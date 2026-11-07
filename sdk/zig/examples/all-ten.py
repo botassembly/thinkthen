@@ -12,7 +12,7 @@ for filename in manifest["cases"]:
     request = case["request"]
     actual = json.loads(subprocess.check_output(
         [str(bundle / "consumer"), "run", json.dumps(settings), json.dumps(request)], text=True))
-    if isinstance(case["expected"], dict):
+    if isinstance(case["expected"], dict) and not case["requests"]:
         assert actual == case["expected"], actual
         continue
     assert isinstance(actual, list) and actual, (request["question"]["function"], actual)

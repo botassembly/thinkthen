@@ -10,7 +10,7 @@ zig fetch --save=thinkthen \
   "$url/v0.2.0/thinkthen-zig-0.2.0-linux-x86_64.tar.gz"
 ```
 
-Then add it to `build.zig`, as [Add it to your build](#add-it-to-your-build) shows. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+Then add it to `build.zig`, as [Add it to your build](#add-it-to-your-build) shows. [Build on Windows](#build-on-windows) has the Windows commands. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
 
 ## Ask a question
 
@@ -21,24 +21,23 @@ const std = @import("std");
 const tt = @import("thinkthen");
 
 pub fn main(init: std.process.Init) !void {
-    var buffer: [4096]u8 = undefined;
-    var stdout = std.Io.File.stdout().writer(init.io, &buffer);
-    const out = &stdout.interface;
-    defer out.flush() catch {};
+    var stdout = std.Io.File.stdout().writerStreaming(init.io, &.{});
     var diag: tt.Diagnostic = .{};
+    errdefer std.debug.print("{s}\n", .{diag.message()});
     var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
 
     // answer returns error.Unsure when not sure, and the message's error
     // when it failed.
-    const is_refund = try (try client.decide(
+    const row = try client.decide(
         init.arena.allocator(),
         "Does the customer request a refund?",
         .{ .text = "Please refund my order." },
         .{},
         &diag,
-    )).answer(&diag);
-    try out.print("{}\n", .{is_refund});
+    );
+    const is_refund = try row.answer(&diag);
+    try stdout.interface.print("{}\n", .{is_refund});
 }
 ```
 
@@ -48,7 +47,7 @@ Output:
 true
 ```
 
-`true` means yes: the message asks for a refund. `is_refund` is a `bool`.
+`true` means yes: the message asks for a refund. `is_refund` is a `bool`. If a call fails, such as when no key is set, the `errdefer` line prints the reason on stderr and the program exits with an error.
 
 ## Not sure and failures
 
@@ -59,11 +58,9 @@ const std = @import("std");
 const tt = @import("thinkthen");
 
 pub fn main(init: std.process.Init) !void {
-    var buffer: [4096]u8 = undefined;
-    var stdout = std.Io.File.stdout().writer(init.io, &buffer);
-    const out = &stdout.interface;
-    defer out.flush() catch {};
+    var stdout = std.Io.File.stdout().writerStreaming(init.io, &.{});
     var diag: tt.Diagnostic = .{};
+    errdefer std.debug.print("{s}\n", .{diag.message()});
     var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
 
@@ -75,15 +72,15 @@ pub fn main(init: std.process.Init) !void {
         &diag,
     );
     switch (refund.outcome) {
-        .answered => |answered| try out.print(
+        .answered => |answered| try stdout.interface.print(
             "{}\n",
             .{answered.answer},
         ),
-        .unsure => |unsure| try out.print(
+        .unsure => |unsure| try stdout.interface.print(
             "Not sure ({d}): ask a person.\n",
             .{unsure.probability},
         ),
-        .failed => |failure| try out.print(
+        .failed => |failure| try stdout.interface.print(
             "{s}: {s}\n",
             .{ failure.name(), failure.message },
         ),
@@ -130,3 +127,15 @@ pub fn build(b: *std.Build) !void {
 ```
 
 Save the program as `src/main.zig`, run `zig build`, then run `./zig-out/bin/example`.
+
+## Build on Windows
+
+Plain `zig build` works on Windows, with no `-Dtarget` flag and no Visual Studio, because Zig brings its own Windows C library. Set up `build.zig` and `src/main.zig` as above, then run this in PowerShell, which fetches the Windows archive:
+
+```powershell
+zig fetch --save=thinkthen "https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-zig-0.2.0-windows-x86_64.zip"
+zig build
+.\zig-out\bin\example.exe
+```
+
+To use Visual Studio's C library instead, add `-Dtarget=x86_64-windows-msvc` to `zig build`.

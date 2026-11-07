@@ -25,9 +25,9 @@ func loadNative() error {
 	if nativeLoaded {
 		return nil
 	}
-	path := os.Getenv("THINKTHEN_LIBRARY")
+	path := filepath.FromSlash(os.Getenv(C.THINKTHEN_LIBRARY_VARIABLE))
 	if path != "" && !filepath.IsAbs(path) {
-		return &Error{code: CodeLocalIO, message: "THINKTHEN_LIBRARY must be an absolute path"}
+		return &Error{code: CodeLocalIO, message: C.THINKTHEN_LIBRARY_PATH_MESSAGE}
 	}
 	if path == "" && installedABI() != 0 {
 		if message := C.tt_load(nil); message != nil {

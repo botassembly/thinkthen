@@ -48,7 +48,7 @@ The outputs a page shows come from one run against the real backend, recorded on
 - `src/lib/markdown-components.mjs` gives each of this site's components its Markdown form for the Markdown twins and `llms-full.txt`. `scripts/pages.mjs` renders the shared components and fails on a component with no Markdown form.
 - `src/data/site.json` holds each fact that appears on more than one page, such as the version and the install lines. Pages read it with `<Fact k="..." />` and `<InstallLine />`. Prose never types the version.
 - `questions/` holds the question list. `npm run answers` writes one answers page per entry marked `answers_page: true`. An answers page is verified on the day its example last ran.
-- `scripts/gen-reference.mjs` writes the reference pages from the program's help. Fix a wrong reference sentence in the help text, never in the page. A page's `verified` date changes when its text changes.
+- `scripts/gen-reference.mjs` writes the reference pages from the program's help, except at an address the site menu or `src/data/redirects.json` already claims. Those claim every page it makes today, so it writes none and still checks the error and exit-code data. Fix a wrong reference sentence in the help text, never in the page. A page's `verified` date changes when its text changes.
 - `WRITING.md` holds the word list's reasons and the rules a check can't see. `src/data/words.json` holds the words the build rejects.
 - `public/social-card.png` is the link-preview card of every page. After a brand change, run `NODE_PATH=$(npm root -g) npm run social-card` (it needs Playwright with Chromium) and commit the PNG.
 

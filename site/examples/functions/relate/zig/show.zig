@@ -2,11 +2,9 @@ const std = @import("std");
 const tt = @import("thinkthen");
 
 pub fn main(init: std.process.Init) !void {
-    var buffer: [4096]u8 = undefined;
-    var stdout = std.Io.File.stdout().writer(init.io, &buffer);
-    const out = &stdout.interface;
-    defer out.flush() catch {};
+    var stdout = std.Io.File.stdout().writerStreaming(init.io, &.{});
     var diag: tt.Diagnostic = .{};
+    errdefer std.debug.print("{s}\n", .{diag.message()});
     var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
 
@@ -22,9 +20,8 @@ pub fn main(init: std.process.Init) !void {
         .{},
         &diag,
     )).answer(&diag);
-    for (relations) |relation| try out.print("{s} --{s}--> {s}\n", .{
-        relation.source.text,
-        relation.relation,
-        relation.target.text,
-    });
+    for (relations) |relation| try stdout.interface.print(
+        "{s} --{s}--> {s}\n",
+        .{ relation.source.text, relation.relation, relation.target.text },
+    );
 }

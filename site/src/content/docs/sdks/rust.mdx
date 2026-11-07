@@ -4,7 +4,7 @@ description: "Rust SDK: ask the ten ThinkThen questions from Rust and get yes, n
 goal: The reader runs a first decide in Rust, adds the crate, handles not sure and failures, and finds the Rust call for each of the ten functions.
 reader: A Rust developer who wants to ask questions about text from code
 kind: reference
-verified: 2026-11-03
+verified: 2026-11-06
 sidebar:
   label: "Rust"
 ---
@@ -102,7 +102,7 @@ The levels run lowest first, so a plain refund request scores near routine. [sco
 
 <Example id="functions/rank/rust" title="src/main.rs" />
 
-The double charge is the most urgent. Each answer is a `NonZeroUsize` rank, starting at 1, and `record()` holds the message it belongs to. `Rank` takes `.top(...)` to keep only the first few. [rank](/functions/rank/) shows every option.
+The double charge is the most urgent. `engine.rank` gives back your own items, best first, each with its row. Each answer is a `NonZeroUsize` rank, starting at 1. A message that fails comes last, still holding its item, and its row's `into_answer()` gives the error. `Rank` takes `.top(...)` to keep only the first few. [rank](/functions/rank/) shows every option.
 
 </details>
 
@@ -149,6 +149,14 @@ Each `Name` has `text()`, `kind()`, `start()`, `end()` and `probability()`. [rec
 Each answer is read by name. It prints as its answer, or as `unsure` or `failed:` with the error code; `answers.answer::<Decide>("refund")` takes it as a `Result`, as decide does. [annotate](/functions/annotate/) shows every option.
 
 </details>
+
+## Send messages from one thread
+
+`engine.open(&question)` takes messages one at a time. Input holds up to one batch of messages (50 by default). Cancelling drops every message not yet sent, which can be more than that, because the engine also holds messages it has read. Only messages with a result were answered. `sender.send(...)` waits while input is full, so it needs another thread reading the results. On one thread, use `sender.try_send(...)`, which never waits and has the signature of `SyncSender::try_send` from the standard library.
+
+<Example id="sdks/rust/one-thread" title="src/main.rs" />
+
+`TrySendError::Full` gives the message back: read a result to make room, then try again. `TrySendError::Disconnected` also gives it back, and means the call has stopped; the results then say why. Close the sender before reading the last results. `rank` gives no results until input closes, so reading one before you close waits forever: on a full queue, try again without reading.
 
 ## The full API
 

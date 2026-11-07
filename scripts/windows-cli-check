@@ -4,11 +4,13 @@ import argparse
 import ctypes
 from ctypes import wintypes
 import hashlib
+import http.server
 import csv
 import io
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import socketserver
 import subprocess
@@ -16,8 +18,19 @@ import sys
 import tempfile
 import threading
 import time
+from types import SimpleNamespace
 import xml.etree.ElementTree as ET
 import zipfile
+
+from test_control import read_line
+
+ROOT = Path(__file__).resolve().parent.parent
+TEXT = '漢字 café evidence 5'
+
+
+def utf8_setting():
+    """The one line the install and command pages tell PowerShell users to run."""
+    return json.loads((ROOT / 'site/src/data/site.json').read_text(encoding='utf-8'))['install']['windowsUtf8']
 
 
 def stopped(pid):
@@ -36,6 +49,16 @@ def stopped(pid):
         assert kernel.WaitForSingleObject(handle, 2000) == 0, 'saved run left child process ' + str(pid)
     finally:
         kernel.CloseHandle(handle)
+
+
+def reap(pids):
+    """Stop only this fixture's recorded children after a failed cleanup assertion."""
+    for pid in pids:
+        try:
+            stopped(pid)
+        except AssertionError:
+            subprocess.run(['taskkill.exe', '/PID', str(pid), '/T', '/F'],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
 
 
 def workbook(path):
@@ -72,14 +95,8 @@ def pipeline(binary, folder, environment):
             stopped(pid)
         assert {p.name for p in folder.iterdir()} == {'run.json', 'children.json'}
     finally:
-        # Reap only this fixture's recorded children after a failed cleanup assertion.
         if pids.exists():
-            for pid in json.loads(pids.read_text(encoding='utf-8')):
-                try:
-                    stopped(pid)
-                except AssertionError:
-                    subprocess.run(['taskkill.exe', '/PID', str(pid), '/T', '/F'],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            reap(json.loads(pids.read_text(encoding='utf-8')))
 
 
 def spreadsheet(binary, folder, environment):
@@ -97,7 +114,7 @@ def spreadsheet(binary, folder, environment):
 
 
 def powershell(binary, folder, environment, *, shell='powershell.exe', diagnostics=None, console=None):
-    diagnostics = diagnostics or Path(__file__).resolve().parent.parent / 'target/windows-cli-diagnostics'
+    diagnostics = diagnostics or ROOT / 'target/windows-cli-diagnostics'
     diagnostics.mkdir(parents=True, exist_ok=True)
     saved = Path(tempfile.mkdtemp(prefix='powershell-unicode-', dir=diagnostics))
     (saved / 'console.json').write_text(json.dumps(console), encoding='utf-8')
@@ -114,13 +131,12 @@ def powershell(binary, folder, environment, *, shell='powershell.exe', diagnosti
         + 'initial_input_code_page=[Console]::InputEncoding.CodePage; '
         + 'initial_output_code_page=[Console]::OutputEncoding.CodePage; '
         + 'initial_pipeline_code_page=$OutputEncoding.CodePage}\n'
-        + '$OutputEncoding=[Text.UTF8Encoding]::new($false)\n'
-        + '[Console]::OutputEncoding=$OutputEncoding\n'
+        + utf8_setting() + '\n'
         + '$observed.input_code_page=[Console]::InputEncoding.CodePage\n'
         + '$observed.output_code_page=[Console]::OutputEncoding.CodePage\n'
         + '$observed.pipeline_code_page=$OutputEncoding.CodePage\n'
         + "[IO.File]::WriteAllText('" + metadata + "', ($observed | ConvertTo-Json), [Text.UTF8Encoding]::new($false))\n"
-        + "'Body', '漢字 café evidence 5' | & '" + str(binary).replace("'", "''")
+        + "'Body', '" + TEXT + "' | & '" + str(binary).replace("'", "''")
         + "' decide 'Ready?' --backend stub --from csv - --column Body --into ready\nexit $LASTEXITCODE\n",
         encoding='utf-8-sig')
     stdout, stderr, rows = b'', b'', None
@@ -135,7 +151,7 @@ def powershell(binary, folder, environment, *, shell='powershell.exe', diagnosti
             raise AssertionError(f'PowerShell stdout encoding: expected UTF-8, actual {stdout!r}') from error
         assert len(rows) == 1, f'PowerShell row count: expected 1, actual {len(rows)!r}'
         actual = rows[0].get('Body')
-        assert actual == '漢字 café evidence 5', f'PowerShell Body: expected {"漢字 café evidence 5"!r}, actual {actual!r}'
+        assert actual == TEXT, f'PowerShell Body: expected {TEXT!r}, actual {actual!r}'
         actual = rows[0].get('ready')
         assert actual == 'TRUE', f'PowerShell ready: expected {"TRUE"!r}, actual {actual!r}'
         files = sorted(p.name for p in folder.iterdir())
@@ -170,7 +186,161 @@ def powershell(binary, folder, environment, *, shell='powershell.exe', diagnosti
             print('PowerShell environment: ' + observed, flush=True)
 
 
-def interrupt(binary, folder, environment):
+def default_pipes(binary, folder, environment):
+    """Measure what the backend receives and PowerShell reads back with and without the setting."""
+    received = []
+    class Backend(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers['Content-Length']))
+            received.append(body)
+            answers = {name: {'type': 'noul', 'noul': 0.9} for name in json.loads(body)['questions']}
+            reply = json.dumps({'answers': answers}).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(reply)))
+            self.end_headers()
+            self.wfile.write(reply)
+        def log_message(self, *_):
+            pass
+    modes = {'default': '', 'input-only': '$OutputEncoding=[Text.UTF8Encoding]::new($false)', 'documented': utf8_setting()}
+    results = {}
+    environment = dict(environment, THINKTHEN_API_KEY='synthetic-loopback-key')
+    with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Backend) as server:
+        worker = threading.Thread(target=server.serve_forever)
+        worker.start()
+        try:
+            for mode, setting in modes.items():
+                metadata = folder / (mode + '.json')
+                script = folder / (mode + '.ps1')
+                script.write_text('$ErrorActionPreference="Stop"\n' + setting + '\n'
+                    + '$observed=[ordered]@{shell_version=$PSVersionTable.PSVersion.ToString(); '
+                    + 'output_code_page=[Console]::OutputEncoding.CodePage; pipeline_code_page=$OutputEncoding.CodePage}\n'
+                    + "$answer='Body', '" + TEXT + "' | & '" + str(binary).replace("'", "''")
+                    + f"' decide 'Ready?' --url http://127.0.0.1:{server.server_address[1]}/v1 --from csv - --column Body --into ready\n"
+                    + '$observed.exit=$LASTEXITCODE\n$observed.read_back=$answer -join "`n"\n'
+                    + "[IO.File]::WriteAllText('" + str(metadata).replace("'", "''")
+                    + "', ($observed | ConvertTo-Json), [Text.UTF8Encoding]::new($false))\n", encoding='utf-8-sig')
+                received.clear()
+                result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(script)],
+                    cwd=folder, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                assert result.returncode == 0 and metadata.exists(), (mode, result.returncode, result.stdout, result.stderr)
+                observed = json.loads(metadata.read_text(encoding='utf-8'))
+                assert len(received) == 1, f'{mode} backend requests: expected 1, actual {len(received)}'
+                sent = re.search(rb'[^"]*evidence 5', received[0])
+                assert sent, f'{mode} backend body holds no message: {received[0]!r}'
+                results[mode] = dict(observed, backend_bytes=sent.group().hex())
+                print('PowerShell pipes: ' + json.dumps(dict(mode=mode, backend_text=sent.group().decode('utf-8', 'replace'),
+                    **results[mode]), ensure_ascii=True), flush=True)
+        finally:
+            server.shutdown()
+            worker.join()
+    for mode, measured in results.items():
+        assert measured['shell_version'].startswith('5.1.'), f'{mode} shell: expected 5.1, actual {measured["shell_version"]}'
+        assert measured['exit'] == 0, f'{mode} exit: expected 0, actual {measured["exit"]}'
+    def backend(mode, text):
+        actual = bytes.fromhex(results[mode]['backend_bytes'])
+        assert actual.endswith(text.encode('utf-8')), f'{mode} backend: expected {text!r}, actual {actual!r}'
+    backend('default', '?? caf? evidence 5')
+    backend('input-only', TEXT)
+    backend('documented', TEXT)
+    table = f'Body,ready\n{TEXT},TRUE'
+    actual = results['documented']['read_back']
+    assert actual == table, f'documented read back: expected {table!r}, actual {actual!r}'
+    actual = results['input-only']
+    if actual['output_code_page'] != 65001:
+        assert actual['read_back'] != table, 'the setting\'s output half changed nothing: read back already matched'
+
+
+def private_console(kernel):
+    """Ctrl-C reaches a whole console, so give it one that holds only this check."""
+    kernel.FreeConsole()
+    if not kernel.AllocConsole():
+        raise ctypes.WinError(ctypes.get_last_error())
+    # A parent that started this process in a new group left Ctrl-C ignored, and children inherit that.
+    if not kernel.SetConsoleCtrlHandler(None, False):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
+def ctrl_c(binary, folder, environment):
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.SetConsoleCtrlHandler.argtypes = [ctypes.c_void_p, wintypes.BOOL]
+    private_console(kernel)
+    previous = signal.signal(signal.SIGINT, lambda *_: None)
+    def send(_child):
+        if not kernel.GenerateConsoleCtrlEvent(signal.CTRL_C_EVENT, 0):
+            raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        interrupt(binary, folder, environment, creationflags=0, send=send)
+    finally:
+        signal.signal(signal.SIGINT, previous)
+        kernel.FreeConsole()
+        # The cases after this one need a console as well.
+        if not kernel.AttachConsole(ctypes.c_ulong(-1).value) and not kernel.AllocConsole():
+            raise ctypes.WinError(ctypes.get_last_error())
+
+
+def stream(binary, folder, environment):
+    """Rows reach a pipe while input stays open, and an interrupt then ends the call."""
+    child = subprocess.Popen([str(binary), 'decide', 'Ready?', '--backend', 'stub', '--from', 'lines', '--json',
+        '--batch', '1'], cwd=folder, env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    try:
+        child.stdin.write(b'one\n')
+        child.stdin.flush()
+        row = json.loads(read_line(child.stdout, timeout=30))
+        assert row['position'] == 1 and row['status'] == 'answered', row
+        child.send_signal(signal.CTRL_BREAK_EVENT)
+        assert child.wait(timeout=30) == 130, child.returncode
+        stdout, stderr = child.communicate(timeout=30)
+        assert not stdout and not list(folder.iterdir()), (stdout, list(folder.iterdir()))
+    finally:
+        if child.poll() is None:
+            child.kill()
+            child.wait()
+
+
+def forced_exit(binary, folder, environment):
+    """A first interrupt asks and a second forces: exit 130 with every owned process gone."""
+    held = 'import signal,threading;signal.signal(signal.SIGBREAK,signal.SIG_IGN);threading.Event().wait()'
+    # The console interrupt reaches these steps too. Ignoring it leaves only the command to stop them.
+    step = ('import os,signal,subprocess,sys,threading;signal.signal(signal.SIGBREAK,signal.SIG_IGN);'
+            'child=subprocess.Popen([sys.executable,"-c",sys.argv[2]]);'
+            'print(os.getpid(),child.pid,file=sys.stderr,flush=True);'
+            'sys.stdout.buffer.write(open(sys.argv[1],"rb").read());sys.stdout.buffer.flush();threading.Event().wait()')
+    payload = folder / 'payload.jsonl'
+    # One row larger than a pipe holds the command in its output write while this check stops reading.
+    payload.write_text(json.dumps('a' * (4 * 1024 * 1024)) + '\n', encoding='utf-8')
+    entry = folder / 'run.json'
+    shell = {'shell': [sys.executable, '-c', step, str(payload), held]}
+    entry.write_text(json.dumps({'run': [shell, shell]}), encoding='utf-8')
+    child = subprocess.Popen([str(binary), 'run', '--allow-shell', str(entry), '--backend', 'stub'], cwd=folder,
+        env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    pids = []
+    try:
+        for _ in range(2):
+            pids.extend(map(int, read_line(child.stderr, timeout=60).split()))
+        assert read_line(SimpleNamespace(readline=lambda: child.stdout.read(1)), timeout=60) == b'"'
+        child.send_signal(signal.CTRL_BREAK_EVENT)
+        notice = read_line(child.stderr, timeout=30).strip()
+        assert notice == b'thinkthen: cancelling; press Ctrl-C again to exit', notice
+        assert child.poll() is None, 'the first interrupt ended the command'
+        child.send_signal(signal.CTRL_BREAK_EVENT)
+        assert child.wait(timeout=30) == 130, child.returncode
+        for pid in pids:
+            stopped(pid)
+        assert {p.name for p in folder.iterdir()} == {'run.json', 'payload.jsonl'}
+    finally:
+        if child.poll() is None:
+            child.kill()
+            child.wait()
+        reap(pids)
+
+
+def interrupt(binary, folder, environment, *, creationflags=None,
+              send=lambda child: child.send_signal(signal.CTRL_BREAK_EVENT)):
+    if creationflags is None:
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
     arrived, closed = threading.Event(), threading.Event()
     requests = []
     class Held(socketserver.BaseRequestHandler):
@@ -201,15 +371,15 @@ def interrupt(binary, folder, environment):
         child = subprocess.Popen([str(binary), 'decide', 'Ready?', '--from', 'lines', '--json',
             '--batch', '1', '--url', f'http://127.0.0.1:{server.server_address[1]}/v1'], cwd=folder,
             env=dict(environment, THINKTHEN_API_KEY='synthetic-loopback-key'), stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=creationflags)
         try:
             child.stdin.write(b'one\n')
             child.stdin.close()
             child.stdin = None
             assert arrived.wait(30), 'CLI did not send its request'
             started = time.monotonic()
-            child.send_signal(signal.CTRL_BREAK_EVENT)
-            assert closed.wait(2), 'CTRL_BREAK did not close the held socket within two seconds'
+            send(child)
+            assert closed.wait(2), 'the interrupt did not close the held socket within two seconds'
             stdout, stderr = child.communicate(timeout=30)
             assert child.returncode == 130, (child.returncode, stdout, stderr)
             assert time.monotonic() - started < 30 and not stdout
@@ -226,7 +396,7 @@ def interrupt(binary, folder, environment):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
-    parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'ctrl-break'))
+    parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'powershell-default', 'ctrl-break', 'ctrl-c', 'stream', 'forced-exit'))
     parser.add_argument('--powershell', default='powershell.exe', help='PowerShell executable for the Unicode case')
     parser.add_argument('--code-page', type=int, help='Select a console code page for an explicitly labelled probe')
     args = parser.parse_args()
@@ -247,7 +417,7 @@ def main():
                 raise ctypes.WinError(ctypes.get_last_error())
         print('Windows CLI console: ' + json.dumps(console), flush=True)
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-') as temporary:
-            for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('ctrl-break', interrupt)]:
+            for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('powershell-default', default_pipes), ('ctrl-break', interrupt), ('ctrl-c', ctrl_c), ('stream', stream), ('forced-exit', forced_exit)]:
                 if args.case and name != args.case:
                     continue
                 folder = Path(temporary) / name

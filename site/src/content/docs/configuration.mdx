@@ -97,3 +97,20 @@ Keys come only from these variables. Keep them in your shell or a secret manager
 A bar you tuned on one model belongs to that model. If you change the model, check your bars again on your own messages.
 
 [Options](/reference/options/) lists every other setting.
+
+## Where an SDK finds its native library
+
+The Go, Swift, Zig, C#, Java, Kotlin and Ruby SDKs load ThinkThen's native library when your program starts using them. They all follow one rule:
+
+1. If `THINKTHEN_LIBRARY` is set, the SDK loads that file and no other. The value must be an absolute path. A relative path stops with `THINKTHEN_LIBRARY must be an absolute path`, and a file that won't load stops with an error that names it. An empty value counts as unset.
+2. If it isn't set, the SDK loads the library it installed, by its full path. Swift and Zig look beside your program. C# and Ruby look inside their installed package. Java, Kotlin and Go unpack the library they carry into your user cache folder and load it from there.
+
+An SDK doesn't look in the working folder or on a system search path, so a file of the same name left there can't take the library's place. On Windows too, the SDK always gives the system a full path.
+
+The rule has these limits:
+
+- It covers ThinkThen's library, not the libraries that library needs. On Windows, Go, Swift, Zig and C# keep that search to the library's own folder and the system folder. Java and Ruby can't, so Windows searches for those in its usual places.
+- On a Mac, `DYLD_LIBRARY_PATH` can still win over a full path, because the system checks it first.
+- A Go program built with the `thinkthen_system` tag links the installed library. The system loads that library when your program starts, before the SDK can read `THINKTHEN_LIBRARY`.
+
+The Python, TypeScript and R packages build the engine into their own module, and C, C++ and Rust link it when you build your program, so `THINKTHEN_LIBRARY` doesn't apply to them.

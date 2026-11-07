@@ -1,5 +1,5 @@
 {
-  "anchor": "    for ranked in engine.rows(&by_urgency, messages)? {",
+  "anchor": "    for ranked in engine.rank(&by_urgency, messages, |message| *message)? {",
   "before": 0,
   "after": 2
 }

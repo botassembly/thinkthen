@@ -94,9 +94,16 @@ fn all_functions_share_typed_rows_from_both_backend_wires() {
                     );
                 }
                 if let Some(code) = case["expected"]["error"].as_str() {
+                    let error = actual.unwrap_err();
                     assert_eq!(
-                        actual.unwrap_err().code().as_str(),
+                        error.code().as_str(),
                         code,
+                        "{} / {backend:?}",
+                        case["name"]
+                    );
+                    assert_eq!(
+                        error.http_status().map(u64::from),
+                        case["expected"]["http_status"].as_u64(),
                         "{} / {backend:?}",
                         case["name"]
                     );

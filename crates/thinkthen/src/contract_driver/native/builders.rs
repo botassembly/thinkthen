@@ -178,15 +178,12 @@ impl QuestionBuilder {
         self.threshold = Some(cut.into());
         Ok(())
     }
-    /// Set an ordered band only for decide, choose and filter.
+    /// Set an ordered band only for decide and filter.
     /// # Errors
     /// Returns the shared threshold error and preserves the prior state.
     pub fn set_band(&mut self, low: f64, high: f64) -> Result<(), Error> {
         let threshold = Threshold::band(low, high)?;
-        if !matches!(
-            self.function,
-            FunctionName::Decide | FunctionName::Choose | FunctionName::Filter
-        ) {
+        if !matches!(self.function, FunctionName::Decide | FunctionName::Filter) {
             return Err(Error::from_contract(
                 Code::UsageThreshold,
                 crate::core::diagnostic::requirement(
@@ -292,8 +289,7 @@ impl QuestionBuilder {
             }
             FunctionName::Choose => finish!(
                 Choose,
-                questions::Choose::with_options(&self.text, self.items.clone())?
-                    .threshold(threshold)
+                questions::Choose::with_options(&self.text, self.items.clone())?.threshold(cut?)
             ),
             FunctionName::Tag => finish!(
                 Tag,

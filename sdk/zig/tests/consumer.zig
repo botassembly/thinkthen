@@ -17,7 +17,7 @@ fn emit(a: A, value: anytype) !void {
     write(try std.json.Stringify.valueAlloc(a, value, .{ .emit_null_optional_fields = false }));
 }
 fn fail(a: A, diagnostic: tt.Diagnostic) !void {
-    try emit(a, .{ .@"error" = diagnostic.code.? });
+    try emit(a, .{ .@"error" = diagnostic.code.?, .http_status = diagnostic.http_status });
 }
 const Mode = enum { many, cancelled, single };
 fn emitItem(comptime function: tt.Function, a: A, item: anytype) !void {
@@ -102,7 +102,7 @@ fn held(a: A, settings_json: []const u8) !void {
 pub fn main(init: std.process.Init) !void {
     const a = init.arena.allocator();
     const args = try init.minimal.args.toSlice(a);
-    if (builtin.os.tag != .windows and std.mem.startsWith(u8, args[1], "stress")) return @import("stress.zig").run(a, args);
+    if (std.mem.startsWith(u8, args[1], "stress")) return @import("stress.zig").run(a, args);
     if (std.mem.eql(u8, args[1], "admission-surface")) {
         write("zig\n");
         return;

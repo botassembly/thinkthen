@@ -79,7 +79,7 @@ impl<'a, F: Function> Packer<'a, F> {
     /// Add `record`, asked by `ask`. Returns the request it closes, if any.
     ///
     /// A record whose question alone passes the byte limit fails with
-    /// `backend.limit` and sends nothing.
+    /// `record.too-large` and sends nothing.
     pub(crate) fn push(&mut self, record: Record) -> Option<Chunk<'a, F>> {
         self.position += 1;
         let id = record.id.clone().unwrap_or(Id::position(self.position));

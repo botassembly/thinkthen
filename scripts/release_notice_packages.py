@@ -1,4 +1,4 @@
-"""Insert notices into the final independently installable package files."""
+"""Insert notices into the final independently installable package files, and compare them after."""
 import base64
 import gzip
 import hashlib
@@ -9,6 +9,7 @@ import re
 import tarfile
 import zipfile
 
+from release_notice_check import contents as archive_contents, verify
 from release_notices import ROOT, NOTICE, bundle
 from release_readme import tar_bytes
 
@@ -71,7 +72,6 @@ def gem_update(path, updates, remove=()):
 
 def apply(path, contents, prefix=''):
     updates = {prefix + name: data for name, data in contents.items()}
-    from release_notice_check import contents as archive_contents
     existing = archive_contents(path)
     remove = set()
     for name, data in updates.items():
@@ -180,3 +180,35 @@ def distribute(out, target, root=ROOT):
             path = swift / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
+
+
+def candidate(folder):
+    """Compare final package inventories with the currently resolved target graphs."""
+    target = json.loads((folder / 'build.json').read_text())['platform']
+    produced = json.loads((folder / 'compiled-crates.json').read_text())
+    if produced['target'] != target: raise ValueError('compiled target differs')
+    for family, path in package_files(folder, target.startswith('windows')):
+        expected = json.loads(bundle(target, family, compiled=produced['crates'])[NOTICE + '/index.json'])
+        verify(path, expected)
+        files = archive_contents(path)
+        prefix = '' if family == 'sqlite' or target.startswith('windows') else 'share/thinkthen-' + family + '/'
+        for name, data in native_notices(family, target).items():
+            if files.get(prefix + name) != data:
+                raise ValueError('package native notices differ: ' + str(path))
+    from release_jvm_notices import check as jvm_notices
+    jvm_notices(folder)
+    from release_r_dependencies import directories, terms, metadata
+    for directory in directories(folder):
+        inventory = json.loads((directory / 'inventory.json').read_text())
+        for filename in inventory['install_order']:
+            path = directory / filename
+            verify(path)
+            files = archive_contents(path)
+            for name, data in terms(path, ROOT).items():
+                if files[metadata(path)['Package'] + '/' + name] != data:
+                    raise ValueError('R dependency terms differ: ' + filename)
+    if (folder / 'prerequisites/swift-runtime').is_dir():
+        for name, data in runtime_files('swift-icu').items():
+            if (folder / 'prerequisites/swift-runtime' / name).read_bytes() != data:
+                raise ValueError('Swift ICU runtime terms differ')
+    print('all package and runtime notices match: ' + target)

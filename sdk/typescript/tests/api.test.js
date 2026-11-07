@@ -12,7 +12,8 @@ function frozen(value) {
 // Feature: immutable toolboxes preserve the caller's domain and evidence.
 test("toolboxes copy and freeze mutable nested inputs without freezing their owner", async () => {
   const original = {
-    topic: { function: "choose", question: "Team?", choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, field: ["body"] },
+    topic: { function: "choose", question: "Team?", choices: ["billing", "shipping"], threshold: 0.8, field: ["body"] },
+    ready: { function: "decide", question: "Ready?", threshold: { low: 0.2, high: 0.8 } },
     links: { function: "relate", rules: [{ name: "knows", source: "person", target: "person", symmetric: true }] },
   };
   const snapshot = structuredClone(original);
@@ -21,7 +22,7 @@ test("toolboxes copy and freeze mutable nested inputs without freezing their own
   frozen(toolbox);
   assert(!Object.isFrozen(original));
   original.topic.choices[0] = "changed";
-  original.topic.threshold.low = 0.9;
+  original.ready.threshold.low = 0.9;
   original.topic.field[0] = "other";
   original.links.rules[0].name = "changed";
   assert.deepEqual(toolbox, snapshot);
@@ -39,15 +40,14 @@ test("toolboxes copy and freeze mutable nested inputs without freezing their own
 test("stream creation snapshots options lists and evidence but leaves AbortSignal live", async () => {
   const client = new sdk.ThinkThen({ backend: "stub" });
   const controller = new AbortController();
-  const options = { choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, field: ["body"], signal: controller.signal };
+  const options = { choices: ["billing", "shipping"], threshold: 0.8, field: ["body"], signal: controller.signal };
   const record = { body: "Refund", other: "Different" };
   const stream = client.chooseStream("Team?", [record], options);
   options.choices[0] = "changed";
-  options.threshold.low = 0.9;
   options.field[0] = "other";
   try {
     const [actual] = await stream.toArray();
-    const expected = await client.choose("Team?", record, { choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, field: ["body"] }).row();
+    const expected = await client.choose("Team?", record, { choices: ["billing", "shipping"], threshold: 0.8, field: ["body"] }).row();
     assert.deepEqual(actual, expected);
     const second = client.chooseStream("Team?", [record], { choices: ["billing", "shipping"], signal: controller.signal });
     controller.abort("after creation");

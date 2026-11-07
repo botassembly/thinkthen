@@ -179,8 +179,43 @@ test("installation refuses engines absent from the release package", async () =>
       Object.defineProperty(process, "arch", {value:${JSON.stringify(arch)}});
       await import(${JSON.stringify(script)});`;
     const result = spawnSync(process.execPath, ["--input-type=module", "-e", program], {encoding:"utf8"});
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, new RegExp(`does not ship a native engine for ${platform}/${arch}`));
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, `thinkthen does not ship a native engine for ${platform}/${arch}\n`);
+  }
+});
+
+const glibcReport = fileURLToPath(new URL("./glibc-report.cjs", import.meta.url));
+/** Run node in the installed package with the runtime reporting this glibc. */
+function withGlibc(version, ...command) {
+  return spawnSync(process.execPath, ["--require", glibcReport, ...command],
+    {cwd: root, encoding: "utf8", env: {...osEnvironment(), THINKTHEN_TEST_GLIBC: version}});
+}
+const firstLoad = `import { ThinkThen, ThinkThenError } from "./runtime.js";
+  try { await new ThinkThen({backend: "stub"}).close(); console.log("loaded"); }
+  catch (error) { console.log(JSON.stringify([error instanceof ThinkThenError, error.code, error.message])); }`;
+
+// Feature: Linux below the glibc floor stops at install and at first load with one line of ours.
+test("installation and first load refuse Linux below the glibc floor", {skip: process.platform !== "linux"}, () => {
+  for (const [version, found] of [["", "none"], ["2.27", "glibc 2.27"], ["2.9", "glibc 2.9"]]) {
+    const line = `thinkthen needs glibc 2.28 or later on Linux; this system has ${found}`;
+    const install = withGlibc(version, "platform.js");
+    assert.equal(install.status, 1, version);
+    assert.equal(install.stderr, `${line}\n`);
+    const load = withGlibc(version, "--input-type=module", "-e", firstLoad);
+    assert.equal(load.status, 0, load.stderr);
+    assert.deepEqual(JSON.parse(load.stdout), [true, "local.io", line]);
+  }
+});
+
+// Feature: Linux at or above the glibc floor installs and loads, whatever the version's text order.
+test("installation and first load accept Linux at the glibc floor and above", {skip: process.platform !== "linux"}, () => {
+  for (const version of ["2.28", "2.100", "3.1"]) {
+    const install = withGlibc(version, "platform.js");
+    assert.equal(install.status, 0, install.stderr);
+    assert.equal(install.stderr, "");
+    const load = withGlibc(version, "--input-type=module", "-e", firstLoad);
+    assert.equal(load.status, 0, load.stderr);
+    assert.equal(load.stdout, "loaded\n");
   }
 });
 

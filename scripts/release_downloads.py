@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch an immutable release input and reject bytes that differ from its pin."""
+"""Fetch an immutable release input and reject bytes that differ from its pin.
+
+URLs pinned to one digest are sources of one input. A caller names its first
+choice, and the others are tried in file order when it gives no verified bytes.
+"""
 import hashlib
 import json
 from pathlib import Path
@@ -13,9 +17,16 @@ import zipfile
 PINS = Path(__file__).with_name('release-downloads.json')
 
 
+def sources(url):
+    """Return a URL's pin and every URL pinned to it, the named URL first."""
+    pins = json.loads(PINS.read_text())
+    return pins[url], [url, *(other for other, digest in pins.items() if digest == pins[url] and other != url)]
+
+
 def fetch(url, path, digest=None):
+    urls = [url]
     if digest is None:
-        digest = json.loads(PINS.read_text())[url]
+        digest, urls = sources(url)
     if ':' in digest:
         algorithm, digest = digest.split(':', 1)
         if algorithm not in ('sha256', 'sha512') or len(digest) != {'sha256': 64, 'sha512': 128}[algorithm]:
@@ -38,16 +49,27 @@ def fetch(url, path, digest=None):
     # must fetch verified bytes before any caller extracts or executes them.
     with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + '.', suffix='.partial', delete=False) as stream:
         temporary = Path(stream.name)
+    refusal, differing = None, []
     try:
-        subprocess.run(['curl', '--fail', '--location', '--silent', '--show-error', '--retry', '2',
-                        '--connect-timeout', '20', '--max-time', '600', url, '-o', str(temporary)], check=True)
-        if not verified(temporary):
-            raise ValueError('release input checksum differs: ' + path.name)
-        temporary.replace(path)
+        for source in urls:
+            try:
+                subprocess.run(['curl', '--fail', '--location', '--silent', '--show-error', '--retry', '2',
+                                '--connect-timeout', '20', '--max-time', '600', source, '-o', str(temporary)], check=True)
+            except subprocess.CalledProcessError as error:
+                refusal = error
+                print('release input source refused: ' + source, file=sys.stderr)
+                continue
+            if verified(temporary):
+                temporary.replace(path)
+                return path
+            differing.append(source)
+            print('release input source differs from its pin: ' + source, file=sys.stderr)
     finally:
         temporary.unlink(missing_ok=True)
-
-    return path
+    if differing:
+        raise ValueError('release input checksum differs: ' + path.name + ' from ' + ' '.join(differing))
+    # Callers with an unpinned location of their own catch this type to try it.
+    raise subprocess.CalledProcessError(refusal.returncode, 'curl ' + ' '.join(urls))
 
 
 def prepare_tool(destination, executable, archive):

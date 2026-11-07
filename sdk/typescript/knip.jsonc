@@ -1,0 +1,4 @@
+{
+  // scripts/typescript-gate runs attw on the packed tarball, outside anything this package's files reference.
+  "ignoreDependencies": ["@arethetypeswrong/cli"]
+}

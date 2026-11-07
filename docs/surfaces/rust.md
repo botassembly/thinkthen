@@ -135,7 +135,9 @@ Look for one line per answer. Find gives `None` when no line answers. Recognize 
 
 `engine.filter` yields only the items it keeps, in input order. The closure turns each item into its record. A not-sure item is left out. A failed record yields `Err(FilterError)` in its place, with the item, and reading goes on. `engine.filter_items` yields every item with its row instead.
 
-For a rank, `engine.rows` yields one row for each record in rank order, with failed records last. Rank 1 is the most urgent. Each rank row keeps its own record, and `row.record()` returns it.
+`engine.rank` yields each of your items with its row, in rank order, then failed records in input order. Rank 1 is the most urgent. A failed item still comes back, and its row's `into_answer()` returns its error. The closure works as it does for `filter`.
+
+Each item stays in memory until its row arrives or the iteration ends, so with `.top(n)` every item is held until then. For long input with `.top(n)`, use `engine.rows`, which keeps only the best records; each of its rank rows returns its record from `row.record()`.
 
 ```rust
 use thinkthen::{Engine, Filter, Rank};
@@ -157,11 +159,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let by_urgency = Rank::new("How urgent is the request?", ["routine", "urgent"])?;
-    for ranked in engine.rows(&by_urgency, messages)? {
-        let ranked = ranked?;
-        let rank = ranked.answer()?;
-        let (_, message) = ranked.record().expect("a rank row keeps its record").original();
-        println!("{rank} {}", String::from_utf8_lossy(message));
+    for ranked in engine.rank(&by_urgency, messages, |message| *message)? {
+        let (message, row) = ranked?;
+        println!("{} {message}", row.answer()?);
     }
     Ok(())
 }
@@ -169,11 +169,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 <!-- output: fill from the real-backend capture run -->
 
-- Records go to a worker thread, so `rows`, `filter` and `filter_items` take owned records. Collect borrowed ones into a `Vec` first.
-- Each item from `rows` is a `Result`. An `Err` there means the call failed, and the iteration ends after it. A failed record is an `Ok` row whose `into_answer()` returns its error.
+- Records go to a worker thread, so `rows`, `filter`, `filter_items` and `rank` take owned records. Collect borrowed ones into a `Vec` first.
+- Each item from `rows` and `rank` is a `Result`. An `Err` there means the call failed, and the iteration ends after it. A failed record is an `Ok` row whose `into_answer()` returns its error.
 - A `FilterError` without an item is a call failure, and the iteration ends after it.
 - Dropping the rows, or calling `cancel()` on them, stops the call. `engine.cancel(Cancel)` shares one cancel signal across calls.
-- `engine.open(&question)` returns a `Call` for pushing records one at a time: send through `call.sender()` and read `call.rows()` on another thread.
+- `engine.open(&question)` returns a `Call` for pushing records one at a time: send through `call.sender()` and read `call.rows()` on another thread. The call holds up to one batch of pushed records (50 by default) before input is full. On one thread, use `sender.try_send(record)`, which never waits and has the signature of `SyncSender::try_send`: on `TrySendError::Full(record)`, read a row and try again. `rank` gives no rows until input closes, so reading one before you close waits forever: on a full queue, try again without reading.
 
 ## Judge JSON records
 

@@ -1,5 +1,7 @@
 """Frame columns produce native answers and filter their original rows."""
 
+import json
+import warnings
 from pathlib import Path
 from typing import Any, cast
 
@@ -207,13 +209,159 @@ def test_every_function_raises_or_coerces_failed_rows(
         for details in (False, True):
             with pytest.raises(tt.RecordError):
                 operation(question, client=selected, details=details, **options)
-        answers = operation(question, client=selected, errors="coerce", **options)
+        with pytest.warns(tt.FailedRowsWarning):
+            answers = operation(question, client=selected, errors="coerce", **options)
+        assert answers.thinkthen.failures()["position"].to_list() == [1]
         if function == "filter":
             assert None not in list(answers)
         elif library == "pandas":
             assert answers.iloc[0] is pd.NA
         else:
-            assert answers[0] is None
+            # Polars 1.0 reads a null struct back as a struct of nulls.
+            assert answers.is_null()[0]
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_coerce_keeps_failures_apart_from_not_sure(
+    tmp_path: Path, library: str
+) -> None:
+    values = ["first", None, ""]
+    source: Any = pd.Series(values) if library == "pandas" else pl.Series(values)
+    with (
+        backend(tmp_path, yes(0.5)) as server,
+        client(server) as selected,
+        pytest.warns(tt.FailedRowsWarning) as caught,
+    ):
+        answers = source.thinkthen.decide(
+            "Ready?", client=selected, threshold=(0.2, 0.8), errors="coerce"
+        )
+    assert len(caught) == 1 and caught[0].filename == __file__
+    warning = cast(tt.FailedRowsWarning, caught[0].message)
+    assert str(warning) == (
+        "ThinkThen returned failed records: record.missing (1), record.empty (1). "
+        ".thinkthen.failures() lists them."
+    )
+    assert warning.codes == (tt.ErrorCode.RECORD_MISSING, tt.ErrorCode.RECORD_EMPTY)
+    assert [row.position for row in warning.rows] == [2, 3]
+    # The three rows read alike as answers, and only the failures are listed.
+    assert len(answers) == 3
+    assert answers.isna().all() if library == "pandas" else answers.is_null().all()
+    failures = answers.thinkthen.failures()
+    assert failures["position"].to_list() == [2, 3]
+    assert failures["error_code"].to_list() == ["record.missing", "record.empty"]
+    # Polars 1.0 reads a null struct back as a struct of nulls.
+    ids = failures["id"] if library == "pandas" else failures["id"].struct.field("kind")
+    assert ids.to_list() == [None, None]
+    questions = failures["question"]
+    assert questions.isna().all() if library == "pandas" else questions.is_null().all()
+    assert all(failures["error_message"].to_list())
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_coerced_filter_lists_failures_and_a_clean_call_lists_none(
+    library: str,
+) -> None:
+    values = ["first", None, ""]
+    source: Any = pd.Series(values) if library == "pandas" else pl.Series(values)
+    with tt.Client(backend="stub") as selected:
+        with pytest.warns(tt.FailedRowsWarning):
+            kept = source.thinkthen.filter("Ready?", client=selected, errors="coerce")
+        assert kept.thinkthen.failures()["position"].to_list() == [2, 3]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            # A subset of an earlier result starts with no failures of its own.
+            clean = kept.thinkthen.filter("Ready?", client=selected, errors="coerce")
+            plain = kept.thinkthen.decide("Ready?", client=selected, errors="coerce")
+    for result in (clean, plain):
+        failures = result.thinkthen.failures()
+        assert len(failures) == 0
+        assert list(failures.columns) == [
+            "position",
+            "id",
+            "question",
+            "error_code",
+            "error_message",
+            "error_http_status",
+        ]
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_annotation_failures_name_their_question_without_a_details_warning(
+    library: str,
+) -> None:
+    values = {"id": ["a", "b"], "body": ["text", ""]}
+    source: Any = pd.DataFrame(values) if library == "pandas" else pl.DataFrame(values)
+    questions = tt.AnnotationQuestions(
+        {
+            "evidence": tt.DecideQuestion("Ready?", field="/body"),
+            "gone": tt.DecideQuestion("Ready?", field="/gone"),
+        }
+    )
+    with tt.Client(backend="stub") as selected:
+        with pytest.warns(tt.FailedRowsWarning) as caught:
+            answers = source.thinkthen.annotate(
+                questions, client=selected, errors="coerce"
+            )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            details = source.thinkthen.annotate(
+                questions, client=selected, details=True, errors="coerce"
+            )
+    assert "record.missing (2), record.empty (1)" in str(caught[0].message)
+    for result in (answers, details):
+        failures = result.thinkthen.failures()
+        assert failures["position"].to_list() == [1, 2, 2]
+        assert failures["question"].to_list() == ["gone", "evidence", "gone"]
+        assert failures["error_code"].to_list() == [
+            "record.missing",
+            "record.empty",
+            "record.missing",
+        ]
+        ids = failures["id"].to_list()
+        if library == "polars":
+            ids = [identity["string"] for identity in ids]
+        assert ids == ["a", "b", "b"]
+
+
+def coerced_pandas(values: list[Any]) -> Any:
+    source: Any = pd.Series(values)
+    with tt.Client(backend="stub") as selected, pytest.warns(tt.FailedRowsWarning):
+        return source.thinkthen.decide("Ready?", client=selected, errors="coerce")
+
+
+def test_pandas_failures_go_where_attrs_go() -> None:
+    answers = coerced_pandas(["first", None, ""])
+    other = coerced_pandas([None])
+
+    def positions(value: Any) -> list[int]:
+        return list(value.thinkthen.failures()["position"].to_list())
+
+    assert json.loads(json.dumps(answers.attrs)) == answers.attrs
+    # A subset keeps the whole list, including failures outside the subset.
+    assert positions(answers.iloc[[0]]) == [2, 3]
+    assert positions(pd.concat([answers, answers])) == [2, 3]
+    # These lost the list, so their empty tables say nothing about the call.
+    assert positions(pd.concat([answers, other])) == []
+    frame: Any = pd.DataFrame({"body": ["first", None, ""]})
+    assert positions(frame.assign(is_ready=answers)) == []
+
+
+def test_pandas_failures_survive_a_parquet_file(tmp_path: Path) -> None:
+    pytest.importorskip("pyarrow")
+    answers = coerced_pandas(["first", None, ""])
+    path = tmp_path / "answers.parquet"
+    answers.to_frame("is_ready").to_parquet(path)
+    restored: Any = pd.read_parquet(path)
+    assert restored.thinkthen.failures()["position"].to_list() == [2, 3]
+
+
+def test_a_derived_polars_object_lists_no_failures() -> None:
+    source: Any = pl.Series(["first", None, ""])
+    with tt.Client(backend="stub") as selected, pytest.warns(tt.FailedRowsWarning):
+        answers = source.thinkthen.decide("Ready?", client=selected, errors="coerce")
+    assert len(answers.thinkthen.failures()) == 2
+    assert len(answers.fill_null(False).thinkthen.failures()) == 0
+    assert len(answers.to_frame().thinkthen.failures()) == 0
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
@@ -277,7 +425,7 @@ def test_polars_annotation_mapping_keeps_schema_without_answered_rows(
         )
     assert answers.name == "body" and len(answers) == len(source)
     assert answers.dtype == pl.Struct({"ready": pl.Boolean})
-    assert answers.to_list() == [None] * len(source)
+    assert answers.is_null().all()
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
@@ -300,3 +448,33 @@ def test_raised_frame_error_keeps_completed_outcomes(library: str) -> None:
     else:
         assert outcomes.struct.field("status").to_list() == ["failed", "answered"]
         assert outcomes.struct.field("answer")[1] in (True, False)
+
+
+def test_pandas_float_ids_are_integers_and_null_or_fractional_ids_fail_their_row(
+    tmp_path: Path,
+) -> None:
+    source = pd.DataFrame(
+        {"id": [1.0, float("nan"), 1.5, 2.0**53, 5.0], "body": ["text"] * 5}
+    )
+    with backend(tmp_path, yes() * 2) as server, client(server) as selected:
+        rows = source.thinkthen.decide(
+            "Ready?", field="/body", client=selected, details=True, errors="coerce"
+        )
+        assert server.count() == 2
+    assert rows["id"].tolist() == [1, None, None, None, 5]
+    assert all(type(rows["id"].iloc[index]) is int for index in (0, 4))
+    assert rows["status"].tolist() == [
+        "answered",
+        "failed",
+        "failed",
+        "failed",
+        "answered",
+    ]
+    assert rows["error_code"].dropna().unique().tolist() == ["record.invalid"]
+    with (
+        backend(tmp_path, yes() * 2) as server,
+        client(server) as selected,
+        pytest.raises(tt.RecordError) as raised,
+    ):
+        source.thinkthen.decide("Ready?", field="/body", client=selected)
+    assert raised.value.code is tt.ErrorCode.RECORD_INVALID

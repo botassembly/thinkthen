@@ -202,6 +202,7 @@ rust.prepare('wasm32-unknown-unknown')
                 for name in ('DriverCode', 'NativeLayouts', 'NativeSignatures'):
                     self.assertTrue((base / 'internal' / (name + '.java')).is_file(), name)
                 self.assertTrue((base.parents[6] / 'kotlin/target/generated-sources/contracts/dev/thinkthen/kotlin/ErrorCode.kt').is_file())
+                self.assertTrue((base.parents[6] / 'java/consumer/kotlin-tests/ConformanceCases.kt').is_file())
                 raise ReachedMaven()
             subprocess.run(list(map(str, arguments)), **options, check=True)
         with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=build):
@@ -219,6 +220,23 @@ rust.prepare('wasm32-unknown-unknown')
                 action()
             self.assertEqual(launch.call_args.args[0][-3:], ['--caller-owned', 'csharp', directory])
 
+    def test_elevated_runs_consumers_from_the_parent_after_the_caller_owned_build(self):
+        module = runpy.run_path(str(ROOT / 'scripts/windows-native-proof'))
+        action = module['main']
+        calls = []
+        with tempfile.TemporaryDirectory() as directory:
+            def built(command, **_options):
+                calls.append(command[-3:])
+                (Path(directory) / 'elevated').mkdir()
+                (Path(directory) / 'elevated/consumers.json').write_text('[{"root": "cache"}]')
+            with patch.dict(action.__globals__, os=SimpleNamespace(name='nt', environ=os.environ),
+                            normal_probe=lambda scratch: calls.append(scratch.name),
+                            check_elevated=calls.append), \
+                    patch.object(sys, 'argv', ['windows-native-proof', 'elevated', directory]), \
+                    patch('windows_caller_process.launch', built):
+                action()
+        self.assertEqual(calls, ['elevated', ['--caller-owned', 'elevated', directory], [{'root': 'cache'}]])
+
     def test_direct_go_executable_has_bounded_test_timeout(self):
         module = runpy.run_path(str(ROOT / 'scripts/windows-native-proof'))
         action = module['go']
@@ -226,12 +244,15 @@ rust.prepare('wasm32-unknown-unknown')
         def cache(command, root, environment, filename):
             self.assertEqual(Path(environment['THINKTHEN_CASES']) / '../schemas/row.schema.json', ROOT / 'conformance/../schemas/row.schema.json')
             captured.append(command)
-        with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=lambda *args, **options: None, check_cache=cache):
+        temporary_cache = []
+        with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=lambda *args, **options: None, check_cache=cache,
+                                                                    go_temporary_cache=lambda execute, binary: temporary_cache.append(binary)):
             scratch = Path(directory)
             native = scratch / 'engine.dll'
             native.write_bytes(b'native fixture')
-            action(scratch, native, {}, {})
+            action(scratch, native, {'PATH': ''}, {})
         self.assertIn('-test.timeout=30m', captured[0])
+        self.assertEqual(temporary_cache, [captured[0][0]])
 
     def test_source_and_registry_go_launchers_expose_canonical_fixtures(self):
         source = (ROOT / 'scripts/source-install-check').read_text()

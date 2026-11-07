@@ -1,7 +1,27 @@
 /* Feature: C streams preserve every position under shared loopback faults.
  * Each worker owns its call and rows; only the client is shared. */
-#include <pthread.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include <process.h>
+#include <windows.h>
+typedef HANDLE stress_thread;
+#define STRESS_RETURN unsigned __stdcall
+static int stress_start(stress_thread *thread, unsigned(__stdcall *entry)(void *), void *work) {
+    *thread = (HANDLE)_beginthreadex(NULL, 0, entry, work, 0, NULL);
+    return *thread == NULL;
+}
+static int stress_join(stress_thread thread) {
+    return WaitForSingleObject(thread, INFINITE) != WAIT_OBJECT_0 || !CloseHandle(thread);
+}
+#else
+#include <pthread.h>
+typedef pthread_t stress_thread;
+#define STRESS_RETURN void *
+static int stress_start(stress_thread *thread, void *(*entry)(void *), void *work) {
+    return pthread_create(thread, NULL, entry, work);
+}
+static int stress_join(stress_thread thread) { return pthread_join(thread, NULL); }
+#endif
 
 typedef struct {
     thinkthen_client *client;
@@ -14,7 +34,7 @@ typedef struct {
     uint64_t identifier_width_mask;
 } stress_work;
 
-static void *stress_drive(void *raw) {
+static STRESS_RETURN stress_drive(void *raw) {
     stress_work *work = raw;
     thinkthen_error error = {.struct_size = sizeof error};
     size_t sent = 0, received = 0, failed = 0;
@@ -62,7 +82,7 @@ static void *stress_drive(void *raw) {
         work->failed = failed;
     }
     thinkthen_error_free(&error);
-    return NULL;
+    return 0;
 }
 static int stress_main(int argc, char **argv) {
     assert(argc == 10);
@@ -73,7 +93,7 @@ static int stress_main(int argc, char **argv) {
     size_t workers = cancel ? 1 : strtoull(argv[7], NULL, 10);
     assert(workers > 0);
     stress_work *work = calloc(workers, sizeof *work);
-    pthread_t *threads = calloc(workers, sizeof *threads);
+    stress_thread *threads = calloc(workers, sizeof *threads);
     assert(work != NULL && threads != NULL);
     size_t failed = 0;
     uint64_t widths = 0;
@@ -86,14 +106,14 @@ static int stress_main(int argc, char **argv) {
             assert(thinkthen_question_set_field(q, (const char *)"/body", 5, &error) == THINKTHEN_OK);
             assert(thinkthen_call_open_question(client, q, NULL, THINKTHEN_OFFSET_CODE_POINTS, &work[i].call, &error) == THINKTHEN_OK);
             thinkthen_question_free(q);
-            assert(pthread_create(&threads[i], NULL, stress_drive, &work[i]) == 0);
+            assert(stress_start(&threads[i], stress_drive, &work[i]) == 0);
         }
         if (cancel) {
             assert(getchar() == 'c');
             thinkthen_call_cancel(work[0].call);
         }
         for (size_t i = 0; i < workers; ++i) {
-            assert(pthread_join(threads[i], NULL) == 0);
+            assert(stress_join(threads[i]) == 0);
             failed += work[i].failed;
             widths |= work[i].identifier_width_mask;
             thinkthen_call_free(work[i].call);

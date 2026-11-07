@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""Stage the Swift consumer package: its sources and every generated target.
+
+Each Swift check builds this one package. Callers choose only the folder, an
+installed README when they test one, and their own dependency and build steps.
+"""
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def generate(*arguments):
+    subprocess.run([sys.executable, *map(str, arguments)], check=True)
+
+
+if len(sys.argv) not in (2, 3):
+    raise SystemExit('usage: swift-consumer-stage DIRECTORY [README]')
+consumer = Path(sys.argv[1])
+readme = sys.argv[2] if len(sys.argv) == 3 else ROOT / 'sdk/swift/README.md'
+consumer.mkdir(parents=True)
+for path in (ROOT / 'sdk/swift/tests').glob('*.swift'):
+    shutil.copy2(path, consumer / path.name)
+generate(ROOT / 'sdk/swift/tests/readme.py', readme, consumer / 'Readme')
+generate(ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md', consumer / 'Examples')
+generate(ROOT / 'scripts/surface-example', 'prepare', 'swift', consumer / 'Guide')

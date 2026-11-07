@@ -16,6 +16,8 @@ use crate::batch::Batch;
 use crate::transport;
 use crate::{Cancel, Error, RetryPolicy};
 mod contract;
+#[cfg(test)]
+mod contract_tests;
 mod input_report;
 mod limits;
 pub(crate) use contract::RecordEvent;
@@ -40,7 +42,6 @@ pub struct Engine {
     agent: Arc<OnceLock<transport::Agent>>,
     policy: RetryPolicy,
     pub(crate) cancel: Cancel,
-    cancel_attached: bool,
     pub(crate) name: Option<String>,
 }
 
@@ -63,7 +64,6 @@ impl Engine {
         Self {
             policy,
             cancel: Cancel::default(),
-            cancel_attached: false,
             backend,
             batch: Batch::default(),
             agent: Arc::new(OnceLock::new()),
@@ -116,32 +116,19 @@ impl Engine {
     /// Attach a shared cancellation signal to this engine's calls.
     #[must_use]
     pub fn cancel(self, cancel: Cancel) -> Self {
-        Self {
-            cancel,
-            cancel_attached: true,
-            ..self
-        }
+        Self { cancel, ..self }
     }
 
+    /// This engine with a signal of the call's own: cancelling the call leaves the engine's
+    /// signal alone, and the engine's signal reaches the call.
     pub(crate) fn for_call(&self) -> Self {
-        let cancel = if self.cancel_attached {
-            self.cancel.child()
-        } else {
-            Cancel::default()
-        };
-        self.clone().cancel(cancel)
+        self.clone().cancel(self.cancel.child())
     }
     pub(crate) fn backend(&self) -> &Backend {
         &self.backend
     }
-    pub(crate) fn call_contract(
-        &self,
-        question: &impl Function,
-        records: impl Iterator<Item = RecordEvent<Record>> + Send,
-        sink: impl FnMut(Result<Row, Error>),
-        identity: String,
-    ) -> Result<(), Error> {
-        self.call_parallel(question, records, sink, identity)
+    pub(crate) fn batch_size(&self) -> usize {
+        self.batch.get().get()
     }
     fn answer<F: Function>(
         &self,
@@ -254,10 +241,16 @@ struct Window<F, T = Row> {
 
 impl<T, F: FnMut(T)> Window<F, T> {
     /// Hold the rows of request `place`, then hand on every finished request at the front.
+    #[expect(
+        clippy::expect_used,
+        reason = "a request is queued before its answer; a panic here ends the call as a fault"
+    )]
     fn fill(&mut self, place: usize, rows: Vec<T>) {
-        if let Some(slot) = self.rows.get_mut(place - self.first) {
-            *slot = Some(rows);
-        }
+        let slot = self
+            .rows
+            .get_mut(place - self.first)
+            .expect("an answered request is in the window");
+        *slot = Some(rows);
         while let Some(rows) = self.rows.front_mut().and_then(Option::take) {
             self.rows.pop_front();
             self.first += 1;

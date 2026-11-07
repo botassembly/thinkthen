@@ -11,7 +11,24 @@ condition <- function(expr, class, code = NULL) {
 warned <- function(expr) {
   error <- tryCatch(force(expr), thinkthen_failed_rows = identity)
   stopifnot(inherits(error, "thinkthen_failed_rows"))
-  tt_answer(error$rows, errors = "na")
+  plain(tt_answer(error$rows, errors = "na"))
+}
+
+# Remove what errors = "na" adds, leaving the value a caller compares.
+plain <- function(expr) {
+  value <- suppressWarnings(expr, classes = "thinkthen_failed_rows_warning")
+  attr(value, ".thinkthen_failures") <- NULL
+  value
+}
+
+# Return a value with every warning its evaluation signalled.
+caught <- function(expr) {
+  warnings <- list()
+  value <- withCallingHandlers(expr, warning = function(warning) {
+    warnings[[length(warnings) + 1L]] <<- warning
+    invokeRestart("muffleWarning")
+  })
+  list(value = value, warnings = warnings)
 }
 
 check_rows <- function(rows, verb, n) {

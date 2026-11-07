@@ -142,7 +142,7 @@ for name, case in cases:
                 normalize(actual["rows"], backend, case["request"].get("name"), "stub" if backend == "stub" else None)
                 if "error" in actual:
                     assert actual["rows"] == case.get("expected_rows", []), (name, actual)
-                    actual = {"error": actual["error"]}
+                    actual = {key: actual[key] for key in ("error", "http_status") if key in actual}
                 else:
                     actual = actual["rows"]
                 assert same_json(actual, expected), (name, backend, actual, expected)

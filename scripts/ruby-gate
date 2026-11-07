@@ -29,7 +29,7 @@ dependency=$(find "$HOME/.local/share/thinkthen-build-tools/ruby/packages" -name
 test -f "$dependency"
 mkdir -p "$scratch/home" "$scratch/tmp" "$scratch/gems"
 export HOME="$scratch/home" TMPDIR="$scratch/tmp" GEM_HOME="$scratch/gems" GEM_PATH="$scratch/gems:$dev_gems"
-unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH RUBYLIB RUBYOPT BUNDLE_GEMFILE
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY RUBYLIB RUBYOPT BUNDLE_GEMFILE
 export THINKTHEN_RUBY_COVERAGE="$build_target/ruby-coverage.json"
 export THINKTHEN_LOOPBACK="$build_target/debug/loopback" THINKTHEN_CASES="$root/conformance" THINKTHEN_STUB_CASES="$root/construction/stub.json"
 gem install --local --no-document "$dependency" "$scratch/packages"/*"-$platform.gem"
@@ -37,6 +37,7 @@ cd "$scratch"
 python3 "$root/scripts/sdk-readme-examples" ruby
 engine=$(find "$GEM_HOME"/gems/thinkthen-*/lib/thinkthen -name '*thinkthen_ffi.*' -print)
 python3 "$root/scripts/loader-failure-check" "$engine" -- ruby -e 'require "thinkthen"; ThinkThen::Client.open(backend: :stub) {}'
+python3 "$root/scripts/native-lookup-check" "$engine" -- ruby -e 'require "thinkthen"; ThinkThen::Client.open(backend: :stub) {}'
 python3 "$root/sdk/ruby/tests/abi_fixtures.py" --engine "$engine" --fixtures "$THINKTHEN_NATIVE_FIXTURES/manifest.json" --output "$scratch/fixtures"
 export THINKTHEN_NATIVE_FIXTURES="$scratch/fixtures"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then

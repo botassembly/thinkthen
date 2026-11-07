@@ -50,6 +50,8 @@ module ThinkThen
     ABI_VERSION: Integer
     ABI_CODE: error_code
     ABI_MESSAGE: String
+    LIBRARY_VARIABLE: String
+    LIBRARY_PATH_MESSAGE: String
     FUNCTION_NAMES: Hash[Integer, String]
     STATUS_NAMES: Hash[Integer, String]
     BACKEND_NAMES: Hash[Integer, String]
@@ -264,6 +266,7 @@ module ThinkThen
     @error: Exception?
     def initialize: (untyped) -> void
     def run: (untyped) -> void
+    def abandon: () -> void
     def value: () -> untyped
   end
   class NativeReader

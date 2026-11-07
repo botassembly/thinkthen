@@ -4,7 +4,7 @@ description: Install the thinkthen command on macOS, Linux or Windows with one l
 goal: A developer installs the thinkthen command the way that suits their machine, checks it runs, and later upgrades or removes it, with shell completions and the manual page if they want them.
 reader: A developer on macOS, Linux or Windows who wants the thinkthen command on PATH
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-06
 ---
 import Example from '../../../components/Example.astro';
 import InstallLine from '../../../components/InstallLine.astro';
@@ -35,6 +35,14 @@ Open a new terminal and run:
 If the shell answers `command not found`, the folder that holds `thinkthen` isn't on your `PATH`. Run the line the installer printed, or open a new terminal.
 
 ThinkThen runs on <Fact k="floors.macos" />, on Linux x86-64 and arm64 with <Fact k="floors.linux" />, and on <Fact k="floors.windows" />.
+
+## Set Windows PowerShell to UTF-8
+
+Windows PowerShell 5.1 sends piped text as ASCII, so it turns each accented or non-Latin character into `?` before ThinkThen reads it. `漢字 café` arrives as `?? caf?`. ThinkThen can't tell, so it answers the changed text, and you pay for that question. PowerShell also garbles such text when it reads the output of ThinkThen into a variable or another command.
+
+Run this line in each session before you pipe text, or add it to your `$PROFILE`:
+
+<InstallLine k="install.windowsUtf8" lang="powershell" />
 
 ## Install with Homebrew
 

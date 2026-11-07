@@ -323,6 +323,8 @@ def run_all(directory: Path, scratch: Path) -> None:
                 except tt.ThinkThenError as error:
                     assert not actual, (filename, actual)
                     actual = {"error": error.code.value}
+                    if error.http_status is not None:
+                        actual["http_status"] = error.http_status
                 finally:
                     if client is not None:
                         client.close()

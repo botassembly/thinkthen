@@ -54,8 +54,8 @@ impl Choose {
     }
     /// Set this function's typed threshold.
     #[must_use]
-    pub fn threshold(mut self, threshold: Threshold) -> Self {
-        self.inner.threshold = threshold;
+    pub fn threshold(mut self, threshold: Cut) -> Self {
+        self.inner.threshold = threshold.into();
         self
     }
 }
@@ -68,6 +68,7 @@ pub(crate) struct ChooseWire {
     #[serde(deserialize_with = "crate::core::diagnostic::choices")]
     #[schemars(with = "Vec<AnswerOption>")]
     choices: Vec<OptionWire>,
+    #[schemars(with = "Cut")]
     #[serde(default)]
     #[serde(deserialize_with = "crate::core::diagnostic::threshold")]
     threshold: ThresholdInput,
@@ -90,8 +91,10 @@ impl TryFrom<ChooseWire> for Choose {
                 .map(AnswerOption::try_from)
                 .collect::<Result<Vec<_>, _>>()?,
         )?;
+        let threshold = value.threshold.admit()?;
+        threshold.require_cut()?;
         question.field = admit_field(value.field)?;
-        question.inner.threshold = value.threshold.admit()?;
+        question.inner.threshold = threshold;
         Ok(question)
     }
 }

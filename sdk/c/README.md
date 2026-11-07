@@ -2,7 +2,7 @@
 
 The C SDK asks questions about text from your C code. Its first function, `thinkthen_decide`, answers a yes-or-no question with yes (`true`), no (`false`) or not sure.
 
-Download the C archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it into `thinkthen`. It holds the header, the library and the engine, so keep them together. You need a C11 compiler and pkg-config. Save the program below as `example.c`, then compile and run it:
+Download the C archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it into `thinkthen`. It holds the header, the library and the engine, so keep them together. You need a C11 compiler and pkg-config. Save the program below as `example.c`, then compile and run it. These commands are for Linux and macOS; [Build on Windows](#build-on-windows) has the Windows ones.
 
 ```sh
 export PKG_CONFIG_PATH="$PWD/thinkthen/lib/pkgconfig"
@@ -13,6 +13,18 @@ cc -std=c11 -Wall -Wextra -Werror example.c -o example \
 ```
 
 The `-rpath` flag tells the program where to find the library, because the pkg-config file names no run-time path. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+
+## Build on Windows
+
+Extract the C archive for Windows, `thinkthen-c-0.2.0-windows-x86_64.zip`, into `thinkthen`. You need clang-cl and the Visual Studio C++ tools, and no pkg-config. Open Developer PowerShell for Visual Studio in the folder that holds `thinkthen` and `example.c`, then run:
+
+```powershell
+clang-cl /nologo /std:c11 /MD /Ithinkthen\include example.c /Fe:example.exe /link thinkthen\lib\thinkthen_ffi.lib
+$env:PATH = "$PWD\thinkthen\bin;$env:PATH"
+.\example.exe
+```
+
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
 
 ## Ask a question
 
@@ -58,7 +70,7 @@ true
 
 ## Not sure and failures
 
-`thinkthen_decide` returns `THINKTHEN_OK` and writes `is_refund` only when there is an answer. When ThinkThen could not judge the message, it returns a negative code and leaves `is_refund` alone, so a failure never reads as no; `report` prints the code's name, such as `record.empty`, and its message. decide is not sure only when you set a low and a high bar: build the question with `thinkthen_question_new`, set the bars with `thinkthen_question_set_band`, and ask it with `thinkthen_run_one`, which returns `THINKTHEN_UNSURE` between them. Send those messages to a person.
+`thinkthen_decide` returns `THINKTHEN_OK` and writes `is_refund` only when there is an answer. When ThinkThen could not judge the message, it returns a negative code and leaves `is_refund` alone, so a failure never reads as no; `report` prints the code's name, such as `record.empty`, and its message. decide is not sure only when you set a low and a high bar: `thinkthen_decide_band(client, question, 0.3, 0.7, text, len, &is_refund, &error)` answers no below 0.3 and yes at 0.7 or above, and returns `THINKTHEN_UNSURE` between them with `is_refund` unchanged. Send those messages to a person.
 
 ## Next
 

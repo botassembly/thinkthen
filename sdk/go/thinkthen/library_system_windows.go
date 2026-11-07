@@ -1,4 +1,4 @@
-//go:build thinkthen_system && windows
+//go:build cgo && thinkthen_system && windows
 
 package thinkthen
 

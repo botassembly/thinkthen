@@ -252,7 +252,7 @@ jobs:
   windows-r:
     if: always()
     runs-on: windows-2022
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions: {contents: read}
     env:
       PYTHONUTF8: '1'
@@ -288,7 +288,97 @@ jobs:
           path: windows-r/
           if-no-files-found: error
           retention-days: 7
+      - name: Install R from the R-universe Windows path
+        id: install-r-from-the-r-universe-windows-path
+        if: always()
+        run: python3 scripts/release_windows_r.py universe "$RUNNER_TEMP/r-universe"
 
+      - name: Report every qualification failure
+        if: always()
+        env:
+          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/qualification-summary
+
+  # Runs beside the first jobs so a preparation failure shows before windows-check starts.
+  # Hosted runners are discarded, so windows-check repeats these steps on its own runner.
+  windows-prepare:
+    if: always()
+    runs-on: windows-2022
+    timeout-minutes: 90
+    permissions: {contents: read}
+    env:
+      PYTHONUTF8: '1'
+    defaults: {run: {shell: bash}}
+    steps:
+      - name: Preserve source bytes on Windows
+        id: configure-checkout
+        if: always()
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        id: checkout
+        if: always()
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        id: setup-python
+        if: always()
+        with: {python-version: '3.13'}
+      - if: always()
+        id: setup-go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with: {go-version: '1.24.13', cache: false}
+      - if: always()
+        id: setup-java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with: {distribution: temurin, java-version: '22.0.2+9'}
+      - if: always()
+        id: setup-dotnet
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with: {dotnet-version: '10.0.114'}
+      - name: Select the pinned Node runtime
+        id: setup-node
+        if: always()
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22.12.0'}
+      - name: Select the pinned Ruby runtime
+        id: setup-ruby
+        if: always()
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
+        with: {ruby-version: '3.3.8'}
+      - name: Prepare pinned Rust and offline header dependencies
+        id: prepare-rust
+        if: always()
+        run: |
+          python3 -c 'import hashlib,os; from pathlib import Path; target=Path.home()/".local/share/thinkthen-build-tools/windows-native"/hashlib.sha256(os.fsencode(Path.cwd())).hexdigest(); open(os.environ["GITHUB_ENV"],"a",encoding="utf-8").write("CARGO_TARGET_DIR="+str(target)+"\n")'
+          python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_rust import prepare; prepare()'
+          cargo fetch --locked --target x86_64-pc-windows-msvc
+      - name: Build the pinned native Windows loopback once
+        id: windows-loopback
+        if: always()
+        shell: pwsh
+        env:
+          CARGO_BUILD_JOBS: '2'
+          RUSTFLAGS: '-C target-feature=+crt-static'
+        run: |
+          $env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
+          cargo build --offline --locked --target x86_64-pc-windows-msvc -p loopback --bin loopback
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "THINKTHEN_LOOPBACK=$env:CARGO_TARGET_DIR/x86_64-pc-windows-msvc/debug/loopback.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Prepare the independent Windows C dependency
+        id: prepare-the-independent-windows-c-dependency
+        if: always()
+        run: python3 scripts/qualification-windows-prepare
+      - name: Prepare installed package runtimes
+        id: prepare-installed-package-runtimes
+        if: always()
+        run: scripts/release-workflow prepare windows-x86_64
+      - name: Prepare Kotlin README compiler dependencies
+        id: prepare-kotlin-readme-compiler-dependencies
+        if: always()
+        run: python3 scripts/kotlin_compiler.py
       - name: Report every qualification failure
         if: always()
         env:
@@ -505,7 +595,7 @@ jobs:
       - if: always()
         id: setup-dotnet
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
-        with: {dotnet-version: '10.0.103'}
+        with: {dotnet-version: '10.0.114'}
       - name: Select the pinned Node runtime
         id: setup-node
         if: always()
@@ -578,6 +668,8 @@ jobs:
         env:
           CARGO_BUILD_JOBS: '2'
           RUSTFLAGS: '-C target-feature=+crt-static'
+          THINKTHEN_EXPECT_WINDOWS_STORE: '1'
+          THINKTHEN_TEST_WINDOWS_STORE: '1'
         run: |
           $env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

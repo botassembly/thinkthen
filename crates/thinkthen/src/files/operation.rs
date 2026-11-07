@@ -8,7 +8,7 @@ use crate::files::{
     csv, headers, local, spool, xlsx,
 };
 use crate::records::Record;
-use crate::{Cancel, Engine, Error, ErrorKind, OffsetUnit, Question, Request};
+use crate::{Cancel, Code, Engine, Error, ErrorKind, OffsetUnit, Question, Request};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -27,6 +27,7 @@ impl FileJob {
     ) -> Result<FileReceipt, FileError> {
         if !request.records().is_empty() {
             return Err(invalid(
+                Code::UsageTable,
                 "a file operation's request must not contain initial records",
             ));
         }
@@ -37,19 +38,19 @@ impl FileJob {
         let filter = matches!(prepared, Question::Filter(_));
         let names: Vec<String> = if annotation {
             if self.into.is_some() {
-                return Err(invalid("annotate uses its question names; omit --into"));
+                return Err(invalid(
+                    Code::UsageColumn,
+                    "annotate uses its question names; omit --into",
+                ));
             }
             match prepared {
                 Question::Annotate(question) => question.questions().keys().cloned().collect(),
                 _ => Vec::new(),
             }
         } else {
-            vec![
-                self.into
-                    .clone()
-                    .filter(|s| !s.is_empty())
-                    .ok_or_else(|| invalid("name the answer column with --into NAME"))?,
-            ]
+            vec![self.into.clone().filter(|s| !s.is_empty()).ok_or_else(|| {
+                invalid(Code::UsageColumn, "name the answer column with --into NAME")
+            })?]
         };
         let _lock = if matches!(self.output, FileOutput::InPlace) {
             Some(crate::files::lock::SourceLock::acquire(&self.input)?)
@@ -68,12 +69,16 @@ impl FileJob {
                 .is_symlink()
             {
                 return Err(invalid(
+                    Code::UsageOutput,
                     "in-place input cannot be a symbolic link; use its real path",
                 ));
             }
             check_owner(&self.input)?;
         } else if output.try_exists().map_err(local)? {
-            return Err(invalid("output already exists; choose a new --output path"));
+            return Err(invalid(
+                Code::UsageOutput,
+                "output already exists; choose a new --output path",
+            ));
         }
         let mut temporary_paths = crate::files::cleanup::TemporaryPaths::default();
         let mut snapshot = temporary_paths.temporary(None).map_err(local)?;
@@ -101,12 +106,15 @@ impl FileJob {
                 self.delimiter(),
                 cancel,
             )?;
-            let header = reader
-                .next()?
-                .ok_or_else(|| invalid("input has no header row; add column names"))?;
+            let header = reader.next()?.ok_or_else(|| {
+                invalid(
+                    Code::UsageTable,
+                    "input has no header row; add column names",
+                )
+            })?;
             headers(&header.fields, &self.columns).map_err(|error| match error {
-                FileError::Invalid(message) => {
-                    FileError::Invalid(format!("CSV/TSV row 1 {message}"))
+                FileError::Invalid(code, message) => {
+                    FileError::Invalid(code, format!("CSV/TSV row 1 {message}"))
                 }
                 error => error,
             })?;
@@ -118,21 +126,24 @@ impl FileJob {
                         .fields
                         .iter()
                         .position(|h| h == name)
-                        .ok_or_else(|| invalid("selected column is missing"))
+                        .ok_or_else(|| invalid(Code::UsageColumn, "selected column is missing"))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             input_headers = header.fields;
             while let Some(row) = reader.next()? {
                 check_cancel(cancel)?;
                 if row.fields.len() != input_headers.len() {
-                    return Err(FileError::Invalid(crate::core::diagnostic::requirement(
-                        &format!("CSV/TSV row {} (line {})", row.number, row.line),
-                        &format!("{} fields", input_headers.len()),
-                        &format!(
-                            "{} fields; quote a field containing a separator or remove the extra separator",
-                            row.fields.len()
+                    return Err(FileError::Invalid(
+                        Code::UsageTable,
+                        crate::core::diagnostic::requirement(
+                            &format!("CSV/TSV row {} (line {})", row.number, row.line),
+                            &format!("{} fields", input_headers.len()),
+                            &format!(
+                                "{} fields; quote a field containing a separator or remove the extra separator",
+                                row.fields.len()
+                            ),
                         ),
-                    )));
+                    ));
                 }
                 let values = positions
                     .iter()
@@ -154,9 +165,12 @@ impl FileJob {
         let mut unique: BTreeSet<_> = input_headers.iter().map(String::as_str).collect();
         for name in &generated {
             if name.is_empty() || !unique.insert(name) {
-                return Err(invalid(&format!(
-                    "answer column `{name}` already exists or collides with another generated column; choose a different name"
-                )));
+                return Err(invalid(
+                    Code::UsageColumn,
+                    &format!(
+                        "answer column `{name}` already exists or collides with another generated column; choose a different name"
+                    ),
+                ));
             }
             if self.format == FileFormat::Xlsx {
                 check_text(name)?;
@@ -166,6 +180,7 @@ impl FileJob {
             && sheet.last_column + generated.len() > xlsx::MAX_COLUMN
         {
             return Err(invalid(
+                Code::UsageTable,
                 "answer columns exceed Excel's column limit; select a workbook with room to append columns",
             ));
         }
@@ -360,9 +375,12 @@ impl FileJob {
             .and_then(|s| s.to_str())
             .is_some_and(|extension| extension.eq_ignore_ascii_case(expected))
         {
-            return Err(invalid(&format!(
-                "output must have a .{expected} extension to preserve the selected format"
-            )));
+            return Err(invalid(
+                Code::UsageOutput,
+                &format!(
+                    "output must have a .{expected} extension to preserve the selected format"
+                ),
+            ));
         }
         if !matches!(self.output, FileOutput::InPlace)
             && path.try_exists().map_err(local)?
@@ -370,6 +388,7 @@ impl FileJob {
                 == fs::canonicalize(&self.input).map_err(local)?
         {
             return Err(invalid(
+                Code::UsageOutput,
                 "output names the input; use --in-place to retain a backup first",
             ));
         }
@@ -540,27 +559,32 @@ fn select(question: &mut Map<String, Value>, columns: &[String]) -> Result<bool,
         {
             Ok(true)
         }
-        Some(pointer) => Err(invalid(&format!(
-            "field pointer `{pointer}` selects none of the --column names; select its column or remove the pointer"
-        ))),
+        Some(pointer) => Err(invalid(
+            Code::UsageColumn,
+            &format!(
+                "field pointer `{pointer}` selects none of the --column names; select its column or remove the pointer"
+            ),
+        )),
     }
 }
 
 fn sibling(input: &Path, suffix: &str) -> Result<PathBuf, FileError> {
-    let stem = input
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .ok_or_else(|| invalid("input filename must be UTF-8 and name a file"))?;
+    let stem = input.file_stem().and_then(|s| s.to_str()).ok_or_else(|| {
+        invalid(
+            Code::UsageOutput,
+            "input filename must be UTF-8 and name a file",
+        )
+    })?;
     let extension = input
         .extension()
         .and_then(|s| s.to_str())
-        .ok_or_else(|| invalid("input must have a format extension"))?;
+        .ok_or_else(|| invalid(Code::UsageOutput, "input must have a format extension"))?;
     Ok(input.with_file_name(format!("{stem}.{suffix}.{extension}")))
 }
 fn check_owner(input: &Path) -> Result<(), FileError> {
     let filename = input
         .file_name()
-        .ok_or_else(|| invalid("input must name a file"))?
+        .ok_or_else(|| invalid(Code::UsageOutput, "input must name a file"))?
         .to_string_lossy();
     if input
         .with_file_name(format!("~${filename}"))
@@ -568,6 +592,7 @@ fn check_owner(input: &Path) -> Result<(), FileError> {
         .map_err(local)?
     {
         return Err(invalid(
+            Code::UsageOutput,
             "Excel appears to have the workbook open; close it before using --in-place",
         ));
     }
@@ -581,8 +606,12 @@ fn sync_directory(path: &Path) -> Result<(), FileError> {
 
 #[cfg(windows)]
 fn sync_directory(_path: &Path) -> Result<(), FileError> {
-    // Windows publication flushes the published file. It does not promise
-    // the Unix directory-entry durability provided by fsync on its parent.
+    // Windows needs no directory flush. Each caller has already flushed the
+    // published file through its handle, after the rename. NTFS keeps the name
+    // in that file's own record and journals the rename, so a crash leaves the
+    // old name or the new one, never a damaged entry. Unix keeps the name only
+    // in the parent, which is why it fsyncs the parent. FlushFileBuffers, the
+    // one Windows flush, is documented for files and volumes, not directories.
     Ok(())
 }
 
@@ -606,6 +635,7 @@ fn check_cell(cell: &Cell) -> Result<(), FileError> {
 fn check_text(text: &str) -> Result<(), FileError> {
     if text.encode_utf16().count() > xlsx::MAX_TEXT_UNITS {
         return Err(invalid(
+            Code::UsageOutput,
             "answer exceeds Excel's cell text limit; use CSV or TSV to retain the full answer",
         ));
     }
@@ -613,15 +643,15 @@ fn check_text(text: &str) -> Result<(), FileError> {
         !matches!(c, '\t' | '\n' | '\r') && (c < ' ' || matches!(c, '\u{fffe}' | '\u{ffff}'))
     }) {
         return Err(invalid(
+            Code::UsageOutput,
             "answer contains characters unsupported by Excel XML; use CSV or TSV",
         ));
     }
     Ok(())
 }
-fn invalid(message: &str) -> FileError {
-    FileError::Invalid(crate::core::diagnostic::requirement(
-        "file",
-        "a valid file operation",
-        message,
-    ))
+fn invalid(code: Code, message: &str) -> FileError {
+    FileError::Invalid(
+        code,
+        crate::core::diagnostic::requirement("file", "a valid file operation", message),
+    )
 }

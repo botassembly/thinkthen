@@ -182,6 +182,16 @@ def windows(scratch):
     else:
         raise AssertionError('changed pinned Windows R binary accepted')
     leaf.write_bytes(original)
+    # A closure package without a pin is refused, whether direct or transitive.
+    for package in ('Direct', 'Leaf'):
+        state['pins'] = lambda: {name: pin for name, pin in selected.items() if name != package + '_1.0.zip'}
+        try:
+            state['dependencies'](scratch / ('omitted-' + package), runtime)
+        except ValueError as error:
+            assert 'Missing pinned R binary dependency: ' + package in str(error), error
+        else:
+            raise AssertionError('unpinned Windows R dependency accepted: ' + package)
+    state['pins'] = lambda: selected
     for built, imports in [('R 4.5.1; x86_64-w64-mingw32; date; windows', 'base'),
                            ('R 5.6.1; x86_64-w64-mingw32; date; windows', 'base'),
                            ('R 4.6.2; x86_64-w64-mingw32; date; windows', 'base'),

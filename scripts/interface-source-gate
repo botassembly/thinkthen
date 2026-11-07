@@ -62,7 +62,8 @@ if [ "$shared_abi" = 1 ]; then
     PATH="$PWD/target/source-tools/bin:$PATH"
     export PATH
     scripts/jvm-prepare
-    scripts/csharp-prepare
+    # A new nuget.org advisory must not stop every lane on code nobody changed.
+    scripts/csharp-prepare --advisories-warn
     scripts/ruby-dev-prepare
     npm --prefix sdk/typescript ci --ignore-scripts --no-audit --no-fund
 fi

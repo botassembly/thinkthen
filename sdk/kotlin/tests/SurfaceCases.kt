@@ -131,7 +131,7 @@ private suspend fun toolboxes() {
     }
 }
 
-// Feature: Filter and rank preserve original objects and retain failures under top.
+// Feature: Filter preserves original objects, rank gives equal copies, and both retain failures under top.
 private suspend fun originals() {
     val first = buildJsonObject { put("id", "first"); put("body", "alpha") }
     val last = buildJsonObject { put("id", "last"); put("body", "beta") }
@@ -156,14 +156,14 @@ private suspend fun originals() {
         val successful = ranked.single { it.row is Row.Answered }
         val rank: Long = successful.answer()
         check(rank == 1L)
-        ranked.forEach { check(snapshotMatches(it.item, records[(it.row.position - 1L).toInt()])) }
+        ranked.forEach { check(it.item == records[(it.row.position - 1L).toInt()]) }
         val failed = ranked.single { it.row is Row.Failed }
-        check(failed.row.position == 2L && failed.item is dev.thinkthen.JsonNull)
-        // The exact typed shape: text arrives as JsonString, JSON as its JsonValue.
-        val snapshots: List<Ranked<dev.thinkthen.JsonValue>> = client.rank("Priority?", listOf("alpha", "beta"), listOf("low", "high")).toList()
-        check(snapshots.associate { it.position to it.item } == mapOf(1L to dev.thinkthen.JsonString("alpha"), 2L to dev.thinkthen.JsonString("beta")))
-        val typed: List<Ranked<dev.thinkthen.JsonValue>> = client.rank("Priority?", listOf(Ticket("refund")), listOf("low", "high"), TicketSerializer).toList()
-        check(typed.single().item is dev.thinkthen.JsonObject && typed.single().item.toString() == "{\"body\":\"refund\"}")
+        check(failed.row.position == 2L && failed.item == null)
+        val text: List<Ranked<String>> = client.rank("Priority?", listOf("alpha", "beta"), listOf("low", "high")).toList()
+        check(text.associate { it.position to it.item } == mapOf(1L to "alpha", 2L to "beta"))
+        val refused = try { client.rank("Priority?", listOf(Ticket("refund")), listOf("low", "high"), TicketSerializer).toList(); error("Accepted a one-way serializer") }
+            catch (failure: kotlinx.serialization.SerializationException) { failure }
+        check("Ticket" in refused.message.orEmpty() && refused.cause?.message == "Consumer only writes records")
     }
 }
 

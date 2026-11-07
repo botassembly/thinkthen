@@ -87,7 +87,7 @@ with tempfile.TemporaryDirectory() as folder:
                 actual = json.loads(result.stdout)
                 if isinstance(actual, dict):
                     assert not actual.get("rows"), (entry, actual)
-                    actual = {"error": actual["error"]}
+                    actual = {key: actual[key] for key in ("error", "http_status") if key in actual}
                 else:
                     actual = [normalize(row, backend, settings["model"]) for row in actual]
                 assert actual == case["expected"], (entry, backend, actual, case["expected"])
@@ -205,8 +205,8 @@ result = subprocess.run([consumer, "surface"], env=env, capture_output=True, tex
 assert result.returncode == 0, (result.stdout, result.stderr)
 assert result.stdout == "Swift public interface passed\n", result.stdout
 
-# The library has no path override. Replace the installed resource in each fresh
-# process, so refused fixtures abort if layout access precedes the handshake.
+# Test the packaged lookup, not the override. Replace the installed resource in each
+# fresh process, so refused fixtures abort if layout access precedes the handshake.
 fixture_path = os.environ["THINKTHEN_NATIVE_FIXTURES"]
 cases = json.loads((Path(fixture_path) / "manifest.json").read_text())["cases"]
 filename = "libthinkthen_ffi.dylib" if sys.platform == "darwin" else "thinkthen_ffi.dll" if sys.platform == "win32" else "libthinkthen_ffi.so"

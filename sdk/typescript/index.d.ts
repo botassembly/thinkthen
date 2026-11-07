@@ -60,7 +60,7 @@ export interface NumericOptions extends CallOptions {
   /** Minimum probability for a positive match. */
   readonly threshold?: number }
 /** Choices required for a direct choose call. */
-export interface ChooseOptions<C extends readonly string[]> extends DecisionOptions, Descriptions<C[number]> {
+export interface ChooseOptions<C extends readonly string[]> extends NumericOptions, Descriptions<C[number]> {
   /** Allowed answers, preserving the literal TypeScript domain. */
   readonly choices: C }
 /** Labels required for a direct tag call. */
@@ -250,7 +250,7 @@ export type FilterQuestion = DecisionFields & Pick<BooleanOptions, "yesMeans" | 
   /** The bounded question to ask about the selected record field. */
   readonly question: string };
 /** A reusable question whose answer comes from the supplied choices. */
-export type ChooseQuestion<C extends readonly string[] = readonly string[]> = DecisionFields & Descriptions<C[number]> & {
+export type ChooseQuestion<C extends readonly string[] = readonly string[]> = NumericFields & Descriptions<C[number]> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "choose";
   /** The bounded question to ask about the selected record field. */

@@ -16,6 +16,7 @@ def cases(root, surface):
         'SQLite wrong-type settings': 'native setting values reject strings before canonical settings JSON admission',
         'R tags in a serialized question': 'native tag arguments expose labels and cannot carry an unknown JSON field',
         'Malformed relation rule source': 'native rule composites convert or reject source before canonical JSON admission',
+        'Choose band in a saved toolbox': 'choose has no low or high argument; a band reaches admission only as JSON',
     }
     for case in fixtures:
         if case.get('kind') != 'admission':
@@ -36,9 +37,10 @@ def cases(root, surface):
         else:
             assert case['boundary'] == 'question', case
             prefix = 'question.'
-        assert case['message'].startswith(prefix), case
+        # A refusal after parsing names no path, so it reads the same at every depth.
+        contextual = case['message'].startswith(prefix)
         # SQL's relation-name translation admits rules before the parent question.
-        message = (case['message'] if child['function'] == 'relate' else
+        message = (case['message'] if child['function'] == 'relate' or not contextual else
                    'question.questions.[0].' + case['message'][len(prefix):])
         print(f'{surface} admission {name}: public projection through annotate.toolbox child')
         yield case, {'question': {'function': 'annotate', 'questions': {'ready': child}},

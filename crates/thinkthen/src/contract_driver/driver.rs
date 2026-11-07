@@ -51,9 +51,11 @@ impl Driver {
             request.records().iter().map(Record::json).collect(),
             offsets,
             InputKind::Finite,
+            HOST_INPUT,
         )?;
         Ok(Self::from_call(call))
     }
+    #[cfg(feature = "native")]
     pub(crate) fn open_records(
         engine: &Engine,
         request: &Request,
@@ -69,6 +71,7 @@ impl Driver {
             records,
             offsets,
             InputKind::Finite,
+            HOST_INPUT,
         )?;
         call.sender.close();
         Ok(Self::from_call(call))

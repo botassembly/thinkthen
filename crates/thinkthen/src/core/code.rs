@@ -75,6 +75,10 @@ mod definition {
         UsageOffsets = 1016, "usage.offsets", Usage, false;
         UsageArgument = 1017, "usage.argument", Usage, false;
         UsageOption = 1018, "usage.option", Usage, false;
+        UsageColumn = 1019, "usage.column", Usage, false;
+        UsageSheet = 1020, "usage.sheet", Usage, false;
+        UsageOutput = 1021, "usage.output", Usage, false;
+        UsageTable = 1022, "usage.table", Usage, false;
         RecordJson = 2001, "record.json", Record, true;
         RecordMissing = 2002, "record.missing", Record, true;
         RecordTooLarge = 2003, "record.too-large", Record, true;

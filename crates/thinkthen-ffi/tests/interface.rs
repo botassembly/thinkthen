@@ -51,6 +51,27 @@ fn decide_writes_the_backend_answer_and_never_sends_blank_text() {
 }
 
 #[test]
+fn decide_band_follows_each_bar_and_sends_nothing_it_refuses() {
+    let server = Loopback::noul(0.5).unwrap();
+    assert_eq!(
+        program("band", Some(&server)),
+        "band 0.6 0.8 rc=0 answer=0\n\
+         band 0.4 0.8 rc=4 answer=1\n\
+         band 0.4 0.8 rc=4 answer=0\n\
+         band 0.2 0.4 rc=0 answer=1\n\
+         band 0.8 0.2 rc=-1001 answer=1\n\
+         client rc=-1017 code=1017 answer=1\n\
+         question rc=-1017 code=1017 answer=1\n\
+         text rc=-2005 code=2005 answer=1\n\
+         answer rc=-1017 code=1017\n\
+         wording rc=-1012 code=1012 answer=1\n\
+         invalid rc=-2004 code=2004 answer=1\n\
+         blank rc=-2005 code=2005 answer=1\n"
+    );
+    assert_eq!(server.requests().len(), 4);
+}
+
+#[test]
 fn choose_writes_the_chosen_index_and_leaves_it_alone_when_not_sure() {
     let server = Loopback::case(&json!({"replies":[
         {"contains":"first note","distribution":{"billing":0.1,"shipping":0.8,"other":0.1}},

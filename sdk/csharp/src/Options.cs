@@ -18,8 +18,8 @@ public sealed record ChooseOptions
     public IReadOnlyDictionary<string, string>? Descriptions { get; init; }
     /// <summary>Selects field using a JSON Pointer; null uses the whole record.</summary>
     public Pointer? Field { get; init; }
-    /// <summary>Sets the question's probability cutoff or band; null uses the engine default.</summary>
-    public Threshold? Threshold { get; init; }
+    /// <summary>Sets the question's probability cutoff; null uses the engine default.</summary>
+    public Cut? Threshold { get; init; }
 }
 /// <summary>Optional settings for tag questions.</summary>
 public sealed record TagOptions

@@ -338,11 +338,7 @@ def swift_package(out, version, host, rid, cache):
     swift.mkdir()
     with tarfile.open(bundle) as source: source.extractall(swift, filter='data')
     consumer = swift.parent / 'Consumer'
-    consumer.mkdir()
-    for path in (ROOT / 'sdk/swift/tests').glob('*.swift'): copy(path, consumer / path.name)
-    run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')
-    run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md', consumer / 'Examples')
-    run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', consumer / 'Guide')
+    run(sys.executable, ROOT / 'scripts/swift-consumer-stage', consumer)
     destination = out / 'checks/swift'
     destination.mkdir()
     commands = '''set -eu
@@ -491,6 +487,7 @@ def finalize(out, version, java, r_version):
     from release_notice_packages import distribute
     distribute(out, host, ROOT)
     finish(out)
+    run(sys.executable, ROOT / 'scripts/notices', '--packages', out)
     run('scripts/runtime-floor-check', out)
     return java
 

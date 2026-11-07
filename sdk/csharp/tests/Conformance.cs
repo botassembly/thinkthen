@@ -119,6 +119,7 @@ internal static partial class Program
                 {
                     Check(output.Count == 0, "admission returned rows");
                     Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.ErrorCode, JsonOptions), failure["error"]), "admission error code");
+                    Check(error.HttpStatus == failure["http_status"]?.GetValue<int>(), "call error HTTP status");
                 }
                 catch (OperationCanceledException error)
                 {

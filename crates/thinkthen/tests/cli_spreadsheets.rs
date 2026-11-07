@@ -162,6 +162,8 @@ fn in_place_preserves_a_workbook_saved_or_opened_during_the_request() {
             .output()
             .unwrap();
         assert_eq!(result.status.code(), Some(5), "{result:?}");
+        // Found after the answers exist, so the source is left alone and the output kept.
+        assert_eq!(support::reported(&result), "local.io");
         assert!(server.count() > 0);
         assert_eq!(
             fs::read(&input).unwrap(),
@@ -623,9 +625,9 @@ fn excel_handles_prefixed_sparse_rows_and_literal_escape_patterns() {
 #[test]
 fn excel_reports_missing_caches_and_selected_merges_without_output() {
     let directory = TempDir::new().unwrap();
-    for (name, column, cause) in [
-        ("cache", "Formula", "without a saved value"),
-        ("merge", "Body", "merged cells"),
+    for (name, column, code, cause) in [
+        ("cache", "Formula", "usage.table", "without a saved value"),
+        ("merge", "Body", "usage.column", "merged cells"),
     ] {
         let input = directory.path().join(format!("{name}.xlsx"));
         workbook(&input);
@@ -646,6 +648,7 @@ fn excel_reports_missing_caches_and_selected_merges_without_output() {
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(2));
+        assert_eq!(support::reported(&output), code);
         assert!(
             String::from_utf8_lossy(&output.stderr).contains(cause),
             "{}",
@@ -948,7 +951,7 @@ fn workbook_individual_shared_string_uses_the_record_byte_limit() {
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     assert!(output.stdout.is_empty());
     let error = String::from_utf8(output.stderr).unwrap();
-    assert!(error.contains("usage.question"), "{error}");
+    assert!(error.contains("usage.table"), "{error}");
     assert!(error.contains("record exceeds the 64 MiB limit"), "{error}");
     assert!(
         !directory
@@ -990,4 +993,162 @@ fn spreadsheet_choices_ignore_the_environment() {
         .output()
         .unwrap();
     assert_eq!(missing.status.code(), Some(2), "{missing:?}");
+}
+
+#[test]
+fn table_mistakes_print_the_code_naming_what_to_change() {
+    let directory = TempDir::new().unwrap();
+    for (name, contents) in [
+        ("good.csv", "Body,ready\nhello,no\n"),
+        ("taken.csv", ""),
+        ("ragged.csv", "Body\nhello,extra\n"),
+        ("repeated.csv", "Body,Body\nhello,there\n"),
+        ("empty.csv", ""),
+    ] {
+        fs::write(directory.path().join(name), contents).unwrap();
+    }
+    for (question, arguments, code) in [
+        (
+            "Ready?",
+            "good.csv --column Bdy --into answer",
+            "usage.column",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --column Body --into answer",
+            "usage.column",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --into ready",
+            "usage.column",
+        ),
+        (
+            "Ready?",
+            "good.csv --sheet Intake --column Body --into answer",
+            "usage.sheet",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --into answer --output taken.csv",
+            "usage.output",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --into answer --output answers.txt",
+            "usage.output",
+        ),
+        (
+            "Ready?",
+            "ragged.csv --column Body --into answer",
+            "usage.table",
+        ),
+        (
+            "Ready?",
+            "repeated.csv --column Body --into answer",
+            "usage.table",
+        ),
+        (
+            "Ready?",
+            "empty.csv --column Body --into answer",
+            "usage.table",
+        ),
+        ("", "good.csv --column Body --into answer", "usage.question"),
+        (
+            "Ready?",
+            "good.csv --column Body --into answer --in-place --output new.csv",
+            "usage.option",
+        ),
+    ] {
+        let output = support::command()
+            .current_dir(directory.path())
+            .args(["decide", question, "--backend", "stub"])
+            .args(arguments.split(' '))
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2), "{arguments}: {output:?}");
+        assert_eq!(support::reported(&output), code, "{arguments}: {output:?}");
+    }
+    assert_eq!(fs::read(directory.path().join("taken.csv")).unwrap(), b"");
+    assert!(!directory.path().join("good.thinkthen.csv").exists());
+}
+
+fn csv_answers(server: &loopback::Loopback, input: &str) -> std::process::Output {
+    let mut child = support::command()
+        .args(["decide", "Ready?", "--from", "csv"])
+        .args(["--column", "Body", "--into", "ready"])
+        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_API_KEY", loopback::KEY)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn trailing_blank_csv_lines_are_ignored() {
+    for (input, table, requests) in [
+        ("Body\nhello\n\n\r\n\n", "Body,ready\nhello,TRUE\n", 1),
+        (
+            "Body,Note\r\nhello,x\r\n\r\n",
+            "Body,Note,ready\r\nhello,x,TRUE\r\n",
+            1,
+        ),
+        ("Body\n\"a\n\nb\"\n\n", "Body,ready\n\"a\n\nb\",TRUE\n", 1),
+        ("Body\n\n", "Body,ready\n", 0),
+    ] {
+        let server = loopback::Loopback::noul(0.9).unwrap();
+        let output = csv_answers(&server, input);
+        assert_eq!(output.status.code(), Some(0), "{input:?}: {output:?}");
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            table,
+            "{input:?}"
+        );
+        assert_eq!(server.count(), requests, "{input:?}");
+    }
+}
+
+#[test]
+fn a_blank_csv_line_inside_the_data_is_refused_by_line() {
+    for (input, place) in [
+        ("Body\nhello\n\nworld\n", "row 3 (line 3)"),
+        (
+            "Body,Note\r\nhello,x\r\n\r\n\r\nworld,y\r\n",
+            "row 3 (line 3)",
+        ),
+        ("Body\n\"a\nb\"\n\nworld\n", "row 3 (line 4)"),
+        ("\nBody\nhello\n", "row 1 (line 1)"),
+    ] {
+        let server = loopback::Loopback::noul(0.9).unwrap();
+        let output = csv_answers(&server, input);
+        assert_eq!(output.status.code(), Some(2), "{input:?}: {output:?}");
+        assert_eq!(support::reported(&output), "usage.table", "{input:?}");
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains(place), "{input:?}: {error}");
+        assert!(error.contains("blank line"), "{input:?}: {error}");
+        assert!(output.stdout.is_empty(), "{input:?}");
+        assert_eq!(server.count(), 0, "{input:?}");
+    }
+}
+
+#[test]
+fn an_empty_quoted_csv_cell_stays_a_failed_row() {
+    let server = loopback::Loopback::noul(0.9).unwrap();
+    let output = csv_answers(&server, "Body\n\"\"\nworld\n");
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("record.empty"), "{error}");
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "Body,ready\n\"\",\nworld,TRUE\n"
+    );
 }

@@ -117,6 +117,16 @@ def runtime_environment(scratch, prepared):
     return env
 
 
+def go_temporary_cache(execute, binary):
+    execute(binary, '-test.run=^TestNativeTemporaryCache$', '-test.count=1', '-test.v',
+            '-test.timeout=10m', stream_output=True)
+
+
+def lookup_check(execute, checks, engine, *command, embedded=False, extra=None):
+    execute(sys.executable, checks / 'native-lookup-check', *(['--embedded'] if embedded else []),
+            engine, '--', *command, extra=extra)
+
+
 def sdk_scratch():
     return long_path_scratch('thinkthen-windows-sdks-', 'Windows SDK')
 
@@ -164,12 +174,20 @@ def full(folder, build, *, caller_owned=False):
         def execute(*args, cwd=scratch, extra=None, stream_output=False):
             return run(*args, cwd=cwd, env=runtime | (extra or {}), resolve_path=env['PATH'],
                        stream_output=stream_output)
+        def cancel(surface, *adapter, native=False, interrupt=False, extra=None):
+            """Each adapter is an absolute path, because the driver starts it with no compiler on PATH."""
+            flags = ['--native'] * native + ['--interrupt'] * interrupt
+            print(execute(sys.executable, checks / 'cancel.py', '--surface', surface, *flags, '--',
+                          *adapter, extra=extra), end='', flush=True)
+        def tool(name):
+            return shutil.which(name, path=env['PATH'])
         python = Path(sys.executable)
         installed_python = scratch / 'python/Scripts/python.exe'
         with check('Python'):
             execute(python, '-I', '-m', 'venv', scratch / 'python')
             execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', wheelhouse(folder), packages['python'])
             execute(installed_python, '-I', checks / 'python.py', fixture)
+            cancel('Python', installed_python, '-I', checks / 'python_cancel.py')
         with check('Python frames'):
             optional = folder / 'prerequisites/python-frames-windows'
             loopback = Path(os.environ['THINKTHEN_LOOPBACK']).resolve(strict=True)
@@ -185,6 +203,10 @@ def full(folder, build, *, caller_owned=False):
                     packages['typescript'], cwd=node)
             shutil.copy2(checks / 'node.mjs', node / 'consumer.mjs')
             execute('node', node / 'consumer.mjs', fixture, cwd=node)
+            execute('node', '--test', checks / 'typescript/stream-concurrency.test.js', cwd=node, stream_output=True,
+                    extra={'THINKTHEN_NODE_PACKAGE': str(node / 'node_modules/thinkthen/runtime.js')})
+            cancel('TypeScript', tool('node'), checks / 'typescript/stress.test.js',
+                   extra={'THINKTHEN_NODE_PACKAGE': str(node / 'node_modules/thinkthen/runtime.js')})
         with check('Go'):
             go = scratch / 'go'
             unpack(packages['go'], go / 'package')
@@ -198,6 +220,10 @@ def full(folder, build, *, caller_owned=False):
                     extra=go_env)
             check_cache([go_binary, *go_arguments],
                         scratch / 'go-cache-proof', runtime | go_env, 'library.dll')
+            go_temporary_cache(execute, go_binary)
+            lookup_check(execute, checks, go / 'package/native/library', go_binary, *go_arguments,
+                         embedded=True, extra=go_env)
+            cancel('Go', go_binary, '-test.run=^TestSharedStress$', '-test.count=1', '-test.timeout=5m')
         for name, main in [('java', 'ConsumerCases'), ('kotlin', 'KotlinCasesKt')]:
             with check(name):
                 classpath = os.pathsep.join(map(str, [checks / 'jvm/consumer.jar', folder / name / '*',
@@ -210,6 +236,10 @@ def full(folder, build, *, caller_owned=False):
                     check_cache([shutil.which('java', path=env['PATH']), '--enable-native-access=ALL-UNNAMED',
                                  '-cp', classpath, main, fixture, '--stub-only'],
                                 scratch / 'java-cache-proof', runtime, 'thinkthen_ffi.dll')
+                    lookup_check(execute, checks, scratch / 'go/package/native/library', shutil.which('java', path=env['PATH']),
+                                 '--enable-native-access=ALL-UNNAMED', '-cp', classpath, main, fixture, '--stub-only', embedded=True)
+                cancel(name, tool('java'), '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
+                       {'java': 'StressCases', 'kotlin': 'consumer.StressCasesKt'}[name])
         with check('C#'):
             consumer = scratch / 'dotnet'
             shutil.copytree(checks / 'csharp-source', consumer)
@@ -230,6 +260,8 @@ def full(folder, build, *, caller_owned=False):
                            extra={'NUGET_PACKAGES': str(scratch / 'nuget-packages')})
             assert (single / 'thinkthen_ffi.dll').is_file(), 'single-file publish lost its side-by-side native DLL'
             execute(single / 'Consumer.exe', fixture, '--stub-only')
+            lookup_check(execute, checks, single / 'thinkthen_ffi.dll', single / 'Consumer.exe', fixture, '--stub-only')
+            cancel('C#', single / 'Consumer.exe', '--stress-adapter')
         with check('Ruby'):
             gems = scratch / 'gems'
             ruby_env = {'GEM_HOME': str(gems), 'GEM_PATH': str(gems), 'GEM_SPEC_CACHE': str(scratch / 'gem-specs')}
@@ -240,10 +272,16 @@ def full(folder, build, *, caller_owned=False):
                                  extra=ruby_env).strip()
             build_consumer('ruby', '-S', 'rbs', '-I', Path(signatures) / 'sig', 'validate')
             execute('ruby', checks / 'ruby.rb', fixture, extra=ruby_env)
+            lookup_check(execute, checks, Path(signatures) / 'lib/thinkthen/thinkthen_ffi.dll', shutil.which('ruby', path=env['PATH']),
+                         '-e', 'require "thinkthen"; ThinkThen::Client.open(backend: :stub) {}', extra=ruby_env)
+            cancel('Ruby', tool('ruby'), checks / 'ruby-stress.rb', extra=ruby_env)
         with check('R'):
-            r_cases(execute, folder, scratch, packages['r'], cases)
-        c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, runtime, check)
-        swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check)
+            r_env = r_cases(execute, folder, scratch, packages['r'], cases)
+            # Rscript only starts Rterm and dies on the interrupt that Rterm handles.
+            cancel('R', tool('Rterm'), '--vanilla', '--no-echo', '--file=' + str(checks / 'r-stress.R'),
+                   interrupt=True, extra=r_env)
+        c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, runtime, check, cancel)
+        swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check, cancel)
         for name in ('sqlite', 'duckdb'):
             with check(name):
                 installed = unpack(packages[name], scratch / name)
@@ -274,6 +312,7 @@ def r_cases(execute, folder, scratch, package, cases):
     # This installed-package probe covers every function for list and frame input.
     execute('Rscript', '--vanilla', folder / 'checks/r-cases.R',
             folder / 'checks/stub.json', extra=r_env)
+    return r_env
 
 
 def native_contract(checks):
@@ -285,12 +324,12 @@ def native_contract(checks):
     return native_cases, registry
 
 
-def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, env, check):
+def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, env, check, cancel):
     with check('C'):
         c = unpack(packages['c'], scratch / 'c')
         c_output = scratch / 'c-consumer.exe'
         build_consumer('clang-cl', '/nologo', '/TC', '/std:c11', '/MD', '/W4', '/WX', '/UNDEBUG',
-                '/I' + str(c / 'include'),
+                '/D_CRT_SECURE_NO_WARNINGS', '/I' + str(c / 'include'),
                 '/I' + str(checks / 'c'), checks / 'c/conformance.c',
                 '/Fe:' + str(c_output), '/link', c / 'lib/thinkthen_ffi.lib')
         c_env = {'PATH': os.pathsep.join((str(c / 'bin'), env['PATH']))}
@@ -298,6 +337,7 @@ def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch
         for case in cases:
             rows = execute(c_output, json.dumps(case['request']), json.dumps(case['client']), extra=c_env)
             native_cases.compare(rows, case, registry)
+        cancel('C', c_output, native=True, extra=c_env)
     with check('C++'):
         c = unpack(packages['c'], scratch / 'cpp-c')
         cpp = unpack(packages['cpp'], scratch / 'cpp')
@@ -309,9 +349,10 @@ def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch
         for case in cases:
             output = execute(binary, json.dumps(case['request']), json.dumps(case['client']), extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
             native_cases.compare(output, case, registry, 'utf8')
+        cancel('C++', binary, native=True, extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
 
 
-def swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check):
+def swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check, cancel):
     with check('Swift'):
         swift = scratch / 'swift'
         unpack(packages['swift'], swift / 'ThinkThen')
@@ -320,12 +361,18 @@ def swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, c
                 '--disable-sandbox', '-Xswiftc', '-warnings-as-errors')
         binary = build_consumer('swift', 'build', '--package-path', swift / 'Consumer', '-c', 'release', '--show-bin-path').strip()
         execute(sys.executable, checks / 'swift.py', Path(binary) / 'Consumer.exe', fixture)
+        lookup_check(execute, checks, Path(binary) / 'ThinkThen_ThinkThen.resources/Native/win-x64/thinkthen_ffi.dll',
+                     Path(binary) / 'Consumer.exe', fixture)
+        cancel('Swift', Path(binary) / 'Consumer.exe', native=True)
     with check('Zig'):
         zig = scratch / 'zig'
         unpack(packages['zig'], zig / 'package')
         shutil.copytree(checks / 'zig', zig / 'consumer')
         build_consumer('zig', 'build', '-j2', '-Dtarget=x86_64-windows-msvc', '-Doptimize=ReleaseSafe', cwd=zig / 'consumer')
         execute(sys.executable, checks / 'zig.py', zig / 'consumer/zig-out/bin/consumer.exe', fixture)
+        execute(zig / 'consumer/zig-out/bin/public-api.exe', stream_output=True)
+        lookup_check(execute, checks, zig / 'consumer/zig-out/bin/thinkthen_ffi.dll', zig / 'consumer/zig-out/bin/consumer.exe', 'load')
+        cancel('Zig', zig / 'consumer/zig-out/bin/consumer.exe', native=True)
 
 
 if __name__ == '__main__':

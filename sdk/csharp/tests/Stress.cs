@@ -17,6 +17,15 @@ internal static partial class Program
         if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "dotnet")
             start.ArgumentList.Add(Environment.GetCommandLineArgs()[0]);
         start.ArgumentList.Add("--stress-adapter");
+        // Runtime threads come and go with load, so hold them still for the short check's count:
+        // the pool starts above its peak, keeps its workers, and no background compiler runs.
+        // Soaks stay on default .NET, because they detect leaks of blocked pool threads.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("THINKTHEN_STRESS_FULL")))
+        {
+            start.Environment["DOTNET_TieredCompilation"] = "0";
+            start.Environment["DOTNET_ThreadPool_ThreadTimeoutMs"] = "-1";
+            start.Environment["THINKTHEN_STRESS_POOL_WORKERS"] = "16";
+        }
         using var process = Process.Start(start)!;
         await process.WaitForExitAsync();
         Check(process.ExitCode == 0, "shared C# stress adapter failed");
@@ -37,7 +46,7 @@ internal static partial class Program
             if (value["status"]!.GetValue<string>() == "failed")
             {
                 failed++;
-                Check(JsonNode.DeepEquals(value["error"]!["code"], sample["scenario"]!["code"]), "stress error changed");
+                Check(JsonNode.DeepEquals(value["error"]!["code"], sample["scenario"]!["code"]), $"stress error changed: {value["error"]!.ToJsonString()}");
             }
             else
             {
@@ -51,8 +60,18 @@ internal static partial class Program
         return failed;
     }
 
+    private static async Task StartPoolWorkers(int workers)
+    {
+        ThreadPool.GetMinThreads(out _, out int completion);
+        ThreadPool.SetMinThreads(workers, completion);
+        using var together = new Barrier(workers);
+        await Task.WhenAll(Enumerable.Range(0, workers).Select(_ => Task.Run(() => together.SignalAndWait())));
+    }
+
     private static async Task StressAdapter()
     {
+        if (Environment.GetEnvironmentVariable("THINKTHEN_STRESS_POOL_WORKERS") is string workers)
+            await StartPoolWorkers(int.Parse(workers));
         JsonNode sample = JsonNode.Parse(await File.ReadAllTextAsync(Environment.GetEnvironmentVariable("THINKTHEN_STRESS_CASE")!))!;
         ThinkThenOptions options = sample["client"]!.Deserialize<ThinkThenOptions>(JsonOptions)!;
         options.ApiKey = ApiKey.From(sample["client"]!["api_key"]!.GetValue<string>());

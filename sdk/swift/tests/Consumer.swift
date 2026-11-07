@@ -6,6 +6,9 @@ func decoded<T: Decodable>(_ type: T.Type, _ value: Any) throws -> T {
   try JSONDecoder().decode(
     type, from: JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed]))
 }
+func httpStatus(_ failure: RowFailure) -> Data {
+  failure.httpStatus.map { Data(",\"http_status\":\($0)".utf8) } ?? Data()
+}
 func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) async throws -> Data
 {
   if cancelled { rows.cancel() }
@@ -14,7 +17,8 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
     for try await row in rows { values.append(row) }
   } catch {
     if let failure = (error as? ThinkThenError)?.failure {
-      return Data("{\"error\":".utf8) + (try encoded(failure.code)) + Data(",\"rows\":".utf8)
+      return Data("{\"error\":".utf8) + (try encoded(failure.code)) + httpStatus(failure)
+        + Data(",\"rows\":".utf8)
         + (try encoded(values)) + Data("}".utf8)
     }
     if error is CancellationError {

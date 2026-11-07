@@ -101,7 +101,7 @@ A refund request is routine, so it scores near 0. The answer is a `Double`, and 
 
 <Example id="sdk-kotlin-rank" title="Main.kt" />
 
-The double charge is the most urgent, so it ranks 1. `answer()` is the rank, a `Long` from 1, and `position` is the message's place in your list, counted from 1. `top = 2` ranks only the first two. [rank](/functions/rank/) shows every answer.
+The double charge is the most urgent, so it ranks 1. `answer()` is the rank, a `Long` from 1, and `position` is the message's place in your list, counted from 1. `item` is an equal copy of your message, read back through its serializer, so a type that cannot be read back throws `SerializationException`. `top = 2` ranks only the first two. [rank](/functions/rank/) shows every answer.
 
 </details>
 

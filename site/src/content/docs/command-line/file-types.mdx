@@ -4,16 +4,21 @@ description: Give ThinkThen text from a pipe or a file, one item per line, a CSV
 goal: The reader gets their own text into the command in the right shape and knows where each answer goes.
 reader: A command-line user with messages in a pipe, a text file, a CSV, TSV or Excel file, or many files
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-06
 ---
 import Example from '../../../components/Example.astro';
 import ExampleFile from '../../../components/ExampleFile.astro';
+import InstallLine from '../../../components/InstallLine.astro';
 
 Every function reads the text to judge from a pipe, from `--text`, or from files. It reads plain text, one item per line, CSV, TSV and Excel files, and many files in one command.
 
 <Example id="files-text" />
 
 Yes: the message asks for a refund. A pipe is one text, and its answer is one line. `--text 'Please refund my order.'` does the same without a pipe, and a file name after the question reads that file as one text.
+
+In Windows PowerShell 5.1, run this line before you pipe text, or each accented or non-Latin character reaches ThinkThen as `?`. [Installation](/install/#set-windows-powershell-to-utf-8) explains why.
+
+<InstallLine k="install.windowsUtf8" lang="powershell" />
 
 ## Judge each line
 
@@ -44,6 +49,8 @@ Where the new table goes depends on how you give the file:
 | `messages.csv --output reviewed.csv` | `reviewed.csv` |
 | `messages.csv --in-place` | `messages.csv` itself, after it keeps the original as `messages.backup.csv`. If filter fails on any row, `messages.csv` stays as it was and the command exits 6 |
 
+Empty lines at the end of a CSV or TSV file are ignored, and the new table leaves them out. An empty line with more rows after it stops the command before any question is asked, and the error names the line, so no row goes unjudged. Delete the line and run again.
+
 ThinkThen never overwrites an output file. If `messages.thinkthen.csv` already exists, the command stops with exit code 2; choose a new `--output` name or remove the old file. Repeat `--column` to judge several columns of each row together. `--details` adds five more columns for each answer, such as its status and probability.
 
 ## Read a TSV file
@@ -66,7 +73,11 @@ An Excel file (`.xlsx`) works by name, never from a pipe. This workbook holds on
 
 The command writes `messages.thinkthen.xlsx` beside the input and prints its name. Its `is_refund` column holds real `TRUE` and `FALSE` cells, and `#N/A` for not sure or a failed message, so an Excel formula can't mistake either for a no.
 
-Every other worksheet, style and formula stays as it was. When a workbook holds more than one worksheet, name one with `--sheet Messages`. Formula cells are read from their saved values and never recalculated. Older `.xls` files, macro-enabled workbooks and signed workbooks are refused; save an unsigned `.xlsx` copy first.
+Every other worksheet, style and formula stays as it was. When a workbook holds more than one worksheet, name one with `--sheet Messages`. Formula cells are read from their saved values and never recalculated. Older `.xls` files, macro-enabled workbooks and signed workbooks are refused; save an unsigned `.xlsx` copy first. A worksheet row larger than 64 MiB, counting the text of every cell, is refused, as a CSV record of that size is.
+
+ThinkThen loads a workbook's whole shared-string table, where Excel keeps its text, into memory. A table larger than 512 MiB is refused. So is a record larger than 64 MiB in plain text, lines, CSV, TSV or JSON Lines, and an Excel row larger than 64 MiB. A record may be up to 64 MiB, but the text sent for judging, with its question, must fit the 96,000-byte request limit: a longer judged text fails that row with `record.too-large`, and the rest of the file completes.
+
+In one run with the stub backend on a Linux build machine (x86_64, glibc 2.43, 12 cores, 27.6 GiB of memory), a 100,000-row workbook with a shared-string table just under the limit peaked at 515.7 MiB of memory. A table with a 64 MiB record peaked at 135.6 MiB, or 263.2 MiB when the record was the judged text.
 
 ## Judge many files at once
 

@@ -23,6 +23,14 @@ It needs a C++17 compiler. Extract the C++ and C archives for your platform from
 
 With CMake, use `find_package(ThinkThenCpp CONFIG REQUIRED)` and link `ThinkThen::Cpp`. The client uses the key from the [Quickstart](/quickstart/).
 
+## Build on Windows
+
+Extract the Windows archives, `thinkthen-cpp-0.2.0-windows-x86_64.zip` and `thinkthen-c-0.2.0-windows-x86_64.zip`, into the same `thinkthen` folder. You need clang-cl and the Visual Studio C++ tools. Open Developer PowerShell for Visual Studio in the folder that holds `thinkthen` and `example.cpp`, then run:
+
+<InstallLine k="languages.cpp.installWindows" lang="powershell" />
+
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
+
 ## Catch not sure and failures
 
 Set a low bar and a high bar with `thinkthen::threshold::band`. Between them, decide is not sure, and `value()` throws `thinkthen::unsure`. When ThinkThen can't judge the message, `value()` throws `thinkthen::error` instead. Neither one can pass for `false`.

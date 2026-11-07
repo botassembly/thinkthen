@@ -18,7 +18,7 @@ export DOTNET_CLI_HOME="$stage/home" NUGET_PACKAGES="$stage/packages"
 export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
 export DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_GENERATE_ASPNET_CERTIFICATE=false
-unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BACKEND THINKTHEN_BASE_URL THINKTHEN_BATCH
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BACKEND THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
 export CARGO_NET_OFFLINE=true
 cargo build -p loopback --bin loopback --locked
 native=${CARGO_TARGET_DIR:-$root/target}/debug
@@ -56,6 +56,7 @@ dotnet build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuG
 engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$mac")" -print)
 case $(uname -s) in Linux) engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$linux")" -print) ;; esac
 python3 scripts/loader-failure-check "$engine" -- dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" --stub-only
+python3 scripts/native-lookup-check "$engine" -- dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" --stub-only
 python3 "$root/sdk/csharp/tests/malformed.py" "$stage/bin" "$THINKTHEN_MALFORMED_ROW_FIXTURES"
 python3 "$root/scripts/csharp_consumers.py" interface "$stage"
 python3 "$root/scripts/csharp_consumers.py" abi "$stage"

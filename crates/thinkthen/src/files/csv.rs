@@ -53,7 +53,24 @@ impl<R: Read> CsvReader<R> {
         })
     }
 
+    /// The next row. Blank lines end the table when only blank lines follow;
+    /// one with more data after it is refused, so no row goes unjudged.
     pub(crate) fn next(&mut self) -> Result<Option<CsvRow>, FileError> {
+        let Some(row) = self.read_row()? else {
+            return Ok(None);
+        };
+        if !row.raw.is_empty() {
+            return Ok(Some(row));
+        }
+        while let Some(later) = self.read_row()? {
+            if !later.raw.is_empty() {
+                return Err(blank_line(&row));
+            }
+        }
+        Ok(None)
+    }
+
+    fn read_row(&mut self) -> Result<Option<CsvRow>, FileError> {
         let mut raw = Vec::new();
         let mut field = Vec::new();
         let mut fields = Vec::new();
@@ -132,12 +149,26 @@ impl<R: Read> CsvReader<R> {
     }
 
     fn bad(&self, line: usize, cause: &str) -> FileError {
-        FileError::Invalid(crate::core::diagnostic::requirement(
-            &format!("CSV/TSV row {} (line {line})", self.row + 1),
-            "valid UTF-8 delimited fields",
-            cause,
-        ))
+        FileError::Invalid(
+            crate::Code::UsageTable,
+            crate::core::diagnostic::requirement(
+                &format!("CSV/TSV row {} (line {line})", self.row + 1),
+                "valid UTF-8 delimited fields",
+                cause,
+            ),
+        )
     }
+}
+
+fn blank_line(row: &CsvRow) -> FileError {
+    FileError::Invalid(
+        crate::Code::UsageTable,
+        crate::core::diagnostic::requirement(
+            &format!("CSV/TSV row {} (line {})", row.number, row.line),
+            "a row of fields",
+            "a blank line inside the data; delete the line",
+        ),
+    )
 }
 
 pub(crate) fn encode(text: &str, delimiter: u8) -> Vec<u8> {

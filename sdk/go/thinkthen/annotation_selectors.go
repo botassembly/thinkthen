@@ -1,3 +1,5 @@
+//go:build cgo
+
 package thinkthen
 
 // Typed selectors make tt.Answer(answers.Decide("refund")) the same operation as

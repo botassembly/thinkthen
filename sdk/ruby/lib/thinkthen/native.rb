@@ -14,7 +14,11 @@ module ThinkThen
               else
                 "libthinkthen_ffi.so"
               end
-    path = File.expand_path(library, __dir__ || ".")
+    chosen = ENV.fetch(NativeContract::LIBRARY_VARIABLE, "")
+    unless chosen.empty? || File.absolute_path?(chosen)
+      raise LocalError.new(NativeContract::LIBRARY_PATH_MESSAGE, code: :"local.io")
+    end
+    path = chosen.empty? ? File.expand_path(library, __dir__ || ".") : chosen
     begin
       ffi_lib path
     rescue LoadError => error

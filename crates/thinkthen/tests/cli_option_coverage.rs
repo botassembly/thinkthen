@@ -82,7 +82,7 @@ fn threshold_and_band_conflicts_fail_without_a_paid_request() {
     let server = loopback::Loopback::noul(0.9).unwrap();
     for args in functions(tempfile::tempdir().unwrap().path())
         .into_iter()
-        .filter(|a| matches!(a[0].as_str(), "decide" | "filter" | "choose"))
+        .filter(|a| matches!(a[0].as_str(), "decide" | "filter"))
     {
         for band in [
             vec!["--low", "0.2"],

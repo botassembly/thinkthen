@@ -5,17 +5,21 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 from threading import Barrier, Thread
 from concurrent.futures import ThreadPoolExecutor
 import unittest
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 from release_downloads import fetch
+import release_installed_prepare
 import release_windows_r
 
 
@@ -31,6 +35,9 @@ class DownloadCache(unittest.TestCase):
                 owner.requests.append(self.path)
                 if owner.barrier is not None:
                     owner.barrier.wait()
+                if self.path not in owner.bodies:
+                    self.send_error(404)
+                    return
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(owner.bodies[self.path])
@@ -88,6 +95,85 @@ class DownloadCache(unittest.TestCase):
         self.assertFalse(list(self.root.glob('*.partial')))
         self.bodies['/tool'] = b'correct pinned tool'
         self.assertEqual(fetch(url, path, 'sha512:' + expected).read_bytes(), b'correct pinned tool')
+
+    def test_urls_pinned_to_one_digest_back_each_other_up(self):
+        pinned, wrong = b'pinned release input', b'wrong network payload'
+        first, second, unrelated = (self.base + name for name in ('/first', '/second', '/unrelated'))
+        digest = 'sha256:' + hashlib.sha256(pinned).hexdigest()
+        registry = self.root / 'pins.json'
+        registry.write_text(json.dumps({first: digest, unrelated: 'sha256:' + '0' * 64, second: digest}))
+        path = self.root / 'input.tar.gz'
+
+        def attempt(bodies):
+            self.bodies, self.requests[:] = bodies, []
+            path.unlink(missing_ok=True)
+            return fetch(first, path)
+
+        with patch('release_downloads.PINS', registry):
+            for bodies in ({'/second': pinned}, {'/first': wrong, '/second': pinned}):
+                self.assertEqual(attempt(bodies).read_bytes(), pinned)
+                self.assertEqual(self.requests, ['/first', '/second'])
+            self.assertEqual(attempt({'/first': pinned, '/second': wrong}).read_bytes(), pinned)
+            self.assertEqual(self.requests, ['/first'])
+            with self.assertRaisesRegex(ValueError, 'checksum differs: input.tar.gz from ' + second):
+                attempt({'/second': wrong})
+            self.assertFalse(path.exists())
+            with self.assertRaises(subprocess.CalledProcessError) as refused:
+                attempt({})
+            self.assertFalse(path.exists())
+        self.assertIn(first + ' ' + second, str(refused.exception))
+        self.assertEqual(self.requests, ['/first', '/second'])
+        self.assertFalse(list(self.root.glob('*.partial')))
+
+    def test_jvm_prepare_gets_maven_while_either_apache_host_is_down(self):
+        launcher = self.root / 'mvn'
+        launcher.write_text('#!/bin/sh\n')
+        launcher.chmod(0o755)
+        archive = self.root / 'maven.tar.gz'
+        with tarfile.open(archive, 'w:gz') as packed:
+            packed.add(launcher, 'apache-maven-3.9.11/bin/mvn')
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        pins = json.loads((ROOT / 'scripts/release-downloads.json').read_text())
+        checkout = self.root / 'checkout'
+        for name in ('scripts/jvm-prepare', 'scripts/release_downloads.py', 'sdk/java/pom.xml', 'sdk/kotlin/pom.xml'):
+            (checkout / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / name, checkout / name)
+        for name in ('scripts/jvm-generated', 'scripts/kotlin_compiler.py'):
+            (checkout / name).touch()
+        (checkout / 'scripts/release-downloads.json').write_text(json.dumps(
+            {url: digest for url in pins if url.endswith('/apache-maven-3.9.11-bin.tar.gz')}))
+        tools = self.root / 'bin'
+        tools.mkdir()
+        (tools / 'curl').write_text('#!' + sys.executable + """
+import os, shutil, sys
+url, target = sys.argv[-3], sys.argv[-1]
+with open(os.environ['CURL_LOG'], 'a') as log: print(url, file=log)
+if os.environ['DOWN_HOST'] in url: sys.exit(7)
+shutil.copy(os.environ['MAVEN_ARCHIVE'], target)
+""")
+        (tools / 'curl').chmod(0o755)
+        for down, reached in (('archive.apache.org', ['repo.maven.apache.org']),
+                              ('repo.maven.apache.org', ['repo.maven.apache.org', 'archive.apache.org'])):
+            with self.subTest(down=down):
+                cache = self.root / ('cache-' + down)
+                for folder in ('jdk-22.0.2+9', 'jdk-22.0.2+9/Contents/Home'):
+                    java = cache / folder / 'bin/java'
+                    java.parent.mkdir(parents=True)
+                    shutil.copy2(launcher, java)
+                log = self.root / (down + '.log')
+                subprocess.run([checkout / 'scripts/jvm-prepare'], check=True, capture_output=True, env=dict(
+                    os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH'], THINKTHEN_JVM_CACHE=str(cache),
+                    CURL_LOG=str(log), DOWN_HOST=down, MAVEN_ARCHIVE=str(archive)))
+                self.assertTrue((cache / 'apache-maven-3.9.11/bin/mvn').is_file())
+                self.assertEqual([urlparse(url).hostname for url in log.read_text().split()], reached)
+
+    def test_installed_consumers_try_maven_central_then_the_apache_archive(self):
+        down = subprocess.CalledProcessError(7, ['curl'])
+        with patch('release_downloads.subprocess.run', side_effect=down) as curl:
+            with self.assertRaises(subprocess.CalledProcessError):
+                release_installed_prepare.jvm(self.root, self.root)
+        self.assertEqual([urlparse(call.args[0][-3]).hostname for call in curl.call_args_list],
+                         ['repo.maven.apache.org', 'archive.apache.org'])
 
     def test_two_callers_refresh_one_stale_destination_atomically(self):
         path = self.root / 'shared.zip'

@@ -155,6 +155,7 @@ fn extensions_ignore_case_and_unsupported_workbooks_explain_conversion() {
         let output = directory.path().join(format!("converted-{extension}.xlsx"));
         let result = excel(&input, &["--output", output.to_str().unwrap()]);
         assert_eq!(result.status.code(), Some(2), "{result:?}");
+        assert_eq!(support::reported(&result), "usage.table");
         let message = String::from_utf8(result.stderr).unwrap();
         assert!(message.contains("save as .xlsx or CSV"), "{message}");
         assert!(!output.exists());

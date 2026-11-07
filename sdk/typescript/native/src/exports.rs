@@ -234,7 +234,7 @@ fn host_error(error: thinkthen::Error) -> napi::Error {
 }
 
 fn error_json(error: &thinkthen::Error) -> String {
-    serde_json::json!({"code": error.code().as_str(), "message": error.to_string(), "family": error.code().family().as_str()}).to_string()
+    serde_json::json!({"code": error.code().as_str(), "message": error.to_string(), "family": error.code().family().as_str(), "http_status": error.http_status()}).to_string()
 }
 
 /// Report the direct native module's contract before any client creation.

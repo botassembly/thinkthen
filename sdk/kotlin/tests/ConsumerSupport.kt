@@ -122,14 +122,3 @@ internal fun contractMatches(actual: JsonElement, expected: JsonElement): Boolea
     is JsonArray -> actual is JsonArray && actual.size == expected.size && actual.zip(expected).all { contractMatches(it.first,it.second) }
     else -> actual == expected
 }
-
-// Rank items are the engine's JsonValue snapshots; compare them with the input JSON, numbers by value.
-internal fun snapshotMatches(snapshot: dev.thinkthen.JsonValue, record: JsonElement?): Boolean =
-    sameJson(Json.parseToJsonElement(snapshot.toString()), record ?: JsonNull)
-internal fun sameJson(actual: JsonElement, expected: JsonElement): Boolean = when (expected) {
-    is JsonObject -> actual is JsonObject && actual.keys == expected.keys && expected.all { (key, value) -> sameJson(actual.getValue(key), value) }
-    is JsonArray -> actual is JsonArray && actual.size == expected.size && actual.zip(expected).all { sameJson(it.first, it.second) }
-    is JsonPrimitive -> actual is JsonPrimitive && actual.isString == expected.isString &&
-        (actual.content == expected.content || (!expected.isString && actual.doubleOrNull != null && actual.doubleOrNull == expected.doubleOrNull))
-    JsonNull -> actual == JsonNull
-}

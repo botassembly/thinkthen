@@ -332,22 +332,22 @@ fn a_json_record_gives_its_id_and_the_evidence_its_pointer_names() {
             r#"{"body":"x"}"#,
             "/missing",
             json!(10),
-            Err("usage.missing"),
+            Err("record.missing"),
         ),
         (
             r#"{"id":"m","body":"x"}"#,
             "/nope",
             json!("m"),
-            Err("usage.missing"),
+            Err("record.missing"),
         ),
         (
             r#"{"a":["x","y"]}"#,
             "/a/01",
             json!(12),
-            Err("usage.missing"),
+            Err("record.missing"),
         ),
-        (r#"{"a":["x"]}"#, "/a/1", json!(13), Err("usage.missing")),
-        ("not json", "/body", json!(14), Err("usage.record")),
+        (r#"{"a":["x"]}"#, "/a/1", json!(13), Err("record.missing")),
+        ("not json", "/body", json!(14), Err("record.json")),
         (
             r#"{"id":null,"body":"nameless"}"#,
             "/body",
@@ -389,11 +389,6 @@ fn a_json_record_gives_its_id_and_the_evidence_its_pointer_names() {
                 );
             }
             Err(code) => {
-                let code = match code {
-                    "usage.missing" => "record.missing",
-                    "usage.record" => "record.json",
-                    other => other,
-                };
                 assert_eq!(value["error"]["code"], code, "{line} at {pointer}");
                 assert_eq!(server.count(), 0);
             }

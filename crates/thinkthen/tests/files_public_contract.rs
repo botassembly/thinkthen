@@ -20,14 +20,9 @@ fn file_boundaries_keep_argument_and_access_failures_distinct() {
             command.args(["--column", column.as_str().unwrap()]);
         }
         let output = command.output().unwrap();
-        let expected = if case["columns"].as_array().unwrap().is_empty() {
-            "usage.question"
-        } else {
-            "local.io"
-        };
         assert_eq!(
             support::reported(&output),
-            expected,
+            case["code"].as_str().unwrap(),
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
@@ -39,10 +34,11 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
     let directory = tempfile::tempdir().unwrap();
     let input = directory.path().join("input.xlsx");
     diagnostic_workbook(&input, r#"<c r="A2" t="b"><v>SECRET-CELL</v></c>"#);
-    for (sheet, column, parts) in [
+    for (sheet, column, code, parts) in [
         (
             None,
             "Body",
+            "usage.sheet",
             vec![
                 "sheet: expected",
                 "Intake",
@@ -54,6 +50,7 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
         (
             Some("Intkae"),
             "Body",
+            "usage.sheet",
             vec![
                 "sheet: expected",
                 "received",
@@ -64,6 +61,7 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
         (
             Some("Intake"),
             "Bdy",
+            "usage.column",
             vec![
                 "sheet `Intake`",
                 "column: expected",
@@ -75,6 +73,7 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
         (
             Some("Intake"),
             "Body",
+            "usage.table",
             vec![
                 "sheet `Intake`",
                 "row 2",
@@ -103,13 +102,31 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
         }
         let output = command.output().unwrap();
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(support::reported(&output), "usage.question");
+        assert_eq!(support::reported(&output), code);
         let message = String::from_utf8(output.stderr).unwrap();
         for part in parts {
             assert!(message.contains(part), "missing {part:?}: {message}");
         }
         assert!(!message.contains("SECRET-CELL"), "{message}");
     }
+}
+
+#[test]
+fn a_number_cell_that_will_not_parse_is_a_table_mistake() {
+    let directory = tempfile::tempdir().unwrap();
+    let input = directory.path().join("input.xlsx");
+    diagnostic_workbook(&input, r#"<c r="A2"><v>abc</v></c>"#);
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--sheet", "Intake"])
+        .args(["--column", "Body", "--into", "answer"])
+        .arg(&input)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    assert_eq!(support::reported(&output), "usage.table");
+    let message = String::from_utf8(output.stderr).unwrap();
+    assert!(message.contains("a finite workbook number"), "{message}");
+    assert!(!message.contains("abc"), "{message}");
 }
 
 #[test]
@@ -139,7 +156,7 @@ fn malformed_workbook_values_keep_cell_context_and_repair_advice() {
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(support::reported(&output), "usage.question");
+        assert_eq!(support::reported(&output), "usage.table");
         let message = String::from_utf8(output.stderr).unwrap();
         for part in [
             "sheet `Intake`",

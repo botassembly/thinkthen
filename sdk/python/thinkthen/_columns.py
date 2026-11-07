@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from typing import Any, Generic, Literal, TypeVar, cast, overload
 
 from ._client import Client, default_client
+from ._codes import ErrorCode
 from ._questions import (
     AnnotateQuestion,
     AnnotationQuestions,
@@ -23,7 +25,13 @@ from ._questions import (
     Toolbox,
 )
 from ._runtime import Cancel, normalize
-from ._types import RecordError, RelationRule, Strings, Threshold
+from ._types import (
+    FailedRowsWarning,
+    RecordError,
+    RelationRule,
+    Strings,
+    Threshold,
+)
 
 
 def annotation_definitions(question: object, rows: list[Any]) -> dict[str, Any]:
@@ -41,12 +49,55 @@ def annotation_definitions(question: object, rows: list[Any]) -> dict[str, Any]:
     }
 
 
+def failure_entries(function: str, rows: list[Any]) -> list[dict[str, Any]]:
+    """List each failure as plain JSON values, in input order."""
+    entries: list[dict[str, Any]] = []
+    for row in sorted(rows, key=lambda row: row.position):
+        outcomes: list[tuple[str | None, Any]] = [(None, row)]
+        if function == "annotate" and row.answer is not None:
+            outcomes.extend(row.answer.items())
+        entries.extend(
+            {
+                "position": row.position,
+                "id": row.id,
+                "question": question,
+                "error_code": outcome.error.code.value,
+                "error_message": outcome.error.message,
+                "error_http_status": outcome.error.http_status,
+            }
+            for question, outcome in outcomes
+            if outcome.error is not None
+        )
+    return entries
+
+
+def failed_rows_warning(
+    rows: list[Any], entries: list[dict[str, Any]]
+) -> FailedRowsWarning:
+    records: dict[str, set[int]] = {}
+    for entry in entries:
+        records.setdefault(entry["error_code"], set()).add(entry["position"])
+    counts = ", ".join(f"{code} ({len(found)})" for code, found in records.items())
+    positions = {entry["position"] for entry in entries}
+    return FailedRowsWarning(
+        f"ThinkThen returned failed records: {counts}. "
+        ".thinkthen.failures() lists them.",
+        tuple(ErrorCode(code) for code in records),
+        tuple(
+            row
+            for row in sorted(rows, key=lambda row: row.position)
+            if row.position in positions
+        ),
+    )
+
+
 A = TypeVar("A")
 D = TypeVar("D")
 K = TypeVar("K")
+F = TypeVar("F")
 
 
-class ColumnMethods(ABC, Generic[A, D, K]):
+class ColumnMethods(ABC, Generic[A, D, K, F]):
     def __init__(self, value: Any) -> None:
         self._value = value
 
@@ -58,6 +109,23 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def _answers(self, function: str, rows: list[Any], question: object) -> A: ...
     @abstractmethod
     def _kept(self, rows: list[Any]) -> K: ...
+    @abstractmethod
+    def _read_failures(self) -> list[dict[str, Any]]: ...
+    @abstractmethod
+    def _write_failures(self, value: Any, entries: list[dict[str, Any]]) -> None: ...
+    @abstractmethod
+    def _failure_frame(self, entries: list[dict[str, Any]]) -> F: ...
+
+    def failures(self) -> F:
+        """List the failures of an ``errors="coerce"`` result, one row each.
+
+        Columns are ``position`` in the call's input, ``id``, ``question`` (the
+        annotate question, otherwise missing), ``error_code``, ``error_message``
+        and ``error_http_status``. A result with no failure gives zero rows, and so
+        does an object that lost the list, such as a new Polars object, so call this
+        on the object the call returned.
+        """
+        return self._failure_frame(self._read_failures())
 
     def _missing(self, value: object) -> bool:
         return False
@@ -97,11 +165,20 @@ class ColumnMethods(ABC, Generic[A, D, K]):
             except RecordError as error:
                 cast(Any, error).outcomes = self._frame(function, rows, question)
                 raise
+        result: A | D | K
         if details:
-            return self._frame(function, rows, question)
-        if function == "filter":
-            return self._kept(rows)
-        return self._answers(function, rows, question)
+            result = self._frame(function, rows, question)
+        elif function == "filter":
+            result = self._kept(rows)
+        else:
+            result = self._answers(function, rows, question)
+        entries = failure_entries(function, rows)
+        self._write_failures(result, entries)
+        # Outcome details already show each status, so only plain results warn.
+        if entries and not details:
+            # The caller sits above this method and the public function method.
+            warnings.warn(failed_rows_warning(rows, entries), stacklevel=3)
+        return result
 
     @overload
     def decide(
@@ -145,7 +222,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def decide(self, question: Any, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("decide", question, **options)
 
@@ -192,7 +270,7 @@ class ColumnMethods(ABC, Generic[A, D, K]):
         """Return the kept input rows; use details=True for outcomes.
 
         Failed rows raise by default. With errors="coerce", the default subset
-        omits failed rows.
+        omits failed rows, warns with every failed code, and failures() lists them.
         """
         return self._call("filter", question, **options)
 
@@ -202,7 +280,7 @@ class ColumnMethods(ABC, Generic[A, D, K]):
         question: ChooseQuestion | str,
         *,
         choices: Strings | None = None,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
@@ -216,7 +294,7 @@ class ColumnMethods(ABC, Generic[A, D, K]):
         question: ChooseQuestion | str,
         *,
         choices: Strings | None = None,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
@@ -230,7 +308,7 @@ class ColumnMethods(ABC, Generic[A, D, K]):
         question: ChooseQuestion | str,
         *,
         choices: Strings | None = None,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
@@ -241,7 +319,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def choose(self, question: Any, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("choose", question, **options)
 
@@ -290,7 +369,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def tag(self, question: Any, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("tag", question, **options)
 
@@ -336,7 +416,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def score(self, question: Any, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("score", question, **options)
 
@@ -385,7 +466,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def rank(self, question: Any, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("rank", question, **options)
 
@@ -431,7 +513,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def find(self, question: Any, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("find", question, **options)
 
@@ -480,7 +563,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def recognize(self, question: Any = None, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("recognize", question, **options)
 
@@ -529,7 +613,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def relate(self, question: Any = None, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         return self._call("relate", question, **options)
 
@@ -575,7 +660,8 @@ class ColumnMethods(ABC, Generic[A, D, K]):
     def annotate(self, question: Any = None, **options: Any) -> A | D | K:
         """Return an answer column; use details=True for outcomes.
 
-        Failed rows raise by default; errors="coerce" replaces failed answers with null.
+        Failed rows raise by default; errors="coerce" replaces failed answers with
+        null, warns with every failed code, and failures() lists them.
         """
         toolbox = options.pop("toolbox", None)
         return self._call(

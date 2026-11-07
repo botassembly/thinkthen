@@ -77,6 +77,8 @@ fn generate(
     Ok(c_types::declarations(String::from_utf8(output)?)?.into_bytes())
 }
 // The contract every declaration below follows, said once in C terms.
+const LIBRARY_VARIABLE: &str = "THINKTHEN_LIBRARY";
+const LIBRARY_PATH_MESSAGE: &str = "THINKTHEN_LIBRARY must be an absolute path";
 const CONVENTIONS: &str = "/*
  * ThinkThen C interface.
  *
@@ -156,6 +158,10 @@ fn meaning(code: thinkthen::Code) -> &'static str {
         "usage.offsets" => "The offset unit is unknown.",
         "usage.argument" => "An argument is NULL, out of range, or not allowed here.",
         "usage.option" => "An option is not valid for this function.",
+        "usage.column" => "A table column, answer column or field pointer is not valid.",
+        "usage.sheet" => "The table sheet selection is not valid.",
+        "usage.output" => "The table answers cannot go to the output asked for.",
+        "usage.table" => "The table input file cannot be used as it is.",
         "record.json" => "The record is not valid JSON.",
         "record.missing" => "The record is a missing value.",
         "record.too-large" => "The record is larger than the backend accepts.",
@@ -257,6 +263,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         header,
         "/** The message a binding reports when the loaded library's binary interface is incompatible. */\n#define THINKTHEN_ABI_ERROR_MESSAGE {}",
         serde_json::to_string(abi.message())?
+    )?;
+    writeln!(
+        header,
+        "/** The environment variable that names the one native library a loading binding opens. */\n#define THINKTHEN_LIBRARY_VARIABLE {}",
+        serde_json::to_string(LIBRARY_VARIABLE)?
+    )?;
+    writeln!(
+        header,
+        "/** The message a loading binding reports when that variable is not an absolute path. */\n#define THINKTHEN_LIBRARY_PATH_MESSAGE {}",
+        serde_json::to_string(LIBRARY_PATH_MESSAGE)?
     )?;
     header.push_str("/** Pass as a text length to read a NUL-terminated string instead of a counted one. */\n#define THINKTHEN_NUL_TERMINATED SIZE_MAX\n");
 

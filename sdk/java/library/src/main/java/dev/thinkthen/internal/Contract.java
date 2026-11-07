@@ -7,6 +7,8 @@ final class Contract {
     static final String ABI_MESSAGE = "the native ABI is incompatible";
     static final String CLOSED_CODE = "usage.closed";
     static final String CLOSED_MESSAGE = "client: expected an open client; received a closed client";
+    static final String LIBRARY_VARIABLE = "THINKTHEN_LIBRARY";
+    static final String LIBRARY_PATH_MESSAGE = "THINKTHEN_LIBRARY must be an absolute path";
     static String functionName(int value) {
         return switch (value) {
             case 1 -> "decide";
@@ -85,6 +87,10 @@ final class Contract {
             case 1016 -> "usage.offsets";
             case 1017 -> "usage.argument";
             case 1018 -> "usage.option";
+            case 1019 -> "usage.column";
+            case 1020 -> "usage.sheet";
+            case 1021 -> "usage.output";
+            case 1022 -> "usage.table";
             case 2001 -> "record.json";
             case 2002 -> "record.missing";
             case 2003 -> "record.too-large";

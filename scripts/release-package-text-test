@@ -292,6 +292,25 @@ class PackageText(unittest.TestCase):
             assert target['path'] in listing, target
         print('Cargo package includes its license and every explicit test target', flush=True)
 
+    def test_candidate_notices_refuse_a_stale_package(self):
+        from release_notice_packages import apply, candidate, distribute
+
+        target = 'linux-x86_64'
+        out = self.scratch / 'candidate'
+        (out / 'c').mkdir(parents=True)
+        package = out / 'c/thinkthen-c.tar.gz'
+        tar(package, {'README.md': b'C package'})
+        crates = sorted(json.loads(bundle(target, 'c')['THIRD-PARTY-NOTICES/index.json'])['crates'])
+        (out / 'build.json').write_text(json.dumps({'platform': target}))
+        (out / 'compiled-crates.json').write_text(json.dumps({'target': target, 'crates': crates}))
+        (out / 'requirements.json').write_text(json.dumps({'c': {}}))
+        with patch('release_jvm_notices.distribute'), patch('release_jvm_notices.check'):
+            distribute(out, target, ROOT)
+            candidate(out)
+            apply(package, bundle(target, 'c', compiled=crates[1:]), 'share/thinkthen-c/')
+            with self.assertRaisesRegex(ValueError, 'package notices differ'):
+                candidate(out)
+
     def test_zig_archive(self):
         from package_inventory import check as inventory
         from release_readme import tar_bytes

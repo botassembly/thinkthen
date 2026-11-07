@@ -54,10 +54,10 @@ fn plain_and_flat_questions_share_identity_and_required_lists() {
     let plain = request(
         "choose",
         "Ready?",
-        Some(r#"{"choices":["one","two"],"threshold":{"low":0.2,"high":0.8}}"#),
+        Some(r#"{"choices":["one","two"],"threshold":0.8}"#),
     )
     .unwrap();
-    let canonical = thinkthen::Request::from_json(r#"{"question":{"function":"choose","question":"Ready?","choices":["one","two"],"threshold":{"low":0.2,"high":0.8}}}"#).unwrap();
+    let canonical = thinkthen::Request::from_json(r#"{"question":{"function":"choose","question":"Ready?","choices":["one","two"],"threshold":0.8}}"#).unwrap();
     assert_eq!(
         serde_json::to_value(plain).unwrap(),
         serde_json::to_value(canonical).unwrap()
@@ -74,6 +74,11 @@ fn plain_and_flat_questions_share_identity_and_required_lists() {
             "tag",
             "Ready?",
             Some(r#"{"labels":["one"],"threshold":{"low":0.2,"high":0.8}}"#),
+        ),
+        (
+            "choose",
+            "Ready?",
+            Some(r#"{"choices":["one","two"],"threshold":{"low":0.2,"high":0.8}}"#),
         ),
     ] {
         assert!(request(function, question, options).is_err());

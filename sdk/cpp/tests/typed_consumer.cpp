@@ -207,8 +207,8 @@ static void snapshots_and_names() {
     assert(std::holds_alternative<tt::rank>(tools.select("rank")));
     try { (void)tools.select<tt::decide>("color"); assert(false); }
     catch (const tt::error& error) { assert(error.code() == tt::errc::usage_name); }
-    const auto band = original.threshold(tt::threshold::band(0.2, 0.8));
-    assert(owner.choose(band, tt::text{"evidence"}).source().question_identity != unnamed.source().question_identity);
+    const auto cut = original.threshold(0.8);
+    assert(owner.choose(cut, tt::text{"evidence"}).source().question_identity != unnamed.source().question_identity);
     assert(owner.choose(original, tt::text{"evidence"}).source().question_identity == unnamed.source().question_identity);
     tt::annotation_questions entries{{"ready", tt::decide{"Ready?"}}};
     const auto annotation = owner.annotate(tt::annotate{entries}, tt::text{"evidence"});
@@ -238,7 +238,7 @@ static void saved_toolbox(const char* json) {
     const auto topic = tools.select<tt::choose>("topic");
     tt::client client(stub_settings());
     const auto loaded = client.choose(topic, tt::json_text{R"({"body":"Bill"})"});
-    const auto direct = client.choose(tt::choose{"Which topic?", {"billing", "shipping"}}.field("/body").threshold(tt::threshold::cutoff(0.7)), tt::json_text{R"({"body":"Bill"})"});
+    const auto direct = client.choose(tt::choose{"Which topic?", {"billing", "shipping"}}.field("/body").threshold(0.7), tt::json_text{R"({"body":"Bill"})"});
     assert(loaded.source().question_identity == direct.source().question_identity);
     assert(loaded.answer() && direct.answer() && *loaded.answer() == *direct.answer());
     std::map<std::string, tt::toolbox_question> entries;

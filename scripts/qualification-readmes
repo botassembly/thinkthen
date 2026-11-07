@@ -19,6 +19,7 @@ import zipfile
 
 from long_path_scratch import long_path_scratch
 from release_python_dependencies import wheelhouse
+from release_readme import windows_steps
 from csharp_consumers import package_config
 from release_registry_check import environment, java_arguments
 from release_workflow import ROOT, version
@@ -34,7 +35,7 @@ def one(folder, pattern):
 
 def unpack(folder, destination):
     item = one(folder, '*.zip' if WINDOWS and folder not in ('ruby', 'r') else '*.tar.gz')
-    destination.mkdir(parents=True)
+    destination.mkdir(parents=True, exist_ok=True)
     if zipfile.is_zipfile(item):
         with zipfile.ZipFile(item) as archive: archive.extractall(destination)
     else:
@@ -123,19 +124,18 @@ if __name__ == '__main__':
 
         for name in ('c', 'cpp'):
             with check(name):
-                installed = unpack(name, scratch / name)
-                native_package = installed if name == 'c' else unpack('c', scratch / 'cpp-native')
                 extension = 'c' if name == 'c' else 'cpp'
-                source = write('first.' + extension, example(name, extension))
-                binary = scratch / ('first-' + name + ('.exe' if WINDOWS else ''))
                 if WINDOWS:
-                    libraries = [native_package / 'lib/thinkthen_ffi.lib']
-                    run('clang-cl', '/nologo', '/std:c11' if name == 'c' else '/std:c++17', '/EHsc', '/MD',
-                        '/I' + str(installed / 'include'), '/I' + str(native_package / 'include'), source, '/Fe:' + str(binary), '/link', *libraries)
-                    native = native_package / 'bin'
-                    search = [str(native)]
-                    run(binary, extra={'PATH': os.pathsep.join(search) + os.pathsep + env['PATH']})
+                    folder = scratch / ('windows-' + name)
+                    for part in ('c',) if name == 'c' else ('c', 'cpp'):
+                        unpack(part, folder / 'thinkthen')
+                    (folder / ('example.' + extension)).write_text(example(name, extension), encoding='utf-8')
+                    run(*windows_steps(PACKAGE / name / 'README.md', folder), cwd=folder)
                 else:
+                    installed = unpack(name, scratch / name)
+                    native_package = installed if name == 'c' else unpack('c', scratch / 'cpp-native')
+                    source = write('first.' + extension, example(name, extension))
+                    binary = scratch / ('first-' + name)
                     if name == 'c':
                         flags = {'PKG_CONFIG_PATH': str(installed / 'lib/pkgconfig') + os.pathsep + env.get('PKG_CONFIG_PATH', '')}
                         result = run('pkg-config', '--cflags', '--libs', 'thinkthen-c', extra=flags, capture_output=True, text=True, encoding='utf-8')

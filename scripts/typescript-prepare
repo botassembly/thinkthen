@@ -2,6 +2,7 @@
 """Generate the TypeScript error declarations from the engine registry."""
 import json
 from release_registry import NODE_TARGETS
+from runtime_floors import FLOORS
 from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 codes = json.loads((root / 'schemas/contract.json').read_text())['codes']
@@ -16,4 +17,4 @@ lines.append('/** Every shared engine error code, in registry order. */')
 lines.append('export declare const ERROR_CODES: readonly ErrorCode[];')
 (package / 'errors.d.ts').write_text('\n'.join(lines) + '\n')
 
-(package / 'platforms.js').write_text('// Generated during package preparation.\nexport const PLATFORMS = Object.freeze(' + json.dumps(list(NODE_TARGETS.values())) + ');\n')
+(package / 'platforms.js').write_text('// Generated during package preparation.\nexport const PLATFORMS = Object.freeze(' + json.dumps(list(NODE_TARGETS.values())) + ');\nexport const GLIBC_FLOOR = ' + json.dumps(FLOORS['linux']['glibc']) + ';\n')

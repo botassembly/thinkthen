@@ -59,7 +59,9 @@ def binding(call: Callable[[], T]) -> T:
     except KeyboardInterrupt:
         return binding(_native.reject_cancelled)
     except _native.Error as error:
-        family, code, message = cast(tuple[str, str, str], error.args)
+        family, code, message, http_status = cast(
+            tuple[str, str, str, int | None], error.args
+        )
         try:
             typed = ErrorCode(code)
         except ValueError:
@@ -71,7 +73,7 @@ def binding(call: Callable[[], T]) -> T:
             kind = Cancelled
         elif family == "internal":
             kind = InternalError
-        raise kind(typed, message) from None
+        raise kind(typed, message, http_status) from None
 
 
 def _converted(convert: Callable[[], str]) -> str | Exception:

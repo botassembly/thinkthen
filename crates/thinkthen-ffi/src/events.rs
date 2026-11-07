@@ -22,8 +22,12 @@ pub struct CallEventsHandle(thinkthen::native::Events);
 /// The thread driving call calls this. call is live.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_events(call: *const CallHandle) -> *mut CallEventsHandle {
+    // SAFETY: the caller lends a live call or NULL.
+    let Some(call) = (unsafe { call.as_ref() }) else {
+        return std::ptr::null_mut();
+    };
     // SAFETY: the sole driver grants shared access before concurrent waits start.
-    let events = unsafe { (&*(*call).call.get()).events() };
+    let events = unsafe { (&*call.call.get()).events() };
     Box::into_raw(Box::new(CallEventsHandle(events)))
 }
 /// Return the wake source's current version.
@@ -34,7 +38,7 @@ pub unsafe extern "C" fn thinkthen_call_events(call: *const CallHandle) -> *mut 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_version(events: *const CallEventsHandle) -> u64 {
     // SAFETY: only an immutable retained signal is accessed.
-    unsafe { (*events).0.version() }
+    unsafe { events.as_ref() }.map_or(0, |events| events.0.version())
 }
 /// Wait until the version is no longer version; return at once if it already changed.
 ///
@@ -44,8 +48,8 @@ pub unsafe extern "C" fn thinkthen_events_version(events: *const CallEventsHandl
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_wait(events: *const CallEventsHandle, version: u64) {
     // SAFETY: only the retained signal's mutex and condition variable are used.
-    unsafe {
-        (*events).0.wait(version);
+    if let Some(events) = unsafe { events.as_ref() } {
+        events.0.wait(version);
     }
 }
 /// Wake every wait on an earlier version, including a wait not yet entered.
@@ -56,8 +60,8 @@ pub unsafe extern "C" fn thinkthen_events_wait(events: *const CallEventsHandle, 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_wake(events: *const CallEventsHandle) {
     // SAFETY: the retained signal provides its own synchronization.
-    unsafe {
-        (*events).0.wake();
+    if let Some(events) = unsafe { events.as_ref() } {
+        events.0.wake();
     }
 }
 /// Free a wake source.
@@ -68,7 +72,7 @@ pub unsafe extern "C" fn thinkthen_events_wake(events: *const CallEventsHandle) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_free(events: *mut CallEventsHandle) {
     // SAFETY: the caller retires all uses before releasing this unique allocation.
-    unsafe {
-        drop(Box::from_raw(events));
+    if !events.is_null() {
+        drop(unsafe { Box::from_raw(events) });
     }
 }

@@ -3,7 +3,7 @@
     unsafe_code,
     reason = "exports borrow counted foreign inputs and own supported output prefixes"
 )]
-use crate::memory::{bytes, error_size, row_size, text};
+use crate::memory::{bytes, error_size, live, row_size, text};
 use crate::{
     Buffer, CallHandle, ClientHandle, HostError, HostRow, QuestionHandle, SettingsHandle, TextView,
 };
@@ -28,9 +28,6 @@ pub const THINKTHEN_NEEDS_INPUT: i32 = 2;
 pub const THINKTHEN_UNSURE: i32 = 4;
 /// Kept for compatibility. Failures return the negative of a thinkthen_code, never this value.
 pub const THINKTHEN_ERROR: i32 = -1;
-pub(crate) const OK: i32 = THINKTHEN_OK;
-pub(crate) const END: i32 = THINKTHEN_END;
-pub(crate) const NEEDS_INPUT: i32 = THINKTHEN_NEEDS_INPUT;
 pub(crate) fn guarded<T>(run: impl FnOnce() -> T) -> std::thread::Result<T> {
     catch_unwind(AssertUnwindSafe(run))
 }
@@ -181,7 +178,7 @@ pub unsafe extern "C" fn thinkthen_client_open(
                 .map_or_else(Settings::default, |settings| settings.0.clone());
             let engine = crate::engine(settings)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -213,7 +210,7 @@ pub unsafe extern "C" fn thinkthen_client_open_backend(
                 .ok_or_else(|| native::argument_error(Code::UsageBackend))?;
             let engine = crate::engine(Settings::default().with_backend(backend))?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -243,7 +240,7 @@ pub unsafe extern "C" fn thinkthen_client_open_json(
             let settings = Settings::from_json(text(settings, len)?)?;
             let engine = crate::engine(settings)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -259,6 +256,20 @@ pub unsafe extern "C" fn thinkthen_client_free(client: *mut ClientHandle) {
         drop(unsafe { Box::from_raw(client) });
     }
 }
+/// The request that asks question, under name when it is not NULL.
+pub(crate) unsafe fn named_request(
+    question: *const QuestionHandle,
+    name: *const TextView,
+) -> Result<Request, Error> {
+    /* SAFETY: the caller lends a live question and a NULL or readable name until return. */
+    unsafe {
+        let request = Request::new(live(question)?.build()?);
+        match name.as_ref() {
+            Some(name) => request.named(text(name.data, name.len)?),
+            None => Ok(request),
+        }
+    }
+}
 pub(crate) unsafe fn open(
     client: *const ClientHandle,
     request: &Request,
@@ -272,7 +283,7 @@ pub(crate) unsafe fn open(
     let offsets = OffsetUnit::from_abi(offsets)
         .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
     /* SAFETY: the client remains live while the engine snapshot is retained. */
-    let call = native::Call::open(unsafe { &(*client).0 }, request, offsets)?;
+    let call = native::Call::open(&unsafe { live(client) }?.0, request, offsets)?;
     /* SAFETY: an independent owned call is published into the empty slot. */
     unsafe {
         out.write(Box::into_raw(Box::new(CallHandle::new(
@@ -281,7 +292,7 @@ pub(crate) unsafe fn open(
             crate::original::Original::initial(request),
         ))));
     }
-    Ok(OK)
+    Ok(THINKTHEN_OK)
 }
 /// Open a streaming call that asks question about each record you send.
 ///
@@ -311,11 +322,7 @@ pub unsafe extern "C" fn thinkthen_call_open_question(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let mut request = Request::new((*question).build()?);
-            if !name.is_null() {
-                request = request.named(text((*name).data, (*name).len)?)?;
-            }
-            open(client, &request, offsets, out)
+            open(client, &named_request(question, name)?, offsets, out)
         })
     }
 }
@@ -374,18 +381,19 @@ pub unsafe extern "C" fn thinkthen_call_send_text(
     /* SAFETY: one driver exclusively accesses the cell; cancel uses a separate token. */
     unsafe {
         operation(error, || {
-            (&mut *(*call).call.get()).send(crate::finite::admit_record(
+            let (driver, originals) = driven(call)?;
+            driver.send(crate::finite::admit_record(
                 data,
                 len,
                 thinkthen::records::RecordKind::Text.abi(),
             )?)?;
-            if let Some(originals) = &mut *(*call).originals.get() {
+            if let Some(originals) = originals {
                 originals.push_back(crate::original::Original::new(
                     thinkthen::records::RecordKind::Text,
                     bytes(data, len),
                 ));
             }
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -412,14 +420,15 @@ pub unsafe extern "C" fn thinkthen_call_send_json(
         operation(error, || {
             let record =
                 crate::finite::admit_record(data, len, thinkthen::records::RecordKind::Json.abi())?;
-            (&mut *(*call).call.get()).send(record)?;
-            if let Some(originals) = &mut *(*call).originals.get() {
+            let (driver, originals) = driven(call)?;
+            driver.send(record)?;
+            if let Some(originals) = originals {
                 originals.push_back(crate::original::Original::new(
                     thinkthen::records::RecordKind::Json,
                     bytes(data, len),
                 ));
             }
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -449,8 +458,9 @@ pub unsafe extern "C" fn thinkthen_call_send_utf16(
             } else {
                 std::slice::from_raw_parts(data, len)
             };
-            (&mut *(*call).call.get()).send(Record::from_utf16(units))?;
-            if let Some(originals) = &mut *(*call).originals.get() {
+            let (driver, originals) = driven(call)?;
+            driver.send(Record::from_utf16(units))?;
+            if let Some(originals) = originals {
                 originals.push_back(match String::from_utf16(units) {
                     Ok(text) => crate::original::Original::new(
                         thinkthen::records::RecordKind::Text,
@@ -461,7 +471,7 @@ pub unsafe extern "C" fn thinkthen_call_send_utf16(
                     }
                 });
             }
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -483,14 +493,15 @@ pub unsafe extern "C" fn thinkthen_call_send_missing(
     /* SAFETY: only the driver accesses this call cell and output slot. */
     unsafe {
         operation(error, || {
-            (&mut *(*call).call.get()).send(Record::missing())?;
-            if let Some(originals) = &mut *(*call).originals.get() {
+            let (driver, originals) = driven(call)?;
+            driver.send(Record::missing())?;
+            if let Some(originals) = originals {
                 originals.push_back(crate::original::Original::new(
                     thinkthen::records::RecordKind::Missing,
                     &[],
                 ));
             }
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -512,14 +523,15 @@ pub unsafe extern "C" fn thinkthen_call_send_invalid(
     /* SAFETY: only the driver accesses this call cell and output slot. */
     unsafe {
         operation(error, || {
-            (&mut *(*call).call.get()).send(Record::invalid())?;
-            if let Some(originals) = &mut *(*call).originals.get() {
+            let (driver, originals) = driven(call)?;
+            driver.send(Record::invalid())?;
+            if let Some(originals) = originals {
                 originals.push_back(crate::original::Original::new(
                     thinkthen::records::RecordKind::Invalid,
                     &[],
                 ));
             }
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -532,8 +544,8 @@ pub unsafe extern "C" fn thinkthen_call_send_invalid(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
     /* SAFETY: only the driver accesses the call cell. */
-    unsafe {
-        (&mut *(*call).call.get()).end_input();
+    if let Ok((driver, _)) = unsafe { driven(call) } {
+        driver.end_input();
     }
 }
 /// Read the call's next event: a row, a request for input, or the end.
@@ -567,7 +579,7 @@ pub unsafe extern "C" fn thinkthen_call_next(
                 Next::Status(status) => Ok(status),
                 Next::Row(row, original) => {
                     publish(*row, original, size, out)?;
-                    Ok(OK)
+                    Ok(THINKTHEN_OK)
                 }
             }
         })
@@ -581,15 +593,27 @@ enum Next {
         Option<crate::original::Original>,
     ),
 }
+type Originals = Option<std::collections::VecDeque<crate::original::Original>>;
+// The call and its originals, for the sole driver. Cancel reaches neither cell.
+unsafe fn driven<'a>(
+    call: *const CallHandle,
+) -> Result<(&'a mut native::Call, &'a mut Originals), Error> {
+    /* SAFETY: only the sole driver reaches these cells of a live call. */
+    unsafe {
+        let call = live(call)?;
+        Ok((&mut *call.call.get(), &mut *call.originals.get()))
+    }
+}
 // Pull one event and pair a filter row with its original input.
 unsafe fn next(call: *mut CallHandle) -> Result<Next, Error> {
     /* SAFETY: only the sole driver reaches the call cell. */
     unsafe {
-        Ok(match (&mut *(*call).call.get()).next_event()? {
-            Event::NeedsInput => Next::Status(NEEDS_INPUT),
-            Event::Finished => Next::Status(END),
+        let (driver, originals) = driven(call)?;
+        Ok(match driver.next_event()? {
+            Event::NeedsInput => Next::Status(THINKTHEN_NEEDS_INPUT),
+            Event::Finished => Next::Status(THINKTHEN_END),
             Event::Row(row) => {
-                let original = match &mut *(*call).originals.get() {
+                let original = match originals {
                     Some(originals) => {
                         Some(originals.pop_front().ok_or_else(native::internal_error)?)
                     }
@@ -644,7 +668,7 @@ pub unsafe extern "C" fn thinkthen_call_next_kept(
         operation(error, || {
             let size = row_size(row)?;
             HostRow::clear(row);
-            if (*(*call).originals.get()).is_none() {
+            if driven(call)?.1.is_none() {
                 return Err(native::argument_error(Code::UsageFunction));
             }
             loop {
@@ -663,7 +687,7 @@ pub unsafe extern "C" fn thinkthen_call_next_kept(
                         }
                         if kept {
                             publish(*item, original, size, row)?;
-                            return Ok(OK);
+                            return Ok(THINKTHEN_OK);
                         }
                     }
                 }
@@ -681,8 +705,8 @@ pub unsafe extern "C" fn thinkthen_call_next_kept(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_cancel(call: *mut CallHandle) {
     /* SAFETY: cancel accesses only its independently shared thread-safe token. */
-    unsafe {
-        (*call).cancel.cancel();
+    if let Some(call) = unsafe { call.as_ref() } {
+        call.cancel.cancel();
     }
 }
 /// Cancel and free a call.

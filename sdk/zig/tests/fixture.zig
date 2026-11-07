@@ -17,7 +17,7 @@ pub fn question(comptime function: tt.Function, a: A, value: V) !tt.QuestionType
     result.options = .{};
     inline for (@typeInfo(@TypeOf(result.options)).@"struct".field_names) |name| {
         if (value.object.get(name)) |child| {
-            if (comptime std.mem.eql(u8, name, "threshold") and (function == .decide or function == .choose or function == .filter)) {
+            if (comptime std.mem.eql(u8, name, "threshold") and (function == .decide or function == .filter)) {
                 result.options.threshold = if (child == .object) tt.Threshold.band(try parse(f64, a, child.object.get("low").?), try parse(f64, a, child.object.get("high").?)) else .{ .cut = try parse(f64, a, child) };
             } else @field(result.options, name) = try parse(@TypeOf(@field(result.options, name)), a, child);
         }

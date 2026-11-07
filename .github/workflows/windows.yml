@@ -17,7 +17,7 @@ env:
 jobs:
   windows:
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 120
     defaults: {run: {shell: pwsh}}
     steps:
       - name: Preserve source bytes on Windows
@@ -42,7 +42,7 @@ jobs:
       - if: always()
         id: setup-dotnet
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
-        with: {dotnet-version: '10.0.103'}
+        with: {dotnet-version: '10.0.114'}
       - name: Select the pinned Node runtime
         id: setup-node
         if: always()
@@ -65,6 +65,10 @@ jobs:
         id: jvm
         if: always() && inputs.surface != 'csharp'
         run: python scripts/windows-native-proof jvm "$env:RUNNER_TEMP/windows-native-proof"
+      - name: Prove Go, Java and Kotlin from an elevated token, then as a normal user
+        id: elevated
+        if: always() && inputs.surface != 'csharp'
+        run: python scripts/windows-native-proof elevated "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove the installed C# single-file consumer
         id: csharp
         if: always() && inputs.surface != 'cache'

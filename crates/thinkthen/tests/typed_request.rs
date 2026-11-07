@@ -244,9 +244,9 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
         (
             questions::Choose::new("Which?", ["a", "b"])
                 .unwrap()
-                .threshold(band)
+                .threshold(cut)
                 .into(),
-            json!({"low":0.2,"high":0.8}),
+            json!(cut.get()),
         ),
         (
             questions::Tag::new("Which?", ["a"])

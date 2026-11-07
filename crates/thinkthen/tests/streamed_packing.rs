@@ -5,6 +5,7 @@ pub mod loopback;
 #[cfg(feature = "command")]
 mod support;
 use loopback::{KEY, Loopback};
+use std::sync::mpsc::TrySendError;
 use thinkthen::{Decide, Engine, Key, Record, Settings};
 
 fn engine(server: &Loopback) -> Engine {
@@ -47,6 +48,31 @@ fn pushed_records_pack_like_finite_input_and_keep_their_order() {
         assert!(row.into_answer().unwrap());
     }
     assert_eq!(server.count() - finite_requests, finite_requests);
+}
+
+#[test]
+fn one_thread_try_send_fills_requests_instead_of_sending_one_per_idle_window() {
+    let server = Loopback::noul(0.9).unwrap();
+    let call = engine(&server)
+        .open(&Decide::new("Ready?").unwrap())
+        .unwrap();
+    let sender = call.sender();
+    let mut rows = call.rows();
+    let mut read = 0;
+    for index in 0..300 {
+        let mut record = Record::text(format!("row {index}"));
+        while let Err(TrySendError::Full(back)) = sender.try_send(record) {
+            record = back;
+            rows.next().unwrap().unwrap();
+            read += 1;
+        }
+    }
+    sender.close();
+    read += rows.map(Result::unwrap).count();
+    assert_eq!(read, 300);
+    // Full requests would be 6. A slow machine may add partial ones; reading a
+    // row at every transient full queue took 146.
+    assert!(server.count() <= 24, "{} requests", server.count());
 }
 
 #[test]

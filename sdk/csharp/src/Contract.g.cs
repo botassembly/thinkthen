@@ -6,6 +6,8 @@ internal static class Contract
     internal const uint AbiVersion = 131074;
     internal const string AbiCode = "usage.abi";
     internal const string AbiMessage = "the native ABI is incompatible";
+    internal const string LibraryVariable = "THINKTHEN_LIBRARY";
+    internal const string LibraryPathMessage = "THINKTHEN_LIBRARY must be an absolute path";
     internal static string? FunctionName(long value) => value switch
     {
         1 => "decide",
@@ -78,6 +80,10 @@ internal static class Contract
         1016 => "usage.offsets",
         1017 => "usage.argument",
         1018 => "usage.option",
+        1019 => "usage.column",
+        1020 => "usage.sheet",
+        1021 => "usage.output",
+        1022 => "usage.table",
         2001 => "record.json",
         2002 => "record.missing",
         2003 => "record.too-large",
@@ -134,6 +140,14 @@ public enum ErrorCode
     UsageArgument = 1017,
     /// <summary>The shared `usage.option` error.</summary>
     UsageOption = 1018,
+    /// <summary>The shared `usage.column` error.</summary>
+    UsageColumn = 1019,
+    /// <summary>The shared `usage.sheet` error.</summary>
+    UsageSheet = 1020,
+    /// <summary>The shared `usage.output` error.</summary>
+    UsageOutput = 1021,
+    /// <summary>The shared `usage.table` error.</summary>
+    UsageTable = 1022,
     /// <summary>The shared `record.json` error.</summary>
     RecordJson = 2001,
     /// <summary>The shared `record.missing` error.</summary>

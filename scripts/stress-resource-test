@@ -57,14 +57,15 @@ def memory_floors():
 
 
 def count_growth():
-    """Feature: short count checks reject sustained growth, not one-time steps."""
+    """Feature: short count checks reject repeated growth, not one-time steps."""
     from stress_resources import METRICS, growth
     for key in METRICS[1:]:
         for late, peaks, passed, soak_passed in (
             ([13] * 10, [13, 13, 13, 13], True, False),
             ([10] * 9 + [13], [10, 10, 10, 13], True, True),
             (list(range(11, 21)), [12, 15, 17, 20], False, False),
-            ([11, 12, 13, 14, 15, 15, 15, 15, 16, 17], [12, 15, 15, 17], True, False),
+            ([11, 12, 13, 14, 15, 15, 15, 15, 16, 17], [12, 15, 15, 17], False, False),
+            ([11, 12, 13, 14, 15, 14, 14, 14, 16, 17], [12, 15, 14, 17], True, False),
         ):
             samples = [dict.fromkeys(METRICS, 0) for _ in range(20)]
             for row, value in zip(samples, [10] * 10 + late):
@@ -76,7 +77,19 @@ def count_growth():
             for options in ({}, dict(memory_window=(11, 20))):
                 soak = growth(samples, [65] * 20, **options)
                 assert soak['passed'] is soak_passed, (key, late, soak)
-    print('short counts: steps and plateaus pass; four strictly rising peaks fail; soaks unchanged')
+        # A leak on rounds N, 2N, 3N.
+        for pace, peaks, passed in (
+            (3, [4, 5, 5, 6], False),
+            (5, [2, 3, 3, 4], False),
+            (6, [2, 2, 2, 3], True),
+        ):
+            samples = [dict.fromkeys(METRICS, 0) for _ in range(20)]
+            for number, row in enumerate(samples, 1):
+                row[key] = number // pace
+            short = growth(samples, [65] * 20, short_gate=True)
+            assert short['passed'] is passed, (key, pace, short)
+            assert short['metrics'][key]['late_window_maxima'] == peaks, short
+    print('short counts: steps and plateaus pass; peaks that never fall and rise twice fail; soaks unchanged')
 
 
 def extended_window():

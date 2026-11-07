@@ -54,8 +54,8 @@ public class Choose(
     /** The question text. */
     public val question: String,
     choices: List<String>,
-    /** When the answer counts; a band makes answers inside it not sure. */
-    public val threshold: Threshold? = null,
+    /** The cut point the best choice must reach; below it the answer is not sure. */
+    public val threshold: Threshold.Cut? = null,
     /** The field inside a JSON record. */
     public val field: Pointer? = null,
     override val name: String? = null,

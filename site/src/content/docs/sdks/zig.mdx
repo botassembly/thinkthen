@@ -17,7 +17,7 @@ The Zig SDK gives your Zig code the ten functions as methods on one client; each
 
 <Example id="functions/decide/zig" title="src/main.zig" />
 
-`true` means yes: the message asks for a refund.
+`true` means yes: the message asks for a refund. If a call fails, such as when no key is set, the `errdefer` line prints the reason on stderr and the program exits with an error.
 
 ## Add it to your build
 
@@ -25,7 +25,7 @@ The SDK needs <Fact k="languages.zig.requires" />. In a project that has a `buil
 
 <InstallLine k="languages.zig.install" lang="sh" />
 
-Archives are published for `linux-x86_64`, `linux-arm64` and `macos-arm64`; change the end of the address to match your machine. `zig fetch --save` adds the dependency to `build.zig.zon`.
+Archives are published for `linux-x86_64`, `linux-arm64` and `macos-arm64`; change the end of the address to match your machine. [Windows](#build-on-windows) has its own zip. `zig fetch --save` adds the dependency to `build.zig.zon`.
 
 This `build.zig` builds `src/main.zig`, adds the `thinkthen` module, installs the native library beside your program with `installNative`, and adds a `run` step:
 
@@ -37,6 +37,14 @@ This `build.zig` builds `src/main.zig`, adds the `thinkthen` module, installs th
 </details>
 
 Save the program as `src/main.zig` and run `zig build run`. The client uses the key from the [Quickstart](/quickstart/).
+
+## Build on Windows
+
+Plain `zig build` works on Windows, with no `-Dtarget` flag and no Visual Studio, because Zig brings its own Windows C library. Set up `build.zig` and `src/main.zig` as above, then run this in PowerShell, which fetches the Windows archive:
+
+<InstallLine k="languages.zig.installWindows" lang="powershell" />
+
+To use Visual Studio's C library instead, add `-Dtarget=x86_64-windows-msvc` to `zig build`.
 
 ## Handle not sure and failures
 

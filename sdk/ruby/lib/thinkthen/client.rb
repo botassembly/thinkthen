@@ -29,7 +29,7 @@ module ThinkThen
       end
       settings = Native::SettingsPointer.new(output.read_pointer)
       key&.send(:copy_to, settings)
-      Thread.handle_interrupt(Exception => :never) do
+      Thread.handle_interrupt(Object => :never) do
         output = FFI::MemoryPointer.new(:pointer)
         Native.checked { |error| Native.thinkthen_client_open(settings, output, error) }
         @pointer = Native::ClientPointer.new(output.read_pointer)
@@ -49,7 +49,7 @@ module ThinkThen
         @streams.filter_map { |reference| reference.__getobj__ if reference.weakref_alive? }
       end
       streams.each(&:close)
-      Thread.handle_interrupt(Exception => :never) do
+      Thread.handle_interrupt(Object => :never) do
         @mutex.synchronize { @pointer&.free; @pointer = nil }
       end
       nil

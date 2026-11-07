@@ -37,6 +37,8 @@ recognize(undefined, "Ada");
 // @ts-expect-error rules are required
 relate(undefined, "Ada");
 for (const operation of [find, recognize, relate] as const) void operation;
+// @ts-expect-error choose takes a numeric threshold
+choose("Team?", "Refund", { choices: ["billing"], threshold: { low: 0.2, high: 0.8 } });
 // @ts-expect-error tag takes a numeric threshold
 tag("Topics?", "Refund", { labels: ["billing"], threshold: { low: 0.2, high: 0.8 } });
 // @ts-expect-error find takes a numeric threshold

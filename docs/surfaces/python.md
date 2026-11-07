@@ -50,7 +50,7 @@ except tt.Unsure:
 
 <!-- output: capture -->
 
-`threshold=(0.2, 0.8)` is a band: no below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above. Without a band, decide uses a cut at 0.5 and is never not sure. A number such as `threshold=0.7` sets a different cut, and `tt.Band(0.2, 0.8)` is the same as the tuple. Choose takes either form and is not sure unless its best choice reaches the upper cut. Tag, find, recognize and relate take only a number.
+`threshold=(0.2, 0.8)` is a band: no below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above. Without a band, decide uses a cut at 0.5 and is never not sure. A number such as `threshold=0.7` sets a different cut, and `tt.Band(0.2, 0.8)` is the same as the tuple. Choose takes only a number and is not sure unless its best choice reaches it. Tag, find, recognize and relate take only a number.
 
 Using an answer raises when there is no answer to use:
 
@@ -416,7 +416,31 @@ with tt.Client() as client:
 print(frame.assign(is_refund=is_refund))
 ```
 
-Each accessor method returns one answer per input row by default, as a Series on the input's index. A Series keeps its name; a DataFrame's answers are named `answer`. pandas answers are `boolean` for decide, `string` for choose, `Float64` for score and `Int64` for rank, and Polars answers use native Polars types. Not sure is `<NA>` in pandas and `null` in Polars. `filter` returns the kept subset of your own Series or DataFrame, and leaves out the rows that are not sure. `details=True` returns the outcomes instead: pandas gives an outcome DataFrame on the input's index, and Polars gives a struct of outcomes. With `details=True`, DataFrame annotation returns the input columns followed by `name`, `name_status`, `name_probability` and `name_detail` for each question name. pandas keeps the original index, including duplicates, and Polars uses the same column layout with native column types. Existing column names must not overlap the added names. By default (`errors="raise"`), a failed row, such as a missing value, raises `RecordError` after every row is judged, and the error's `outcomes` attribute holds every outcome already paid for. `errors="coerce"` gives a failed row a missing answer instead, so it reads like not sure, and `filter` then leaves failed rows out of the subset without raising. Choose `errors="coerce"` only when your code checks for missing answers. Streams can also collect with `.to_pandas()` or `.to_polars()`. These collection methods retain all result rows in memory.
+Each accessor method returns one answer per input row by default, as a Series on the input's index. A Series keeps its name; a DataFrame's answers are named `answer`. pandas answers are `boolean` for decide, `string` for choose, `Float64` for score and `Int64` for rank, and Polars answers use native Polars types. Not sure is `<NA>` in pandas and `null` in Polars. On older Polars, such as 1.0, a missing `find` or annotate answer reads back as a struct of nulls, so check with `is_null()`, which works on every supported version. `filter` returns the kept subset of your own Series or DataFrame, and leaves out the rows that are not sure. `details=True` returns the outcomes instead: pandas gives an outcome DataFrame on the input's index, and Polars gives a struct of outcomes. With `details=True`, DataFrame annotation returns the input columns followed by `name`, `name_status`, `name_probability` and `name_detail` for each question name. pandas keeps the original index, including duplicates, and Polars uses the same column layout with native column types. Existing column names must not overlap the added names. By default (`errors="raise"`), a failed row, such as a missing value, raises `RecordError` after every row is judged, and the error's `outcomes` attribute holds every outcome already paid for. Streams can also collect with `.to_pandas()` or `.to_polars()`. These collection methods retain all result rows in memory.
+
+To keep going past a failure, pass `errors="coerce"`. The answers stay a plain column with a missing value for not sure and for a failure, and `filter` leaves failed rows out of the subset. The call warns once with `tt.FailedRowsWarning`, which names every failed code, and `.thinkthen.failures()` on the result lists each failure, so you can tell it from not sure:
+
+```python
+import pandas as pd
+import thinkthen as tt
+import thinkthen.pandas
+
+frame = pd.DataFrame({"text": ["Please refund my order.", None, ""]})
+with tt.Client() as client:
+    is_refund = frame.thinkthen.decide(
+        "Does the customer request a refund?",
+        field="/text",
+        threshold=(0.2, 0.8),
+        client=client,
+        errors="coerce",
+    )
+failed_messages = is_refund.thinkthen.failures()
+print(failed_messages[["position", "error_code"]])
+```
+
+Each row of `failures()` has the failure's `position` in your input, counted from 1, then `id`, `question`, `error_code`, `error_message` and `error_http_status`. `question` names the annotate question. The result is a pandas or Polars DataFrame, matching the input. A result with no failure gives no warning and zero rows. The warning's `codes` and `rows` hold the same failures, and `warnings.filterwarnings("ignore", category=tt.FailedRowsWarning)` silences it. With `details=True` the outcomes already show each status, so the call does not warn, and `failures()` still lists the codes. To keep status in your own table, use `details=True`.
+
+Call `failures()` on the object the call returned, because the list does not always follow your data. pandas keeps it in that object's `.attrs`. A subset keeps the whole list, including failures outside the subset. `pd.concat` keeps it only when every input's `.attrs` are identical and not empty. `frame.assign(is_refund=is_refund)` loses it, because the list sits on the answer column and not on `frame`. Polars has no place to keep it, so every Polars operation that makes a new object loses it. Where the list was lost, `failures()` gives zero rows, so an empty table there does not mean the call had no failures.
 
 `tt.AsyncClient` supports `async with`. Await its one-record methods, and iterate its streams with `async for` inside `async with`. Its `filter` yields kept records the same way, then raises one `tt.RecordError` for failures. Row streams offer `.to_list()` and `.aclose()`. The async calls accept ordinary iterables and async iterables of records, and `thinkthen.aio` supplies top-level async functions. Cancelling an asyncio task keeps Python's normal cancellation behavior and closes the underlying operation.
 
@@ -438,6 +462,29 @@ asyncio.run(main())
 ```
 
 <!-- output: capture -->
+
+`thinkthen.aio.set_default_client(client)` makes the `thinkthen.aio` calls use your `tt.AsyncClient`, as `tt.set_default_client` does for the plain calls. Call it inside your main coroutine, because each running event loop has its own default and a call outside a running loop raises `RuntimeError`. The default ends with its loop, so the next `asyncio.run` starts fresh. Setting a new default leaves the old one open, and `aio.aclose_default_client()` closes the one that is set.
+
+```python
+import asyncio
+
+import thinkthen as tt
+import thinkthen.aio as aio
+
+
+async def main() -> None:
+    retry = tt.RetryPolicy(max_retries=5)
+    aio.set_default_client(tt.AsyncClient(retry=retry))
+    is_refund = await aio.decide(
+        "Does the customer request a refund?",
+        "Please refund my order.",
+    )
+    print(is_refund)
+    await aio.aclose_default_client()
+
+
+asyncio.run(main())
+```
 
 ## Save and load questions
 

@@ -72,6 +72,7 @@ fn expanding_workbooks_and_oversized_grids_stop_before_requests() {
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(2), "{name}: {output:?}");
+        assert_eq!(support::reported(&output), "usage.table", "{name}");
         assert!(
             String::from_utf8_lossy(&output.stderr).contains(limit),
             "{name}: {output:?}"

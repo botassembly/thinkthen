@@ -92,7 +92,8 @@
 //! [`Engine::rows`] takes any owned iterator of records and yields one row per
 //! record, in input order; a failed record is a row, and the call goes on.
 //! [`Engine::filter`] yields only the kept items, and
-//! [`Engine::filter_items`] yields every item with its row.
+//! [`Engine::filter_items`] yields every item with its row. [`Engine::rank`]
+//! yields each item with its row, best first.
 //!
 //! ```
 //! # use thinkthen::{BackendName, Settings};
@@ -108,10 +109,10 @@
 //! assert_eq!(refund_requests.len(), 2);
 //!
 //! let severity = Rank::new("How severe is the outage?", ["minor", "major", "total"])?;
-//! for row in engine.rows(&severity, ["One page is slow.", "Nothing loads."])? {
-//!     let row = row?;
-//!     let place = row.answer()?;
-//!     println!("record {} ranks {place}", row.position());
+//! let outages = ["One page is slow.", "Nothing loads."];
+//! for ranked in engine.rank(&severity, outages, |outage| *outage)? {
+//!     let (outage, row) = ranked?;
+//!     println!("{} {outage}", row.answer()?);
 //! }
 //!
 //! let team = Choose::new("Which team owns this?", ["billing", "shipping"])?;
@@ -157,7 +158,7 @@ pub use batch::Batch;
 #[doc(hidden)]
 pub use contract_driver::native;
 pub use contract_driver::{
-    AnyCall, AnyRows, Call, FilterError, Filtered, Kept, RecordSender, Rows,
+    AnyCall, AnyRows, Call, FilterError, Filtered, Kept, Ranked, RecordSender, Rows,
 };
 #[cfg(feature = "stream")]
 pub use contract_driver::{AnyRowStream, RowStream};

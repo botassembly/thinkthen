@@ -57,8 +57,8 @@ pub const ChooseOptions = struct {
     name: ?[]const u8 = null,
     /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
     field: ?[]const u8 = null,
-    /// The answer threshold: a cut, or a band whose middle is not sure.
-    threshold: ?Threshold = null,
+    /// The lowest probability that counts; below it the answer is not sure.
+    threshold: ?f64 = null,
 };
 /// A choose question.
 pub const Choose = struct {

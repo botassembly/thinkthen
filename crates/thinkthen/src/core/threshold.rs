@@ -114,7 +114,7 @@ impl Threshold {
         Ok(Self(Rule::Band(low.0, high.0)))
     }
 
-    /// Require a single cut for a question that cannot return not sure.
+    /// Require a single cut for a question that takes no band.
     ///
     /// # Errors
     ///

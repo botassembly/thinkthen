@@ -8,7 +8,8 @@
       class = c(paste0("thinkthen_", error$family, "_error"),
                 if (identical(error$code, "local.cancelled")) "thinkthen_cancelled_error",
                 "thinkthen_error"),
-      code = error$code, call = rlang::caller_env(), trace = rlang::trace_back(bottom = globalenv()))
+      code = error$code, http_status = error$http_status, call = rlang::caller_env(),
+      trace = rlang::trace_back(bottom = globalenv()))
   }
   result
 }
@@ -171,6 +172,8 @@ tt_retry <- function(..., max_retries = NULL, initial_backoff_ms = NULL,
   }
   selected <- .tt_restore(x, selected)
   attr(selected, ".thinkthen_function") <- NULL
+  # An index restored from the input describes the input's rows, not this subset's.
+  if (inherits(selected, "data.table")) attr(selected, "index") <- NULL
   selected
 }
 

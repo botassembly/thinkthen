@@ -145,13 +145,11 @@ client.rank(
     field = text,
 ).collect { ranked ->
     val urgencyRank = ranked.answer()
-    val message = ranked.item as JsonObject
-    val id = message.values()["id"] as JsonString
-    println("$urgencyRank ${id.value()}")
+    println("$urgencyRank ${ranked.item["id"]}")
 }
 ```
 
-rank gives back each record as a `JsonValue` snapshot (text arrives as `JsonString`); filter gives back your own objects. These are the Java package's types, so import `dev.thinkthen.JsonObject` and `dev.thinkthen.JsonString`. A JSON record arrives as its JSON type, such as `JsonObject`, whose `values()` map holds its fields, and a missing or invalid record arrives as `JsonNull`, never `null`. `answer()` is the rank, a `Long` starting at 1. `position` is the record's place in your input. `top = n` keeps the first `n` ranks and still reports failed records.
+rank gives a `Ranked` of your record type. Its `item` is an equal copy of your record, read back through the record's serializer, not the same object, so a long `Flow` with `top` holds only the top records. filter gives back your own objects. A missing or invalid record has no copy, so it keeps your original on its failed row. A type that cannot read back to the same JSON throws `SerializationException` naming the type, before any backend request when the first record shows it. `answer()` is the rank, a `Long` starting at 1. `position` is the record's place in your input. `top = n` keeps the first `n` ranks and still reports failed records.
 
 ### find: point to the line that answers
 

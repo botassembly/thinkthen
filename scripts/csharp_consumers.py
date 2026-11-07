@@ -168,10 +168,5 @@ if __name__ == '__main__':
         abi(stage)
     elif sys.argv[1] == 'interface':
         negative(stage)
-    elif sys.argv[1] == 'metadata':
-        metadata(stage)
     else:
-        negative(stage)
-        readme(stage)
-        guide(stage)
-        metadata(stage)
+        raise SystemExit('usage: csharp_consumers.py examples|readme|guide-rank|metadata|abi|interface STAGE')

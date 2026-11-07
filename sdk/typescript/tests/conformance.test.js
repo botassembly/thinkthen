@@ -27,7 +27,8 @@ for (const file of manifest.cases) {
             client = new sdk.ThinkThen(options);
             return streamFor(client, fixture.request, cancel.signal).toArray();
           },
-            error => error instanceof sdk.ThinkThenError && error.code === fixture.expected.error);
+            error => error instanceof sdk.ThinkThenError && error.code === fixture.expected.error
+              && error.httpStatus === fixture.expected.http_status);
           assert.equal(await server.count(), fixture.requests);
           return;
         }

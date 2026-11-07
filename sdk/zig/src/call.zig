@@ -228,7 +228,7 @@ fn admit(comptime function: t.Function, allocator: Allocator, question: q.Questi
     errdefer native.function("thinkthen_question_free")(builder);
     if (@hasField(@TypeOf(question.options), "threshold")) {
         if (question.options.threshold) |threshold| {
-            if (function == .decide or function == .choose or function == .filter) {
+            if (function == .decide or function == .filter) {
                 switch (threshold) {
                     .cut => |v| try d.check(native.function("thinkthen_question_set_cut")(builder, v, &err), &err, diag),
                     .bounds => |v| try d.check(native.function("thinkthen_question_set_band")(builder, v.low, v.high, &err), &err, diag),

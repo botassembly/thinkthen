@@ -4,7 +4,7 @@ import { menuPages, sidebar } from './src/lib/sitemap.mjs';
 import errorData from './src/data/errors.json' with { type: 'json' };
 
 const sdkLocalFailures = ['go', 'java', 'kotlin', 'python', 'typescript'].map((language) => `sdk-${language}-failure`);
-const localCaptures = [...sdkLocalFailures, 'ref-json-failed', 'version', 'completions', 'man-page', 'error-backend-name', 'error-batch', 'error-choices', 'error-key-missing', 'error-name', 'error-pointer', 'error-question', 'error-record-missing', 'error-too-large', 'error-toolbox', 'error-url', 'exit-interrupt', 'exit-local', 'exit-usage', 'ans-field-piped', 'ans-field-piped-missing', 'ans-json-on-table'];
+const localCaptures = [...sdkLocalFailures, 'ref-json-failed', 'version', 'completions', 'man-page', 'error-backend-name', 'error-batch', 'error-choices', 'error-column', 'error-key-missing', 'error-name', 'error-output', 'error-pointer', 'error-question', 'error-record-missing', 'error-sheet', 'error-table', 'error-too-large', 'error-toolbox', 'error-url', 'exit-interrupt', 'exit-local', 'exit-usage', 'ans-field-piped', 'ans-field-piped-missing', 'ans-json-on-table'];
 const localNotices = { 'exit-interrupt': 'thinkthen: cancelling; press Ctrl-C again to exit' };
 const localCodes = Object.fromEntries(Object.entries(errorData.codes).flatMap(([code, entry]) => [entry.example, entry.also].filter((id) => localCaptures.includes(id) && !localNotices[id]).map((id) => [id, code])));
 

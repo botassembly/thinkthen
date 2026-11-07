@@ -3,7 +3,7 @@ const std = @import("std");
 pub const Backend = enum { systemone, openai, stub };
 /// The ten question functions.
 pub const Function = enum { decide, choose, tag, score, filter, rank, find, recognize, relate, annotate };
-/// When decide, choose and filter answer: one cut, or a band whose middle is not sure.
+/// When decide and filter answer: one cut, or a band whose middle is not sure.
 pub const Threshold = union(enum) {
     /// Answer yes at or above this probability.
     cut: f64,

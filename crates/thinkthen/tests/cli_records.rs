@@ -484,3 +484,41 @@ fn field_environment_selects_records_and_the_previous_setting_is_ignored() {
         assert_eq!(sent.contains("caller field"), !selected);
     }
 }
+
+#[test]
+fn whole_float_ids_become_integers_and_null_and_other_floats_fail_their_row() {
+    let server = Loopback::refunds().unwrap();
+    let input = [
+        r#"{"id":3.0,"body":"refund"}"#,
+        r#"{"id":-2e0,"body":"refund"}"#,
+        r#"{"id":9007199254740991.0,"body":"refund"}"#,
+        r#"{"id":null,"body":"refund"}"#,
+        r#"{"id":1.5,"body":"refund"}"#,
+        r#"{"id":9007199254740992.0,"body":"refund"}"#,
+    ]
+    .join("\n");
+    let output = run(
+        &server,
+        &["--from", "jsonl", "--json", "--field", "/body"],
+        None,
+        input.as_bytes(),
+    );
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
+    let rows = rows(&output);
+    let answered = [json!(3), json!(-2), json!(9_007_199_254_740_991_i64)];
+    for (row, id) in rows.iter().zip(&answered) {
+        assert_eq!(row["status"], "answered", "{row}");
+        assert_eq!(&row["id"], id, "{row}");
+    }
+    assert_eq!(rows.len(), 6);
+    for row in &rows[3..] {
+        assert_eq!(row["status"], "failed", "{row}");
+        assert_eq!(row["error"]["code"], "record.invalid", "{row}");
+        assert!(row.get("id").is_none(), "{row}");
+    }
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        error.contains("id: expected a string or a whole number; received null"),
+        "{error}"
+    );
+}

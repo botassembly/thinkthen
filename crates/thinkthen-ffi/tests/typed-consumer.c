@@ -66,7 +66,7 @@ static void builders_and_prefixes(void) {
         rejected(thinkthen_question_set_field(value, (const char *)"body", 4, &error), THINKTHEN_CODE_USAGE_POINTER, &error);
         identity(client, value, after, &error); assert(memcmp(before, after, 64) == 0);
         ok(thinkthen_question_set_field(value, (const char *)"/body", 5, &error), &error);
-        if (function == THINKTHEN_FUNCTION_DECIDE || function == THINKTHEN_FUNCTION_FILTER || function == THINKTHEN_FUNCTION_CHOOSE) ok(thinkthen_question_set_band(value, 0.2, 0.8, &error), &error);
+        if (function == THINKTHEN_FUNCTION_DECIDE || function == THINKTHEN_FUNCTION_FILTER) ok(thinkthen_question_set_band(value, 0.2, 0.8, &error), &error);
         else rejected(thinkthen_question_set_band(value, 0.2, 0.8, &error), THINKTHEN_CODE_USAGE_THRESHOLD, &error);
         if (function == THINKTHEN_FUNCTION_SCORE || function == THINKTHEN_FUNCTION_RANK || function == THINKTHEN_FUNCTION_ANNOTATE) rejected(thinkthen_question_set_cut(value, 0.7, &error), THINKTHEN_CODE_USAGE_THRESHOLD, &error);
         else ok(thinkthen_question_set_cut(value, 0.7, &error), &error);

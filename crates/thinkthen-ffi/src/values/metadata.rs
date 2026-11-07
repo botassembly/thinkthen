@@ -6,8 +6,8 @@
 use super::{IdView, Owned, SourceView, ValueHandle, project, views};
 use crate::{
     HostError, HostRow,
-    exports::{OK, operation},
-    memory::error_size,
+    exports::{THINKTHEN_OK, operation},
+    memory::{error_size, live},
 };
 use thinkthen::{
     Code, native,
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn thinkthen_row_values(
             out.write(std::ptr::null_mut());
             let value = ValueHandle::from_row(row)?;
             out.write(Box::into_raw(Box::new(value)));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn thinkthen_value_function(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: the value is borrowed and outputs are exclusive until return. */
-    unsafe { project(out, error, || Ok((*value).function()?.abi())) }
+    unsafe { project(out, error, || Ok(live(value)?.function()?.abi())) }
 }
 /// Write the value's thinkthen_status to *out.
 ///
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn thinkthen_value_status(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: the value is borrowed and outputs are exclusive until return. */
-    unsafe { project(out, error, || Ok((*value).status()?.abi())) }
+    unsafe { project(out, error, || Ok(live(value)?.status()?.abi())) }
 }
 /// Write which question, backend and model gave the value to *out.
 ///
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn thinkthen_value_source(
     /* SAFETY: value owns the returned strings; the output slots are exclusive. */
     unsafe {
         project(out, error, || {
-            let Owned::Row(row) = &(*value).0 else {
+            let Owned::Row(row) = &live(value)?.0 else {
                 return Err(native::abi_error());
             };
             let source = row.source();
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn thinkthen_value_id(
     /* SAFETY: string views borrow value; output slots are exclusive until return. */
     unsafe {
         project(out, error, || {
-            let Owned::Row(row) = &(*value).0 else {
+            let Owned::Row(row) = &live(value)?.0 else {
                 return Err(native::abi_error());
             };
             let mut view = IdView {
@@ -208,12 +208,12 @@ pub unsafe extern "C" fn thinkthen_value_error(
         operation(error, || {
             let size = error_size(result).ok_or_else(native::abi_error)?;
             HostError::clear(result, size);
-            (match (*value).error()? {
+            (match live(value)?.error()? {
                 Some(error) => HostError::from_error(size, error),
                 None => HostError::empty(size),
             })
             .write(result);
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -243,7 +243,7 @@ pub unsafe extern "C" fn thinkthen_value_probability(
     /* SAFETY: value is borrowed and outputs are exclusively writable until return. */
     unsafe {
         project(out, error, || {
-            Ok(match &(*value).0 {
+            Ok(match &live(value)?.0 {
                 Owned::Row(row) => row
                     .probability()
                     .map_or(f64::NAN, thinkthen::Probability::get),
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn thinkthen_value_has_detail(
     /* SAFETY: value is borrowed and output slots are exclusively writable. */
     unsafe {
         project(out, error, || {
-            Ok(match &(*value).0 {
+            Ok(match &live(value)?.0 {
                 Owned::Row(row) => {
                     macro_rules! read{($($variant:ident),*)=>{match row{$(thinkthen::results::AnyRow::$variant(row)=>present(row.outcome()),)*_=>return Err(native::abi_error())}};}
                     read!(
@@ -314,7 +314,7 @@ pub unsafe extern "C" fn thinkthen_value_source_name(
     /* SAFETY: the returned view borrows the live value owner. */
     unsafe {
         project(out, error, || {
-            let Owned::Row(row) = &(*value).0 else {
+            let Owned::Row(row) = &live(value)?.0 else {
                 return Err(native::abi_error());
             };
             Ok(row
@@ -344,7 +344,7 @@ pub unsafe extern "C" fn thinkthen_value_original(
     /* SAFETY: the value owns the original input and output slots are exclusive. */
     unsafe {
         project(out, error, || {
-            (*value)
+            live(value)?
                 .1
                 .as_ref()
                 .map(crate::original::Original::view)

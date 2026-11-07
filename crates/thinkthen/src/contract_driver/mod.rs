@@ -6,6 +6,7 @@ mod filtered;
 #[cfg(feature = "native")]
 pub mod native;
 mod queue;
+mod ranked;
 #[cfg(any(feature = "native", feature = "command"))]
 mod signal;
 #[cfg(feature = "stream")]
@@ -18,8 +19,10 @@ use crate::engine::RecordEvent;
 use crate::{Cancel, Engine, Error, OffsetUnit, Question, Request};
 pub use filtered::{FilterError, Filtered, Kept};
 use queue::{Queue, Received};
+pub use ranked::Ranked;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::sync::mpsc::TrySendError;
 #[cfg(feature = "stream")]
 use std::task::{Context, Poll};
 #[cfg(feature = "stream")]
@@ -28,6 +31,9 @@ pub use stream::{AnyRowStream, RowStream};
 // Typed Rust calls report spans in UTF-8 bytes, so `&text[start..end]` slices the
 // matched text.
 const RUST_OFFSETS: OffsetUnit = OffsetUnit::Utf8;
+
+// Native hosts read their sources this far ahead of the engine, and promise no more.
+const HOST_INPUT: usize = 2;
 
 // Empty queue polls describe host scheduling, not the end of a batch.
 const INPUT_IDLE: std::time::Duration = std::time::Duration::from_millis(100);
@@ -172,6 +178,40 @@ impl RecordSender {
     pub fn send(&self, record: Record) -> Result<(), Error> {
         self.0.input.send(record)
     }
+    /// Transfer one record if input has room, without waiting, as
+    /// [`SyncSender::try_send`](std::sync::mpsc::SyncSender::try_send) does.
+    ///
+    /// One thread can feed and drain a call with this: when input is full, read a
+    /// row to make room, then try again. Close input before reading the last rows.
+    /// [`Rank`](crate::Rank) gives no row until input closes, so reading one before
+    /// closing waits forever: on a full queue, its caller tries again without reading.
+    /// ```
+    /// use std::sync::mpsc::TrySendError;
+    /// use thinkthen::{BackendName, Decide, Record, Settings};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let engine = Settings::default().with_backend(BackendName::Stub).engine(|_| None)?;
+    /// let call = engine.open(&Decide::new("Ready?")?)?;
+    /// let sender = call.sender();
+    /// let mut rows = call.rows();
+    /// let mut record = Record::text("ready");
+    /// while let Err(refused) = sender.try_send(record) {
+    ///     let TrySendError::Full(back) = refused else { break };
+    ///     record = back;
+    ///     rows.next().transpose()?;
+    /// }
+    /// sender.close();
+    /// assert_eq!(rows.count(), 1);
+    /// # Ok(())
+    /// # }
+    /// ```
+    /// # Errors
+    /// Gives the record back in [`TrySendError::Full`] when input is full, and in
+    /// [`TrySendError::Disconnected`] when the call is closed or cancelled. The
+    /// call's own error, if it has one, comes from its rows.
+    pub fn try_send(&self, record: Record) -> Result<(), TrySendError<Record>> {
+        self.0.input.try_send(record)
+    }
     /// Close input without waiting for output to be drained.
     pub fn close(&self) {
         self.0.input.close();
@@ -277,6 +317,13 @@ impl Engine {
     /// thread or independently scheduled task while sending. `send` blocks the
     /// calling thread when input is full; the draining task must still run. Sending
     /// everything before draining can deadlock because both queues are bounded.
+    /// A caller with only one thread uses [`RecordSender::try_send`] instead, which
+    /// never waits.
+    ///
+    /// Input holds up to one batch of messages (50 by default). Cancelling drops
+    /// every message not yet sent, which can be more than that, because the engine
+    /// also holds messages it has read. Only messages with a result were answered.
+    ///
     /// Close or drop the last sender after the final record. For an existing
     /// iterator, prefer [`Engine::rows`], which owns input production.
     /// # Errors
@@ -288,6 +335,8 @@ impl Engine {
             Vec::new(),
             RUST_OFFSETS,
             InputKind::Open,
+            // A full batch of room, so that full means the engine is behind.
+            self.batch_size().max(HOST_INPUT),
         )?;
         Ok(Call {
             sender: call.sender,
@@ -310,6 +359,7 @@ impl Engine {
             request.records().iter().map(Record::json).collect(),
             offsets,
             InputKind::Open,
+            HOST_INPUT,
         )
     }
     fn open_any(
@@ -319,9 +369,10 @@ impl Engine {
         initial: Vec<Record>,
         offsets: OffsetUnit,
         input_kind: InputKind,
+        capacity: usize,
     ) -> Result<AnyCall, Error> {
         let engine = self.for_call();
-        let input = Queue::new(2, &engine.cancel);
+        let input = Queue::new(capacity, &engine.cancel);
         let sender = RecordSender(Arc::new(SenderOwner {
             input: input.clone(),
         }));

@@ -61,14 +61,7 @@ module ThinkThen
       @client.send(:check_process)
       @owner.close
       @cancel&.detach(@owner)
-      @driver&.synchronize do
-        @reader&.close
-        @reader = nil
-        @initial = nil
-        @items.clear
-        @invalid.clear
-        @records = nil
-      end
+      release
       @client.send(:forget, self)
       nil
     end
@@ -101,7 +94,8 @@ module ThinkThen
         raise ThreadError, "call already has an active driver"
       end
       begin
-        Thread.handle_interrupt(Exception => :never) do
+        # Thread#kill is not an Exception, so only Object holds it back here.
+        Thread.handle_interrupt(Object => :never) do
           begin
             drive
           rescue Interrupt => interruption
@@ -113,6 +107,22 @@ module ThinkThen
             end
           end
         end
+      ensure
+        @driver.unlock
+        release if @owner.closed?
+      end
+    end
+
+    # A driver held in caller input must not hold up close, so it releases on its way out.
+    def release
+      return unless @driver&.try_lock
+      begin
+        @reader&.close
+        @reader = nil
+        @initial = nil
+        @items.clear
+        @invalid.clear
+        @records = nil
       ensure
         @driver.unlock
       end
@@ -146,14 +156,19 @@ module ThinkThen
     def blocking_next(native)
       @reader ||= NativeReader.new(@owner)
       read = @reader.start(native)
+      finished = false
       begin
-        Thread.handle_interrupt(Exception => :immediate) { read.value }
-      rescue Exception
-        @owner.cancel
-        raise
+        status = Thread.handle_interrupt(Object => :immediate) { read.value }
+        finished = true
+        status
       ensure
-        # Keep the row pinned until the native operation has stopped.
-        read.value rescue nil
+        begin
+          # Thread#kill runs ensure blocks but no rescue, so cancel here.
+          @owner.cancel unless finished
+        ensure
+          # Keep the row pinned until the native operation has stopped.
+          read.value rescue nil
+        end
       end
     end
 
@@ -169,7 +184,7 @@ module ThinkThen
     def supply_input
       record = begin
         # Caller input may block in Ruby; native storage stays protected outside it.
-        Thread.handle_interrupt(Exception => :immediate) { @records.next }
+        Thread.handle_interrupt(Object => :immediate) { @records.next }
       rescue StopIteration
         @owner.use { |pointer| Native.thinkthen_call_end_input(pointer) }
         return

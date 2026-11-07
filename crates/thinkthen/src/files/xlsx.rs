@@ -1,12 +1,12 @@
 //! Append cells to one worksheet while raw-copying every other ZIP member.
 
-use crate::Cancel;
 use crate::files::{
     FileError,
     admission::{check_cancel, copy},
     cells::Cell as Answer,
     local,
 };
+use crate::{Cancel, Code};
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::name::ResolveResult;
 use quick_xml::{NsReader, Writer};
@@ -147,21 +147,24 @@ pub(crate) fn admit(
     }
     .ok_or_else(|| {
         let accepted: Vec<_> = sheets.iter().map(|(name, _)| name.as_str()).collect();
-        FileError::Invalid(match sheet_name {
-            Some(name) => crate::core::diagnostic::unknown("sheet", name, &accepted),
-            None => crate::core::diagnostic::requirement(
-                "sheet",
-                &format!(
-                    "one worksheet name selected with --sheet from: {}",
-                    accepted
-                        .iter()
-                        .map(|name| format!("`{name}`"))
-                        .collect::<Vec<_>>()
-                        .join(", ")
+        FileError::Invalid(
+            Code::UsageSheet,
+            match sheet_name {
+                Some(name) => crate::core::diagnostic::unknown("sheet", name, &accepted),
+                None => crate::core::diagnostic::requirement(
+                    "sheet",
+                    &format!(
+                        "one worksheet name selected with --sheet from: {}",
+                        accepted
+                            .iter()
+                            .map(|name| format!("`{name}`"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    "no sheet selection for a workbook without exactly one sheet",
                 ),
-                "no sheet selection for a workbook without exactly one sheet",
-            ),
-        })
+            },
+        )
     })?;
     let mut part = None;
     let relations = xml_bytes(&mut zip, "xl/_rels/workbook.xml.rels", cancel)?;
@@ -201,6 +204,9 @@ pub(crate) fn admit(
     };
     let mut row_number = 0;
     let mut row = BTreeMap::new();
+    let mut row_bytes = 0;
+    let in_row =
+        |error, row: usize| context_error(error, &format!("sheet `{}` row {row}", chosen.0));
     let mut cell = Cell::default();
     let mut in_value = false;
     let mut in_text = false;
@@ -242,6 +248,7 @@ pub(crate) fn admit(
                     previous_row = row_number;
                     sheet.last_row = sheet.last_row.max(row_number);
                     row.clear();
+                    row_bytes = 0;
                 }
                 b"sheetData" => {
                     if depth != 2 || seen_data {
@@ -318,10 +325,18 @@ pub(crate) fn admit(
                 }
                 _ => {}
             },
-            Event::Text(t) if in_value || in_text => cell.value.push_str(&text(&t)?),
-            Event::GeneralRef(r) if in_value || in_text => cell.value.push_str(&reference(&r)?),
+            // The reader emits entity references separately, so text is borrowed UTF-8.
+            Event::Text(t) if in_value || in_text => {
+                append_cell_text(&mut cell, row_bytes, &t.decode().map_err(local)?)
+                    .map_err(|error| in_row(error, row_number))?
+            }
+            Event::GeneralRef(r) if in_value || in_text => {
+                append_cell_text(&mut cell, row_bytes, &reference(&r)?)
+                    .map_err(|error| in_row(error, row_number))?
+            }
             Event::CData(t) if in_value || in_text => {
-                cell.value.push_str(&t.decode().map_err(local)?)
+                append_cell_text(&mut cell, row_bytes, &t.decode().map_err(local)?)
+                    .map_err(|error| in_row(error, row_number))?
             }
             Event::End(e) if main => match e.local_name().as_ref() {
                 b"sheetData" => inside_data = false,
@@ -329,6 +344,8 @@ pub(crate) fn admit(
                 b"v" => in_value = false,
                 b"t" => in_text = false,
                 b"c" => {
+                    row_bytes = add_cell_bytes(row_bytes, &cell, &shared)
+                        .map_err(|error| in_row(error, row_number))?;
                     retain_cell(&mut row, std::mem::take(&mut cell))?;
                 }
                 b"row" if row_number == 1 => {
@@ -347,10 +364,9 @@ pub(crate) fn admit(
                     selected_positions = selected
                         .iter()
                         .map(|name| {
-                            positions
-                                .get(name)
-                                .copied()
-                                .ok_or_else(|| invalid("selected column is missing"))
+                            positions.get(name).copied().ok_or_else(|| {
+                                mistake(Code::UsageColumn, "selected column is missing")
+                            })
                         })
                         .collect::<Result<_, _>>()?;
                 }
@@ -412,15 +428,18 @@ fn value(
     );
     let missing_cache = !cell.saved || (cell.value.is_empty() && cell.kind != "str");
     if selected && (cell.kind == "e" || (cell.formula && missing_cache)) {
-        return Err(FileError::Invalid(crate::core::diagnostic::requirement(
-            &field,
-            "a cell with a saved value; save the calculated workbook or select a plain text column",
-            if cell.kind == "e" {
-                "an error cell"
-            } else {
-                "a formula without a saved value"
-            },
-        )));
+        return Err(FileError::Invalid(
+            Code::UsageTable,
+            crate::core::diagnostic::requirement(
+                &field,
+                "a cell with a saved value; save the calculated workbook or select a plain text column",
+                if cell.kind == "e" {
+                    "an error cell"
+                } else {
+                    "a formula without a saved value"
+                },
+            ),
+        ));
     }
     match cell.kind.as_str() {
         "s" => integer(&cell.value)
@@ -433,26 +452,35 @@ fn value(
         "b" => match cell.value.as_str() {
             "1" => Ok("TRUE".into()),
             "0" => Ok("FALSE".into()),
-            _ => Err(FileError::Invalid(crate::core::diagnostic::expected(
-                &field,
-                "a workbook boolean encoded as 0 or 1",
-                &serde_json::Value::String(cell.value.clone()),
-            ))),
+            _ => Err(FileError::Invalid(
+                Code::UsageTable,
+                crate::core::diagnostic::expected(
+                    &field,
+                    "a workbook boolean encoded as 0 or 1",
+                    &serde_json::Value::String(cell.value.clone()),
+                ),
+            )),
         },
         "" | "n" if !cell.value.is_empty() => {
             let number = cell.value.parse::<f64>().map_err(|_| {
-                FileError::Local(crate::core::diagnostic::expected(
-                    &field,
-                    "a finite workbook number",
-                    &serde_json::Value::String(cell.value.clone()),
-                ))
+                FileError::Invalid(
+                    Code::UsageTable,
+                    crate::core::diagnostic::expected(
+                        &field,
+                        "a finite workbook number",
+                        &serde_json::Value::String(cell.value.clone()),
+                    ),
+                )
             })?;
             if !number.is_finite() {
-                return Err(FileError::Invalid(crate::core::diagnostic::requirement(
-                    &field,
-                    "a finite workbook number",
-                    "a non-finite number",
-                )));
+                return Err(FileError::Invalid(
+                    Code::UsageTable,
+                    crate::core::diagnostic::requirement(
+                        &field,
+                        "a finite workbook number",
+                        "a non-finite number",
+                    ),
+                ));
             }
             Ok(styles
                 .render(cell.style, number)
@@ -471,9 +499,12 @@ fn check_merge(e: &BytesStart<'_>, selected: &[usize], sheet: &mut Sheet) -> Res
         sheet.last_column = sheet.last_column.max(a.0).max(b.0);
         sheet.last_row = sheet.last_row.max(a.1).max(b.1);
         if b.1 > 1 && selected.iter().any(|c| *c >= a.0 && *c <= b.0) {
-            return Err(invalid(&format!(
-                "selected field intersects merged cells {range}; select an unmerged text column"
-            )));
+            return Err(mistake(
+                Code::UsageColumn,
+                &format!(
+                    "selected field intersects merged cells {range}; select an unmerged text column"
+                ),
+            ));
         }
     }
     Ok(())
@@ -497,11 +528,11 @@ fn shared_strings(reader: impl Read, cancel: &Cancel) -> Result<Vec<String>, Fil
             }
             // The reader emits entity references separately, so text is borrowed UTF-8.
             Event::Text(t) if in_text => {
-                append_shared_text(&mut item, &t.decode().map_err(local)?)?
+                append_record_text(&mut item, 0, &t.decode().map_err(local)?)?
             }
-            Event::GeneralRef(r) if in_text => append_shared_text(&mut item, &reference(&r)?)?,
+            Event::GeneralRef(r) if in_text => append_record_text(&mut item, 0, &reference(&r)?)?,
             Event::CData(t) if in_text => {
-                append_shared_text(&mut item, &t.decode().map_err(local)?)?
+                append_record_text(&mut item, 0, &t.decode().map_err(local)?)?
             }
             Event::End(e) if main && e.local_name().as_ref() == b"t" => in_text = false,
             Event::End(e) if main && e.local_name().as_ref() == b"si" => {
@@ -524,12 +555,33 @@ fn shared_strings(reader: impl Read, cancel: &Cancel) -> Result<Vec<String>, Fil
     Ok(strings)
 }
 
-fn append_shared_text(item: &mut String, text: &str) -> Result<(), FileError> {
-    if item.len().saturating_add(text.len()) > super::MAX_RECORD_BYTES {
+/// Append `text` to `item` unless they and the `before` bytes pass the record limit.
+fn append_record_text(item: &mut String, before: usize, text: &str) -> Result<(), FileError> {
+    let total = before.saturating_add(item.len());
+    if total.saturating_add(text.len()) > super::MAX_RECORD_BYTES {
         return Err(super::record_limit());
     }
     item.push_str(text);
     Ok(())
+}
+
+/// Append worksheet text to `cell`. A shared cell holds only an index here, and
+/// [`add_cell_bytes`] counts its string against the row when the cell ends.
+fn append_cell_text(cell: &mut Cell, row_bytes: usize, text: &str) -> Result<(), FileError> {
+    let before = if cell.kind == "s" { 0 } else { row_bytes };
+    append_record_text(&mut cell.value, before, text)
+}
+
+/// Add one finished cell's text to its row, counting a shared string by its own length.
+fn add_cell_bytes(before: usize, cell: &Cell, shared: &[String]) -> Result<usize, FileError> {
+    let stored = (cell.kind == "s")
+        .then(|| shared.get(cell.value.parse::<usize>().ok()?))
+        .flatten();
+    let total = before.saturating_add(stored.unwrap_or(&cell.value).len());
+    if total > super::MAX_RECORD_BYTES {
+        return Err(super::record_limit());
+    }
+    Ok(total)
 }
 
 /// Elements that follow `autoFilter` in a worksheet, in schema order.
@@ -986,16 +1038,22 @@ pub(super) fn xml_bytes(
 }
 fn context_error(error: FileError, field: &str) -> FileError {
     match error {
-        FileError::Invalid(message) => FileError::Invalid(format!("{field} {message}")),
+        FileError::Invalid(code, message) => FileError::Invalid(code, format!("{field} {message}")),
         error => error,
     }
 }
 pub(super) fn invalid(message: &str) -> FileError {
-    FileError::Invalid(crate::core::diagnostic::requirement(
-        "workbook",
-        "a valid unsigned .xlsx workbook",
-        message,
-    ))
+    mistake(Code::UsageTable, message)
+}
+fn mistake(code: Code, message: &str) -> FileError {
+    FileError::Invalid(
+        code,
+        crate::core::diagnostic::requirement(
+            "workbook",
+            "a valid unsigned .xlsx workbook",
+            message,
+        ),
+    )
 }
 fn resolve(target: &str) -> Result<String, FileError> {
     let candidate = if target.starts_with('/') {

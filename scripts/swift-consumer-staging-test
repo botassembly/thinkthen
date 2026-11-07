@@ -14,6 +14,10 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+# swift-gate comes first: every other caller must stage what it builds.
+CALLERS = ('swift-gate', 'release-candidate', 'release_windows.py', 'source-install-check',
+           'toolbox-native-development')
+GENERATED = {'Readme': 'readme.py', 'Examples': 'docs.py', 'Guide': 'surface-example'}
 
 
 def run(*arguments, **options):
@@ -47,44 +51,93 @@ def check_consumer(consumer):
     assert 'entries' in json.loads((consumer / 'Examples/toolbox.json').read_text())
 
 
+def stage(name, revision, root, scratch, package=None):
+    """Run one caller's real staging statements and return the folder they staged."""
+    scratch.mkdir(parents=True)
+    consumer = scratch / 'Consumer'
+    environment = dict(ROOT=root, Path=Path, shutil=shutil, sys=sys, run=run,
+                       scratch=scratch, consumer=consumer, swift=scratch / 'ThinkThen')
+    def copy(original, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(original, destination)
+    environment['copy'] = copy
+    text = source(name, revision)
+    if name == 'release-candidate':
+        body = statements(text, "    consumer = swift.parent / 'Consumer'", '    destination =')
+    elif name == 'release_windows.py':
+        # Run the complete portable-source staging function, including its real copy loop.
+        function = next(node for node in ast.parse(text).body
+                        if isinstance(node, ast.FunctionDef) and node.name == 'check_sources')
+        body = ast.unparse(function) + '\ncheck_sources(scratch)\n'
+        consumer = scratch / 'checks/swift'
+    elif name == 'source-install-check':
+        body = statements(text, "        swift = scratch / 'swift-consumer'", '        manifest =')
+        environment.update(args=argparse.Namespace(readmes=package is not None), package=package)
+        consumer = scratch / 'swift-consumer'
+    else:
+        body = statements(text, 'python3 scripts/swift-consumer-stage', 'swift build ')
+        run('sh', '-eu', '-c', body, cwd=root, env=dict(os.environ, scratch=str(scratch)))
+        consumer = scratch / 'consumer'
+        body = ''
+    exec(compile(body, str(ROOT / 'scripts' / name), 'exec'), environment)
+    return consumer
+
+
+def contents(consumer):
+    return {path.relative_to(consumer).as_posix(): path.read_bytes()
+            for path in consumer.rglob('*') if path.is_file()}
+
+
+def without(line, root):
+    """Overlay the checkout with a shared step that lost one generating line."""
+    (root / 'scripts').mkdir(parents=True)
+    for parent in (ROOT, ROOT / 'scripts'):
+        for path in parent.iterdir():
+            link = root / path.relative_to(ROOT)
+            if not link.exists():
+                link.symlink_to(path)
+    step = root / 'scripts/swift-consumer-stage'
+    lines = step.read_text().splitlines(keepends=True)
+    step.unlink()
+    kept = [text for text in lines if line not in text]
+    assert len(kept) == len(lines) - 1, 'the shared step must generate each part on one line: ' + line
+    step.write_text(''.join(kept))
+
+
 def staging(revision):
     failures = []
     with tempfile.TemporaryDirectory(prefix='thinkthen-swift-staging-') as temporary:
-        for name in ('release-candidate', 'release_windows.py', 'source-install-check',
-                     'toolbox-native-development'):
-            scratch = Path(temporary) / name
-            scratch.mkdir()
-            consumer = scratch / 'Consumer'
-            environment = dict(ROOT=ROOT, Path=Path, shutil=shutil, sys=sys, run=run,
-                               scratch=scratch, consumer=consumer, swift=scratch / 'ThinkThen')
-            def copy(original, destination):
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(original, destination)
-            environment['copy'] = copy
-            text = source(name, revision)
-            if name == 'release-candidate':
-                body = statements(text, "    consumer = swift.parent / 'Consumer'", '    destination =')
-            elif name == 'release_windows.py':
-                # Run the complete portable-source staging function, including its real copy loop.
-                function = next(node for node in ast.parse(text).body
-                                if isinstance(node, ast.FunctionDef) and node.name == 'check_sources')
-                body = ast.unparse(function) + '\ncheck_sources(scratch)\n'
-                consumer = scratch / 'checks/swift'
-            elif name == 'source-install-check':
-                body = statements(text, "        swift = scratch / 'swift-consumer'", '        manifest =')
-                environment['args'] = argparse.Namespace(readmes=False)
-                consumer = scratch / 'swift-consumer'
-            else:
-                body = statements(text, 'mkdir "$scratch/consumer"', 'swift build ')
-                run('sh', '-eu', '-c', body, cwd=ROOT, env=dict(os.environ, scratch=str(scratch)))
-                consumer = scratch / 'consumer'
-                body = ''
+        folder = Path(temporary)
+        expected = None
+        for name in CALLERS:
             try:
-                exec(compile(body, str(ROOT / 'scripts' / name), 'exec'), environment)
+                consumer = stage(name, revision, ROOT, folder / name)
                 check_consumer(consumer)
-                print(name + ': shared manifest targets and actual Examples sources/resources pass', flush=True)
+                files = contents(consumer)
+                expected = expected or files
+                changed = sorted(path for path in expected.keys() | files.keys()
+                                 if expected.get(path) != files.get(path))
+                assert not changed, 'differs from swift-gate: ' + ', '.join(changed)
+                print(name + ': staged consumer matches swift-gate byte for byte', flush=True)
             except AssertionError as error:
                 failures.append(name + ': ' + str(error))
+        for part, line in GENERATED.items():
+            without(line, folder / part)
+            for name in CALLERS:
+                try:
+                    check_consumer(stage(name, revision, folder / part, folder / (part + '-stage') / name))
+                    failures.append(name + ': passed after the shared step lost ' + part)
+                except AssertionError as error:
+                    if part not in str(error):
+                        failures.append(name + ': failed without ' + part + ' for another reason: ' + str(error))
+        if not failures:
+            print('Removing any generated part from the shared step fails every caller', flush=True)
+        package = folder / 'package'
+        (package / 'swift').mkdir(parents=True)
+        (package / 'swift/README.md').write_text('```swift\nlet client = "installed README"\n```\n')
+        consumer = stage('source-install-check', revision, ROOT, folder / 'readmes', package)
+        if 'installed README' not in (consumer / 'Readme/Readme.swift').read_text():
+            failures.append('source-install-check: --readmes did not stage the installed README')
     if failures:
         raise SystemExit('\n'.join(failures))
 
@@ -135,7 +188,7 @@ def mac_package(assets, receipt_path, revision):
             shutil.move(out / 'checks/swift', installed)
             shutil.rmtree(ROOT / '.swift-installed')
             environment = dict(os.environ)
-            environment.pop('THINKTHEN_NATIVE_LIBRARY', None)
+            environment.pop('THINKTHEN_LIBRARY', None)
             run(sys.executable, ROOT / 'scripts/release/swift.py', installed / 'Consumer',
                 ROOT / 'construction/stub.json', cwd=scratch, env=environment)
             run(installed / 'Consumer', 'surface', cwd=scratch, env=environment)
@@ -188,7 +241,7 @@ def source_install(assets, receipt_path, revision, resolve_only=False):
             print('source install ' + name + ': PASS', flush=True)
 
         environment = dict(os.environ, THINKTHEN_BACKEND='stub')
-        environment.pop('THINKTHEN_NATIVE_LIBRARY', None)
+        environment.pop('THINKTHEN_LIBRARY', None)
         def source_run(*arguments, **options):
             print('Source-install command: ' + json.dumps(list(map(str, arguments))), flush=True)
             run(*arguments, **options)

@@ -76,19 +76,73 @@ You see `thinkthen: usage.name: name: expected a nonblank execution name; receiv
 
 <span id="usage-question"></span>
 
-### It refuses the question, the toolbox or the CSV file
+### It refuses the question or the toolbox
 
-The question, a toolbox, or a CSV, TSV or Excel file can't be used as asked.
+The question or a toolbox can't be used as asked.
 
 | You see | Fix |
 | --- | --- |
 | `question: expected nonblank text; received blank text` | Put the question in quotes after the function name. |
 | `toolbox toolbox.json: entry: expected one of …; received unknown field …` | The toolbox has several entries, so the word after it is read as an entry name. Name the entry, as in `thinkthen run toolbox.json refunds messages.jsonl`, or pass `--entry refunds`. |
-| `columns: expected at least one field column with --column; received an empty selection` | Name the column to read with `--column`. |
-| `file: expected a valid file operation; received output already exists; choose a new --output path` | ThinkThen never overwrites a file. Name a new file with `--output`, or change the file itself with `--in-place`, which keeps a backup. |
-| `` file: expected a valid file operation; received answer column `refund` already exists … `` | Pick a new name for `--into`. |
 
-**Code:** `usage.question`. [File types](/command-line/file-types/) covers CSV, TSV and Excel files, and [Toolboxes](/command-line/toolboxes/) covers toolbox entries.
+**Code:** `usage.question`. [Toolboxes](/command-line/toolboxes/) covers toolbox entries.
+
+<span id="usage-column"></span>
+
+### It refuses the column
+
+A column you named doesn't fit the CSV, TSV or Excel file.
+
+| You see | Fix |
+| --- | --- |
+| `columns: expected at least one field column with --column; received an empty selection` | Name the column to read with `--column`. |
+| `` CSV/TSV row 1 column: expected one of …; received unknown field … `` | The file has no such column. Use the one after `did you mean`, or one from the list. |
+| `` file: expected a valid file operation; received answer column `refund` already exists … `` | Pick a new name for `--into`. |
+| `` … field pointer `/note` selects none of the --column names … `` | Select the column the pointer names, or remove the pointer. |
+| `… selected field intersects merged cells …` | Select a column with no merged cells. |
+
+**Code:** `usage.column`. [File types](/command-line/file-types/) covers CSV, TSV and Excel files.
+
+<span id="usage-sheet"></span>
+
+### It refuses the sheet
+
+You see `thinkthen: usage.sheet: sheet: expected xlsx framing; received CSV or TSV framing`, or a message that lists the worksheets of a workbook.
+
+**Code:** `usage.sheet`. **Cause:** `--sheet` was given for a CSV or TSV file, it names no worksheet in the workbook, or the workbook has several worksheets and none was named. **Fix:** drop `--sheet` for a CSV or TSV file, or name one of the listed worksheets.
+
+<span id="usage-output"></span>
+
+### It refuses the output file
+
+ThinkThen can't put the answers where you asked.
+
+| You see | Fix |
+| --- | --- |
+| `file: expected a valid file operation; received output already exists; choose a new --output path` | ThinkThen never overwrites a file. Name a new file with `--output`, or change the file itself with `--in-place`, which keeps a backup. |
+| `… output names the input; use --in-place to retain a backup first` | Add `--in-place`, or name a new file with `--output`. |
+| `… output must have a .csv extension to preserve the selected format` | Give `--output` the extension of the input. |
+| `… in-place input cannot be a symbolic link; use its real path` | Pass the real path of the file. |
+| `… Excel appears to have the workbook open; close it before using --in-place` | Close the workbook, then run the command again. |
+
+**Code:** `usage.output`.
+
+<span id="usage-table"></span>
+
+### It refuses the CSV or Excel file
+
+The file has a format, a header or a row ThinkThen can't read. The message names the row or cell.
+
+| You see | Fix |
+| --- | --- |
+| `… unsupported workbook format; save as .xlsx or CSV before running ThinkThen` | Save the file as `.xlsx` or CSV. |
+| `… headers: expected nonempty, unique column headers; …` | Give every column its own name in the first row. |
+| `… input has no header row; add column names` | Add a first row of column names. |
+| `CSV/TSV row 3 (line 3): expected 2 fields; received 3 fields; …` | Quote a field that holds the separator, or remove the extra separator. |
+| `CSV/TSV row 3 (line 3): expected a row of fields; received a blank line inside the data; delete the line` | Delete the empty line. Empty lines at the end of the file are fine. |
+| `… save a clean .xlsx copy` | The workbook is damaged or unusual. Open it in Excel and save a new copy. |
+
+**Code:** `usage.table`. [File types](/command-line/file-types/) covers CSV, TSV and Excel files.
 
 <span id="usage-option"></span>
 
@@ -103,6 +157,7 @@ An option is unknown, has a value it doesn't take, or doesn't fit with another o
 | `expected true or false` | An on-or-off option, or its `THINKTHEN_` variable, holds something other than `true` or `false`. |
 | `choice: expected a supplied list; received absent option` | Give the function its list: `--choice` for choose, `--label` for tag, `--level` for score and rank, `--kind` for recognize, `--rule` for relate. |
 | `threshold: expected low and high together; received one bound` | Give `--low` and `--high` as a pair, or `--threshold` alone. |
+| `threshold: expected a single numeric cut; received a low/high band` | Only decide and filter take a low and a high bar. Give this function one number. |
 | `check: expected text framing and exactly one source; …` | `--check` answers one text. To check many lines, use [filter](/functions/filter/) with `--check`. |
 | `field: expected JSON or table framing; omit --field for lines; …` | Plain lines have no fields. Drop `--field`, or read JSON Lines with `--from jsonl`. |
 | `into: expected an answer column name; received absent name` | Name the new answer column of a CSV, TSV or Excel file with `--into`. |
@@ -290,6 +345,8 @@ The command never returns these. An SDK or a database extension returns them wit
 ### A value can't be sent as text
 
 **Code:** `record.invalid`. **Cause:** an SDK was given a value with no exact text or JSON form, such as a number too large for JSON. That value fails, and the others still answer. **Fix:** turn the value into text or plain JSON yourself before the call, so you decide what the model reads.
+
+An `id` that isn't a string or a whole number fails the same way, with the same code. A null `id` is refused, so a gap in a pandas `id` column fails that row. A whole number stored as a float, such as `3.0`, is read as `3`, up to 9,007,199,254,740,991; past that, a float may no longer hold the number you meant. Fill the gaps, or store large ids as text.
 
 ## Next
 

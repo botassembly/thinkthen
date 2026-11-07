@@ -1,10 +1,12 @@
-"""Run proof children with caller ownership without changing the source token.
+"""Run proof children as the caller or a normal user without changing the source token.
 
 Windows API contracts:
 https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-duplicatetokenex
 https://learn.microsoft.com/en-us/windows/win32/secauthz/owner-of-a-new-object
 https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw
+https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-createrestrictedtoken
 """
+from contextlib import nullcontext
 import ctypes as C
 from ctypes import wintypes as W
 import os
@@ -29,6 +31,10 @@ class ProcessInfo(C.Structure):
                 ('process_id', W.DWORD), ('thread_id', W.DWORD)]
 
 
+class SidAttributes(C.Structure):
+    _fields_ = [('sid', C.c_void_p), ('attributes', W.DWORD)]
+
+
 def api():
     kernel = C.WinDLL('kernel32', use_last_error=True)
     security = C.WinDLL('advapi32', use_last_error=True)
@@ -43,6 +49,10 @@ def api():
         'GetTokenInformation': (security, [W.HANDLE, C.c_int, C.c_void_p, W.DWORD, C.POINTER(W.DWORD)], W.BOOL),
         'SetTokenInformation': (security, [W.HANDLE, C.c_int, C.c_void_p, W.DWORD], W.BOOL),
         'ConvertSidToStringSidW': (security, [C.c_void_p, C.POINTER(W.LPWSTR)], W.BOOL),
+        'ConvertStringSidToSidW': (security, [W.LPCWSTR, C.POINTER(C.c_void_p)], W.BOOL),
+        'GetLengthSid': (security, [C.c_void_p], W.DWORD),
+        'CreateRestrictedToken': (security, [W.HANDLE, W.DWORD, W.DWORD, C.c_void_p, W.DWORD,
+            C.c_void_p, W.DWORD, C.c_void_p, C.POINTER(W.HANDLE)], W.BOOL),
         'CreateProcessAsUserW': (security, [W.HANDLE, W.LPCWSTR, W.LPWSTR, C.c_void_p,
             C.c_void_p, W.BOOL, W.DWORD, C.c_void_p, W.LPCWSTR,
             C.POINTER(StartupInfo), C.POINTER(ProcessInfo)], W.BOOL),
@@ -80,8 +90,42 @@ def sid(functions, buffer):
         functions['LocalFree'](C.cast(value, C.c_void_p))
 
 
-def launch(command, *, cwd, env, probe=False):
-    """Duplicate the current token, change only its default owner, and wait."""
+def string_sid(functions, text):
+    value = C.c_void_p()
+    checked(functions['ConvertStringSidToSidW'](text, C.byref(value)), 'ConvertStringSidToSidW')
+    return value
+
+
+def normal_token(functions):
+    """Return the current user's token as a normal shell has it: no Administrators, medium integrity."""
+    source, token = W.HANDLE(), W.HANDLE()
+    # The new token takes this handle's access. A restricted token must descend
+    # from the caller's own, or starting a process with it needs a privilege.
+    checked(functions['OpenProcessToken'](functions['GetCurrentProcess'](), 0x0008 | 0x0002 | 0x0001 | 0x0080,
+                                         C.byref(source)), 'OpenProcessToken')
+    administrators = string_sid(functions, 'S-1-5-32-544')
+    medium = string_sid(functions, 'S-1-16-8192')
+    try:
+        disabled = SidAttributes(administrators, 0)
+        # DISABLE_MAX_PRIVILEGE, with Administrators made deny-only.
+        checked(functions['CreateRestrictedToken'](source, 0x1, 1, C.byref(disabled), 0, None, 0, None,
+                                                   C.byref(token)), 'CreateRestrictedToken')
+        label = SidAttributes(medium, 0x20)  # SE_GROUP_INTEGRITY
+        size = C.sizeof(label) + functions['GetLengthSid'](medium)
+        checked(functions['SetTokenInformation'](token, 25, C.byref(label), size), 'SetTokenInformation(TokenIntegrityLevel)')
+        return token
+    finally:
+        functions['LocalFree'](medium)
+        functions['LocalFree'](administrators)
+        functions['CloseHandle'](source)
+
+
+def launch(command, *, cwd, env, probe=False, normal_log=None):
+    """Run a child whose default owner is the caller, and wait.
+
+    The child has the current token, or with normal_log a normal user's token and
+    that log file, which the normal user can write and a private folder would refuse.
+    """
     if os.name != 'nt':
         raise RuntimeError('Caller-owned proof processes require native Windows')
     sys.stdout.reconfigure(encoding='utf-8')
@@ -95,15 +139,19 @@ def launch(command, *, cwd, env, probe=False):
                                              C.byref(source)), 'OpenProcessToken')
         original = sid(functions, token_info(functions, source, 4))  # TokenOwner
         caller = sid(functions, token_info(functions, source, 1))  # TokenUser
-        access = 0x0008 | 0x0002 | 0x0001 | 0x0080  # QUERY, DUPLICATE, ASSIGN_PRIMARY, ADJUST_DEFAULT
-        checked(functions['DuplicateTokenEx'](source, access, None, 2, 1, C.byref(duplicate)), 'DuplicateTokenEx')
+        if normal_log:
+            duplicate = normal_token(functions)
+        else:
+            access = 0x0008 | 0x0002 | 0x0001 | 0x0080  # QUERY, DUPLICATE, ASSIGN_PRIMARY, ADJUST_DEFAULT
+            checked(functions['DuplicateTokenEx'](source, access, None, 2, 1, C.byref(duplicate)), 'DuplicateTokenEx')
         user = token_info(functions, duplicate, 1)
         owner = C.c_void_p(C.cast(user, C.POINTER(C.c_void_p))[0])
         checked(functions['SetTokenInformation'](duplicate, 4, C.byref(owner), C.sizeof(owner)), 'SetTokenInformation(TokenOwner)')
         assert sid(functions, token_info(functions, duplicate, 4)) == caller, 'duplicate default owner differs from caller'
         print('Windows proof token: parent owner=' + original + '; child owner=' + caller, flush=True)
-        with tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-') as temporary:
-            log = Path(temporary) / 'child.log'
+        folder = nullcontext() if normal_log else tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-')
+        with folder as temporary:
+            log = Path(normal_log) if normal_log else Path(temporary) / 'child.log'
             child = [sys.executable, str(Path(__file__).resolve()), '--child', str(log),
                      '90' if probe else '3600', *map(str, command)]
             line = subprocess.list2cmdline(child)
@@ -123,7 +171,7 @@ def launch(command, *, cwd, env, probe=False):
             status = W.DWORD()
             checked(functions['GetExitCodeProcess'](process.process, C.byref(status)), 'GetExitCodeProcess')
             if status.value:
-                print('Caller-owned proof child exited ' + str(status.value), flush=True)
+                print('Windows proof child exited ' + str(status.value), flush=True)
                 raise SystemExit(status.value)
     finally:
         try:
@@ -153,13 +201,21 @@ def stream(log, wait):
         checked(status == 0x102, 'WaitForSingleObject')
 
 
-def probe(cwd, env):
-    """Check isolated token ownership without a compiler or engine."""
+def probe(cwd, env, normal=None):
+    """Check isolated token ownership without a compiler or engine.
+
+    Given a folder, check there that a normal user's token works and is not an administrator's.
+    """
     powershell = Path(env['SYSTEMROOT']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
-    with tempfile.TemporaryDirectory(prefix='thinkthen-owner-probe-') as temporary:
+    with nullcontext(normal) if normal else tempfile.TemporaryDirectory(prefix='thinkthen-owner-probe-') as temporary:
         script = """$ErrorActionPreference='Stop';
 $i=[System.Security.Principal.WindowsIdentity]::GetCurrent();
 if ($i.User.Value -ne $i.Owner.Value) { throw 'Child token default owner is not the caller' };
+if ($env:TT_NORMAL_PROBE) {
+  $administrators=New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544');
+  if ((New-Object System.Security.Principal.WindowsPrincipal($i)).IsInRole($administrators)) { throw 'Normal token is an administrator' };
+  if (-not (whoami /groups | Select-String 'S-1-16-8192')) { throw 'Normal token is not medium integrity' }
+};
 $directory=Join-Path $env:TT_OWNER_PROBE 'directory';
 $file=Join-Path $directory 'file';
 New-Item -ItemType Directory -Path $directory | Out-Null;
@@ -174,7 +230,8 @@ $owners=@($directory,$file) | ForEach-Object {
         source = Path(temporary) / 'probe.ps1'
         source.write_text(script, encoding='utf-8')
         launch([powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', source],
-               cwd=cwd, env=env | {'TT_OWNER_PROBE': temporary}, probe=True)
+               cwd=cwd, env=env | {'TT_OWNER_PROBE': str(temporary)} | ({'TT_NORMAL_PROBE': '1'} if normal else {}),
+               probe=True, normal_log=Path(temporary) / 'child.log' if normal else None)
 
 
 

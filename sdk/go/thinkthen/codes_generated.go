@@ -43,6 +43,14 @@ const (
 	CodeUsageArgument Code = C.THINKTHEN_CODE_USAGE_ARGUMENT
 	// CodeUsageOption identifies the engine's usage.option error.
 	CodeUsageOption Code = C.THINKTHEN_CODE_USAGE_OPTION
+	// CodeUsageColumn identifies the engine's usage.column error.
+	CodeUsageColumn Code = C.THINKTHEN_CODE_USAGE_COLUMN
+	// CodeUsageSheet identifies the engine's usage.sheet error.
+	CodeUsageSheet Code = C.THINKTHEN_CODE_USAGE_SHEET
+	// CodeUsageOutput identifies the engine's usage.output error.
+	CodeUsageOutput Code = C.THINKTHEN_CODE_USAGE_OUTPUT
+	// CodeUsageTable identifies the engine's usage.table error.
+	CodeUsageTable Code = C.THINKTHEN_CODE_USAGE_TABLE
 	// CodeRecordJSON identifies the engine's record.json error.
 	CodeRecordJSON Code = C.THINKTHEN_CODE_RECORD_JSON
 	// CodeRecordMissing identifies the engine's record.missing error.
@@ -88,6 +96,10 @@ var codeNames = map[Code]string{
 	CodeUsageOffsets:      "usage.offsets",
 	CodeUsageArgument:     "usage.argument",
 	CodeUsageOption:       "usage.option",
+	CodeUsageColumn:       "usage.column",
+	CodeUsageSheet:        "usage.sheet",
+	CodeUsageOutput:       "usage.output",
+	CodeUsageTable:        "usage.table",
 	CodeRecordJSON:        "record.json",
 	CodeRecordMissing:     "record.missing",
 	CodeRecordTooLarge:    "record.too-large",

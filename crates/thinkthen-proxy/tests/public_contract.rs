@@ -6,23 +6,15 @@ use thinkthen_proxy::{ActorKind, Attribution, Evidence, Service};
 
 #[test]
 fn store_boundaries_keep_their_own_codes() {
-    let cases: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../conformance/public-contract/boundaries.json"
-    ))
-    .unwrap();
-    let cases = &cases["store"];
     let directory = tempfile::tempdir().unwrap();
     assert_eq!(
         Service::open(directory.path()).unwrap_err().code(),
-        cases["storage"]["code"]
+        "proxy.storage"
     );
     let mut service = Service::open(directory.path().join("records.sqlite")).unwrap();
     assert_eq!(
-        service
-            .admit_inline(cases["question"]["request"].as_str().unwrap())
-            .unwrap_err()
-            .code(),
-        cases["question"]["code"]
+        service.admit_inline("{").unwrap_err().code(),
+        "proxy.question"
     );
     let question = service
         .admit_inline(r#"{"question":{"function":"decide","question":"Ready?"}}"#)
@@ -41,5 +33,5 @@ fn store_boundaries_keep_their_own_codes() {
     let error = service
         .set_gold(&question.question, &evidence, None, &json!(true), author())
         .unwrap_err();
-    assert_eq!(error.code(), cases["conflict"]["code"]);
+    assert_eq!(error.code(), "proxy.conflict");
 }

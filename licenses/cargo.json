@@ -239,7 +239,7 @@
       "LICENSE": "fb9c2cccbdcb61ea51e0d553a6474297031544104985279c5c32d25c5c99977e"
     },
     "license": "MIT",
-    "patch_sha256": "fece7fb4bbd03d8766eb2dfb85f0a40575db53b28b10491a6adfa57f88b0d2dc"
+    "patch_sha256": "8412252c1353d123748b5f665f93d0f179878d1608012e0c296f1523700b91e9"
   },
   "extendr-ffi-0.8.2": {
     "checksum": "acf3ace33b895bdfc13d02fd7486b26dc71078c256f3399f6272f8bd70fc3a1e",

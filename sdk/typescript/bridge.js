@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { ABI_VERSION, ABI_VERSION_EXPORT, ABI_EXPORTS, ABI_CODE, ABI_MESSAGE } from "./contract.js";
 import { ERROR_CODES } from "./errors.js";
+import { libcRefusal } from "./libc.js";
 /** @typedef {import('./index.d.ts').ErrorCode} ErrorCode */
 /** @typedef {(data: string, text: boolean, invalid?: boolean, idKind?: string, idValue?: string, missing?: boolean) => void} Reply */
 /** @typedef {(error: Error | null, kind: string, data: string, reply: Reply) => void} Callback */
@@ -51,8 +52,8 @@ let cached;
 export function loadNative() {
   if (cached) return cached;
   if (process.platform === "linux") {
-    const report = /** @type {{header?: {glibcVersionRuntime?: string}}} */(process.report.getReport());
-    if (!report.header?.glibcVersionRuntime) throw new ThinkThenError({code: "local.io", message: "unsupported Linux platform: the native engine requires glibc"});
+    const refusal = libcRefusal(process.report.getReport());
+    if (refusal) throw new ThinkThenError({code: "local.io", message: refusal});
   }
   /** @type {unknown} */ let loaded;
   try { loaded = require("./thinkthen.node"); }

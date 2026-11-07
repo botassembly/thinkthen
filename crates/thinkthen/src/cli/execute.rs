@@ -87,18 +87,10 @@ pub(super) fn stream(
     let selected_field = !input.selection.is_empty();
     let mut input = super::input::StreamInput::new(input, cancel.clone())?;
     let engine = engine.clone().cancel(cancel.clone());
+    // Rank reads as it asks, so with --top it holds only the best rows, and a
+    // finite call sends full batches because no answer prints before the end.
     let mut call = if matches!(request.question(), crate::Question::Rank(_)) {
-        let mut records = Vec::new();
-        while let Some((record, bytes, _)) = input.next()? {
-            if cancel.is_cancelled() {
-                return Err(crate::retry::cancelled());
-            }
-            if let Some(originals) = &mut originals {
-                originals.push(&bytes)?;
-            }
-            records.push(record);
-        }
-        Driver::open_records(&engine, request, records, crate::OffsetUnit::CodePoints)?
+        Driver::open_finite(&engine, request, crate::OffsetUnit::CodePoints)?
     } else {
         Driver::open(&engine, request, crate::OffsetUnit::CodePoints)?
     };

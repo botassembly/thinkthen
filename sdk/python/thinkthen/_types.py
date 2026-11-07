@@ -149,6 +149,25 @@ class RecordError(ThinkThenError):
         self.rows = rows
 
 
+class FailedRowsWarning(UserWarning):
+    """A frame call under ``errors="coerce"`` kept going past failed records.
+
+    ``codes`` holds each distinct failure code in order of first appearance, and
+    ``rows`` holds every row with a failure in input order. An annotate row is
+    listed when any of its questions failed.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        codes: tuple[ErrorCode, ...] = (),
+        rows: tuple[Any, ...] = (),
+    ) -> None:
+        super().__init__(message)
+        self.codes = codes
+        self.rows = rows
+
+
 class Unsure(ValueError):
     """A not-sure result was used as an answer. Check .unsure first."""
 

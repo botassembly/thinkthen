@@ -63,7 +63,7 @@ internal static partial class Native
     static Native() => NativeLibrary.SetDllImportResolver(typeof(Native).Assembly,
         (name, _, _) => name == Library ? Loaded.Value : nint.Zero);
 
-    private static unsafe nint Load()
+    private static string PackagedPath()
     {
         string rid;
         string filename;
@@ -77,8 +77,17 @@ internal static partial class Native
         else throw new DllNotFoundException("The ThinkThen package has no native asset for this runtime.");
         string root = AppContext.BaseDirectory;
         string path = Path.Combine(root, "runtimes", rid, "native", filename);
-        if (!File.Exists(path) && File.Exists(Path.Combine(root, filename))) path = Path.Combine(root, filename);
-        nint library = NativeLibrary.Load(Path.GetFullPath(path));
+        return !File.Exists(path) && File.Exists(Path.Combine(root, filename)) ? Path.Combine(root, filename) : path;
+    }
+
+    private static unsafe nint Load()
+    {
+        string? chosen = Environment.GetEnvironmentVariable(Contract.LibraryVariable);
+        if (!string.IsNullOrEmpty(chosen) && !Path.IsPathFullyQualified(chosen))
+            throw new ThinkThenException(new(ErrorCode.LocalIo, Contract.LibraryPathMessage));
+        string path = string.IsNullOrEmpty(chosen) ? PackagedPath() : chosen;
+        nint library = NativeLibrary.Load(Path.GetFullPath(path), typeof(Native).Assembly,
+            DllImportSearchPath.System32 | DllImportSearchPath.UseDllDirectoryForDependencies);
         try
         {
             var version = (delegate* unmanaged[Cdecl]<uint>)NativeLibrary.GetExport(library, "thinkthen_abi_version");

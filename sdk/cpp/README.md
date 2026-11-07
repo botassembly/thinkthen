@@ -2,7 +2,7 @@
 
 The C++ SDK asks questions about text from your C++ code. Its first function, decide, answers a yes-or-no question with yes (`true`), no (`false`) or not sure.
 
-Download the C++ and C archives for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), and extract both into the same `thinkthen` folder. You need a C++17 compiler. Save the program below as `example.cpp`, then compile and run it:
+Download the C++ and C archives for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), and extract both into the same `thinkthen` folder. You need a C++17 compiler. Save the program below as `example.cpp`, then compile and run it. These commands are for Linux and macOS; [Build on Windows](#build-on-windows) has the Windows ones.
 
 ```sh
 c++ -std=c++17 -Wall -Wextra -Werror \
@@ -13,6 +13,18 @@ c++ -std=c++17 -Wall -Wextra -Werror \
 ```
 
 CMake projects use `find_package(ThinkThenCpp CONFIG REQUIRED)`, link `ThinkThen::Cpp`, and set `CMAKE_PREFIX_PATH` to the `thinkthen` folder. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+
+## Build on Windows
+
+Extract the Windows archives, `thinkthen-cpp-0.2.0-windows-x86_64.zip` and `thinkthen-c-0.2.0-windows-x86_64.zip`, into the same `thinkthen` folder. You need clang-cl and the Visual Studio C++ tools. Open Developer PowerShell for Visual Studio in the folder that holds `thinkthen` and `example.cpp`, then run:
+
+```powershell
+clang-cl /nologo /std:c++17 /EHsc /MD /Ithinkthen\include example.cpp /Fe:example.exe /link thinkthen\lib\thinkthen_ffi.lib
+$env:PATH = "$PWD\thinkthen\bin;$env:PATH"
+.\example.exe
+```
+
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
 
 ## Ask a question
 

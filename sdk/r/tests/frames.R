@@ -18,6 +18,36 @@ DT <- data.table::as.data.table(input)
 DT[, answer := tt_decide(body, "Ready?", client = stub)]
 stopifnot(identical(tbl$answer, answers), identical(DT$answer, answers))
 
+# Feature: failures sit beside plain answers in everyday table use.
+inbox <- tibble::tibble(body = c("alpha", NA, "bravo"))
+answered <- suppressWarnings(dplyr::mutate(inbox, answer = tt_decide(body, "Ready?", client = stub, errors = "na")))
+mask <- suppressWarnings(tt_keep(inbox$body, "Ready?", client = stub, errors = "na"))
+stopifnot(is.logical(answered$answer), is.na(answered$answer[[2]]),
+          nrow(suppressWarnings(dplyr::filter(inbox, tt_keep(body, "Ready?", client = stub, errors = "na")))) == sum(mask, na.rm = TRUE))
+kept <- suppressWarnings(tt_filter(data.table::as.data.table(inbox), "Ready?", field = "/body", client = stub, errors = "na"))
+clean <- tt_filter(data.table::as.data.table(inbox[-2, ]), "Ready?", field = "/body", client = stub)
+stopifnot(identical(tt_failures(kept)$position, 2), length(caught(kept[, flag := TRUE])$warnings) == 0L,
+          length(caught(clean[, flag := TRUE])$warnings) == 0L)
+subclassed <- data.table::as.data.table(inbox)
+class(subclassed) <- c("custom_table", class(subclassed))
+stopifnot(identical(class(suppressWarnings(tt_filter(subclassed, "Ready?", field = "/body", client = stub, errors = "na"))), class(subclassed)),
+          identical(class(tt_filter(subclassed[-2, ], "Ready?", field = "/body", client = stub)), class(subclassed)))
+
+# Feature: a filtered data.table with an automatic index stays queryable.
+values <- rep(letters[1:12], 2L)
+for (body in list(sort(values), values)) {
+  indexed <- data.table::data.table(a = body, b = seq_along(body))
+  invisible(indexed[a == "a"])
+  stopifnot(identical(data.table::indices(indexed), "a"))
+  kept <- tt_filter(indexed, "Ready?", field = "/a", client = stub)
+  stopifnot(nrow(kept) > 0L, nrow(kept) < nrow(indexed), identical(data.table::indices(indexed), "a"))
+  for (value in letters[1:12]) stopifnot(identical(kept[a == value]$b, kept$b[kept$a == value]))
+  # An `==` lookup on a one-row item does not raise on a stale index, so check the index itself.
+  for (item in tt_filter_rows(indexed, "Ready?", field = "/a", client = stub)$item) {
+    stopifnot(is.null(data.table::indices(item)), identical(item[a == item$a]$b, item$b))
+  }
+}
+
 # Feature: attachment preserves repeated names, custom attributes and empty prototypes.
 names(input)[2:3] <- c("duplicate", "duplicate")
 attr(input, "origin") <- "retain"

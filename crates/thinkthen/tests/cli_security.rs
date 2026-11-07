@@ -34,6 +34,7 @@ fn shell_steps_require_consent_and_pass_only_named_backend_keys() {
         .output()
         .unwrap();
     assert_eq!(refused.status.code(), Some(5));
+    assert_eq!(support::reported(&refused), "local.toolbox");
     assert!(refused.stdout.is_empty());
     assert!(!directory.path().join("marker").exists());
     assert!(String::from_utf8_lossy(&refused.stderr).contains("--allow-shell"));

@@ -10,12 +10,12 @@ static_assert(!std::is_constructible_v<tt::annotation_question, tt::rank>);
 
 template<class Q> Q options(Q q, const json& value) {
     if (value.contains("field")) q = q.field(value.at("field").get<std::string>());
-    if constexpr (std::is_same_v<Q, tt::decide> || std::is_same_v<Q, tt::choose> || std::is_same_v<Q, tt::filter>) {
+    if constexpr (std::is_same_v<Q, tt::decide> || std::is_same_v<Q, tt::filter>) {
         if (value.contains("threshold")) {
             const auto& t = value.at("threshold");
             q = q.threshold(t.is_number() ? tt::threshold::cutoff(t.get<double>()) : tt::threshold::band(t.at("low"), t.at("high")));
         }
-    } else if constexpr (std::is_same_v<Q, tt::tag> || std::is_same_v<Q, tt::find> || std::is_same_v<Q, tt::recognize> || std::is_same_v<Q, tt::relate>) {
+    } else if constexpr (std::is_same_v<Q, tt::choose> || std::is_same_v<Q, tt::tag> || std::is_same_v<Q, tt::find> || std::is_same_v<Q, tt::recognize> || std::is_same_v<Q, tt::relate>) {
         if (value.contains("threshold")) q = q.threshold(value.at("threshold").get<double>());
     } else if constexpr (std::is_same_v<Q, tt::rank>) {
         if (value.contains("top")) q = q.top(value.at("top").get<std::size_t>());
@@ -138,7 +138,9 @@ int main(int argc, char** argv) {
 #undef THINKTHEN_COLLECT
         }, q);
     } catch (const tt::error& error) {
-        std::cout << json{{"rows", rows}, {"kept", kept}, {"error", thinkthen_code_name(error.code().value())}} << '\n';
+        json output{{"rows", rows}, {"kept", kept}, {"error", thinkthen_code_name(error.code().value())}};
+        if (error.http_status()) output["http_status"] = *error.http_status();
+        std::cout << output << '\n';
         return 0;
     }
     std::cout << json{{"rows", rows}, {"kept", kept}} << '\n';

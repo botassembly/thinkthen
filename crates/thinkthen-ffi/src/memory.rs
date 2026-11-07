@@ -31,15 +31,18 @@ impl Default for Buffer {
     }
 }
 impl Buffer {
-    // Every engine allocation has the same private pointer prefix. Only source
-    // allocations attach an Original. Cleanup never probes foreign allocations.
-    const PREFIX: usize = size_of::<*mut crate::original::Original>();
+    // Every engine allocation has the same private prefix: an optional owner pointer, then
+    // the byte length cleanup frees by, because a caller can reach the public len. Only
+    // source allocations attach an Original. Cleanup never probes foreign allocations.
+    const OWNER: usize = size_of::<*mut crate::original::Original>();
+    const PREFIX: usize = Self::OWNER + size_of::<usize>();
     pub(crate) fn new(text: String) -> Self {
         #[cfg(test)]
         LIVE.with(|live| live.set(live.get() + 1));
-        let mut allocation = vec![0_u8; Self::PREFIX];
-        allocation.extend_from_slice(text.as_bytes());
         let len = text.len();
+        let mut allocation = vec![0_u8; Self::OWNER];
+        allocation.extend_from_slice(&len.to_ne_bytes());
+        allocation.extend_from_slice(text.as_bytes());
         let base = Box::into_raw(allocation.into_boxed_slice()).cast::<u8>();
         /* SAFETY: PREFIX leaves room for one unaligned optional owner pointer. */
         let data = unsafe { base.add(Self::PREFIX) };
@@ -75,16 +78,17 @@ impl Buffer {
             #[cfg(test)]
             LIVE.with(|live| live.set(live.get() - 1));
             /* SAFETY: cleanup accepts only unique allocations from new. The full
-             * boxed slice length is the visible length plus the fixed prefix. */
+             * boxed slice length is the stored length plus the fixed prefix. */
             unsafe {
                 let base = self.data.sub(Self::PREFIX);
                 let owner = ptr::read_unaligned(base.cast::<*mut crate::original::Original>());
+                let len = ptr::read_unaligned(base.add(Self::OWNER).cast::<usize>());
                 if !owner.is_null() {
                     drop(Box::from_raw(owner));
                 }
                 drop(Box::from_raw(ptr::slice_from_raw_parts_mut(
                     base,
-                    self.len + Self::PREFIX,
+                    len + Self::PREFIX,
                 )));
             }
             *self = Self::default();
@@ -276,6 +280,16 @@ impl QuestionHandle {
 /// A set of named questions, each copied in. Free it with thinkthen_toolbox_free.
 #[derive(Debug, Default)]
 pub struct ToolboxHandle(pub(crate) ToolboxBuilder);
+/// Borrow a caller's handle, or fail with the ABI error when it is NULL.
+pub(crate) unsafe fn live<'a, T>(handle: *const T) -> Result<&'a T, Error> {
+    /* SAFETY: the caller lends a live handle or NULL until the export returns. */
+    unsafe { handle.as_ref() }.ok_or_else(native::abi_error)
+}
+/// Borrow a handle the caller's one driving thread lends exclusively, as `live` does.
+pub(crate) unsafe fn live_mut<'a, T>(handle: *mut T) -> Result<&'a mut T, Error> {
+    /* SAFETY: the caller lends a live handle or NULL until the export returns. */
+    unsafe { handle.as_mut() }.ok_or_else(native::abi_error)
+}
 /// Borrow counted input bytes only until the export returns.
 /// THINKTHEN_NUL_TERMINATED (SIZE_MAX) as the length reads up to the first NUL.
 pub(crate) unsafe fn bytes<'a>(data: *const u8, len: usize) -> &'a [u8] {

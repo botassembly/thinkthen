@@ -170,31 +170,123 @@ fn trusted_roots_still_require_the_server_name_and_validity() {
 #[cfg(target_os = "linux")]
 #[test]
 fn container_system_store_is_used_and_extra_roots_preserve_it() {
-    if std::env::var_os("THINKTHEN_TEST_CONTAINER_STORE").is_none() {
-        assert!(
-            std::env::var_os("THINKTHEN_EXPECT_CONTAINER_STORE").is_none(),
-            "qualification expected the system-store test but omitted its activation"
-        );
+    if !store_proof_is_active(
+        "THINKTHEN_TEST_CONTAINER_STORE",
+        "THINKTHEN_EXPECT_CONTAINER_STORE",
+    ) {
         return;
     }
-    let fixture = trust::Certificates::new();
-    let extra = trust::Certificates::new();
-    let directory = tempfile::tempdir().unwrap();
-    let ca = directory.path().join("extra.pem");
-    std::fs::write(&ca, extra.root.pem()).unwrap();
     let store = std::path::Path::new("/etc/ssl/certs/ca-certificates.crt");
-    for (installed, file, answered) in [
-        (false, false, false),
-        (true, false, true),
-        (true, true, true),
-        (false, true, false),
-    ] {
+    let fixture = trust::Certificates::new();
+    system_store_is_used_and_extra_roots_preserve_it(&fixture, |installed| {
         if installed {
             std::fs::create_dir_all(store.parent().unwrap()).unwrap();
             std::fs::write(store, fixture.root.pem()).unwrap();
         } else if store.exists() {
             std::fs::remove_file(store).unwrap();
         }
+    });
+}
+
+/// Changes the machine's trust, so it runs only where a job activates it. The
+/// machine store needs an administrator, and is where a corporate proxy's CA goes.
+#[cfg(windows)]
+#[test]
+fn windows_store_is_used_and_extra_roots_preserve_it() {
+    if !store_proof_is_active(
+        "THINKTHEN_TEST_WINDOWS_STORE",
+        "THINKTHEN_EXPECT_WINDOWS_STORE",
+    ) {
+        return;
+    }
+    let fixture = trust::Certificates::new();
+    let directory = tempfile::tempdir().unwrap();
+    let file = directory.path().join("root.der");
+    std::fs::write(&file, fixture.root.der()).unwrap();
+    let mut root = MachineRoot {
+        file,
+        installed: false,
+    };
+    system_store_is_used_and_extra_roots_preserve_it(&fixture, |installed| root.set(installed));
+}
+
+/// One test-owned root in the machine's Root store, removed even when a case fails.
+#[cfg(windows)]
+struct MachineRoot {
+    file: std::path::PathBuf,
+    installed: bool,
+}
+
+#[cfg(windows)]
+impl MachineRoot {
+    fn set(&mut self, installed: bool) {
+        if installed != self.installed {
+            let output = self.change(if installed { "Add" } else { "Remove" });
+            assert!(
+                output.status.success(),
+                "machine Root store: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            self.installed = installed;
+        }
+    }
+
+    fn change(&self, action: &str) -> std::process::Output {
+        let x509 = "[Security.Cryptography.X509Certificates";
+        Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command"])
+            .arg(format!(
+                "$ErrorActionPreference='Stop'; \
+                 $root={x509}.X509Certificate2]::new($env:THINKTHEN_TEST_ROOT); \
+                 $store={x509}.X509Store]::new('Root','LocalMachine'); \
+                 $store.Open('ReadWrite'); $store.{action}($root); $store.Close()"
+            ))
+            .env("THINKTHEN_TEST_ROOT", &self.file)
+            .output()
+            .unwrap()
+    }
+}
+
+#[cfg(windows)]
+impl Drop for MachineRoot {
+    fn drop(&mut self) {
+        if self.installed && !self.change("Remove").status.success() {
+            eprintln!("The test root stayed in the machine Root store");
+        }
+    }
+}
+
+#[cfg(any(target_os = "linux", windows))]
+fn store_proof_is_active(activation: &str, expectation: &str) -> bool {
+    let active = std::env::var_os(activation).is_some();
+    assert!(
+        active || std::env::var_os(expectation).is_none(),
+        "qualification expected the system-store test but omitted its activation"
+    );
+    active
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[allow(
+    clippy::print_stderr,
+    reason = "Show in the job log which system store cases ran."
+)]
+fn system_store_is_used_and_extra_roots_preserve_it(
+    fixture: &trust::Certificates,
+    mut set_store: impl FnMut(bool),
+) {
+    let extra = trust::Certificates::new();
+    let directory = tempfile::tempdir().unwrap();
+    let ca = directory.path().join("extra.pem");
+    std::fs::write(&ca, extra.root.pem()).unwrap();
+    for (installed, file, answered) in [
+        (false, false, false),
+        (true, false, true),
+        (true, true, true),
+        (false, true, false),
+        (false, false, false),
+    ] {
+        set_store(installed);
         let server = fixture.server();
         let mut child = isolated_child();
         child
@@ -211,6 +303,7 @@ fn container_system_store_is_used_and_extra_roots_preserve_it() {
             String::from_utf8_lossy(&output.stderr)
         );
         assert_eq!(!server.finish().is_empty(), answered);
+        eprintln!("System store case: store={installed}, file={file}, answered={answered}");
     }
 }
 
@@ -265,17 +358,26 @@ fn trust_child() {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 #[test]
-fn an_expected_container_store_proof_cannot_silently_skip() {
-    let output = Command::new(std::env::current_exe().unwrap())
-        .args([
-            "--exact",
+fn an_expected_store_proof_cannot_silently_skip() {
+    let (name, activation, expectation) = if cfg!(windows) {
+        (
+            "windows_store_is_used_and_extra_roots_preserve_it",
+            "THINKTHEN_TEST_WINDOWS_STORE",
+            "THINKTHEN_EXPECT_WINDOWS_STORE",
+        )
+    } else {
+        (
             "container_system_store_is_used_and_extra_roots_preserve_it",
-            "--nocapture",
-        ])
-        .env_remove("THINKTHEN_TEST_CONTAINER_STORE")
-        .env("THINKTHEN_EXPECT_CONTAINER_STORE", "1")
+            "THINKTHEN_TEST_CONTAINER_STORE",
+            "THINKTHEN_EXPECT_CONTAINER_STORE",
+        )
+    };
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", name, "--nocapture"])
+        .env_remove(activation)
+        .env(expectation, "1")
         .output()
         .unwrap();
     assert!(!output.status.success());

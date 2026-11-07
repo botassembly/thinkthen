@@ -6,8 +6,7 @@ Usage: kotlin-example-check CLASSPATH MAVEN_REPOSITORY HOME
 A complete program runs as written. Every other snippet runs inside
 `runBlocking { ThinkThen().use { client -> ... } }` after the guide block that
 sets up `messages` and `text`, with the imports the guide names: the Kotlin
-package and the Java package's `JsonObject` and `JsonString` for rank snapshots. The Gradle dependency block is build setup, not
-code, and the JSON block is the toolbox.json the toolbox example loads. Only
+package. The Gradle dependency block is build setup, not code, and the JSON block is the toolbox.json the toolbox example loads. Only
 these steps run with THINKTHEN_BACKEND=stub, so no example makes a paid call.
 """
 import os
@@ -52,7 +51,7 @@ with tempfile.TemporaryDirectory(prefix='kotlin-guide-examples-') as folder:
         else:
             body = literal if literal == setup else setup + '\n' + literal
             source = (f'package {package}\n\nimport dev.thinkthen.kotlin.*\nimport kotlinx.coroutines.flow.*\n'
-                      'import kotlinx.coroutines.runBlocking\nimport dev.thinkthen.JsonObject\nimport dev.thinkthen.JsonString\n\n'
+                      'import kotlinx.coroutines.runBlocking\n\n'
                       'fun main(): Unit = runBlocking {\n    ThinkThen().use { client ->\n'
                       + body + '\n    }\n    Unit\n}\n')
         (sources / f'Example{index}.kt').write_text(source)

@@ -46,7 +46,7 @@ pub const AnyRow = r.AnyRow;
 pub const Backend = t.Backend;
 /// The ten question functions.
 pub const Function = t.Function;
-/// When decide, choose and filter answer.
+/// When decide and filter answer.
 pub const Threshold = t.Threshold;
 /// A backend key that never prints.
 pub const ApiKey = t.ApiKey;
@@ -159,7 +159,7 @@ pub const Client = struct {
         native.ready() catch |err| switch (err) {
             error.EngineVersion => return d.incompatible(diag),
             error.LoadFailure => {
-                if (diag) |value| value.set(.{ .code = .local_io, .message = "cannot load native engine " ++ native.path ++ "; install it beside the executable with thinkthen.installNative in build.zig" });
+                if (diag) |value| value.set(.{ .code = .local_io, .message = native.failure() });
                 return error.Setup;
             },
         };

@@ -22,6 +22,7 @@ pub enum StressFixture {
 impl StressFixture {
     /// Open one named scenario from the shared table.
     /// Faults are consumed in request arrival order, then normal replies resume.
+    /// Connections stay open between requests unless a fault ends the reply.
     /// # Errors
     /// Returns invalid scenario or socket setup errors.
     pub fn open(name: &str) -> io::Result<Self> {
@@ -45,6 +46,13 @@ impl StressFixture {
             .and_then(Value::as_array)
             .cloned()
             .unwrap_or_default();
+        // These faults exist to end the reply, as a real backend's closed socket does.
+        let ends_reply = faults.iter().any(|fault| {
+            matches!(
+                fault.get("kind").and_then(Value::as_str),
+                Some("closed" | "truncated")
+            )
+        });
         let replies = table
             .get("replies")
             .and_then(Value::as_array)
@@ -64,6 +72,9 @@ impl StressFixture {
             super::case::reply(&replies, request)
         })?;
         lock(&server.state).recording_limit = Some(8);
+        if !ends_reply {
+            server.keep_alive();
+        }
         Ok(Self::Server(server))
     }
     /// The backend base URL, valid until the fixture is dropped.

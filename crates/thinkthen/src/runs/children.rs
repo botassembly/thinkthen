@@ -27,9 +27,7 @@ pub(crate) fn force_cleanup() -> Result<(), Error> {
     groups.stopped = true;
     let mut failure = None;
     for child in groups.children.iter().filter_map(Weak::upgrade) {
-        let mut child = lock(&child);
-        let _ = child.kill();
-        if let Err(error) = child.wait() {
+        if let Err(error) = OwnedChild::stop(&child) {
             failure.get_or_insert(error);
         }
     }
@@ -41,6 +39,10 @@ pub(crate) fn force_cleanup() -> Result<(), Error> {
     })
 }
 
+/// A declared command's group, killed and reaped when this value drops.
+///
+/// A command owns its descendants even when its leader has exited, so the group
+/// is stopped on every path.
 pub(crate) struct OwnedChild(Arc<Mutex<GroupChild>>);
 impl OwnedChild {
     pub(crate) fn spawn(command: &mut Command) -> io::Result<Self> {
@@ -66,12 +68,15 @@ impl OwnedChild {
         lock(&self.0).try_wait()
     }
 
-    pub(crate) fn kill(&self) -> io::Result<()> {
-        lock(&self.0).kill()
+    fn stop(child: &Mutex<GroupChild>) -> io::Result<ExitStatus> {
+        let mut child = lock(child);
+        let _ = child.kill();
+        child.wait()
     }
-
-    pub(crate) fn wait(&self) -> io::Result<ExitStatus> {
-        lock(&self.0).wait()
+}
+impl Drop for OwnedChild {
+    fn drop(&mut self) {
+        let _ = Self::stop(&self.0);
     }
 }
 

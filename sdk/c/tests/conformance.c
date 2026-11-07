@@ -15,14 +15,10 @@ static void member(const char *name, thinkthen_buffer value) {
     assert(fwrite(value.data, 1, value.len, stdout) == value.len);
 }
 
-#ifndef _WIN32
 #include "stress.h"
-#endif
 
 int main(int argc, char **argv) {
-#ifndef _WIN32
     if (argc > 1 && strncmp(argv[1], "stress", 6) == 0) return stress_main(argc, argv);
-#endif
     assert(argc == 3 || (argc == 4 && strcmp(argv[3], "cancelled") == 0));
     assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()));
     thinkthen_client *client = NULL;
@@ -71,9 +67,10 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < kept_count; ++i) printf("%s%s", i ? "," : "", kept[i] ? "true" : "false");
     printf("]");
     free(kept);
-    if (status < 0)
+    if (status < 0) {
         printf(",\"error\":\"%s\"", thinkthen_code_name(error.code));
-    else assert(status == THINKTHEN_END);
+        if (error.http_status) printf(",\"http_status\":%u", error.http_status);
+    } else assert(status == THINKTHEN_END);
     puts("}");
     thinkthen_call_free(call);
     thinkthen_error_free(&error);

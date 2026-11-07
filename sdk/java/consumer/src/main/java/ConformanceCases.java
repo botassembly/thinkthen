@@ -284,7 +284,9 @@ public final class ConformanceCases {
                     actual = values;
                 } catch (ThinkThenException error) {
                     ConsumerCases.check(values.isEmpty(), "Admission returned rows");
-                    actual = error(error.code().wireName());
+                    var failure = (ObjectNode) error(error.code().wireName());
+                    error.httpStatus().ifPresent(status -> failure.put("http_status",status));
+                    actual = failure;
                 } catch (java.util.concurrent.CancellationException error) {
                     ConsumerCases.check(cancelled && values.isEmpty(), "Unexpected cancellation or cancelled rows");
                     ConsumerCases.check(error.getCause() instanceof ThinkThenException cause && cause.code() == ErrorCode.LOCAL_CANCELLED, "Cancellation lost its engine code");

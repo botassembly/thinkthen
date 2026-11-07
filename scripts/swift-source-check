@@ -8,7 +8,7 @@ cargo build --locked -p thinkthen-ffi -p loopback --lib --bin loopback
 build_target=${CARGO_TARGET_DIR:-$PWD/target}
 case "$build_target" in /*) ;; *) build_target="$PWD/$build_target" ;; esac
 if [ "${1:-}" = --interface-only ]; then
-    export THINKTHEN_NATIVE_LIBRARY="$build_target/debug/$([ "$(uname -s)" = Darwin ] && echo libthinkthen_ffi.dylib || echo libthinkthen_ffi.so)"
+    export THINKTHEN_LIBRARY="$build_target/debug/$([ "$(uname -s)" = Darwin ] && echo libthinkthen_ffi.dylib || echo libthinkthen_ffi.so)"
     if [ -n "${2:-}" ]; then
         scripts/swift-interface-check --against "$2" --native
     else
@@ -33,5 +33,5 @@ fi
 export THINKTHEN_SWIFT_NATIVE_ASSETS="$scratch"
 export THINKTHEN_LOOPBACK="$build_target/debug/loopback"
 # Exercise the installed package's own loader, not the source library override.
-unset THINKTHEN_NATIVE_LIBRARY
+unset THINKTHEN_LIBRARY
 scripts/swift-gate

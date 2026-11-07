@@ -4,6 +4,7 @@
 pub mod loopback;
 
 use serde_json::json;
+use std::sync::mpsc::TrySendError;
 use thinkthen::records::{Record, RecordId};
 use thinkthen::results::{AnyRow, Outcome, Status};
 use thinkthen::{BackendName, Code, Settings, questions};
@@ -170,6 +171,126 @@ fn push_rows_are_published_before_the_input_owner_closes() {
         Status::Failed
     );
     assert!(remaining.is_empty());
+}
+
+// More records than a call holds unread, so a caller that never reads must meet
+// a full queue.
+const MORE_THAN_A_CALL_HOLDS: usize = 2_000;
+
+fn stub_engine() -> thinkthen::Engine {
+    Settings::default()
+        .with_backend(BackendName::Stub)
+        .engine(|_| None)
+        .unwrap()
+}
+
+fn numbered(index: usize) -> Record {
+    Record::text("ready").with_id(RecordId::from(format!("r{index}").as_str()))
+}
+
+/// Fails, rather than hangs, when a one-thread caller stalls.
+fn without_a_stall(caller: impl FnOnce() + Send + 'static) {
+    let (finished, done) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        caller();
+        finished.send(()).unwrap();
+    });
+    done.recv_timeout(std::time::Duration::from_secs(60))
+        .expect("the one-thread caller must finish");
+}
+
+// Reads rows only when input is full and returns how often it was.
+fn fill_and_drain(engine: thinkthen::Engine, records: usize) -> usize {
+    let question = questions::Decide::new("Ready?").unwrap();
+    let call = engine.open(&question).unwrap();
+    let sender = call.sender();
+    let mut rows = call.rows();
+    let mut read = Vec::new();
+    let mut full = 0;
+    for index in 0..records {
+        let mut record = numbered(index);
+        loop {
+            match sender.try_send(record) {
+                Ok(()) => break,
+                Err(TrySendError::Full(back)) => {
+                    full += 1;
+                    record = back;
+                    read.push(rows.next().unwrap().unwrap());
+                }
+                Err(TrySendError::Disconnected(_)) => panic!("the call must stay open"),
+            }
+        }
+    }
+    sender.close();
+    read.extend(rows.map(Result::unwrap));
+    assert_eq!(read.len(), records);
+    for (index, row) in read.iter().enumerate() {
+        assert_eq!(row.id(), numbered(index).id());
+    }
+    full
+}
+
+#[test]
+fn one_thread_fills_input_with_try_send_and_drains_every_row_in_order() {
+    without_a_stall(|| {
+        let one_per_request = Settings::default()
+            .with_backend(BackendName::Stub)
+            .batch(1_u64.try_into().unwrap())
+            .engine(|_| None)
+            .unwrap();
+        let full = fill_and_drain(one_per_request, MORE_THAN_A_CALL_HOLDS);
+        assert!(full > 0, "the caller must have met a full queue");
+    });
+}
+
+#[test]
+fn one_thread_rank_tries_again_on_a_full_queue_and_reads_after_close() {
+    without_a_stall(|| {
+        let question = questions::Rank::new("How much?", ["low", "high"]).unwrap();
+        let call = stub_engine().open(&question).unwrap();
+        let sender = call.sender();
+        let rows = call.rows();
+        for index in 0..200 {
+            let mut record = numbered(index);
+            while let Err(refused) = sender.try_send(record) {
+                let TrySendError::Full(back) = refused else {
+                    panic!("the call must stay open")
+                };
+                record = back;
+                std::thread::yield_now();
+            }
+        }
+        sender.close();
+        assert_eq!(rows.map(Result::unwrap).count(), 200);
+    });
+}
+
+#[test]
+fn try_send_on_a_stopped_call_gives_the_record_back_even_when_input_is_full() {
+    type Rows = thinkthen::Rows<questions::Decide>;
+    let stops: [fn(&thinkthen::RecordSender, &Rows); 2] =
+        [|sender, _| sender.close(), |_, rows| rows.cancel()];
+    for stop in stops {
+        without_a_stall(move || {
+            let question = questions::Decide::new("Ready?").unwrap();
+            let call = stub_engine().open(&question).unwrap();
+            let sender = call.sender();
+            let rows = call.rows();
+            let refused = loop {
+                if let Err(refused) = sender.try_send(numbered(0)) {
+                    break refused;
+                }
+            };
+            let TrySendError::Full(record) = refused else {
+                panic!("an unread call must fill up")
+            };
+            stop(&sender, &rows);
+            let Err(TrySendError::Disconnected(record)) = sender.try_send(record) else {
+                panic!("a stopped call must refuse the record")
+            };
+            assert_eq!(record.id(), numbered(0).id());
+        });
+    }
 }
 
 #[test]

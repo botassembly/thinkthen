@@ -2,6 +2,7 @@
 """Check release versions, CLI record framing and build attestation contracts."""
 import json
 import hashlib
+import http.client
 import io
 import os
 from pathlib import Path
@@ -66,6 +67,28 @@ class ReleaseScripts(unittest.TestCase):
         example = namespace['example']
         example.__globals__['PACKAGE'] = ROOT / 'sdk'
         self.assertTrue(example('typescript', 'js'))
+
+    def test_windows_readme_steps_run_as_written(self):
+        from release_readme import windows_steps
+        site = json.loads((ROOT / 'site/src/data/site.json').read_text(encoding='utf-8'))
+        with tempfile.TemporaryDirectory(prefix='thinkthen-windows-steps-') as temporary:
+            folder = Path(temporary)
+            for name in ('c', 'cpp', 'go', 'zig'):
+                document = ROOT / 'sdk' / name / 'README.md'
+                steps = site['languages'][name]['installWindows']
+                command = windows_steps(document, folder)
+                self.assertEqual(command[0], 'powershell')
+                guarded = ''.join(line + '\nif ($LASTEXITCODE) { exit $LASTEXITCODE }\n' for line in steps.splitlines())
+                self.assertEqual(command[-1].read_text(encoding='utf-8'),
+                                 "$ErrorActionPreference = 'Continue'\ntrap { Write-Output $_; exit 1 }\n" + guarded + 'exit 0\n')
+                self.assertNotIn('-Dtarget', steps)
+            address = 'https://github.com/botassembly/thinkthen/releases/download'
+            windows_steps(ROOT / 'sdk/zig/README.md', folder, {address: 'local'})
+            self.assertNotIn(address, (folder / 'windows-steps.ps1').read_text(encoding='utf-8'))
+            with self.assertRaisesRegex(ValueError, 'does not name'):
+                windows_steps(ROOT / 'sdk/zig/README.md', folder, {'absent': 'local'})
+            with self.assertRaises(ValueError):
+                windows_steps(ROOT / 'sdk/ruby/README.md', folder)
 
     def test_nuget_same_version_stale_package_is_refused(self):
         from release_registry_check import verify_nuget
@@ -139,6 +162,42 @@ class ReleaseScripts(unittest.TestCase):
             with patch('subprocess.run', side_effect=invoke):
                 case(Path('thinkthen.exe'), folder, environment, diagnostics=diagnostics)
             self.assertEqual(sorted(p.name for p in folder.iterdir()), ['unicode.ps1'])
+
+    def test_windows_default_pipes_prove_the_problem_and_the_documented_setting(self):
+        case = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['default_pipes']
+        line = json.loads((ROOT / 'site/src/data/site.json').read_text(encoding='utf-8'))['install']['windowsUtf8']
+        text, lost = '漢字 café evidence 5', '?? caf? evidence 5'
+        table, garbled = f'Body,ready\n{text},TRUE', 'Body,ready\nµ╝óσ¡ù evidence 5,TRUE'
+        right = {'default': (lost, f'Body,ready\n{lost},TRUE'), 'input-only': (text, garbled), 'documented': (text, table)}
+        cases = [
+            ('measured', right, 437, None),
+            ('UTF-8 console', right | {'input-only': (text, table)}, 65001, None),
+            ('default already works', right | {'default': (text, table)}, 437, 'default backend'),
+            ('setting loses text', right | {'documented': (lost, table)}, 437, 'documented backend'),
+            ('setting garbles output', right | {'documented': (text, garbled)}, 437, 'documented read back'),
+            ('output half does nothing', right | {'input-only': (text, table)}, 437, 'output half'),
+        ]
+        for name, measured, page, message in cases:
+            with self.subTest(name), tempfile.TemporaryDirectory(prefix='thinkthen-default-pipes-') as temporary:
+                def invoke(command, **options):
+                    script = Path(command[-1]).read_text(encoding='utf-8-sig')
+                    mode = Path(command[-1]).stem
+                    self.assertEqual(line in script, mode == 'documented')
+                    self.assertEqual('$OutputEncoding=[' in script, mode == 'input-only')
+                    sent, read_back = measured[mode]
+                    connection = http.client.HTTPConnection('127.0.0.1', int(re.search(r'127\.0\.0\.1:(\d+)/v1', script)[1]))
+                    connection.request('POST', '/v1', json.dumps({'questions': {'q1': {'text': sent}}}, ensure_ascii=False).encode('utf-8'))
+                    self.assertEqual(json.load(connection.getresponse())['answers']['q1']['noul'], 0.9)
+                    connection.close()
+                    (Path(options['cwd']) / (mode + '.json')).write_text(json.dumps({'shell_version': '5.1.20348.1', 'exit': 0,
+                        'output_code_page': 65001 if mode == 'documented' else page, 'read_back': read_back}), encoding='utf-8')
+                    return subprocess.CompletedProcess(command, 0, stdout=b'', stderr=b'')
+                with patch('subprocess.run', side_effect=invoke):
+                    if message is None:
+                        case(Path('thinkthen.exe'), Path(temporary), dict(os.environ))
+                    else:
+                        with self.assertRaisesRegex(AssertionError, message):
+                            case(Path('thinkthen.exe'), Path(temporary), dict(os.environ))
 
     def test_windows_powershell_failures_name_difference_and_retain_raw_evidence(self):
         case = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['powershell']
@@ -566,6 +625,7 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
     def test_qualification_recipes(self):
         subprocess.run([sys.executable, ROOT / "scripts/qualification-recipe-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-windows-sdks-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/windows-cancel-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/long-path-scratch-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/qualification-continuation-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-replay-test"], check=True)
@@ -878,7 +938,7 @@ for platform, fallback in (
             def execute(*arguments, **options):
                 command = list(map(str, arguments))
                 env = options['env']
-                self.assertNotIn('THINKTHEN_NATIVE_LIBRARY', env)
+                self.assertNotIn('THINKTHEN_LIBRARY', env)
                 self.assertNotIn('NPM_TOKEN', env)
                 self.assertNotIn('THINKTHEN_INSTALL_BASE', env)
                 self.assertEqual(env['THINKTHEN_BACKEND'], 'stub')
@@ -917,7 +977,7 @@ for platform, fallback in (
                     self.assertNotIn('.package(path:', manifest)
                 return ''
             with self.subTest(site=site), patch.object(sys, 'argv', [str(script), site]), \
-                 patch.dict(os.environ, THINKTHEN_NATIVE_LIBRARY='stale-engine', NPM_TOKEN='unused',
+                 patch.dict(os.environ, THINKTHEN_LIBRARY='stale-engine', NPM_TOKEN='unused',
                             THINKTHEN_INSTALL_BASE='https://mirror.invalid'), \
                  patch.dict(main.__globals__, run=execute):
                 main()

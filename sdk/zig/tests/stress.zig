@@ -6,6 +6,14 @@ const builtin = @import("builtin");
 extern "c" fn getenv(name: [*:0]const u8) ?[*:0]u8;
 extern "c" fn system(command: [*:0]const u8) c_int;
 extern "c" fn _read(fd: c_int, bytes: [*]u8, count: c_uint) c_int;
+extern "c" fn _write(fd: c_int, bytes: [*]const u8, count: c_uint) c_int;
+fn writeOut(bytes: []const u8) void {
+    if (builtin.os.tag == .windows) {
+        _ = _write(1, bytes.ptr, @intCast(bytes.len));
+    } else {
+        _ = std.c.write(1, bytes.ptr, bytes.len);
+    }
+}
 const Source = struct {
     offset: usize,
     count: usize,
@@ -97,6 +105,6 @@ pub fn run(a: std.mem.Allocator, args: []const [:0]const u8) !void {
     }
     std.debug.assert(cancel or if (std.mem.eql(u8, args[4], "failed")) failed > 0 else failed == 0);
     const summary = try std.json.Stringify.valueAlloc(a, .{ .identifier_width_mask = widths, .calls = workers * rounds, .rows = if (cancel) 0 else workers * count * rounds, .failed = failed, .cancelled = cancel }, .{});
-    _ = std.c.write(1, summary.ptr, summary.len);
-    _ = std.c.write(1, "\n", 1);
+    writeOut(summary);
+    writeOut("\n");
 }

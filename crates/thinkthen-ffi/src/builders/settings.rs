@@ -5,8 +5,8 @@
 )]
 use crate::{
     HostError, SettingsHandle,
-    exports::{OK, operation},
-    memory::text,
+    exports::{THINKTHEN_OK, operation},
+    memory::{live, live_mut, text},
 };
 use std::time::Duration;
 use thinkthen::{BackendName, Batch, Retry, native};
@@ -28,7 +28,7 @@ pub unsafe extern "C" fn thinkthen_settings_new(
     unsafe {
         operation(error, || {
             out.write(Box::into_raw(Box::new(SettingsHandle::default())));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -50,10 +50,11 @@ pub unsafe extern "C" fn thinkthen_settings_set_backend(
     /* SAFETY: the driver owns the live builder and error slot. */
     unsafe {
         operation(error, || {
+            let handle = live_mut(settings)?;
             let backend = BackendName::from_abi(backend)
                 .ok_or_else(|| thinkthen::native::argument_error(thinkthen::Code::UsageBackend))?;
-            (*settings).0 = (*settings).0.clone().with_backend(backend);
-            Ok(OK)
+            handle.0 = handle.0.clone().with_backend(backend);
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -79,9 +80,10 @@ pub unsafe extern "C" fn thinkthen_settings_set_api_key(
     /* SAFETY: the builder is exclusive and the bytes remain readable until return. */
     unsafe {
         operation(error, || {
+            let handle = live_mut(settings)?;
             let key = text(data, len)?.parse()?;
-            (*settings).0 = (*settings).0.clone().api_key(key);
-            Ok(OK)
+            handle.0 = handle.0.clone().api_key(key);
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -106,9 +108,10 @@ pub unsafe extern "C" fn thinkthen_settings_set_model(
     /* SAFETY: the driver owns the builder and lends readable counted text. */
     unsafe {
         operation(error, || {
+            let handle = live_mut(settings)?;
             let value = text(data, len)?;
-            (*settings).0 = (*settings).0.clone().model(value);
-            Ok(OK)
+            handle.0 = handle.0.clone().model(value);
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -134,10 +137,11 @@ pub unsafe extern "C" fn thinkthen_settings_set_url(
     /* SAFETY: the builder and borrowed counted bytes are live through return. */
     unsafe {
         operation(error, || {
+            let handle = live_mut(settings)?;
             let value = text(data, len)?;
             native::validate_url(value)?;
-            (*settings).0 = (*settings).0.clone().url(value);
-            Ok(OK)
+            handle.0 = handle.0.clone().url(value);
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -159,9 +163,10 @@ pub unsafe extern "C" fn thinkthen_settings_set_batch(
     /* SAFETY: the driver owns the builder and error slot. */
     unsafe {
         operation(error, || {
+            let handle = live_mut(settings)?;
             let batch = Batch::try_from(batch)?;
-            (*settings).0 = (*settings).0.clone().batch(batch);
-            Ok(OK)
+            handle.0 = handle.0.clone().batch(batch);
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -186,13 +191,14 @@ pub unsafe extern "C" fn thinkthen_settings_set_retry(
     /* SAFETY: the driver exclusively owns builder and error slot. */
     unsafe {
         operation(error, || {
+            let handle = live_mut(settings)?;
             let retry = Retry::new(
                 max_retries,
                 Duration::from_millis(initial_backoff_ms),
                 Duration::from_millis(attempt_timeout_ms),
             )?;
-            (*settings).0 = (*settings).0.clone().retry(retry);
-            Ok(OK)
+            handle.0 = handle.0.clone().retry(retry);
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -227,8 +233,10 @@ pub unsafe extern "C" fn thinkthen_settings_clone(
     /* SAFETY: source remains borrowed; output slots are exclusively writable. */
     unsafe {
         operation(error, || {
-            out.write(Box::into_raw(Box::new(SettingsHandle((*source).0.clone()))));
-            Ok(OK)
+            out.write(Box::into_raw(Box::new(SettingsHandle(
+                live(source)?.0.clone(),
+            ))));
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -249,9 +257,12 @@ pub unsafe extern "C" fn thinkthen_settings_copy_api_key(
     /* SAFETY: the immutable key copy finishes before destination is replaced. */
     unsafe {
         operation(error, || {
-            let snapshot = (*destination).0.clone().copy_api_key(&(*source).0);
-            (*destination).0 = snapshot;
-            Ok(OK)
+            let snapshot = live_mut(destination)?
+                .0
+                .clone()
+                .copy_api_key(&live(source)?.0);
+            live_mut(destination)?.0 = snapshot;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -281,7 +292,7 @@ pub unsafe extern "C" fn thinkthen_settings_from_json(
             out.write(std::ptr::null_mut());
             let settings = thinkthen::Settings::from_json(text(data, len)?)?;
             out.write(Box::into_raw(Box::new(SettingsHandle(settings))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }

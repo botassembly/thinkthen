@@ -149,7 +149,7 @@ fn ordinary<F: core::Function>(
             prepared
         })
     });
-    let result = engine.call_contract(
+    let result = engine.call_parallel(
         execution,
         records,
         |row| {

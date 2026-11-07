@@ -2,11 +2,13 @@ package consumer
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -109,11 +111,81 @@ func TestNativeLoadFailure(t *testing.T) {
 	}
 }
 
+// Windows folders have no Unix mode, so these helpers set their access lists.
+const everyone = "*S-1-1-0"
+
+func icacls(t *testing.T, arguments ...string) {
+	t.Helper()
+	if output, err := exec.Command("icacls", arguments...).CombinedOutput(); err != nil {
+		t.Fatalf("icacls %v: %v\n%s", arguments, err, output)
+	}
+}
+
+func currentSID(t *testing.T) string {
+	t.Helper()
+	owner, err := user.Current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return owner.Uid
+}
+
+// A Windows root is short, because the fallback engine path must fit the loader's
+// MAX_PATH, and private, because a folder inherits its parent's access list.
+func cacheRoot(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		return t.TempDir()
+	}
+	root, err := os.MkdirTemp(os.Getenv("SystemDrive")+`\`, "tt-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(root) })
+	icacls(t, root, "/inheritance:r", "/grant:r", "*"+currentSID(t)+":(OI)(CI)F", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F")
+	return root
+}
+
+func predictableCache(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf("thinkthen-%x", sha256.Sum256([]byte(currentSID(t))))
+	}
+	return fmt.Sprintf("thinkthen-%d", os.Geteuid())
+}
+
+func openCache(t *testing.T, path string, mode os.FileMode) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		icacls(t, path, "/grant", everyone+":(M)")
+	} else if err := os.Chmod(path, mode); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func closeCache(t *testing.T, path string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		icacls(t, path, "/remove:g", everyone)
+	} else if err := os.Chmod(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func denyCacheWrites(t *testing.T, path string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		icacls(t, path, "/deny", "*"+currentSID(t)+":(AD,WD)")
+		return
+	}
+	if err := os.Chmod(path, 0500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(path, 0700) })
+}
+
 // Feature: unavailable user caches use a private per-user temporary cache.
 func TestNativeTemporaryCache(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Unix cache environment")
-	}
 	if os.Getenv("THINKTHEN_TEMP_CACHE_CHILD") == "1" {
 		client, err := thinkthen.New(thinkthen.Config{Backend: thinkthen.Stub})
 		if err != nil {
@@ -128,7 +200,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 	}
 	for _, mode := range []string{"unset", "readonly", "long", "occupied", "group-writable"} {
 		t.Run(mode, func(t *testing.T) {
-			root := t.TempDir()
+			root := cacheRoot(t)
 			cache := filepath.Join(root, "cache")
 			home := filepath.Join(root, "home")
 			if runtime.GOOS == "darwin" {
@@ -141,9 +213,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 				t.Fatal(err)
 			}
 			if mode == "group-writable" {
-				if err := os.Chmod(cache, 0775); err != nil {
-					t.Fatal(err)
-				}
+				openCache(t, cache, 0775)
 			}
 			if mode == "long" {
 				cache = filepath.Join(root, strings.Repeat("x", 256))
@@ -153,26 +223,25 @@ func TestNativeTemporaryCache(t *testing.T) {
 				if os.Geteuid() == 0 {
 					t.Skip("root can write read-only folders")
 				}
-				if err := os.Chmod(cache, 0500); err != nil {
-					t.Fatal(err)
-				}
-				t.Cleanup(func() { os.Chmod(cache, 0700) })
+				denyCacheWrites(t, cache)
 			}
 			if mode == "occupied" {
-				if err := os.WriteFile(filepath.Join(root, fmt.Sprintf("thinkthen-%d", os.Geteuid())), []byte("foreign occupant"), 0600); err != nil {
+				if err := os.WriteFile(filepath.Join(root, predictableCache(t)), []byte("foreign occupant"), 0600); err != nil {
 					t.Fatal(err)
 				}
 			}
 			command := exec.Command(os.Args[0], "-test.run=^TestNativeTemporaryCache$")
 			for _, entry := range os.Environ() {
 				key, _, _ := strings.Cut(entry, "=")
-				if key != "HOME" && key != "XDG_CACHE_HOME" && key != "TMPDIR" && key != "THINKTHEN_LIBRARY" {
+				switch strings.ToUpper(key) {
+				case "HOME", "XDG_CACHE_HOME", "TMPDIR", "THINKTHEN_LIBRARY", "LOCALAPPDATA", "TMP", "TEMP":
+				default:
 					command.Env = append(command.Env, entry)
 				}
 			}
-			command.Env = append(command.Env, "THINKTHEN_TEMP_CACHE_CHILD=1", "TMPDIR="+root)
+			command.Env = append(command.Env, "THINKTHEN_TEMP_CACHE_CHILD=1", "TMPDIR="+root, "TMP="+root, "TEMP="+root)
 			if mode != "unset" && mode != "occupied" {
-				command.Env = append(command.Env, "XDG_CACHE_HOME="+cache)
+				command.Env = append(command.Env, "XDG_CACHE_HOME="+cache, "LOCALAPPDATA="+cache)
 				if runtime.GOOS == "darwin" {
 					command.Env = append(command.Env, "HOME="+home)
 				}
@@ -194,25 +263,30 @@ func TestNativeTemporaryCache(t *testing.T) {
 				t.Fatalf("missing private fallback: %v %v", folders, err)
 			}
 			info, err := os.Lstat(folders[0])
-			if err != nil || info.Mode().Perm() != 0700 {
+			// Windows folders carry no mode; the check that refuses a broader
+			// list is what the group-writable case and the retry below exercise.
+			if err != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != 0700) {
 				t.Fatalf("fallback permissions: %v %v", info, err)
 			}
-			assets, err := filepath.Glob(filepath.Join(folders[0], "thinkthen", "native", "*", "library"))
+			library := "library"
+			if runtime.GOOS == "windows" {
+				library = "library.dll"
+			}
+			assets, err := filepath.Glob(filepath.Join(folders[0], "thinkthen", "native", "*", library))
 			if err != nil || len(assets) != 1 {
 				t.Fatalf("fallback did not publish one engine: %v %v", assets, err)
 			}
 			// A predictable fallback with broader permissions is left untouched.
-			if err := os.Chmod(folders[0], 0755); err != nil {
-				t.Fatal(err)
-			}
+			openCache(t, folders[0], 0755)
 			retry := exec.Command(command.Path, command.Args[1:]...)
 			retry.Env = command.Env
 			output, runErr := retry.CombinedOutput()
-			if err := os.Chmod(folders[0], 0700); err != nil {
-				t.Fatal(err)
-			}
+			closeCache(t, folders[0])
 			if runErr != nil {
 				t.Fatalf("private replacement failed: %v %s", runErr, output)
+			}
+			if all, err := filepath.Glob(filepath.Join(root, "thinkthen-*", "thinkthen", "native", "*", library)); err != nil || len(all) != 2 {
+				t.Fatalf("private replacement did not publish its own engine: %v %v", all, err)
 			}
 		})
 	}

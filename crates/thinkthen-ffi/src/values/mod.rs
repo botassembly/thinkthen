@@ -9,7 +9,7 @@ mod metadata;
 mod views;
 use crate::{
     HostRow,
-    memory::{row_size, text},
+    memory::{live, row_size, text},
 };
 pub use answers::*;
 pub use detail::*;
@@ -200,7 +200,7 @@ pub(crate) unsafe fn project<T>(
     unsafe {
         crate::exports::operation(error, || {
             out.write(read()?);
-            Ok(crate::exports::OK)
+            Ok(crate::THINKTHEN_OK)
         })
     }
 }
@@ -215,14 +215,14 @@ pub(crate) unsafe fn answer_project<T>(
     /* SAFETY: the live value is borrowed and output slots are exclusive. */
     unsafe {
         crate::exports::operation(error, || {
-            if (*value).status()? == thinkthen::results::Status::Unsure {
+            if live(value)?.status()? == thinkthen::results::Status::Unsure {
                 return Ok(crate::THINKTHEN_UNSURE);
             }
-            if let Some(error) = (*value).error()? {
+            if let Some(error) = live(value)?.error()? {
                 return Err(error.clone());
             }
             out.write(read()?);
-            Ok(crate::exports::OK)
+            Ok(crate::THINKTHEN_OK)
         })
     }
 }

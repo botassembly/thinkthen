@@ -2,7 +2,7 @@ source(file.path(dirname(sub("^--file=", "", grep("^--file=", commandArgs(), val
 stub <- tt_client(backend = "stub")
 
 # Feature: required lists, named options and numeric threshold translation.
-q <- tt_choose_question("Which team?", c("billing", "shipping"), threshold = c(.2, .8))
+q <- tt_choose_question("Which team?", c("billing", "shipping"), threshold = .8)
 stopifnot(inherits(q, "tt_choose_question"), inherits(q, "tt_question"))
 condition(tt_choose_rows("text", "Which team?", client = stub), "thinkthen_usage_error")
 condition(tt_choose_rows("text", q, c("other", "team"), client = stub), "thinkthen_usage_error")
@@ -126,7 +126,7 @@ for (input in list(c(NA_character_, NA_character_), list(NULL, NULL))) {
   stopifnot(identical(out$position, c(1, 2)), all(out$status == "failed"),
             all(as.character(out$error_code) == "record.missing"),
             identical(out$answer, c(NA, NA)), all(is.na(out$probability)))
-  stopifnot(identical(tt_answer(out, errors = "na"), c(NA, NA)))
+  stopifnot(identical(plain(tt_answer(out, errors = "na")), c(NA, NA)))
 }
 stopifnot(identical(warned(tt_decide(NA_character_, "Ready?", client = stub)), NA),
           identical(warned(tt_keep(NA_character_, "Ready?", client = stub)), NA))
@@ -215,7 +215,7 @@ client <- tt_client(backend = "stub")
 questions <- tt_annotation_questions(list(missing = tt_decide_question("Ready?", field = "/missing")))
 rows <- tt_annotate_rows(list(list(body = "text")), questions, client = client)
 condition(tt_answer(rows), "thinkthen_failed_rows", "record.missing")
-answer <- tt_answer(rows, errors = "na")
+answer <- plain(tt_answer(rows, errors = "na"))
 stopifnot(is.logical(answer$missing), is.na(answer$missing))
 child <- rows$answer[[1]]$missing
 stopifnot(inherits(child, "tt_decide_failed_outcome"), is.factor(child$status),

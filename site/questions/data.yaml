@@ -252,13 +252,13 @@
   frequency: every second run of a spreadsheet command meets it
   rank: 68
   page: /your-data/
-  reference: /reference/errors/usage-question/
+  reference: /reference/errors/usage-output/
   answers_page: true
   page_title: Your data
-  reference_title: usage.question error
+  reference_title: usage.output error
   reader: A user who ran a spreadsheet command twice and got exit code 2
   answer: |
-    ThinkThen {version} never overwrites a file. A spreadsheet command writes `NAME.thinkthen.csv` beside the input, and when that file exists the next run stops with `usage.question` and exit code 2. Name a new file with `--output`, or delete the old one.
+    ThinkThen {version} never overwrites a file. A spreadsheet command writes `NAME.thinkthen.csv` beside the input, and when that file exists the next run stops with `usage.output` and exit code 2. Name a new file with `--output`, or delete the old one.
   why: |
     Refusing to overwrite keeps the answers of an earlier run, which may have been paid for. `--output` names any path that does not exist yet.
   limits: |

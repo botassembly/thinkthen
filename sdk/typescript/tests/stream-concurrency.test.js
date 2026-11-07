@@ -61,8 +61,9 @@ test("100 concurrent async streams complete with ordered rows", { timeout: 30000
   } finally { await client.close(); }
 });
 
+const noThreadAudit = process.platform === "win32" && "the audit interposes pthread_create, which Windows threads never call";
 // Feature: a long lazy stream retains one native bridge for its entire lifetime.
-test("1000 rows start one addon bridge thread", { skip: process.platform === "win32" }, () => {
+test("1000 rows start one addon bridge thread", { skip: noThreadAudit }, () => {
   const audit = fileURLToPath(new URL("./thread-start-audit.py", import.meta.url));
   const result = spawnSync("python3", [audit], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stdout + result.stderr);

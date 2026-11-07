@@ -12,8 +12,7 @@ fun main() = runBlocking {
             "How urgent is the request?", messages,
             listOf("routine", "urgent"),
         ).collect { ranked ->
-            val message = messages[ranked.position.toInt() - 1]
-            println("${ranked.answer()} $message")
+            println("${ranked.answer()} ${ranked.item}")
         }
     }
 }

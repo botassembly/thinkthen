@@ -332,10 +332,10 @@ fn shell(
     }
     let child = match crate::runs::children::OwnedChild::spawn(&mut command) {
         Ok(child) => child,
-        Err(_) => {
-            state.fail(RunCompletion::Failure(local(
-                "the declared command could not be started",
-            )));
+        Err(error) => {
+            state.fail(RunCompletion::Failure(local(&format!(
+                "the declared command could not be started: {error}"
+            ))));
             return;
         }
     };
@@ -343,12 +343,13 @@ fn shell(
         state.fail(RunCompletion::Failure(local(
             "the declared command pipes could not be opened",
         )));
-        let _ = child.kill();
-        let _ = child.wait();
         return;
     };
     let finished = AtomicBool::new(false);
     std::thread::scope(|scope| {
+        // Owned here so that it drops before the scope joins: killing the group
+        // closes the output the reader is blocked on.
+        let child = child;
         let finished = &finished;
         let writing = std::thread::Builder::new().spawn_scoped(scope, move || {
             while !state.cancel.is_cancelled() && !finished.load(Ordering::Acquire) {
@@ -372,8 +373,6 @@ fn shell(
             state.fail(RunCompletion::Failure(local(
                 "the command input worker could not be started",
             )));
-            let _ = child.kill();
-            let _ = child.wait();
             return;
         }
         let reading = std::thread::Builder::new().spawn_scoped(scope, || {
@@ -395,7 +394,7 @@ fn shell(
                     if line.trim().is_empty() {
                         continue;
                     }
-                    if serde_json::from_str::<serde_json::Value>(&line).is_err() {
+                    if serde_json::from_str::<serde::de::IgnoredAny>(&line).is_err() {
                         state.fail(RunCompletion::Failure(local(
                             "a declared command wrote an invalid JSON line",
                         )));
@@ -412,16 +411,9 @@ fn shell(
             state.fail(RunCompletion::Failure(local(
                 "the command output worker could not be started",
             )));
-            let _ = child.kill();
-            let _ = child.wait();
             return;
         }
-        loop {
-            if state.cancel.is_cancelled() || finished.load(Ordering::Acquire) {
-                let _ = child.kill();
-                let _ = child.wait();
-                break;
-            }
+        while !state.cancel.is_cancelled() && !finished.load(Ordering::Acquire) {
             match child.try_wait() {
                 Ok(Some(status)) => {
                     if !status.success() && !finished.load(Ordering::Acquire) {
@@ -431,10 +423,6 @@ fn shell(
                         });
                     }
                     finished.store(true, Ordering::Release);
-                    // A command owns its descendants even when its leader has exited.
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    break;
                 }
                 Ok(None) => std::thread::park_timeout(POLL),
                 Err(_) => {
@@ -442,9 +430,6 @@ fn shell(
                         "the declared command could not be waited for",
                     )));
                     finished.store(true, Ordering::Release);
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    break;
                 }
             }
         }

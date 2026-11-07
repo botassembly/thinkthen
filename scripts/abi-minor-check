@@ -27,7 +27,7 @@ def run(*args, cwd=ROOT, binding=None, scratch=None, **kwargs):
         args = (*shlex.split(runner), '--abi-binding', binding, '--scratch', scratch, '--', *args)
     if binding == 'swift':
         environment = dict(kwargs.get('env', os.environ))
-        environment.pop('THINKTHEN_NATIVE_LIBRARY', None)
+        environment.pop('THINKTHEN_LIBRARY', None)
         kwargs['env'] = environment
     subprocess.run([str(arg) for arg in args], cwd=cwd, check=True, **kwargs)
 

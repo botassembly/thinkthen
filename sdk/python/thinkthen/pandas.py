@@ -10,6 +10,10 @@ import pandas as pd
 from ._columns import ColumnMethods, annotation_definitions
 from ._types import ErrorCode, Status
 
+_FAILURES = "thinkthen_failures"
+_ERROR_CODE = pd.CategoricalDtype([item.value for item in ErrorCode])
+_STATUS = pd.CategoricalDtype([item.value for item in Status])
+
 
 def _answer_dtype(function: str) -> str:
     return {
@@ -49,12 +53,12 @@ def frame(
         "position": "Int64",
         "id": "object",
         "function": "string",
-        "status": pd.CategoricalDtype([item.value for item in Status]),
+        "status": _STATUS,
         "answer": answer,
         "probability": "Float64",
         "source": "object",
         "detail": "object",
-        "error_code": pd.CategoricalDtype([item.value for item in ErrorCode]),
+        "error_code": _ERROR_CODE,
         "error_message": "string",
         "error_http_status": "Int64",
     }
@@ -80,7 +84,9 @@ def _missing(value: object) -> bool:
 P = TypeVar("P", "pd.Series[Any]", pd.DataFrame)
 
 
-class _PandasAccessor(ColumnMethods["pd.Series[Any]", pd.DataFrame, P], Generic[P]):
+class _PandasAccessor(
+    ColumnMethods["pd.Series[Any]", pd.DataFrame, P, pd.DataFrame], Generic[P]
+):
     def _missing(self, value: object) -> bool:
         return _missing(value)
 
@@ -106,6 +112,33 @@ class _PandasAccessor(ColumnMethods["pd.Series[Any]", pd.DataFrame, P], Generic[
     def _kept(self, rows: list[Any]) -> P:
         return cast(
             P, self._value.iloc[[row.position - 1 for row in rows if row.kept]].copy()
+        )
+
+    def _read_failures(self) -> list[dict[str, Any]]:
+        return list(self._value.attrs.get(_FAILURES, []))
+
+    def _write_failures(self, value: Any, entries: list[dict[str, Any]]) -> None:
+        # A kept subset copies its source's attrs, which may hold an earlier list.
+        # The list stays plain JSON: pandas compares attrs in concat and writes
+        # them to Parquet, and a frame here would break both.
+        value.attrs.pop(_FAILURES, None)
+        if entries:
+            value.attrs[_FAILURES] = entries
+
+    def _failure_frame(self, entries: list[dict[str, Any]]) -> pd.DataFrame:
+        dtypes: dict[str, Any] = {
+            "position": "Int64",
+            "id": "object",
+            "question": "string",
+            "error_code": _ERROR_CODE,
+            "error_message": "string",
+            "error_http_status": "Int64",
+        }
+        return pd.DataFrame(
+            {
+                name: pd.Series([entry[name] for entry in entries], dtype=dtype)
+                for name, dtype in dtypes.items()
+            }
         )
 
     def _frame(self, function: str, rows: list[Any], question: object) -> pd.DataFrame:
@@ -134,7 +167,7 @@ class ThinkThenFrameAccessor(_PandasAccessor[pd.DataFrame]):
             ]
             for field, dtype in (
                 ("answer", _answer_dtype(definition["function"])),
-                ("status", pd.CategoricalDtype([item.value for item in Status])),
+                ("status", _STATUS),
                 ("probability", "Float64"),
                 ("detail", "object"),
             ):

@@ -40,12 +40,12 @@ client <- tt_client(backend = "stub")
 for (case in cases) {
   rows <- invoke(case$request$records, case$request$question, client, case$request$name)
   verb <- case$request$question[["function"]]
-  projected <- tt_answer(rows, errors = "na")
+  projected <- plain(tt_answer(rows, errors = "na"))
   actual <- tryCatch(invoke(case$request$records, case$request$question,
                            client, case$request$name, vector = TRUE), thinkthen_failed_rows = identity)
   if (inherits(actual, "thinkthen_failed_rows")) {
     stopifnot(identical(actual$rows, rows))
-    actual <- if (verb == "filter") actual$kept else tt_answer(actual$rows, errors = "na")
+    actual <- if (verb == "filter") actual$kept else plain(tt_answer(actual$rows, errors = "na"))
   }
   if (verb == "filter") {
     stopifnot(identical(actual, case$request$records[rows$position[which(rows$answer)]]))

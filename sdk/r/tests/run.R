@@ -96,7 +96,8 @@ result <- tryCatch({
     row
   })
   list(rows = rows)
-}, thinkthen_error = function(error) list(error = error$code, family = class(error)[[1]]))
+}, thinkthen_error = function(error) c(list(error = error$code, family = class(error)[[1]]),
+                                       if (!is.null(error$http_status)) list(http_status = error$http_status)))
 # JSON has one number type. Preserve R's numeric storage before serialization
 # so the external comparator can reject integer probability/score projections.
 numeric_types <- function(value, path = list()) {

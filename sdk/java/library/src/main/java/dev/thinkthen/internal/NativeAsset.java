@@ -87,15 +87,19 @@ final class NativeAsset {
         } else {
             var user = path.getFileSystem().getUserPrincipalLookupService()
                 .lookupPrincipalByName(System.getProperty("user.name"));
-            unsafe |= !owner.equals(user);
+            // An elevated caller's objects belong to Administrators, which already controls the machine.
+            unsafe |= !owner.equals(user) && !WindowsIdentity.administrators(owner.getName());
             var acl = Files.getFileAttributeView(path, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             if (acl == null) throw new IOException("Cannot verify ThinkThen native cache permissions: " + path);
             var writes = Set.of(AclEntryPermission.WRITE_DATA, AclEntryPermission.APPEND_DATA,
                 AclEntryPermission.WRITE_ATTRIBUTES, AclEntryPermission.WRITE_NAMED_ATTRS,
                 AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER, AclEntryPermission.DELETE,
                 AclEntryPermission.DELETE_CHILD);
-            for (var entry : acl.getAcl()) {
-                if (entry.type() == AclEntryType.ALLOW && !entry.principal().equals(owner)
+            var entries = acl.getAcl();
+            // Java shows a null list, which lets everyone in, as empty, and skips entries it cannot decode.
+            unsafe |= entries.isEmpty() || entries.size() != WindowsIdentity.accessEntries(path);
+            for (var entry : entries) {
+                if (entry.type() == AclEntryType.ALLOW && !entry.principal().equals(user)
                         && entry.permissions().stream().anyMatch(writes::contains)
                         && !WindowsIdentity.privileged(entry.principal().getName())) unsafe = true;
             }

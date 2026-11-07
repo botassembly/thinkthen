@@ -4,6 +4,20 @@ The Go SDK asks questions about text from your Go code. Its first function, deci
 
 Install it with Go 1.23 or later, cgo and a C compiler: `go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0`. The module carries its own engine. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
 
+## Build on Windows
+
+cgo on Windows needs a 64-bit gcc, such as MinGW-w64, on `PATH`; it can't use the Visual Studio compiler. Save the program below as `main.go` in a new folder, then run this in PowerShell in that folder:
+
+```powershell
+$env:CGO_ENABLED = "1"
+go mod init example
+go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0
+go build -o example.exe .
+.\example.exe
+```
+
+The module carries its own engine, so there is no library to install or add to `PATH`.
+
 ## Ask a question
 
 Ask whether a support message requests a refund:

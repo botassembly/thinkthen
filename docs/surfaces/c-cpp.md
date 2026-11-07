@@ -55,6 +55,7 @@ Each one-call function takes the client, the question as a NUL-terminated string
 | Function | Takes | Writes |
 | --- | --- | --- |
 | `thinkthen_decide` | question | `bool`, yes or no |
+| `thinkthen_decide_band` | question, low bar and high bar | `bool`, yes or no; returns `THINKTHEN_UNSURE` between the bars |
 | `thinkthen_choose` | question, choices and count | the index of the chosen string; returns `THINKTHEN_UNSURE` when no choice reaches the cut |
 | `thinkthen_tag` | question, labels and count | one `bool` per label, in label order |
 | `thinkthen_score` | question, levels lowest first, and count | a `double` from 0 for the first level to 1 for the last |
@@ -67,7 +68,9 @@ Free a written `thinkthen_value` with `thinkthen_value_free`. Filter and rank ju
 
 ## C: not sure
 
-`thinkthen_decide` uses the default cut, which always answers. To let the model say it is not sure, build the question, set a band, and ask it with `thinkthen_run_one`. Below the band is no, at or above its top is yes, and inside it is not sure:
+`thinkthen_decide` uses the default cut, which always answers. To let the model say it is not sure, call `thinkthen_decide_band(client, question, 0.3, 0.7, text, len, &is_refund, &error)`. Below the low bar is no, at or above the high bar is yes, and between them it returns `THINKTHEN_UNSURE` with `is_refund` unchanged. It refuses bars unless 0 < low < high <= 1, and sends nothing.
+
+To also say what yes and no mean, build the question, set a band, and ask it with `thinkthen_run_one`:
 
 ```c
 #include <thinkthen.h>
@@ -123,7 +126,7 @@ int main(void) {
 
 `thinkthen_run_one` returns `THINKTHEN_OK` with the answer in the row, `THINKTHEN_UNSURE` when the model is not sure, or the record's own negative code when it fails. Read `row.answer_bool`, `row.number` or `row.rank` only after `THINKTHEN_OK`; on any other return `answer_bool` is 0, which is not an answer.
 
-`thinkthen_question_set_yes_means` and `thinkthen_question_set_no_means` tell the model what yes and no mean for a decide or filter question. For choose, tag, score and rank, add the option first, then describe it with `thinkthen_question_set_description(question, "billing", THINKTHEN_NUL_TERMINATED, "charges and refunds", THINKTHEN_NUL_TERMINATED, &error)`. Decide, choose and filter take a band; `thinkthen_question_set_cut` sets a single cut instead.
+`thinkthen_question_set_yes_means` and `thinkthen_question_set_no_means` tell the model what yes and no mean for a decide or filter question. For choose, tag, score and rank, add the option first, then describe it with `thinkthen_question_set_description(question, "billing", THINKTHEN_NUL_TERMINATED, "charges and refunds", THINKTHEN_NUL_TERMINATED, &error)`. Decide and filter take a band; `thinkthen_question_set_cut` sets a single cut instead.
 
 ## C: keep only the matching records
 
@@ -309,7 +312,7 @@ int main() {
 
 `tt::unsure` derives from `std::exception`, not from `tt::error`, so a handler for engine errors never takes a not-sure answer. Its `probability()` is the model's probability when it gave one.
 
-`yes_means` and `no_means` tell the model what yes and no mean for a decide or filter question. Choose, tag, score and rank take `descriptions`, a `std::map` from each choice, label or level to its meaning. `threshold(0.7)` sets a single cut instead of a band. Decide, filter and choose take a cut or a band; tag, find, recognize and relate take a cut. Each of these methods returns a new question and leaves the one it was called on unchanged.
+`yes_means` and `no_means` tell the model what yes and no mean for a decide or filter question. Choose, tag, score and rank take `descriptions`, a `std::map` from each choice, label or level to its meaning. `threshold(0.7)` sets a single cut instead of a band. Decide and filter take a cut or a band; choose, tag, find, recognize and relate take a cut. Each of these methods returns a new question and leaves the one it was called on unchanged.
 
 ## C++: keep only the matching records
 
@@ -424,7 +427,7 @@ Pass one finite collection or record source per call to let the engine batch. Cl
 
 C uses `thinkthen_toolbox_from_json` for saved named questions or toolbox insert/select functions for typed construction. C++ toolbox stores typed questions, loads saved entries with `toolbox::from_json`, saves with `to_json()` and retrieves typed snapshots with `select<Q>(name)`. Neither surface executes shell toolbox runs. Use host file/table libraries to read data and write CSV or spreadsheets. C++ users of nlohmann/json can include `<thinkthen/nlohmann.hpp>` for record adapters and typed row serialization. Preserve exact IDs and all statuses in saved results.
 
-Decide, choose and filter accept numeric cuts or low/high bands. C uses question_set_cut/question_set_band; C++ uses `.threshold(value)` or `.threshold(thinkthen::threshold::band(low, high))`. Tag, find, recognize and relate use cuts only. A decide/filter band yields false below low, unsure inside and true at or above high; choose needs its winner to reach the upper cut.
+Decide and filter accept numeric cuts or low/high bands. C uses question_set_cut/question_set_band, or `thinkthen_decide_band` for a decide band in one call; C++ uses `.threshold(value)` or `.threshold(thinkthen::threshold::band(low, high))`. Choose, tag, find, recognize and relate use cuts only. A decide/filter band yields false below low, unsure inside and true at or above high; choose needs its winner to reach the cut.
 
 Call relate alone when you need names and relations from the same field. A C relate snapshot exposes all admitted names through `thinkthen_value_name_count` and `thinkthen_value_name_at`. C++ relation detail exposes `names` and `pairs`. Names keep the existing recognized-name shape and include names with no returned relation. Read accepted relations from the answer; do not run recognize first.
 

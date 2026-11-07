@@ -4,7 +4,7 @@ description: "R SDK: ask the ten ThinkThen questions from R and get plain R vect
 goal: The reader runs a first decide in R, installs the SDK, handles not sure and failures, and finds the R call for each of the ten functions.
 reader: An R developer who wants to ask questions about text from code or a data frame
 kind: reference
-verified: 2026-11-03
+verified: 2026-11-06
 sidebar:
   label: "R"
 ---
@@ -22,6 +22,8 @@ Install it (<Fact k="languages.r.requires" />):
 
 <InstallLine k="languages.r.install" lang="r" />
 
+On Windows x86-64, `install.packages()` takes R-universe's binary package when it has one for your R, and then you need no compiler. We test this build with pinned R 4.6 and Rtools 4.5 before release, not on R-universe's own builders. Windows support is x86-64 only; Windows ARM64 is untested.
+
 The client uses the key from the [Quickstart](/quickstart/).
 
 ## Handle not sure and failures
@@ -32,7 +34,18 @@ Set a low bar and a high bar with `threshold = c(0.2, 0.8)`. Between them, decid
 
 A double charge might be a refund request, or might not, so the answer is `NA`: send it to a person. The blank text can't be judged, so the call raises, and the error's `code` is `record.empty`.
 
-Test `is.na()` before you branch on an answer. The error is raised only after every other text is judged; its `failed_rows` lists the texts that failed, and `rows` holds every outcome already paid for. Every ThinkThen error inherits `thinkthen_error` and carries a `code`; [Troubleshooting](/reference/troubleshooting/) lists each one.
+Test `is.na()` before you branch on an answer. The error is raised only after every other text is judged; its `failed_rows` lists the texts that failed, and `rows` holds every outcome already paid for. Its message and `codes` name every failure code, and `code` is the first. Every ThinkThen error inherits `thinkthen_error` and carries a `code`; [Troubleshooting](/reference/troubleshooting/) lists each one.
+
+To keep going past a failure, pass `errors = "na"`. The answers stay a plain vector with `NA` for not sure and for a failure, the call warns once with every failure code, and `tt_failures()` lists each failure, so you can tell it from not sure:
+
+```r
+messages <- c("Please refund my order.", NA, "")
+is_refund <- tt_decide(messages, question = "Does the customer request a refund?",
+                       threshold = c(0.2, 0.8), errors = "na")
+tt_failures(is_refund)[c("position", "error_code")]
+```
+
+`tt_failures()` gives each failure's place in your input, its code and its message. An answer with no failure gives no warning and an empty list. `tt_filter()`, `tt_keep()` and `tt_annotate()` work the same way.
 
 ## The ten functions
 

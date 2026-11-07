@@ -45,7 +45,8 @@ def test_all_functions_use_the_stub_without_backend_requests() -> None:
                 ):
                     return list(stream)
 
-            if isinstance(case["expected"], dict):
+            # The stub sends no request, so a backend's refusal never reaches it.
+            if isinstance(case["expected"], dict) and not case["requests"]:
                 with pytest.raises(tt.ThinkThenError) as failure:
                     consume()
                 assert failure.value.code == case["expected"]["error"]

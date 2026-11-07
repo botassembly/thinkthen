@@ -8,7 +8,7 @@ Install it in a Node.js 22.12 or later project:
 npm install thinkthen
 ```
 
-It runs on Linux (x64 or Arm64, with glibc), macOS on Apple silicon and Windows x64, and carries its TypeScript types. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+It runs on Linux (x64 or Arm64, with glibc 2.28 or later), macOS on Apple silicon and Windows x64, and carries its TypeScript types. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
 
 ## Ask a question
 

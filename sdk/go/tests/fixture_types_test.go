@@ -22,12 +22,13 @@ type apiCase struct {
 		Records  []json.RawMessage `json:"records"`
 		Name     string            `json:"name"`
 	} `json:"request"`
-	Expected      []apiExpected   `json:"-"`
-	Requests      int             `json:"requests"`
-	ExpectedData  json.RawMessage `json:"expected"`
-	ExpectedRows  []apiExpected   `json:"expected_rows"`
-	ExpectedError string          `json:"-"`
-	Cancelled     bool            `json:"cancelled"`
+	Expected           []apiExpected   `json:"-"`
+	Requests           int             `json:"requests"`
+	ExpectedData       json.RawMessage `json:"expected"`
+	ExpectedRows       []apiExpected   `json:"expected_rows"`
+	ExpectedError      string          `json:"-"`
+	ExpectedHTTPStatus int             `json:"-"`
+	Cancelled          bool            `json:"cancelled"`
 }
 type apiQuestion struct {
 	Function                       string `json:"function"`
@@ -96,7 +97,7 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 	case "choose":
 		v := tt.NewChoose(q.Question, q.Choices)
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(thresholdFor(t, q.Threshold))
+			v = v.WithThreshold(cutFor(t, q.Threshold))
 		}
 		if q.Field != nil {
 			v = v.WithField(*q.Field)

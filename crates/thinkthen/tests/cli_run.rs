@@ -7,6 +7,7 @@ pub mod loopback;
 
 mod support;
 
+use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
@@ -33,7 +34,14 @@ impl Fixture {
         path
     }
     fn run(&self, args: &[&str], input: &str) -> Output {
-        let server=Loopback::answering(|q| json!({"type":"noul","noul":if q["instructions"].as_str().unwrap().contains("evidence 5"){0.77}else{0.47}})).unwrap();
+        let server = Loopback::answering(|q| {
+            if q["criteria"].is_array() {
+                return json!({"type":"score","probabilities":{"0":0.4,"1":0.6}});
+            }
+            let evidence = q["instructions"].as_str().unwrap().contains("evidence 5");
+            json!({"type":"noul","noul":if evidence {0.77} else {0.47}})
+        })
+        .unwrap();
         let mut child = support::command()
             .current_dir(&self.0)
             .args(["run", "--allow-shell"])
@@ -68,6 +76,25 @@ fn rows(output: &Output) -> Vec<Value> {
     String::from_utf8_lossy(&output.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
+        .collect()
+}
+
+/// Rows with their raw field text, for values `Value` cannot hold.
+fn raw_rows(output: &Output) -> Vec<BTreeMap<String, String>> {
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|line| {
+            serde_json::from_str::<BTreeMap<String, Box<serde_json::value::RawValue>>>(line)
+                .unwrap()
+                .into_iter()
+                .map(|(field, value)| (field, value.get().to_owned()))
+                .collect()
+        })
         .collect()
 }
 
@@ -164,6 +191,49 @@ fn shell_failure_keeps_its_status_and_stops_function_output() {
         &json!({"run":[{"shell":["/bin/sh","-c","printf '%s\\n' not-json"]}, question()]}),
     );
     assert_eq!(fixture.run(&["invalid.json"], "").status.code(), Some(5));
+}
+
+#[test]
+fn a_command_that_cannot_start_reports_the_system_cause() {
+    let fixture = Fixture::new();
+    let missing = fixture.0.join("missing-program");
+    fixture.write("missing.json", &json!({"run":[{"shell":[missing]}]}));
+    let cause = Command::new(&missing).spawn().unwrap_err();
+    let output = fixture.run(&["missing.json"], "");
+    assert_eq!(output.status.code(), Some(5));
+    let expected = format!("the declared command could not be started: {cause}");
+    let reported = String::from_utf8_lossy(&output.stderr);
+    assert!(reported.contains(&expected), "{reported}");
+}
+
+#[test]
+fn a_function_reads_a_shell_line_as_it_reads_the_same_input_line() {
+    let fixture = Fixture::new();
+    let nested = format!("{}{}", "[".repeat(200), "]".repeat(200));
+    let questions = [
+        question(),
+        json!({"question":{"function":"filter","question":"Ready?"}}),
+        json!({"question":{"function":"rank","question":"Ready?","levels":["low","high"]}}),
+    ];
+    for line in ["1e999", r#""\ud800""#, nested.as_str()] {
+        for question in &questions {
+            fixture.write("direct.json", &json!({"run":[question]}));
+            let shell = json!({"shell":["/bin/sh","-c","printf '%s\\n' \"$1\"","line",line]});
+            fixture.write("piped.json", &json!({"run":[shell, question]}));
+            let input = format!("{line}\n");
+            let direct = raw_rows(&fixture.run(&["direct.json", "--from", "jsonl"], &input));
+            let piped = raw_rows(&fixture.run(&["piped.json"], ""));
+            assert_eq!((direct.len(), piped.len()), (1, 1), "{line}");
+            for (field, value) in &piped[0] {
+                if field != "item" {
+                    assert_eq!(direct[0].get(field), Some(value), "{line}: {field}");
+                }
+            }
+            let carries_item = question["question"]["function"] != "decide";
+            let item = piped[0].get("item").map(String::as_str);
+            assert_eq!(item, carries_item.then_some(line));
+        }
+    }
 }
 
 #[test]

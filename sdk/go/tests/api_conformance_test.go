@@ -65,7 +65,8 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 			}
 		} else {
 			var terminal struct {
-				Error string `json:"error"`
+				Error      string `json:"error"`
+				HTTPStatus int    `json:"http_status"`
 			}
 			if err := json.Unmarshal(sample.ExpectedData, &terminal); err != nil {
 				t.Fatal(err)
@@ -74,6 +75,7 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 				t.Fatal("fixture has an unrecognized terminal outcome")
 			}
 			sample.ExpectedError = terminal.Error
+			sample.ExpectedHTTPStatus = terminal.HTTPStatus
 			sample.Expected = sample.ExpectedRows
 		}
 		for _, wire := range manifest.Backends {
@@ -440,6 +442,9 @@ func collectCase[R any](t *testing.T, s apiCase, seq iter.Seq2[R, error]) []R {
 		var native *tt.Error
 		if !errors.As(err, &native) || native.Code().String() != s.ExpectedError {
 			t.Fatalf("unexpected call error: %v", err)
+		}
+		if status, _ := native.HTTPStatus(); status != s.ExpectedHTTPStatus {
+			t.Fatalf("call error HTTP status %d; want %d", status, s.ExpectedHTTPStatus)
 		}
 	}
 	if (s.ExpectedError != "" && terminal != 1) || (s.ExpectedError == "" && terminal != 0) {

@@ -128,6 +128,10 @@
       "name": "thinkthen_decide"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_decide_band(const struct thinkthen_client *client, const char *question, double low, double high, const char *text, size_t len, bool *answer, struct thinkthen_error *error);",
+      "name": "thinkthen_decide_band"
+    },
+    {
       "declaration": "void thinkthen_error_free(struct thinkthen_error *error);",
       "name": "thinkthen_error_free"
     },

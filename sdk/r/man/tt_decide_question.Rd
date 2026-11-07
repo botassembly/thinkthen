@@ -26,7 +26,7 @@ tt_relate_question(rules, ..., threshold = NULL, field = NULL)
 \item{descriptions}{A named character vector of descriptions for domain labels or levels.}
 \item{question}{Question text or an admitted question of the matching function.}
 \item{...}{Named engine options. Unknown options are refused before any backend call.}
-\item{threshold}{A numeric probability cut, or a low and high pair for decide, choose and filter.}
+\item{threshold}{A numeric probability cut, or a low and high pair for decide and filter.}
 \item{field}{An optional JSON Pointer selecting field within each record.}
 \item{choices}{Character vector of allowed choices. Omit when the admitted question supplies it.}
 \item{labels}{Character vector of allowed labels. Omit when the admitted question supplies it.}

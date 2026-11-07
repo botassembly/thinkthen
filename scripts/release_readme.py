@@ -66,6 +66,24 @@ def readme(name, out, artifact, *, root=ROOT):
     return (intro + body + '\n').encode()
 
 
+def windows_steps(document, folder, addresses=None):
+    """Write a README's one PowerShell block as a script and return its command.
+
+    Only an address may change, for a download a check must serve locally.
+    """
+    block, = re.findall(r'```powershell\n(.*?)\n```', document.read_text(encoding='utf-8'), re.S)
+    for address, local in (addresses or {}).items():
+        if address not in block:
+            raise ValueError(f'{document} does not name {address}')
+        block = block.replace(address, local)
+    script = folder / 'windows-steps.ps1'
+    # Tools write progress to stderr, so Stop could end a good run. The trap catches a missing command.
+    guard = 'if ($LASTEXITCODE) { exit $LASTEXITCODE }\n'
+    steps = ''.join(line + '\n' + guard for line in block.splitlines())
+    script.write_text("$ErrorActionPreference = 'Continue'\ntrap { Write-Output $_; exit 1 }\n" + steps + 'exit 0\n', encoding='utf-8')
+    return 'powershell', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script
+
+
 def tar_bytes(data, updates, remove=()):
     """Change documentation only; retain every other member's bytes and mode."""
     output = io.BytesIO()

@@ -85,7 +85,7 @@ unsafe fn run(
             crate::finite::admit_record(data, len, thinkthen::records::RecordKind::Text.abi())?;
         let row = evaluate(&(*client).0, builder.build()?, record)?;
         match status(&row)? {
-            crate::exports::OK => Ok(Ok(row)),
+            crate::THINKTHEN_OK => Ok(Ok(row)),
             other => Ok(Err(other)),
         }
     }
@@ -118,7 +118,7 @@ unsafe fn answer<T>(
             match run()? {
                 Ok(value) => {
                     out.write(value);
-                    Ok(crate::exports::OK)
+                    Ok(crate::THINKTHEN_OK)
                 }
                 Err(status) => Ok(status),
             }
@@ -129,8 +129,8 @@ unsafe fn answer<T>(
 /// Ask a yes-or-no question about one text, and write the answer to *answer.
 ///
 /// Returns THINKTHEN_OK with *answer written; THINKTHEN_UNSURE with *answer unchanged (the
-/// default cut never gives it; set a band with thinkthen_question_set_band and
-/// thinkthen_run_one); or a negative thinkthen_code with *answer unchanged:
+/// default cut never gives it; set a low and a high bar with thinkthen_decide_band); or a
+/// negative thinkthen_code with *answer unchanged:
 /// -THINKTHEN_CODE_RECORD_EMPTY for empty or blank text (never sent to the backend), a
 /// usage code for a bad argument, or a backend code.
 /// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
@@ -155,6 +155,49 @@ pub unsafe extern "C" fn thinkthen_decide(
         self::answer(error, answer, || {
             let builder =
                 self::question(FunctionName::Decide, string(question)?, std::ptr::null(), 0)?;
+            match run(client, &builder, text, len)? {
+                Err(status) => Ok(Err(status)),
+                Ok(row) => answered!(&row, Decide).map(Ok),
+            }
+        })
+    }
+}
+
+/// Ask a yes-or-no question about one text with a low and a high bar, and write the answer
+/// to *answer.
+///
+/// Returns THINKTHEN_OK with *answer written: false for a probability below low, true for one
+/// at or above high. Returns THINKTHEN_UNSURE with *answer unchanged from low up to just under
+/// high. Otherwise returns a negative thinkthen_code with *answer unchanged:
+/// -THINKTHEN_CODE_USAGE_THRESHOLD unless 0 < low < high <= 1,
+/// -THINKTHEN_CODE_RECORD_EMPTY for empty, blank or NULL text, -THINKTHEN_CODE_RECORD_INVALID
+/// for text that is not UTF-8, or a usage code for a bad argument, none of which reaches the
+/// backend; or a backend code.
+/// A question that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// # Safety
+/// Any thread may call this, and threads may share the client. question is a NUL-terminated
+/// string. text points to len readable bytes (or a NUL-terminated string with
+/// THINKTHEN_NUL_TERMINATED). answer is writable. error is NULL or initialized with
+/// THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it
+/// again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_decide_band(
+    client: *const ClientHandle,
+    question: *const c_char,
+    low: f64,
+    high: f64,
+    text: *const u8,
+    len: usize,
+    answer: *mut bool,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller lends every input until return. */
+    unsafe {
+        self::answer(error, answer, || {
+            let mut builder =
+                self::question(FunctionName::Decide, string(question)?, std::ptr::null(), 0)?;
+            builder.set_band(low, high)?;
             match run(client, &builder, text, len)? {
                 Err(status) => Ok(Err(status)),
                 Ok(row) => answered!(&row, Decide).map(Ok),
@@ -249,7 +292,7 @@ pub unsafe extern "C" fn thinkthen_tag(
                             .add(index)
                             .write(chosen.iter().any(|value| value == label));
                     }
-                    Ok(crate::exports::OK)
+                    Ok(crate::THINKTHEN_OK)
                 }
             }
         })

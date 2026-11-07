@@ -379,14 +379,14 @@ The two time settings take PostgreSQL units, as `'2min'` or `'500ms'`, and a bar
 | `field => '/text'` | all | Judges one field of a JSON record |
 | `params => '[1]'` | all | Binds values to the source query's `$1` |
 | `threshold => 0.8` | decide, filter, choose, tag, find, recognize, relate | Sets the cut an answer must reach |
-| `low => 0.2, high => 0.8` | decide, filter, choose | Sets a band; between them is not sure |
+| `low => 0.2, high => 0.8` | decide, filter | Sets a band; between them is not sure |
 | `top => 5` | rank | Keeps the first five ranks |
 | `yes_means => '...'`, `no_means => '...'` | decide, filter | Says what yes and no mean for this question |
 | `descriptions => '{"billing": "Invoices, fees and refunds."}'` | choose, tag, score, rank | Describes some or all options or levels, as `jsonb`. A key that is not an option or level is refused. |
 | `failures => 'row'` | filter | Returns failed records as rows; `'raise'` is the default. Any other value raises `usage.option`. |
 | `name => 'refund-check'` | all | Names the question in `source` |
 
-With a band, decide answers no below `low`, yes at or above `high`, and not sure between them. Choose needs its winner to reach the upper cut.
+With a band, decide answers no below `low`, yes at or above `high`, and not sure between them. Choose needs its winner to reach `threshold`.
 
 ### Result columns
 

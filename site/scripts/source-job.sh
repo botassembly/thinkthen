@@ -129,6 +129,7 @@ PREPARED
    ;;
  reference)
    npm ci --no-audit --no-fund
+   node scripts/gen-reference-test.mjs
    node scripts/gen-reference.mjs
    node scripts/gen-reference.mjs --check
    node scripts/gen-answers.mjs

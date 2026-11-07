@@ -24,11 +24,21 @@ It needs <Fact k="languages.c.requires" />. Extract the C archive for your platf
 
 The `-Wl,-rpath` flag tells the program where to find the library when it runs. The client uses the key from the [Quickstart](/quickstart/).
 
+## Build on Windows
+
+Extract the C archive for Windows, `thinkthen-c-0.2.0-windows-x86_64.zip`, into `thinkthen`. You need clang-cl and the Visual Studio C++ tools, and no pkg-config. Open Developer PowerShell for Visual Studio in the folder that holds `thinkthen` and `example.c`, then run:
+
+<InstallLine k="languages.c.installWindows" lang="powershell" />
+
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
+
 ## Read not sure and failures from the return code
 
 Every call returns `THINKTHEN_OK` when it wrote an answer. It returns `THINKTHEN_UNSURE` when the model is not sure, and then it writes no answer, so not sure can never read as `false`. When ThinkThen can't judge the text, it returns a negative number, and `error` holds the code and its message.
 
-To get not sure from decide, build the question and set a low bar and a high bar with `thinkthen_question_set_band`. `thinkthen_run_one` then asks it and fills in the result.
+To get not sure from decide in one call, pass a low bar and a high bar: `thinkthen_decide_band(client, question, 0.3, 0.7, text, len, &answer, &error)`. Below the low bar it writes `false`, at or above the high bar it writes `true`, and between them it returns `THINKTHEN_UNSURE` and writes nothing.
+
+To also say what yes and no mean, build the question and set the bars with `thinkthen_question_set_band`. `thinkthen_run_one` then asks it and fills in the result.
 
 <Example id="sdks/c/unsure" title="example.c" />
 
@@ -36,7 +46,7 @@ A double charge might be a refund request, or might not, so decide is not sure. 
 
 - The negative number is minus the error code, such as `-THINKTHEN_CODE_RECORD_EMPTY` for blank text, which is never sent. Compare with `THINKTHEN_OK`, never with `-1`.
 - `thinkthen_code_name` gives the code's name, such as `record.empty`. `error.message` is counted bytes, so print it with its length. [Troubleshooting](/reference/troubleshooting/) lists each code.
-- decide, filter and choose take a low and a high bar. choose and find can also be not sure without them. tag, score, rank, recognize and relate answer or fail. Each annotate answer follows its own question.
+- decide and filter take a low and a high bar. choose and find can be not sure without them. tag, score, rank, recognize and relate answer or fail. Each annotate answer follows its own question.
 - With GCC and Clang, ignoring a return code draws a compiler warning.
 
 Start every `thinkthen_error` with `THINKTHEN_ERROR_INIT` and every result with `THINKTHEN_ROW_INIT`. Passing one to another call frees what it held first. Free each with `thinkthen_error_free` or `thinkthen_row_free` after its last use. Clients, questions, calls and values each have their own free function, and every free function accepts `NULL`.
@@ -52,7 +62,7 @@ Each program is a whole file that compiles with the line above, and asks the sup
 
 <Example id="functions/decide/c" title="example.c" />
 
-Yes: the message asks for a refund. `thinkthen_decide` writes the answer into your `bool`, and uses one bar at 0.5. For a low and a high bar, or to say what yes and no mean with `thinkthen_question_set_yes_means` and `thinkthen_question_set_no_means`, build a question and use `thinkthen_run_one`, as in the not sure example above. [decide](/functions/decide/) shows every option.
+Yes: the message asks for a refund. `thinkthen_decide` writes the answer into your `bool`, and uses one bar at 0.5. For a low and a high bar, call `thinkthen_decide_band`. To say what yes and no mean with `thinkthen_question_set_yes_means` and `thinkthen_question_set_no_means`, build a question and use `thinkthen_run_one`, as in the not sure example above. [decide](/functions/decide/) shows every option.
 
 </details>
 

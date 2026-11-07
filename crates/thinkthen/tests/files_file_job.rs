@@ -71,7 +71,7 @@ fn unmatched_rank_pointers_stop_before_work_and_valid_ranks_publish() {
     };
     let rejected = run(&["--field", "/Missing"]);
     assert_eq!(rejected.status.code(), Some(2), "{rejected:?}");
-    assert_eq!(support::reported(&rejected), "usage.question");
+    assert_eq!(support::reported(&rejected), "usage.column");
     assert!(String::from_utf8_lossy(&rejected.stderr).contains("/Missing"));
     let output = directory.path().join("requests.thinkthen.csv");
     assert!(!output.exists());

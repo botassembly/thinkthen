@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
-unset THINKTHEN_NATIVE_LIBRARY
+unset THINKTHEN_LIBRARY
 swift format lint --strict --recursive sdk/swift
 scripts/swift-interface-check
 export CARGO_NET_OFFLINE=true
@@ -18,12 +18,9 @@ if [ -n "${THINKTHEN_SWIFT_PACKAGE:-}" ]; then
 else
     scripts/swift-package "$scratch/ThinkThen"
 fi
-mkdir "$scratch/consumer" "$scratch/home" "$scratch/tmp" "$scratch/module-cache"
+mkdir "$scratch/home" "$scratch/tmp" "$scratch/module-cache"
 export CLANG_MODULE_CACHE_PATH="$scratch/module-cache"
-cp sdk/swift/tests/*.swift "$scratch/consumer/"
-python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
-python3 sdk/swift/tests/docs.py docs/surfaces/swift.md "$scratch/consumer/Examples"
-python3 scripts/surface-example prepare swift "$scratch/consumer/Guide"
+python3 scripts/swift-consumer-stage "$scratch/consumer"
 # SwiftPM has no remote dependencies to resolve. The separate consumer checks
 # normal dependency eligibility rather than only building the library itself.
 swift build --package-path "$scratch/consumer" --disable-sandbox --jobs "${CARGO_BUILD_JOBS:-2}" -Xswiftc -warnings-as-errors -Xswiftc -module-cache-path -Xswiftc "$CLANG_MODULE_CACHE_PATH" -Xcc "-fmodules-cache-path=$CLANG_MODULE_CACHE_PATH"
@@ -43,6 +40,7 @@ done
 swift_engine=$(find "$scratch/installed" -type f -name "libthinkthen_ffi.$([ "$(uname -s)" = Darwin ] && echo dylib || echo so)" -print)
 HOME="$scratch/home" TMPDIR="$scratch/tmp" python3 sdk/swift/tests/run.py --readme-only "$scratch/installed/Readme"
 python3 scripts/loader-failure-check "$swift_engine" --attempted "$swift_engine" -- "$scratch/installed/Readme"
+python3 scripts/native-lookup-check "$swift_engine" -- "$scratch/installed/Readme"
 python3 sdk/swift/tests/options.py "$scratch/consumer" construction/options.json
 rm -rf "$scratch/ThinkThen" "$scratch/consumer"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_BACKEND

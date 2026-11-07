@@ -38,6 +38,8 @@ Most urgent first: the double charge, then the parcel question, then the refund 
 
 `position` is the line's place in the input, `answer` is its rank, and `levels` holds the chance of each level, lowest first. Lines with equal scores keep their input order. [JSON output](/reference/json-output/) lists every field.
 
+rank asks about each line as it reads. With `--top`, it holds only the best lines so far, plus any line that failed, in memory. Without `--top`, it holds every result until the input ends, because the last line can still change the order. Either way nothing prints before the input ends, and the plain output keeps each input line in a temporary file until then.
+
 </details>
 
 ## Rank every row of a CSV file

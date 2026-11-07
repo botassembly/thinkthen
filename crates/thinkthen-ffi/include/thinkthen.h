@@ -84,6 +84,10 @@
 #define THINKTHEN_ABI_ERROR_CODE "usage.abi"
 /** The message a binding reports when the loaded library's binary interface is incompatible. */
 #define THINKTHEN_ABI_ERROR_MESSAGE "the native ABI is incompatible"
+/** The environment variable that names the one native library a loading binding opens. */
+#define THINKTHEN_LIBRARY_VARIABLE "THINKTHEN_LIBRARY"
+/** The message a loading binding reports when that variable is not an absolute path. */
+#define THINKTHEN_LIBRARY_PATH_MESSAGE "THINKTHEN_LIBRARY must be an absolute path"
 /** Pass as a text length to read a NUL-terminated string instead of a counted one. */
 #define THINKTHEN_NUL_TERMINATED SIZE_MAX
 /**
@@ -128,6 +132,14 @@ typedef enum thinkthen_code {
   THINKTHEN_CODE_USAGE_ARGUMENT = 1017,
   /** usage.option: An option is not valid for this function. */
   THINKTHEN_CODE_USAGE_OPTION = 1018,
+  /** usage.column: A table column, answer column or field pointer is not valid. */
+  THINKTHEN_CODE_USAGE_COLUMN = 1019,
+  /** usage.sheet: The table sheet selection is not valid. */
+  THINKTHEN_CODE_USAGE_SHEET = 1020,
+  /** usage.output: The table answers cannot go to the output asked for. */
+  THINKTHEN_CODE_USAGE_OUTPUT = 1021,
+  /** usage.table: The table input file cannot be used as it is. */
+  THINKTHEN_CODE_USAGE_TABLE = 1022,
   /** record.json: The record is not valid JSON. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_RECORD_JSON = 2001,
   /** record.missing: The record is a missing value. A record error: that record's row fails and the call goes on. */
@@ -852,7 +864,7 @@ int32_t thinkthen_question_set_cut(struct thinkthen_question *question,
 /**
  * Set a band of probabilities, from low to high, that gives THINKTHEN_UNSURE.
  *
- * Only decide, filter and choose take a band. Returns THINKTHEN_OK, or a negative code with
+ * Only decide and filter take a band. Returns THINKTHEN_OK, or a negative code with
  * the question unchanged: -THINKTHEN_CODE_USAGE_THRESHOLD when the band is out of order,
  * outside 0 to 1, or the function takes none.
  * Pointers and threads:
@@ -1367,8 +1379,8 @@ int32_t thinkthen_question_function(const struct thinkthen_question *question,
  * Ask a yes-or-no question about one text, and write the answer to *answer.
  *
  * Returns THINKTHEN_OK with *answer written; THINKTHEN_UNSURE with *answer unchanged (the
- * default cut never gives it; set a band with thinkthen_question_set_band and
- * thinkthen_run_one); or a negative thinkthen_code with *answer unchanged:
+ * default cut never gives it; set a low and a high bar with thinkthen_decide_band); or a
+ * negative thinkthen_code with *answer unchanged:
  * -THINKTHEN_CODE_RECORD_EMPTY for empty or blank text (never sent to the backend), a
  * usage code for a bad argument, or a backend code.
  * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
@@ -1387,6 +1399,36 @@ int32_t thinkthen_decide(const struct thinkthen_client *client,
                          size_t len,
                          bool *answer,
                          struct thinkthen_error *error);
+
+/**
+ * Ask a yes-or-no question about one text with a low and a high bar, and write the answer
+ * to *answer.
+ *
+ * Returns THINKTHEN_OK with *answer written: false for a probability below low, true for one
+ * at or above high. Returns THINKTHEN_UNSURE with *answer unchanged from low up to just under
+ * high. Otherwise returns a negative thinkthen_code with *answer unchanged:
+ * -THINKTHEN_CODE_USAGE_THRESHOLD unless 0 < low < high <= 1,
+ * -THINKTHEN_CODE_RECORD_EMPTY for empty, blank or NULL text, -THINKTHEN_CODE_RECORD_INVALID
+ * for text that is not UTF-8, or a usage code for a bad argument, none of which reaches the
+ * backend; or a backend code.
+ * A question that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. question is a NUL-terminated
+ * string. text points to len readable bytes (or a NUL-terminated string with
+ * THINKTHEN_NUL_TERMINATED). answer is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it
+ * again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_decide_band(const struct thinkthen_client *client,
+                              const char *question,
+                              double low,
+                              double high,
+                              const char *text,
+                              size_t len,
+                              bool *answer,
+                              struct thinkthen_error *error);
 
 /**
  * Choose one of count choices for one text, and write the chosen index to *choice.

@@ -5,7 +5,7 @@
 )]
 use crate::{
     HostError,
-    exports::{OK, operation},
+    exports::{THINKTHEN_OK, operation},
     memory::text,
 };
 /// Test routes to local servers, in a debug test build. Free with thinkthen_fixture_routes_free.
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn thinkthen_fixture_routes_install(
                 text(openai, openai_len)?,
             )?;
             out.write(Box::into_raw(Box::new(FixtureHandle { _guard: owner })));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }

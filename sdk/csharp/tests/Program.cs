@@ -36,12 +36,6 @@ internal static partial class Program
             catch (Exception error) { Console.Error.WriteLine(error.Message); Environment.ExitCode = 1; }
             return;
         }
-        if (args is ["--entry-forms", var cases, var loopback])
-        {
-            await SharedOptions(Path.Combine(cases,"..","construction","options.json"));
-            await Conformance(Path.Combine(cases,"typed"),loopback);
-            return;
-        }
         if (args is ["--sdk-fixes", var registry]) { await SdkFixes(registry); return; }
         if (args is ["--stress-adapter"]) { await StressAdapter(); return; }
         if (args.Length >= 1 && args[0] == "--malformed-row")

@@ -5,8 +5,8 @@
 )]
 use crate::{
     ClientHandle, HostError, HostRow, QuestionHandle,
-    exports::{OK, operation},
-    memory::row_size,
+    exports::{THINKTHEN_OK, operation},
+    memory::{live, row_size},
 };
 use thinkthen::{
     Engine, Error, OffsetUnit, Question, Request,
@@ -42,7 +42,7 @@ pub(crate) fn status(row: &AnyRow) -> Result<i32, Error> {
     match (row.status(), row.error()) {
         (_, Some(error)) => Err(error.clone()),
         (Status::Unsure, None) => Ok(crate::THINKTHEN_UNSURE),
-        _ => Ok(OK),
+        _ => Ok(THINKTHEN_OK),
     }
 }
 
@@ -78,9 +78,9 @@ pub unsafe extern "C" fn thinkthen_run_one(
             let size = row_size(out)?;
             HostRow::clear(out);
             let record = crate::finite::admit_record(data, len, kind)?;
-            let question = (*question).build()?;
+            let question = live(question)?.build()?;
             let filter = question.function() == thinkthen::FunctionName::Filter;
-            let row = evaluate(&(*client).0, question, record)?;
+            let row = evaluate(&live(client)?.0, question, record)?;
             let status = status(&row);
             let mut result = HostRow::from_row(size, row)?;
             if filter {

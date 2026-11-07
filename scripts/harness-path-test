@@ -43,8 +43,6 @@ def monitor_case():
 def swift_case(folder):
     source = folder / 'source'
     (source / 'scripts').mkdir(parents=True)
-    (source / 'sdk/swift/tests').mkdir(parents=True)
-    (source / 'sdk/swift/tests/Consumer.swift').touch()
     shutil.copy2(ROOT / 'scripts/swift-gate', source / 'scripts/swift-gate')
     # This fixture checks cache ownership, not the separate Swift interface gate.
     preflight = source / 'scripts/swift-interface-check'

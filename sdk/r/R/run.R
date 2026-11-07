@@ -223,8 +223,10 @@ tt_filter <- function(x, question, ..., threshold = NULL, yes_means = NULL, no_m
   errors <- .tt_errors(errors)
   rows <- tt_filter_rows(x = x, question = question, ..., threshold = threshold, yes_means = yes_means, no_means = no_means, field = field, client = client, .progress = .progress, name = name)
   kept <- .tt_subset(x, rows$position[which(rows$answer)])
-  .tt_failures(rows, errors, kept = kept)
-  kept
+  result <- .tt_report(rows, errors, kept, kept = kept)
+  # Setting attributes copies a data.table, and a copy needs repair before `:=`.
+  if (inherits(result, "data.table")) result <- data.table::setalloccol(result)
+  result
 }
 
 #' Return typed answers in input order; not-sure answers are missing values.

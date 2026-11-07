@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import os
 from pathlib import Path, PureWindowsPath
 import runpy
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,14 @@ import long_path_scratch as scratch_module
 README = Path(__file__).resolve().parent / 'qualification-readmes'
 READMES = ('command', 'Python', 'TypeScript', 'c', 'cpp', 'Java', 'Kotlin', 'C#', 'R', 'sqlite', 'duckdb')
 LEFTOVER = 'npm-cache/_cacache/content-v2/sha512/2a/cd/held'
+PLAIN_NPM = """
+with tempfile.TemporaryDirectory(prefix='thinkthen-npm-') as scratch:
+    subprocess.run(['npm', 'ci', '--cache', scratch], check=True)
+"""
+CONVERTED_NPM = """
+with long_path_scratch('thinkthen-npm-', 'npm') as scratch:
+    subprocess.run(['npm', 'ci', '--cache', scratch], check=True)
+"""
 
 
 def windows_root():
@@ -113,8 +122,45 @@ def readme_cleanup():
     print('README check: every README runs before cleanup; a held npm cache fails the step and is kept')
 
 
+def windows_run_check():
+    """Scenario: a Windows-run script fails the check until its npm folder uses the helper."""
+    source = README.parent.parent
+    with tempfile.TemporaryDirectory(prefix='thinkthen-long-path-check-test-') as directory:
+        root = Path(directory)
+        shutil.copytree(source / 'scripts', root / 'scripts')
+        shutil.copytree(source / '.github/workflows', root / '.github/workflows')
+
+        def check(name, change):
+            path = root / 'scripts' / name
+            original = path.read_text(encoding='utf-8')
+            path.write_text(change(original), encoding='utf-8')
+            result = subprocess.run([sys.executable, root / 'scripts/long-path-scratch-check'],
+                                    capture_output=True, text=True, timeout=300)
+            path.write_text(original, encoding='utf-8')
+            return result
+
+        unchanged = check('release-check', lambda text: text)
+        assert unchanged.returncode == 0, unchanged.stderr
+        # One script from each source of the Windows-run set: check_tools(), a Windows job, a child, an import.
+        for name in ('release_windows_sdks.py', 'kotlin_compiler.py', 'qualification-readmes', 'release_workflow.py'):
+            plain = check(name, lambda text: text + PLAIN_NPM)
+            assert plain.returncode != 0, plain.stdout
+            assert name + ": tempfile.TemporaryDirectory(prefix='thinkthen-npm-')" in plain.stderr, plain.stderr
+            converted = check(name, lambda text: text + CONVERTED_NPM)
+            assert converted.returncode == 0, converted.stderr
+        removal = check('windows-cli-check', lambda text: text + '\nshutil.rmtree(cache)\n')
+        assert 'windows-cli-check: shutil.rmtree(cache): use long_path_scratch' in removal.stderr, removal.stderr
+        linux = check('linux-store-trust-check', lambda text: text + PLAIN_NPM)
+        assert linux.returncode == 0, 'a script only Linux jobs run stays free: ' + linux.stderr
+        kept = "tempfile.TemporaryDirectory(prefix='thinkthen-candidate-install-')"
+        stale = check('release-check', lambda text: text.replace(kept, "long_path_scratch('candidate-', 'Candidate')"))
+        assert 'release-check: ' + kept + ': no longer found' in stale.stderr, stale.stderr
+    print('Windows-run check: a plain npm folder or rmtree fails, the helper passes, and Linux scripts stay free')
+
+
 if len(sys.argv) == 3:
     readme_child(sys.argv[1], sys.argv[2])
 else:
     windows_root()
     readme_cleanup()
+    windows_run_check()

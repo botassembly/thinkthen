@@ -8,6 +8,8 @@ pub(super) fn emit(root: &Path, check: bool) -> Result<(), Box<dyn std::error::E
     let closed = thinkthen::native::closed_client_error();
     let closed_code = serde_json::to_string(closed.code().as_str())?;
     let closed_message = serde_json::to_string(closed.message())?;
+    let library_variable = serde_json::to_string(super::LIBRARY_VARIABLE)?;
+    let library_message = serde_json::to_string(super::LIBRARY_PATH_MESSAGE)?;
     let outputs = [
         (
             "sdk/python/thinkthen/_contract.py",
@@ -30,19 +32,19 @@ pub(super) fn emit(root: &Path, check: bool) -> Result<(), Box<dyn std::error::E
         (
             "sdk/java/library/src/main/java/dev/thinkthen/internal/Contract.java",
             format!(
-                "// Generated native requirement. Do not edit.\npackage dev.thinkthen.internal;\nfinal class Contract {{\n    private Contract() {{}}\n    static final int ABI_VERSION = {version};\n    static final String ABI_CODE = {code};\n    static final String ABI_MESSAGE = {message};\n    static final String CLOSED_CODE = {closed_code};\n    static final String CLOSED_MESSAGE = {closed_message};\n}}\n"
+                "// Generated native requirement. Do not edit.\npackage dev.thinkthen.internal;\nfinal class Contract {{\n    private Contract() {{}}\n    static final int ABI_VERSION = {version};\n    static final String ABI_CODE = {code};\n    static final String ABI_MESSAGE = {message};\n    static final String CLOSED_CODE = {closed_code};\n    static final String CLOSED_MESSAGE = {closed_message};\n    static final String LIBRARY_VARIABLE = {library_variable};\n    static final String LIBRARY_PATH_MESSAGE = {library_message};\n}}\n"
             ),
         ),
         (
             "sdk/csharp/src/Contract.g.cs",
             format!(
-                "// Generated native requirement. Do not edit.\n#nullable enable\nnamespace ThinkThen;\ninternal static class Contract\n{{\n    internal const uint AbiVersion = {version};\n    internal const string AbiCode = {code};\n    internal const string AbiMessage = {message};\n}}\n"
+                "// Generated native requirement. Do not edit.\n#nullable enable\nnamespace ThinkThen;\ninternal static class Contract\n{{\n    internal const uint AbiVersion = {version};\n    internal const string AbiCode = {code};\n    internal const string AbiMessage = {message};\n    internal const string LibraryVariable = {library_variable};\n    internal const string LibraryPathMessage = {library_message};\n}}\n"
             ),
         ),
         (
             "sdk/ruby/lib/thinkthen/contract.rb",
             format!(
-                "# frozen_string_literal: true\n# Generated native requirement. Do not edit.\nmodule ThinkThen\n  module NativeContract\n    ABI_VERSION = {version}\n    ABI_CODE = {code}\n    ABI_MESSAGE = {message}\n  end\nend\n"
+                "# frozen_string_literal: true\n# Generated native requirement. Do not edit.\nmodule ThinkThen\n  module NativeContract\n    ABI_VERSION = {version}\n    ABI_CODE = {code}\n    ABI_MESSAGE = {message}\n    LIBRARY_VARIABLE = {library_variable}\n    LIBRARY_PATH_MESSAGE = {library_message}\n  end\nend\n"
             ),
         ),
     ];

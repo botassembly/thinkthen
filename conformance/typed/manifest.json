@@ -17,6 +17,7 @@
   "cases": [
     "decide-precision.json",
     "decide-unsure.json",
+    "decide-rejected-key.json",
     "choose-tie.json",
     "tag-batching.json",
     "score-weighted.json",

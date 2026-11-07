@@ -138,7 +138,7 @@
               "type": "string"
             },
             "threshold": {
-              "$ref": "#/$defs/Threshold",
+              "$ref": "#/$defs/Cut",
               "default": 0.5
             }
           },
@@ -393,7 +393,7 @@
               "type": "string"
             },
             "threshold": {
-              "$ref": "#/$defs/Threshold",
+              "$ref": "#/$defs/Cut",
               "default": 0.5
             }
           },

@@ -1,13 +1,11 @@
 package dev.thinkthen.kotlin
 
-import dev.thinkthen.JsonNull as SnapshotNull
-import dev.thinkthen.JsonString as SnapshotString
-import dev.thinkthen.JsonValue
 import dev.thinkthen.internal.DriverCall
 import dev.thinkthen.internal.DriverClient
 import dev.thinkthen.internal.DriverException
 import dev.thinkthen.internal.DriverRecord
 import dev.thinkthen.kotlin.internal.Decoder
+import dev.thinkthen.kotlin.internal.RankCopies
 import dev.thinkthen.kotlin.internal.decoder
 import dev.thinkthen.kotlin.internal.request
 import kotlin.coroutines.coroutineContext
@@ -59,46 +57,35 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
     @PublishedApi internal suspend fun <T, A, D> single(question: SingleQuestion<A, D>, record: T, serializer: KSerializer<*>): Row<A, D> {
         refuseMany(record)
         val decoder = decoder(question)
-        val row = finite(question, listOf(record), serializer, false) { _, packet -> decode(decoder, packet) }.single()
+        val row = finite(question, listOf(record), serializer, { false }) { _, packet -> decode(decoder, packet) }.single()
         if (row is Row.Failed && row.error.code == ErrorCode.RECORD_EMPTY) row.answer()
         return row
     }
     @PublishedApi internal fun <T, A, D> stream(question: SingleQuestion<A, D>, records: Flow<T>, serializer: KSerializer<*>): Flow<Row<A, D>> {
         val decoder = decoder(question)
-        return streaming(question, records, serializer, false) { _, packet -> decode(decoder, packet) }
+        return streaming(question, records, serializer, { false }) { _, packet -> decode(decoder, packet) }
     }
     @PublishedApi internal fun <T, A, D> iterable(question: SingleQuestion<A, D>, records: Iterable<T>, serializer: KSerializer<*>): Flow<Row<A, D>> {
         val decoder = decoder(question)
-        return finite(question, records, serializer, false) { _, packet -> decode(decoder, packet) }
+        return finite(question, records, serializer, { false }) { _, packet -> decode(decoder, packet) }
     }
     @PublishedApi internal fun <T> filterFlow(question: Filter, records: Flow<T>, serializer: KSerializer<*>): Flow<Filtered<T>> =
-        streaming(question, records, serializer, true) { item, packet -> Filtered(item, decode(Decoder.FILTER, packet)) }
+        streaming(question, records, serializer, { true }) { item, packet -> Filtered(item, decode(Decoder.FILTER, packet)) }
     @PublishedApi internal fun <T> filterIterable(question: Filter, records: Iterable<T>, serializer: KSerializer<*>): Flow<Filtered<T>> =
-        finite(question, records, serializer, true) { item, packet -> Filtered(item, decode(Decoder.FILTER, packet)) }
-    @PublishedApi internal fun <T> rankFlow(question: Rank, records: Flow<T>, serializer: KSerializer<*>): Flow<Ranked<JsonValue>> =
-        streaming(question, records, serializer, false) { _, packet -> ranked(packet) }
-    @PublishedApi internal fun <T> rankIterable(question: Rank, records: Iterable<T>, serializer: KSerializer<*>): Flow<Ranked<JsonValue>> =
-        finite(question, records, serializer, false) { _, packet -> ranked(packet) }
-
-    // Rank items are the engine's owned snapshot of each input, never a host map of the inputs.
-    private fun ranked(packet: DriverCall.DriverRow): Ranked<JsonValue> {
-        val row = decode(Decoder.RANK, packet)
-        val original = packet.original() ?: throw ThinkThenException(ErrorCode.USAGE_ABI, "Native rank row has no record snapshot")
-        val item = try {
-            when (original.kindName()) {
-                "text" -> SnapshotString(String(original.bytes(), Charsets.UTF_8))
-                "json" -> JsonValue.parse(String(original.bytes(), Charsets.UTF_8))
-                else -> SnapshotNull()
-            }
-        } catch (error: IllegalArgumentException) {
-            if (row !is Row.Failed) throw ThinkThenException(ErrorCode.USAGE_ABI, "Invalid native rank record snapshot", cause = error)
-            SnapshotNull()
-        }
-        return Ranked(item, row)
+        finite(question, records, serializer, { true }) { item, packet -> Filtered(item, decode(Decoder.FILTER, packet)) }
+    @PublishedApi internal fun <T> rankFlow(question: Rank, records: Flow<T>, serializer: KSerializer<*>): Flow<Ranked<T>> = flow {
+        val copies = RankCopies<T>(recordJson, serializer)
+        emitAll(streaming(question, records, serializer, copies::keep) { kept, packet -> ranked(copies, kept, packet) })
     }
+    @PublishedApi internal fun <T> rankIterable(question: Rank, records: Iterable<T>, serializer: KSerializer<*>): Flow<Ranked<T>> = flow {
+        val copies = RankCopies<T>(recordJson, serializer)
+        emitAll(finite(question, records, serializer, copies::keep) { kept, packet -> ranked(copies, kept, packet) })
+    }
+    private fun <T> ranked(copies: RankCopies<T>, kept: T, packet: DriverCall.DriverRow): Ranked<T> =
+        Ranked(copies.item(kept, packet), decode(Decoder.RANK, packet))
 
-    // With keep, each row's convert receives the original input; otherwise it receives null and no input is held.
-    private fun <T, R> finite(question: Question<*, *>, records: Iterable<T>, serializer: KSerializer<*>, keep: Boolean, convert: (T, DriverCall.DriverRow) -> R): Flow<R> {
+    // A record's convert receives its original input when keep says so; otherwise it receives null and holds no input.
+    private fun <T, R> finite(question: Question<*, *>, records: Iterable<T>, serializer: KSerializer<*>, keep: (DriverRecord) -> Boolean, convert: (T, DriverCall.DriverRow) -> R): Flow<R> {
         if (records !is Collection<T>) return streaming(question, records.asFlow(), serializer, keep, convert)
         return flow {
             coroutineScope {
@@ -109,8 +96,7 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
                 try {
                     val encoded = records.mapIndexed { index, value ->
                         currentCoroutineContext().ensureActive()
-                        if (keep) originals[index + 1L] = value
-                        encode(value, serializer)
+                        encode(value, serializer).also { if (keep(it)) originals[index + 1L] = value }
                     }
                     currentCoroutineContext().ensureActive()
                     call = driver.openRecords(question.request(), encoded)
@@ -127,7 +113,7 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
             }
         }
     }
-    private fun <T, R> streaming(question: Question<*, *>, records: Flow<T>, serializer: KSerializer<*>, keep: Boolean, convert: (T, DriverCall.DriverRow) -> R): Flow<R> = flow {
+    private fun <T, R> streaming(question: Question<*, *>, records: Flow<T>, serializer: KSerializer<*>, keep: (DriverRecord) -> Boolean, convert: (T, DriverCall.DriverRow) -> R): Flow<R> = flow {
         coroutineScope {
             val job = coroutineContext.job
             register(job)
@@ -175,8 +161,8 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
                         else {
                             @Suppress("UNCHECKED_CAST") val value = next.getOrNull() as T
                             ++sent
-                            if (keep) originals[sent] = value
                             val encoded = encode(value, serializer)
+                            if (keep(encoded)) originals[sent] = value
                             native(active) {
                                 when (encoded.kindName()) {
                                     "missing" -> active.sendMissing()

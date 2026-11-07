@@ -14,17 +14,33 @@ import zipfile
 from unittest.mock import patch
 
 from release_registry import github_packages, attach
-from release_windows import source_package, check_tools
+from release_windows import source_package, check_sources, check_tools
 from release_workflow import ROOT, TARGETS, version
 
 
 BASE_ENV = dict(os.environ)
 BASE_ENV.pop('THINKTHEN_GATE_FAILURE_TAILS', None)
+# Each consumer installs these before its file under checks/ runs; typing_extensions is read only by type checkers.
+CONSUMER_PACKAGES = {'duckdb', 'pandas', 'polars', 'thinkthen', 'typing_extensions'}
+
+
+def missing_helpers(folder, *scripts, installed=()):
+    """Name what shipped files import, inside functions too, that neither Python nor the folder has."""
+    modules = list(folder.glob('*.py'))
+    imported = set()
+    for path in (*scripts, *modules):
+        for node in ast.walk(ast.parse(path.read_bytes())):
+            if isinstance(node, ast.Import):
+                imported.update(alias.name.partition('.')[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                imported.add(node.module.partition('.')[0])
+    return imported - sys.stdlib_module_names - set(installed) - {path.stem for path in modules}
 
 
 def checker(scratch):
     delivered = scratch / 'delivered'
     check_tools(delivered)
+    check_sources(delivered)
     env = {key: value for key, value in BASE_ENV.items() if key != 'PYTHONPATH'}
     output = subprocess.check_output([sys.executable, '-E', '-s', delivered / 'check', '--help'],
                                      cwd=scratch, env=env, text=True)
@@ -36,6 +52,19 @@ def checker(scratch):
                     'import importlib, sys\nfor name in sys.argv[1:]: importlib.import_module(name)', *modules],
                    cwd=delivered, env=env, check=True)
     print('Delivered Windows checker starts outside the source tree with its actual shipped imports', flush=True)
+    checks = delivered / 'checks'
+    missing = missing_helpers(delivered, delivered / 'check') | missing_helpers(checks, installed=CONSUMER_PACKAGES)
+    assert not missing, missing
+    # The import run reaches none of the imports below, so only the syntax walk can fail them.
+    (delivered / 'windows_caller_process.py').unlink()
+    with (delivered / 'release_records.py').open('a') as shipped:
+        shipped.write('\n\ndef unreached():\n    import absent_helper\n')
+    missing = missing_helpers(delivered, delivered / 'check')
+    assert missing == {'windows_caller_process', 'absent_helper'}, missing
+    (checks / 'entry_forms.py').unlink()
+    missing = missing_helpers(checks, installed=CONSUMER_PACKAGES)
+    assert missing == {'entry_forms'}, missing
+    print('Delivered Windows checker ships every helper its files import, inside functions too', flush=True)
 
 
 def attachments(scratch):
@@ -218,8 +247,17 @@ pub fn build(b: *std.Build) void {
 }
 ''')
     tool = Path.home() / '.local/share/thinkthen-build-tools/zig/0.17.0/zig'
-    subprocess.run([tool, 'build', '-j2', '-Dtarget=x86_64-windows-msvc'], cwd=consumer, check=True)
+    # Zig ships gnu's Windows C headers. msvc needs Microsoft's, so native Windows checks prove it.
+    subprocess.run([tool, 'build', '-j2', '-Dtarget=x86_64-windows-gnu'], cwd=consumer, check=True)
     print('Extracted Windows Zig archive compiles a real consumer against its generated ErrorCode; no engine link', flush=True)
+    # A plain zig build on Windows selects the gnu ABI, so the README must link there.
+    blocks = re.findall(r'```zig\n(.*?)\n```', (ROOT / 'sdk/zig/README.md').read_text(encoding='utf-8'), re.S)
+    (consumer / 'src').mkdir()
+    (consumer / 'src/main.zig').write_text(blocks[0])
+    (consumer / 'build.zig').write_text(next(block for block in blocks if 'pub fn build' in block))
+    subprocess.run([tool, 'build', '-j2', '-Dtarget=x86_64-windows-gnu'], cwd=consumer, check=True)
+    assert (consumer / 'zig-out/bin/example.exe').is_file() and (consumer / 'zig-out/bin/thinkthen_ffi.dll').is_file()
+    print('The Zig README program links for Windows with the engine beside it', flush=True)
 
 
 if sys.argv[1:] == ['--cleanup-only']:

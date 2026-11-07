@@ -9,6 +9,8 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -23,7 +25,18 @@ final class Native {
     }
     static MemoryLayout rowLayout() { functions(); return NativeLayouts.ROW; }
     private Native() {}
-    private static Map<String, MethodHandle> load() {
+    private static Path library() throws IOException {
+        String chosen = System.getenv(Contract.LIBRARY_VARIABLE);
+        if (chosen == null || chosen.isEmpty()) return packaged();
+        try {
+            var path = Path.of(chosen);
+            if (path.isAbsolute()) return path;
+        } catch (InvalidPathException error) {
+            throw new ThinkThenException("local.io", Contract.LIBRARY_PATH_MESSAGE);
+        }
+        throw new ThinkThenException("local.io", Contract.LIBRARY_PATH_MESSAGE);
+    }
+    private static Path packaged() throws IOException {
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         String arch = System.getProperty("os.arch");
         boolean arm = arch.equals("aarch64") || arch.equals("arm64");
@@ -35,8 +48,11 @@ final class Native {
             throw new UnsatisfiedLinkError("No packaged ThinkThen native engine for " + os + " " + arch);
         }
         String file = platform.startsWith("linux") ? "libthinkthen_ffi.so" : platform.startsWith("windows") ? "thinkthen_ffi.dll" : "libthinkthen_ffi.dylib";
+        return NativeAsset.resolve("/io/thinkthen/native/" + platform + "/" + file, file);
+    }
+    private static Map<String, MethodHandle> load() {
         try {
-            var asset = NativeAsset.resolve("/io/thinkthen/native/" + platform + "/" + file, file);
+            var asset = library();
             SymbolLookup symbols;
             try { symbols = SymbolLookup.libraryLookup(asset, Arena.global()); }
             catch (IllegalArgumentException error) {

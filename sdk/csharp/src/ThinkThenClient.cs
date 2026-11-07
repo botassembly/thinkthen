@@ -86,6 +86,7 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
             return call;
         }
     }
+    private void Forget(CallState call) { lock (lifecycle) active.Remove(call); }
     private sealed record Pull(int Status, uint Function, uint RowStatus, int ErrorCode, double Probability, ulong Position,
         byte[] Id, byte[] Answer, byte[] Source, byte[] Error, byte[] Detail, byte[]? Original);
     private static Pull Next(CallHandle call, CancellationToken token)
@@ -131,6 +132,7 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
         CallState call;
         try { call = Open(question.Handle, name, cancellationToken); }
         finally { if (owned) question.Dispose(); }
+        var lease = new CallLease(call, Forget);
         Source<T>? source = null;
         bool failed = false;
         var original = originals ? new Dictionary<ulong,T>() : null;
@@ -212,9 +214,10 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
         }
         finally
         {
+            GC.SuppressFinalize(lease);
             bool cancelled = call.Token.IsCancellationRequested;
             await call.Close().ConfigureAwait(false);
-            lock (lifecycle) active.Remove(call);
+            Forget(call);
             original?.Clear();
             failedOriginals?.Clear();
             if (source is not null) await source.Finish(failed || cancelled, cancellationToken).ConfigureAwait(false);

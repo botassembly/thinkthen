@@ -215,6 +215,84 @@ fn grammar_rejects_missing_lists_removed_flags_and_ambiguous_check_before_sendin
 }
 
 #[test]
+fn choose_refuses_low_and_high_as_unknown_options_before_sending() {
+    let server = backend("systemone", 0.9);
+    for args in [
+        ["--low", "0.3"].as_slice(),
+        ["--high", "0.8"].as_slice(),
+        ["--low", "0.2", "--high", "0.8"].as_slice(),
+    ] {
+        let output = execute(
+            selected("systemone", &server)
+                .args(["choose", "Which?"])
+                .args(args),
+            b"one",
+        );
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(2), "{args:?}: {output:?}");
+        assert!(output.stdout.is_empty(), "{args:?}");
+        assert!(stderr.contains("usage.option"), "{args:?}: {stderr}");
+        assert!(
+            stderr.contains(&format!("unknown field `{}`", args[0])),
+            "{args:?}: {stderr}"
+        );
+    }
+    assert_eq!(server.count(), 0);
+}
+
+#[test]
+fn saved_choose_bands_are_refused_before_sending() {
+    let question = json!({
+        "function": "choose",
+        "question": "Which?",
+        "choices": ["a", "b"],
+        "threshold": {"low": 0.2, "high": 0.8},
+    });
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("saved.json");
+    let server = backend("systemone", 0.9);
+    for (saved, selection) in [
+        (json!({"question": question, "records": ["one"]}), vec![]),
+        (
+            json!({"entries": {"ready": {"question": question}}}),
+            vec!["--entry", "ready"],
+        ),
+    ] {
+        fs::write(&path, saved.to_string()).unwrap();
+        let output = execute(
+            selected("systemone", &server)
+                .arg("run")
+                .arg(&path)
+                .args(selection),
+            b"one\n",
+        );
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(2), "{saved}: {output:?}");
+        assert!(output.stdout.is_empty(), "{saved}");
+        assert!(stderr.contains("usage.threshold"), "{saved}: {stderr}");
+        assert!(stderr.contains("a low/high band"), "{saved}: {stderr}");
+    }
+    assert_eq!(server.count(), 0);
+}
+
+#[test]
+fn low_and_high_settings_do_not_reach_choose() {
+    let run = |settings: &[(&str, &str)]| {
+        let mut command = support::command();
+        command
+            .args(["--backend", "stub", "--json"])
+            .args(["choose", "Which?", "--choice", "a", "--choice", "b"])
+            .envs(settings.iter().copied());
+        execute(&mut command, b"one")
+    };
+    let plain = run(&[]);
+    let set = run(&[("THINKTHEN_LOW", "0.2"), ("THINKTHEN_HIGH", "0.8")]);
+    assert_eq!(plain.status.code(), Some(0), "{plain:?}");
+    assert_eq!(set.status.code(), plain.status.code(), "{set:?}");
+    assert_eq!(set.stdout, plain.stdout);
+}
+
+#[test]
 fn explicit_values_replace_malformed_environment_before_admission() {
     let mut command = support::command();
     let output = execute(

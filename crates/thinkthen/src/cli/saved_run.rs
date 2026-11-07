@@ -136,21 +136,16 @@ pub(super) fn run(
                 .write_all(line.as_bytes())
                 .map_err(|error| super::output_error(error, cancel));
         }
-        // Shell outputs remain arbitrary JSON; final typed rows use command rendering.
-        let mut value: serde_json::Value = serde_json::from_str(line)
-            .map_err(|_| super::local("the run output could not be decoded"))?;
-        if let Some(fields) = value.as_object_mut() {
-            fields.remove("item");
-        }
-        let row = serde_json::from_value::<crate::results::AnyRow>(value);
+        // An item is any JSON the pipeline admitted, so only the row's own fields are typed.
+        let undecoded = |_| super::local("the run output could not be decoded");
+        let mut fields: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+            serde_json::from_str(line).map_err(undecoded)?;
+        let item = fields.remove("item");
+        let row = serde_json::to_string(&fields).map_err(undecoded)?;
+        let row = serde_json::from_str::<crate::results::AnyRow>(&row);
         if output.json {
-            if let Ok(row @ crate::results::AnyRow::Filter(_)) = row {
-                let fields: std::collections::BTreeMap<&str, &serde_json::value::RawValue> =
-                    serde_json::from_str(line)
-                        .map_err(|_| super::local("the run output could not be decoded"))?;
-                if let Some(item) = fields.get("item") {
-                    return super::render::filter_row(&row, item, cancel);
-                }
+            if let (Ok(row @ crate::results::AnyRow::Filter(_)), Some(item)) = (&row, &item) {
+                return super::render::filter_row(row, item, cancel);
             }
             return writeln!(io::stdout().lock(), "{line}")
                 .map_err(|error| super::output_error(error, cancel));

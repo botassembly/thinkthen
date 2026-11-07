@@ -27,6 +27,7 @@ calls = {
     "rank requires levels": ('client.rank("Scale?", records: [Record.text("a")])', "levels"),
     "recognize requires kinds": ('client.recognize(record: .text("a"))', "kinds"),
     "relate requires rules": ('client.relate(record: .text("a"))', "rules"),
+    "choose refuses a band": ('client.choose("Which?", choices: ["a", "b"], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
     "tag refuses a band": ('client.tag("Topics?", labels: ["a"], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
     "find refuses a band": ('client.find("Where?", record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
     "recognize refuses a band": ('client.recognize(kinds: ["person"], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),

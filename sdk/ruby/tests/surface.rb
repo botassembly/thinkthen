@@ -249,7 +249,7 @@ def ruby_completion_interruption
 end
 
 # Feature: repeated interruptions keep row storage until the native read stops.
-def ruby_repeated_interruption
+def ruby_repeated_interruption(again = proc { |worker| 2.times { worker.raise(Interrupt) } })
   ThinkThen::Client.open(backend: :stub) do |client|
     native = ThinkThen.send(:native)
     read_class = ThinkThen.const_get(:NativeRead)
@@ -300,8 +300,7 @@ def ruby_repeated_interruption
     worker.raise(Interrupt)
     cleanup.pop
     Thread.pass until worker.status == "sleep"
-    worker.raise(Interrupt)
-    worker.raise(Interrupt)
+    again.call(worker)
     resume << true
     worker.join
     assert(completed, "native read stops")

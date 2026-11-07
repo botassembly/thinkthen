@@ -22,7 +22,7 @@ Each one-record call returns one row and refuses a collection with `UsageError`.
 
 A record that has no JSON form, such as an `Object` or a cyclic Hash, becomes a failed row with code `:"record.invalid"` whose message names its class and reason, and the call goes on. Reading `item` on such a rank row raises that error. A `nil` record fails with `:"record.missing"`, and blank text with `:"record.empty"`.
 
-Thresholds use Float. Decide, choose and filter also accept an inclusive Float Range. Score, rank and annotate have no threshold option. Field accepts a JSON Pointer String or an Array of String, Symbol and nonnegative Integer components. Decide and filter take `yes_means:` and `no_means:`; choose, tag, score and rank take `descriptions:`. Each call accepts an execution `name:` and a `cancel:` token.
+Thresholds use Float. Decide and filter also accept an inclusive Float Range. Score, rank and annotate have no threshold option. Field accepts a JSON Pointer String or an Array of String, Symbol and nonnegative Integer components. Decide and filter take `yes_means:` and `no_means:`; choose, tag, score and rank take `descriptions:`. Each call accepts an execution `name:` and a `cancel:` token.
 
 Typed question classes keep their options. A matching call takes its typed question and record with only `name:` and `cancel:` (and `failures:` for `filter` and `rank`). `Toolbox` maps names to typed questions, and its `[]` raises `KeyError` for an unknown name. `AnnotationQuestions` excludes rank and annotate. Selecting a toolbox entry does not set an execution name.
 

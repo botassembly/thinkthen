@@ -96,7 +96,7 @@ internal fun decodeQuestion(value: JsonObject): EntryQuestion<*, *> {
         .associate { it.getValue("name").jsonPrimitive.content to it.getValue("description").jsonPrimitive.content }
     return when (value.getValue("function").jsonPrimitive.content) {
         "decide" -> Decide(text(), threshold, field, yesMeans = meaning("true"), noMeans = meaning("false"))
-        "choose" -> Choose(text(), names("choices"), threshold, field, descriptions = descriptions("choices"))
+        "choose" -> Choose(text(), names("choices"), cut(), field, descriptions = descriptions("choices"))
         "tag" -> Tag(text(), names("labels"), cut(), field, descriptions = descriptions("labels"))
         "score" -> Score(text(), names("levels"), field, descriptions = descriptions("levels"))
         "filter" -> Filter(text(), threshold, field, yesMeans = meaning("true"), noMeans = meaning("false"))

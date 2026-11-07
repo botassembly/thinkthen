@@ -60,7 +60,15 @@ def _default() -> AsyncClient:
     return client
 
 
+def set_default_client(client: AsyncClient) -> None:
+    """Use this client for module calls in the running event loop."""
+    if not isinstance(client, AsyncClient):
+        raise TypeError("client must be an AsyncClient")
+    _defaults[asyncio.get_running_loop()] = client
+
+
 async def aclose_default_client() -> None:
+    """Close the running event loop's default client, if it has one."""
     client = _defaults.pop(asyncio.get_running_loop(), None)
     if client is not None:
         await client.aclose()
@@ -212,7 +220,7 @@ async def choose(
     record: Record,
     *,
     choices: TypeForm[_Label],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -225,7 +233,7 @@ async def choose(
     record: Record,
     *,
     choices: list[_Label] | tuple[_Label, ...],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -251,7 +259,7 @@ def choose_stream(
     records: Iterable[Record] | AsyncIterable[Record],
     *,
     choices: TypeForm[_Label],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -264,7 +272,7 @@ def choose_stream(
     records: Iterable[Record] | AsyncIterable[Record],
     *,
     choices: list[_Label] | tuple[_Label, ...],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -643,6 +651,7 @@ __all__ = [
     "relate_stream",
     "score",
     "score_stream",
+    "set_default_client",
     "tag",
     "tag_stream",
 ]

@@ -23,7 +23,7 @@ With `--json`, ThinkThen prints one line of JSON for each text it judges. Each l
 | --- | --- |
 | `function` | The function that answered, such as `decide`. |
 | `position` | Where the text came in the input, counting from 1. |
-| `id` | The `id` of the JSON line, when it has one. A string or a whole number, exactly as it was. |
+| `id` | The `id` of the JSON line, when it has one. A string or a whole number, exactly as it was. A whole number written as a float, such as `3.0`, comes back as `3`. |
 | `source` | Which question was asked, and where. See below. |
 | `status` | `answered`, `unsure` for not sure, or `failed`. |
 

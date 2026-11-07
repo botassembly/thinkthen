@@ -2,11 +2,9 @@ const std = @import("std");
 const tt = @import("thinkthen");
 
 pub fn main(init: std.process.Init) !void {
-    var buffer: [4096]u8 = undefined;
-    var stdout = std.Io.File.stdout().writer(init.io, &buffer);
-    const out = &stdout.interface;
-    defer out.flush() catch {};
+    var stdout = std.Io.File.stdout().writerStreaming(init.io, &.{});
     var diag: tt.Diagnostic = .{};
+    errdefer std.debug.print("{s}\n", .{diag.message()});
     var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
 
@@ -42,6 +40,9 @@ pub fn main(init: std.process.Init) !void {
         const is_refund = try answers.get(.decide, "refund").?.answer(&diag);
         const topic = try answers.get(.choose, "topic").?.answer(&diag);
         const urgency = try answers.get(.score, "urgency").?.answer(&diag);
-        try out.print("{} {s} {d}\n", .{ is_refund, topic, urgency });
+        try stdout.interface.print(
+            "{} {s} {d}\n",
+            .{ is_refund, topic, urgency },
+        );
     }
 }

@@ -5,8 +5,8 @@
 )]
 use crate::{
     HostError, QuestionHandle, ToolboxHandle,
-    exports::{OK, operation},
-    memory::text,
+    exports::{THINKTHEN_OK, operation},
+    memory::{live, live_mut, text},
 };
 use std::ptr;
 /// Make an empty toolbox of named questions.
@@ -27,7 +27,7 @@ pub unsafe extern "C" fn thinkthen_toolbox_new(
     unsafe {
         operation(error, || {
             out.write(Box::into_raw(Box::new(ToolboxHandle::default())));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -55,10 +55,10 @@ pub unsafe extern "C" fn thinkthen_toolbox_insert(
     /* SAFETY: only the collection is mutated; child and bytes are borrowed. */
     unsafe {
         operation(error, || {
-            (*toolbox)
+            live_mut(toolbox)?
                 .0
-                .insert(text(name, len)?, (*question).build()?)?;
-            Ok(OK)
+                .insert(text(name, len)?, live(question)?.build()?)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -87,9 +87,9 @@ pub unsafe extern "C" fn thinkthen_toolbox_select(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let question = (*toolbox).0.select(text(name, len)?)?;
+            let question = live(toolbox)?.0.select(text(name, len)?)?;
             out.write(Box::into_raw(Box::new(QuestionHandle::new(question))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn thinkthen_toolbox_from_json(
             out.write(ptr::null_mut());
             let toolbox = thinkthen::native::ToolboxBuilder::from_json(text(data, len)?)?;
             out.write(Box::into_raw(Box::new(ToolboxHandle(toolbox))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -166,9 +166,9 @@ pub unsafe extern "C" fn thinkthen_toolbox_select_as(
             out.write(ptr::null_mut());
             let function = thinkthen::FunctionName::from_abi(function)
                 .ok_or_else(|| thinkthen::native::argument_error(thinkthen::Code::UsageFunction))?;
-            let question = (*toolbox).0.select_as(text(name, len)?, function)?;
+            let question = live(toolbox)?.0.select_as(text(name, len)?, function)?;
             out.write(Box::into_raw(Box::new(QuestionHandle::new(question))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -200,7 +200,7 @@ pub unsafe extern "C" fn thinkthen_toolbox_from_definitions_json(
             let toolbox =
                 thinkthen::native::ToolboxBuilder::from_definitions_json(text(data, len)?)?;
             out.write(Box::into_raw(Box::new(ToolboxHandle(toolbox))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -225,8 +225,8 @@ pub unsafe extern "C" fn thinkthen_toolbox_to_json(
     unsafe {
         operation(error, || {
             out.write(crate::Buffer::default());
-            out.write(crate::Buffer::new((*toolbox).0.to_json()?));
-            Ok(OK)
+            out.write(crate::Buffer::new(live(toolbox)?.0.to_json()?));
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -251,8 +251,8 @@ pub unsafe extern "C" fn thinkthen_toolbox_definitions_json(
     unsafe {
         operation(error, || {
             out.write(crate::Buffer::default());
-            out.write(crate::Buffer::new((*toolbox).0.definitions_json()?));
-            Ok(OK)
+            out.write(crate::Buffer::new(live(toolbox)?.0.definitions_json()?));
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -278,11 +278,11 @@ pub unsafe extern "C" fn thinkthen_question_to_json(
     unsafe {
         operation(error, || {
             out.write(crate::Buffer::default());
-            let value = (*question).build()?;
+            let value = live(question)?.build()?;
             let json =
                 serde_json::to_string(&value).map_err(|_| thinkthen::native::internal_error())?;
             out.write(crate::Buffer::new(json));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -304,8 +304,8 @@ pub unsafe extern "C" fn thinkthen_question_function(
     // SAFETY: the caller lends a live handle and exclusive outputs.
     unsafe {
         operation(error, || {
-            out.write((*question).builder.function().abi());
-            Ok(OK)
+            out.write(live(question)?.builder.function().abi());
+            Ok(THINKTHEN_OK)
         })
     }
 }

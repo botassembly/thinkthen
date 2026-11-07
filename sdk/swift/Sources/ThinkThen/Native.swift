@@ -86,27 +86,33 @@ final class Native: Sendable {
     #else
       throw ThinkThenError.engineUnavailable(message: "No packaged engine for this host")
     #endif
-    let environment = ProcessInfo.processInfo.environment
-    let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
-      .deletingLastPathComponent()
-    let bundles = [Bundle.main.bundleURL, executable].flatMap { base in
+    let chosen = ProcessInfo.processInfo.environment[THINKTHEN_LIBRARY_VARIABLE] ?? ""
+    guard chosen.isEmpty || isFullPath(chosen) else {
+      throw ThinkThenError.engineUnavailable(message: THINKTHEN_LIBRARY_PATH_MESSAGE)
+    }
+    let folders = [Bundle.main.bundleURL, Bundle.main.executableURL?.deletingLastPathComponent()]
+    let bundles = folders.compactMap { $0 }.flatMap { base in
       ["ThinkThen_ThinkThen.bundle", "ThinkThen_ThinkThen.resources"].map {
         base.appendingPathComponent($0).appendingPathComponent("Native/" + resource).path
       }
     }
-    guard
-      let path = environment["THINKTHEN_NATIVE_LIBRARY"]
-        ?? bundles.first(where: {
-          FileManager.default.fileExists(atPath: $0)
-        })
-    else {
+    let packaged = bundles.first(where: { FileManager.default.fileExists(atPath: $0) })
+    guard let path = chosen.isEmpty ? packaged : chosen else {
       throw ThinkThenError.engineUnavailable(
         message:
-          "Cannot load packaged engine; searched \(bundles.joined(separator: ", ")); set THINKTHEN_NATIVE_LIBRARY to the native library path"
+          "Cannot load packaged engine; searched \(bundles.joined(separator: ", ")); set \(THINKTHEN_LIBRARY_VARIABLE) to the native library path"
       )
     }
     #if os(Windows)
-      guard let handle = path.withCString(encodedAs: UTF16.self, { LoadLibraryW($0) }) else {
+      // The search flags need a full path with backslashes, and they keep the
+      // engine's dependencies out of the working folder.
+      let file = URL(fileURLWithPath: path).withUnsafeFileSystemRepresentation {
+        $0.map { String(cString: $0) } ?? path
+      }
+      let flags = DWORD(LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)
+      guard
+        let handle = file.withCString(encodedAs: UTF16.self, { LoadLibraryExW($0, nil, flags) })
+      else {
         throw ThinkThenError.engineUnavailable(
           message: "Cannot load packaged engine \(path): \(GetLastError())")
       }
@@ -403,6 +409,18 @@ struct WireRow: Sendable {
         Row<F>.self, from: JSONSerialization.data(withJSONObject: fields))
     } catch { throw rowABIFailure(String(describing: error)) }
   }
+}
+
+/// True for a path the system loader opens without searching.
+private func isFullPath(_ path: String) -> Bool {
+  #if os(Windows)
+    let bytes = Array(path.utf8)
+    let separators = [UInt8(ascii: "\\"), UInt8(ascii: "/")]
+    return path.hasPrefix("\\\\")
+      || (bytes.count > 2 && bytes[1] == UInt8(ascii: ":") && separators.contains(bytes[2]))
+  #else
+    return path.hasPrefix("/")
+  #endif
 }
 
 func rowABIFailure(_ message: String) -> ThinkThenError {

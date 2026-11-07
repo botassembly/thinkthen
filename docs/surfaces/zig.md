@@ -9,12 +9,9 @@ const std = @import("std");
 const tt = @import("thinkthen");
 
 pub fn main(init: std.process.Init) !void {
-    var buffer: [4096]u8 = undefined;
-    var stdout = std.Io.File.stdout().writer(init.io, &buffer);
-    const out = &stdout.interface;
-    defer out.flush() catch {};
-
+    var stdout = std.Io.File.stdout().writerStreaming(init.io, &.{});
     var diag: tt.Diagnostic = .{};
+    errdefer std.debug.print("{s}\n", .{diag.message()});
     var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
     const question = "Does the customer request a refund?";
@@ -22,7 +19,7 @@ pub fn main(init: std.process.Init) !void {
     // A JSON array is one record, so this asks about the whole thread at once.
     const thread = try client.decide(init.arena.allocator(), question,
         .{ .json = "[\"Where is my parcel?\",\"Please refund my order.\"]" }, .{}, &diag);
-    try out.print("array {t}\n", .{thread.status()});
+    try stdout.interface.print("array {t}\n", .{thread.status()});
 
     // In JSON Lines, each line is its own record and gets its own row, in input order.
     const inbox = try std.Io.Dir.cwd().readFileAlloc(init.io, "records.jsonl", init.gpa, .limited(16 << 20));
@@ -31,9 +28,9 @@ pub fn main(init: std.process.Init) !void {
     defer refunds.deinit();
     while (try refunds.next(&diag)) |refund| {
         switch (refund.outcome) {
-            .answered => |decision| try out.print("{d} answered {}\n", .{ refund.position, decision.answer }),
-            .unsure => try out.print("{d} unsure: send it to a person\n", .{refund.position}),
-            .failed => |failure| try out.print("{d} failed {s}: {s}\n", .{ refund.position, failure.name(), failure.message }),
+            .answered => |decision| try stdout.interface.print("{d} answered {}\n", .{ refund.position, decision.answer }),
+            .unsure => try stdout.interface.print("{d} unsure: send it to a person\n", .{refund.position}),
+            .failed => |failure| try stdout.interface.print("{d} failed {s}: {s}\n", .{ refund.position, failure.name(), failure.message }),
         }
     }
 }
@@ -93,10 +90,10 @@ Each function has a one-record form named for the function, such as `decide`, an
 ```zig
 const is_refund = try (try client.decide(init.arena.allocator(), "Does the customer request a refund?",
     .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
-try out.print("{}\n", .{is_refund});
+try stdout.interface.print("{}\n", .{is_refund});
 ```
 
-The examples from here on go inside a `main` like the first one, with its `out`, `diag` and `client`. A one-record call's row lives in the allocator you pass, which must be an arena; `init.arena` lasts until the program exits.
+The examples from here on go inside a `main` like the first one, with its `stdout`, `diag` and `client`. A one-record call's row lives in the allocator you pass, which must be an arena; `init.arena` lasts until the program exits.
 
 ## Send not sure to a person
 
@@ -110,15 +107,15 @@ while (try refunds.next(&diag)) |refund| {
     const message = messages[@intCast(refund.position - 1)];
     const is_refund = refund.answer(&diag) catch |err| switch (err) {
         error.Unsure => {
-            try out.print("{s}: not sure, send it to a person\n", .{message});
+            try stdout.interface.print("{s}: not sure, send it to a person\n", .{message});
             continue;
         },
         else => {
-            try out.print("{s}: failed, {s}\n", .{ message, diag.message() });
+            try stdout.interface.print("{s}: failed, {s}\n", .{ message, diag.message() });
             continue;
         },
     };
-    try out.print("{s}: {}\n", .{ message, is_refund });
+    try stdout.interface.print("{s}: {}\n", .{ message, is_refund });
 }
 ```
 
@@ -126,7 +123,7 @@ After `answer` returns an error, `diag` holds the row's `position`, and either i
 
 Print a row with `{f}` to see its outcome and probability, such as `true (0.97)`, `unsure (0.50)` or `failed record.missing: ...`.
 
-A client or call that can't start, such as one with no key or an invalid question, returns its error directly, with the code and message in `diag`.
+A client or call that can't start, such as one with no key or an invalid question, returns its error directly, with the code and message in `diag`, and the first example's `errdefer` line prints that message on stderr.
 
 ## The ten functions
 
@@ -137,7 +134,7 @@ The answer is a `bool`.
 ```zig
 const is_refund = try (try client.decide(init.arena.allocator(), "Does the customer request a refund?",
     .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
-try out.print("{}\n", .{is_refund});
+try stdout.interface.print("{}\n", .{is_refund});
 ```
 
 ### choose: pick one option
@@ -147,7 +144,7 @@ The answer is one of your labels. `tt.choices` builds the label list.
 ```zig
 const topic = try (try client.choose(init.arena.allocator(), "What is the message about?",
     tt.choices(&.{ "billing", "shipping", "other" }), .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
-try out.print("{s}\n", .{topic});
+try stdout.interface.print("{s}\n", .{topic});
 ```
 
 ### tag: label every fit
@@ -157,7 +154,7 @@ The answer is every label that fits, which may be none.
 ```zig
 const topics = try (try client.tag(init.arena.allocator(), "Which topics appear?",
     tt.choices(&.{ "billing", "shipping" }), .{ .text = "I was charged twice and my parcel is late again." }, .{}, &diag)).answer(&diag);
-for (topics) |topic| try out.print("{s}\n", .{topic});
+for (topics) |topic| try stdout.interface.print("{s}\n", .{topic});
 ```
 
 ### score: measure along levels
@@ -167,7 +164,7 @@ Name the levels lowest first. The answer is an `f64` from 0 to 1 along them.
 ```zig
 const urgency = try (try client.score(init.arena.allocator(), "How urgent is the request?",
     tt.choices(&.{ "routine", "urgent" }), .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
-try out.print("{d}\n", .{urgency});
+try stdout.interface.print("{d}\n", .{urgency});
 ```
 
 ### filter: keep the records that pass
@@ -178,7 +175,7 @@ try out.print("{d}\n", .{urgency});
 const messages = [_][]const u8{ "Please refund my order.", "Where is my parcel?", "I was charged twice for one invoice." };
 var refunds = try client.filterAll(init.gpa, "Does the customer request a refund?", .{ .texts = &messages }, .{}, &diag);
 defer refunds.deinit();
-while (try refunds.next(&diag)) |refund| try out.print("{s}\n", .{refund.text});
+while (try refunds.next(&diag)) |refund| try stdout.interface.print("{s}\n", .{refund.text});
 ```
 
 To see every row, kept or not, read with `nextRow`, which yields each record with its row. The one-record `client.filter` returns the record when kept and `null` when not, and returns `error.Unsure` when not sure.
@@ -194,7 +191,7 @@ var by_urgency = try client.rankAll(init.gpa, "How urgent is the request?",
 defer by_urgency.deinit();
 while (try by_urgency.next(&diag)) |ranked| {
     const rank = try ranked.answer(&diag);
-    try out.print("{d} {s}\n", .{ rank, ranked.item.text });
+    try stdout.interface.print("{d} {s}\n", .{ rank, ranked.item.text });
 }
 ```
 
@@ -207,7 +204,7 @@ The answer is a `?tt.Span`: the line's text with its UTF-8 byte offsets, or `nul
 ```zig
 const action = try (try client.find(init.arena.allocator(), "Which line states the requested action?",
     .{ .text = "Morgan works for Example Group.\nPlease refund my order." }, .{}, &diag)).answer(&diag);
-if (action) |line| try out.print("{s}\n", .{line.text}) else try out.print("no line answers\n", .{});
+if (action) |line| try stdout.interface.print("{s}\n", .{line.text}) else try stdout.interface.print("no line answers\n", .{});
 ```
 
 ### annotate: fill in a form
@@ -228,7 +225,7 @@ while (try triage.next(&diag)) |filled| {
     const is_refund = try answers.get(.decide, "refund").?.answer(&diag);
     const topic = try answers.get(.choose, "topic").?.answer(&diag);
     const urgency = try answers.get(.score, "urgency").?.answer(&diag);
-    try out.print("{} {s} {d}\n", .{ is_refund, topic, urgency });
+    try stdout.interface.print("{} {s} {d}\n", .{ is_refund, topic, urgency });
 }
 ```
 
@@ -241,7 +238,7 @@ The answer is each name with its `kind`, `text`, byte offsets and probability. R
 ```zig
 const names = try (try client.recognize(init.arena.allocator(), tt.choices(&.{ "person", "organization" }),
     .{ .text = "Morgan works for Example Group." }, .{}, &diag)).answer(&diag);
-for (names) |name| try out.print("{s}: {s}\n", .{ name.kind, name.text });
+for (names) |name| try stdout.interface.print("{s}: {s}\n", .{ name.kind, name.text });
 ```
 
 ### relate: link names
@@ -252,7 +249,7 @@ Each rule names a relation and the kinds at each end. The answer is each related
 const works_for = [_]tt.RelationRule{.{ .name = "works_for", .source = "person", .target = "organization" }};
 const relations = try (try client.relate(init.arena.allocator(), &works_for,
     .{ .text = "Morgan works for Example Group.\nPlease refund my order." }, .{}, &diag)).answer(&diag);
-for (relations) |relation| try out.print("{s} --{s}--> {s}\n", .{ relation.source.text, relation.relation, relation.target.text });
+for (relations) |relation| try stdout.interface.print("{s} --{s}--> {s}\n", .{ relation.source.text, relation.relation, relation.target.text });
 ```
 
 A rule can add `.reads = "works for"` for how it reads in a sentence and `.either = true` when it holds both ways. The row's detail lists every name found, including names with no relation.
@@ -275,7 +272,7 @@ One call over the whole collection lets ThinkThen batch requests. An empty colle
 Each function takes its own options struct as the argument after the record or input:
 
 - `.field = "/text"`: a JSON Pointer to the text to judge in a JSON record.
-- `.threshold`: for decide, choose and filter, a cut such as `.{ .cut = 0.8 }` or a band such as `tt.Threshold.band(0.2, 0.8)`, which answers no below 0.2, yes above 0.8, and not sure between. Tag, find, recognize and relate take one `f64` cut.
+- `.threshold`: for decide and filter, a cut such as `.{ .cut = 0.8 }` or a band such as `tt.Threshold.band(0.2, 0.8)`, which answers no below 0.2, yes above 0.8, and not sure between. Choose, tag, find, recognize and relate take one `f64` cut.
 - `.name = "refund"`: names the question in each row's `source`.
 - `.top`: rank only.
 - `.yes_means` and `.no_means`: for decide and filter, what a yes and a no mean for this question.
@@ -284,13 +281,13 @@ Each function takes its own options struct as the argument after the record or i
 ```zig
 const is_refund = try (try client.decide(init.arena.allocator(), "Does the customer request a refund?",
     .{ .text = "Please refund my order." }, .{ .yes_means = "The customer wants money back.", .no_means = "The customer wants anything else." }, &diag)).answer(&diag);
-try out.print("{}\n", .{is_refund});
+try stdout.interface.print("{}\n", .{is_refund});
 
 var urgency_levels: std.json.ArrayHashMap([]const u8) = .{};
 try urgency_levels.map.put(init.arena.allocator(), "urgent", "The customer is out of money or waiting on a late order.");
 const urgency = try (try client.score(init.arena.allocator(), "How urgent is the request?",
     tt.choices(&.{ "routine", "urgent" }), .{ .text = "Please refund my order." }, .{ .descriptions = urgency_levels }, &diag)).answer(&diag);
-try out.print("{d}\n", .{urgency});
+try stdout.interface.print("{d}\n", .{urgency});
 ```
 
 ## Save and load questions
@@ -311,12 +308,12 @@ defer toolbox.deinit();
 
 const topic_question = (toolbox.get("topic") orelse return error.MissingQuestion).as(.choose) orelse return error.WrongQuestionKind;
 const topic = try (try client.open(.choose, init.arena.allocator(), topic_question, .{ .text = "Please refund my order." }, &diag)).answer(&diag);
-try out.print("{s}\n", .{topic});
+try stdout.interface.print("{s}\n", .{topic});
 
 const form = try toolbox.annotation(init.gpa, &diag);
 defer init.gpa.free(form.entries);
 const answers = try (try client.annotate(init.arena.allocator(), form, .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
-try out.print("{}\n", .{try answers.get(.decide, "refund").?.answer(&diag)});
+try stdout.interface.print("{}\n", .{try answers.get(.decide, "refund").?.answer(&diag)});
 ```
 
 `openAll` asks a loaded question of many records. `toolbox.toJson(allocator, &diag)` writes the toolbox back out, and `annotation` returns `error.Usage` when the toolbox holds a rank question. Keep the toolbox alive until the calls that use its questions are done.

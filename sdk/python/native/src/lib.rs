@@ -20,7 +20,7 @@ pyo3::create_exception!(
     _native,
     Error,
     PyException,
-    "A library error's family, code and message."
+    "A library error's family, code, message and HTTP status."
 );
 
 fn error(error: thinkthen::Error) -> PyErr {
@@ -28,6 +28,7 @@ fn error(error: thinkthen::Error) -> PyErr {
         error.code().family().as_str(),
         error.code().as_str(),
         error.to_string(),
+        error.http_status(),
     ))
 }
 

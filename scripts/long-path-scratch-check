@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Feature: a Windows-run script cleans a native tool's folder only through long_path_scratch."""
+import ast
+from pathlib import Path
+import re
+import sys
+from unittest.mock import patch
+
+import release_windows
+
+SCRIPTS = Path(__file__).resolve().parent
+PLAIN = {'TemporaryDirectory', 'rmtree'}
+# Windows-run scripts that only another script starts.
+CHILDREN = {'installer-test', 'qualification-readmes', 'release-windows-replay', 'source-install-check',
+            'swift-windows-consumer-check', 'windows-cli-check', 'windows-readme-input-probe'}
+# A plain use stays only where npm, Go, Swift and Zig never write, or where Windows never reaches it.
+ALLOWED = {
+    ('installer-test', "tempfile.TemporaryDirectory(prefix='thinkthen-installer-test-')"):
+        'Holds the command and its test mirror.',
+    ('kotlin_compiler.py', "tempfile.TemporaryDirectory(prefix='kotlin-compiler-')"):
+        'Holds one POM and one classpath file; Maven writes to its own repository.',
+    ('long_path_scratch.py', 'tempfile.TemporaryDirectory(prefix=prefix, dir=root)'):
+        'This is the helper.',
+    ('qualification-candidate', "tempfile.TemporaryDirectory(prefix='thinkthen-runtime-path-')"):
+        'Runs only for the macOS target.',
+    ('qualification-windows-prepare', "tempfile.TemporaryDirectory(prefix='thinkthen-singlefile-prepare-')"):
+        'Holds one project for dotnet restore; packages go to the prepared feed.',
+    ('release-check', "tempfile.TemporaryDirectory(prefix='thinkthen-candidate-install-')"):
+        'Windows returns to release_windows_check.smoke() first.',
+    ('release-installer-check', "tempfile.TemporaryDirectory(prefix='thinkthen-real-installer-')"):
+        'Holds the unpacked command.',
+    ('release_metadata.py', "tempfile.TemporaryDirectory(prefix='thinkthen-cmake-version-')"):
+        'Holds one CMake script and its output.',
+    ('release_native.py', "tempfile.TemporaryDirectory(prefix='publish-', dir=destination.parent)"):
+        'Python copies built files here, and they move out before cleanup.',
+    ('release_native.py', 'shutil.rmtree(destination)'):
+        'Replaces the built files an earlier run published.',
+    ('release_registry.py', "shutil.rmtree(base / 'package' / NOTICE, ignore_errors=True)"):
+        'Only the Linux bundle job stages registries.',
+    ('release_registry.py', "tempfile.TemporaryDirectory(prefix='thinkthen-registry-')"):
+        'Only the Linux bundle job stages registries.',
+    ('release_downloads.py', "tempfile.TemporaryDirectory(prefix='.compiler-', dir=destination.parent)"):
+        'Python unpacks the compiler here, and the tree moves out before cleanup.',
+    ('release_windows_check.py', "tempfile.TemporaryDirectory(prefix='thinkthen-windows-check-')"):
+        'Holds the command and C consumer; the SDK checks run after it closes.',
+    ('release_windows_host.py', "tempfile.TemporaryDirectory(prefix='thinkthen-sqlite-host-')"):
+        'Holds the SQLite source for one clang-cl build.',
+    ('release_windows_r.py', "tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-')"):
+        'Holds downloaded R packages.',
+    ('release_windows_r.py', "tempfile.TemporaryDirectory(prefix='thinkthen-windows-r-')"):
+        'Holds the R package source and library; only R and clang-cl write here.',
+    ('release_workflow.py', "tempfile.TemporaryDirectory(prefix='thinkthen-release-bundle-')"):
+        'Only the Linux bundle job collects archives.',
+    ('release_workflow.py', "tempfile.TemporaryDirectory(prefix='thinkthen-release-check-')"):
+        'No Windows job runs check-archive.',
+    ('source-install-check', 'shutil.rmtree(tag / name)'):
+        'Removes unpacked SDK source before any tool runs.',
+    ('windows-cli-check', "tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-')"):
+        'Only the command and PowerShell write here.',
+    ('windows-native-proof', 'shutil.rmtree(package)'):
+        'Removes the SDK copy just zipped, before Go runs.',
+    ('windows-readme-input-probe', "tempfile.TemporaryDirectory(prefix='readme-input-probe-')"):
+        'Only PowerShell and the command write here.',
+    ('windows_caller_process.py', "tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-')"):
+        'Holds the child log.',
+    ('windows_caller_process.py', "tempfile.TemporaryDirectory(prefix='thinkthen-owner-probe-')"):
+        'Holds one PowerShell probe.',
+}
+
+
+def shipped():
+    """Read the shipped checker from check_tools() itself, so a new shipped script is covered."""
+    sources = []
+    with patch.object(release_windows, 'copy', lambda source, _: sources.append(source)):
+        release_windows.check_tools(Path())
+    return {source.name for source in sources if source.parent.name == 'scripts'}
+
+
+def workflow_steps():
+    """Read the scripts a job on a Windows runner starts, so a new step is covered."""
+    names = set()
+    for workflow in (SCRIPTS.parent / '.github/workflows').glob('*.yml'):
+        for job in re.split(r'(?m)^  (?=[\w-]+:$)', workflow.read_text(encoding='utf-8')):
+            if 'runs-on: windows' in job:
+                names.update(re.findall(r'(?m)^\s+(?:run: )?(?:python3? )?scripts/([\w.-]+)', job))
+    return names
+
+
+def parsed(name):
+    path = SCRIPTS / name
+    return ast.parse(path.read_text(encoding='utf-8'), str(path))
+
+
+def with_imports(names):
+    """Follow module-level imports, so the code behind a launcher such as release-workflow is covered."""
+    pending, seen = list(names), set()
+    while pending:
+        name = pending.pop()
+        if name not in seen:
+            seen.add(name)
+            for node in parsed(name).body:
+                modules = [alias.name for alias in node.names] if isinstance(node, ast.Import) else \
+                    [node.module] if isinstance(node, ast.ImportFrom) else []
+                pending += [module + '.py' for module in modules if (SCRIPTS / (module + '.py')).is_file()]
+    return seen
+
+
+def plain_uses(name):
+    for node in ast.walk(parsed(name)):
+        if isinstance(node, ast.Call) and getattr(node.func, 'attr', getattr(node.func, 'id', '')) in PLAIN:
+            yield name, ast.unparse(node)
+
+
+found = {use for name in with_imports(shipped() | workflow_steps() | CHILDREN) for use in plain_uses(name)}
+problems = [name + ': ' + call + ': use long_path_scratch, or add this to ALLOWED with its reason'
+            for name, call in sorted(found - ALLOWED.keys())]
+problems += [name + ': ' + call + ': no longer found; remove it from ALLOWED'
+             for name, call in sorted(ALLOWED.keys() - found)]
+if problems:
+    sys.exit('\n'.join(problems))
+print('Windows-run scratch: every plain use is on the allow list with its reason')

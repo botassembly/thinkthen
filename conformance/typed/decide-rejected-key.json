@@ -1,0 +1,25 @@
+{
+  "name": "decide-rejected-key",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "status": 401,
+      "body": {
+        "message": "rejected key"
+      }
+    }
+  ],
+  "expected": {
+    "error": "backend.status",
+    "http_status": 401
+  },
+  "requests": 1
+}

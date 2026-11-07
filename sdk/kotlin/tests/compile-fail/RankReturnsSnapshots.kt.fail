@@ -1,9 +1,0 @@
-package consumer.rejected
-
-import dev.thinkthen.kotlin.*
-import kotlinx.coroutines.flow.Flow
-
-// Feature: RankReturnsSnapshots. rank gives the engine's JsonValue snapshots, never the caller's own objects.
-fun rejectedRankReturnsSnapshots(client: ThinkThen) {
-    val ranked: Flow<Ranked<String>> = client.rank("Priority?", listOf("alpha", "beta"), listOf("low", "high"))
-}

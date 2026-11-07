@@ -1,3 +1,5 @@
+//go:build cgo
+
 package thinkthen
 
 import "sort"
@@ -180,7 +182,7 @@ func (v Choose) WithField(pointer string) Choose { v.q.field = &pointer; return 
 func (v Choose) WithName(name string) Choose { v.q.name = &name; return v }
 
 // WithThreshold returns a copy using the given probability threshold.
-func (v Choose) WithThreshold(t Threshold) Choose { v.q.threshold = snapshotThreshold(t); return v }
+func (v Choose) WithThreshold(t Cut) Choose { v.q.threshold = snapshotThreshold(t); return v }
 
 // Tag holds an immutable tag question.
 type Tag struct{ q question }

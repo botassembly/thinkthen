@@ -109,6 +109,9 @@ from ._types import (
     ErrorCode as ErrorCode,
 )
 from ._types import (
+    FailedRowsWarning as FailedRowsWarning,
+)
+from ._types import (
     FilterOutcome as FilterOutcome,
 )
 from ._types import (
@@ -378,7 +381,7 @@ def choose(
     record: Record,
     *,
     choices: TypeForm[_Label],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -391,7 +394,7 @@ def choose(
     record: Record,
     *,
     choices: list[_Label] | tuple[_Label, ...],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -417,7 +420,7 @@ def choose_stream(
     records: Iterable[Record],
     *,
     choices: TypeForm[_Label],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -430,7 +433,7 @@ def choose_stream(
     records: Iterable[Record],
     *,
     choices: list[_Label] | tuple[_Label, ...],
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
@@ -818,6 +821,7 @@ __all__ = [
     "DecideQuestion",
     "DecideRow",
     "ErrorCode",
+    "FailedRowsWarning",
     "FilterOutcome",
     "FilterQuestion",
     "FilterRow",

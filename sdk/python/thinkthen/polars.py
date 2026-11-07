@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 import polars as pl
 
@@ -32,9 +32,10 @@ _SOURCE = pl.Struct(
         "name": pl.String,
     }
 )
+_CODE = pl.Enum([item.value for item in ErrorCode])
 _ERROR = pl.Struct(
     {
-        "code": pl.Enum([item.value for item in ErrorCode]),
+        "code": _CODE,
         "message": pl.String,
         "http_status": pl.Int64,
     }
@@ -47,6 +48,16 @@ _ID = pl.Struct(
         "unsigned": pl.UInt64,
     }
 )
+_FAILURE: dict[str, Any] = {
+    "position": pl.Int64,
+    "id": _ID,
+    "question": pl.String,
+    "error_code": _CODE,
+    "error_message": pl.String,
+    "error_http_status": pl.Int64,
+}
+# Polars has no metadata, so the list sits on the one object a call returns.
+_FAILURES = "_thinkthen_failures"
 
 
 def _shape(
@@ -119,18 +130,21 @@ def _labels(values: dict[str, float]) -> list[dict[str, object]]:
     return [{"label": key, "probability": value} for key, value in values.items()]
 
 
+def _identity(value: str | int | None) -> dict[str, Any] | None:
+    kind = (
+        "string"
+        if isinstance(value, str)
+        else "unsigned"
+        if isinstance(value, int) and value >= 2**63
+        else "signed"
+    )
+    return {"kind": kind, kind: value} if value is not None else None
+
+
 def _project(value: dict[str, Any], *, child: bool = False) -> dict[str, Any]:
     function = value["function"]
     if not child:
-        identity = value["id"]
-        kind = (
-            "string"
-            if isinstance(identity, str)
-            else "unsigned"
-            if isinstance(identity, int) and identity >= 2**63
-            else "signed"
-        )
-        value["id"] = {"kind": kind, kind: identity} if identity is not None else None
+        value["id"] = _identity(value["id"])
     detail = value["detail"]
     if detail is not None:
         if function in {"tag", "choose"}:
@@ -170,8 +184,30 @@ def series(
     )
 
 
+D = TypeVar("D")
+K = TypeVar("K")
+
+
+class _PolarsNamespace(ColumnMethods[pl.Series, D, K, pl.DataFrame], Generic[D, K]):
+    def _read_failures(self) -> list[dict[str, Any]]:
+        return list(getattr(self._value, _FAILURES, []))
+
+    def _write_failures(self, value: Any, entries: list[dict[str, Any]]) -> None:
+        if entries:
+            setattr(value, _FAILURES, entries)
+
+    def _failure_frame(self, entries: list[dict[str, Any]]) -> pl.DataFrame:
+        values = [{**entry, "id": _identity(entry["id"])} for entry in entries]
+        return pl.DataFrame(
+            [
+                pl.Series(name, [entry[name] for entry in values], dtype, strict=True)
+                for name, dtype in _FAILURE.items()
+            ]
+        )
+
+
 @pl.api.register_series_namespace("thinkthen")
-class ThinkThenNamespace(ColumnMethods[pl.Series, pl.Series, pl.Series]):
+class ThinkThenNamespace(_PolarsNamespace[pl.Series, pl.Series]):
     _value: pl.Series
 
     def _records(self) -> Iterable[Any]:
@@ -208,7 +244,7 @@ class ThinkThenNamespace(ColumnMethods[pl.Series, pl.Series, pl.Series]):
 
 
 @pl.api.register_dataframe_namespace("thinkthen")
-class ThinkThenFrameNamespace(ColumnMethods[pl.Series, pl.DataFrame, pl.DataFrame]):
+class ThinkThenFrameNamespace(_PolarsNamespace[pl.DataFrame, pl.DataFrame]):
     _value: pl.DataFrame
 
     def _records(self) -> Iterable[Any]:

@@ -5,7 +5,21 @@ ifneq ($(filter 1,$(THINKTHEN_R_SOURCE_NATIVE))$(THINKTHEN_COVERAGE_ROOT),)
 PROFILE = debug
 CARGO_PROFILE =
 endif
-STATLIB = $(CARGO_TARGET_DIR)/$(PROFILE)/libthinkthen_r.a
+TARGET_ROOT = $(CARGO_TARGET_DIR)
+ifeq ($(OS),Windows_NT)
+# R links with the Rtools GNU compiler, so Rust targets GNU on either host toolchain.
+# windows_raw_dylib lets the static library carry its own Windows imports.
+# A GNU host's rustc passes -lgcc_eh, which Rtools lacks, so an empty stub answers it,
+# as rextendr's template does. Release qualification covers only an MSVC host.
+GCC_STUB = engine/gcc-stub
+CARGO_TARGET = --target x86_64-pc-windows-gnu
+TARGET_ROOT = $(CARGO_TARGET_DIR)/x86_64-pc-windows-gnu
+CARGO_WINDOWS = CC_x86_64_pc_windows_gnu="$(CC)" AR_x86_64_pc_windows_gnu="$(AR)" \
+	CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="$(firstword $(CC))" \
+	LIBRARY_PATH="$${LIBRARY_PATH:-};$(CURDIR)/$(GCC_STUB)" \
+	RUSTFLAGS="$${RUSTFLAGS:-} --cfg windows_raw_dylib --print=native-static-libs"
+endif
+STATLIB = $(TARGET_ROOT)/$(PROFILE)/libthinkthen_r.a
 PKG_LIBS = $(STATLIB) $(shell sh ../tools/native-frameworks) $(THINKTHEN_COVERAGE_LIBS)
 
 all: $(SHLIB)
@@ -16,6 +30,7 @@ $(SHLIB): $(STATLIB)
 
 $(STATLIB):
 	mkdir -p engine/.cargo "$(CARGO_TARGET_DIR)"
+	$(if $(GCC_STUB),mkdir -p $(GCC_STUB) && touch $(GCC_STUB)/libgcc_eh.a)
 	@test -d engine/vendor || tar -xzf engine/vendor.tar.gz -C engine
 	cp engine/vendor-config.toml engine/.cargo/config.toml
 	cd engine && \
@@ -26,4 +41,4 @@ $(STATLIB):
 	  else \
 	    export RUSTFLAGS="$${RUSTFLAGS:-} --remap-path-prefix=$$(pwd)=$$THINKTHEN_COVERAGE_ROOT"; \
 	  fi; \
-	fi && CARGO_NET_OFFLINE=true cargo build -p thinkthen-r --locked $(CARGO_PROFILE) --target-dir "$(CARGO_TARGET_DIR)" --message-format=json-render-diagnostics >"$(CARGO_TARGET_DIR)/thinkthen-r-artifacts.json"
+	fi && $(CARGO_WINDOWS) CARGO_NET_OFFLINE=true cargo build -p thinkthen-r --locked $(CARGO_PROFILE) $(CARGO_TARGET) --target-dir "$(CARGO_TARGET_DIR)" --message-format=json-render-diagnostics >"$(CARGO_TARGET_DIR)/thinkthen-r-artifacts.json"

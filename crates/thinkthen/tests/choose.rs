@@ -6,7 +6,7 @@ pub mod loopback;
 
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{Choose, Engine, Key, Outcome, Record, Settings, Threshold};
+use thinkthen::{Choose, Cut, Engine, Key, Outcome, Question, Record, Settings};
 
 fn engine(server: &Loopback) -> Engine {
     Settings::default()
@@ -22,37 +22,30 @@ fn the_largest_probability_wins_with_first_option_breaking_ties() {
         (
             json!({"z": 0.2, "a": 0.8}),
             ["z", "a"],
-            Threshold::cut(0.5).unwrap(),
+            Cut::new(0.5).unwrap(),
             Some("a"),
             0.8,
         ),
         (
             json!({"z": 0.5, "a": 0.5}),
             ["z", "a"],
-            Threshold::cut(0.5).unwrap(),
+            Cut::new(0.5).unwrap(),
             Some("z"),
             0.5,
         ),
         (
             json!({"z": 0.5, "a": 0.5}),
             ["a", "z"],
-            Threshold::cut(0.5).unwrap(),
+            Cut::new(0.5).unwrap(),
             Some("a"),
             0.5,
         ),
         (
             json!({"z": 0.3, "a": 0.7}),
             ["z", "a"],
-            Threshold::cut(0.8).unwrap(),
+            Cut::new(0.8).unwrap(),
             None,
             0.7,
-        ),
-        (
-            json!({"z": 0.2, "a": 0.8}),
-            ["z", "a"],
-            Threshold::band(0.2, 0.8).unwrap(),
-            Some("a"),
-            0.8,
         ),
     ] {
         let server =
@@ -86,7 +79,7 @@ fn the_largest_probability_wins_with_first_option_breaking_ties() {
 }
 
 #[test]
-fn invalid_questions_are_refused_at_construction() {
+fn invalid_questions_and_threshold_bands_are_refused_at_construction() {
     for (text, labels) in [
         ("Which?", vec!["a", "a"]),
         ("Which?", vec![]),
@@ -105,6 +98,8 @@ fn invalid_questions_are_refused_at_construction() {
             .as_str(),
         "usage.question"
     );
+    let error = Question::from_json(r#"{"function":"choose","question":"Which?","choices":["a","b"],"threshold":{"low":0.2,"high":0.8}}"#).unwrap_err();
+    assert_eq!(error.code().as_str(), "usage.threshold");
 }
 
 #[test]

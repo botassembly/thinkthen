@@ -258,6 +258,67 @@ def test_async_input_conversion_and_explicit_client_routing() -> None:
     asyncio.run(scenario())
 
 
+def test_async_default_client_belongs_to_the_event_loop_that_set_it() -> None:
+    async def make() -> tt.AsyncClient:
+        selected = tt.AsyncClient(backend="stub")
+        aio.set_default_client(selected)
+        return selected
+
+    async def ask() -> tt.DecideRow:
+        return await aio.decide("Ready?", "body")
+
+    first = asyncio.new_event_loop()
+    second = asyncio.new_event_loop()
+    try:
+        selected = first.run_until_complete(make())
+        assert first.run_until_complete(ask()).source.backend is tt.Backend.STUB
+        with pytest.raises(tt.UsageError, match="THINKTHEN_API_KEY"):
+            second.run_until_complete(ask())
+        assert first.run_until_complete(ask()).source.backend is tt.Backend.STUB
+        first.run_until_complete(aio.aclose_default_client())
+        with pytest.raises(tt.UsageError) as raised:
+            first.run_until_complete(selected.decide("Ready?", "closed"))
+        assert raised.value.code is tt.ErrorCode.USAGE_CLOSED
+        with pytest.raises(tt.UsageError, match="THINKTHEN_API_KEY"):
+            first.run_until_complete(ask())
+    finally:
+        first.close()
+        second.close()
+
+
+def test_async_default_client_refuses_other_values_and_needs_a_loop() -> None:
+    async def scenario(wrong: object) -> None:
+        aio.set_default_client(cast(Any, wrong))
+
+    with (
+        tt.Client(backend="stub") as sync_client,
+        pytest.raises(TypeError, match="AsyncClient"),
+    ):
+        asyncio.run(scenario(sync_client))
+    with pytest.raises(TypeError, match="AsyncClient"):
+        asyncio.run(scenario(None))
+    selected = tt.AsyncClient(backend="stub")
+    with pytest.raises(RuntimeError, match="no running event loop"):
+        aio.set_default_client(selected)
+    asyncio.run(selected.aclose())
+
+
+def test_async_default_client_replaces_and_closes_as_the_sync_call_does() -> None:
+    async def scenario() -> None:
+        async with tt.AsyncClient(backend="stub") as replaced:
+            aio.set_default_client(replaced)
+            async with tt.AsyncClient(backend="stub") as current:
+                aio.set_default_client(current)
+                assert (await replaced.decide("Ready?", "still open")).ok
+            with pytest.raises(tt.UsageError) as raised:
+                await aio.decide("Ready?", "closed")
+            assert raised.value.code is tt.ErrorCode.USAGE_CLOSED
+            assert (await aio.decide("Ready?", "body", client=replaced)).ok
+            await aio.aclose_default_client()
+
+    asyncio.run(scenario())
+
+
 def test_async_task_cancellation_closes_held_transport() -> None:
     async def scenario(server: Held) -> None:
         async with tt.AsyncClient(

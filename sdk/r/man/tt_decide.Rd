@@ -66,13 +66,13 @@ tt_relate_rows(x, rules, ..., threshold = NULL, field = NULL,
 tt_keep(x, question, ..., threshold = NULL, yes_means = NULL, no_means = NULL, field = NULL, client = NULL, .progress = TRUE, name = NULL, errors = "error")
 }
 \arguments{
-\item{errors}{"error" raises a condition carrying every outcome and failed row; "na" returns missing answers or drops failed records from a kept-only filter.}
+\item{errors}{"error" raises a condition carrying every outcome and failed row; "na" returns missing answers or drops failed records from a kept-only filter, warns once with every failed code, and keeps the failures for \code{\link{tt_failures}}.}
 \item{yes_means, no_means}{Optional descriptions of true and false answers for decide and filter.}
 \item{descriptions}{A named character vector mapping domain labels or levels to descriptions. Unknown names are refused.}
 \item{x}{A character vector, list of records or data frame.}
 \item{question}{Question text or an admitted question of the matching function.}
 \item{...}{Named engine options. Unknown options are refused before any backend call.}
-\item{threshold}{A numeric probability cut, or a low and high pair for decide, choose and filter.}
+\item{threshold}{A numeric probability cut, or a low and high pair for decide and filter.}
 \item{field}{An optional JSON Pointer selecting field within each record.}
 \item{client}{A client from \code{tt_client()}. NULL uses the scoped or package default.}
 \item{.progress}{Whether to display progress in an interactive session.}

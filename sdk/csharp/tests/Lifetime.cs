@@ -85,6 +85,45 @@ internal static partial class Program
         await DisposalBeforeFirstEnumeration();
         await SourceFailure();
         await AdmissionRace(loopback);
+        await DroppedStream();
+    }
+
+    // Feature: a stream dropped without disposal cancels its call and ends its driver thread.
+    private static async Task DroppedStream()
+    {
+        var encoder = new ThreadRecordConverter();
+        await using var client = new ThinkThenClient(new()
+        {
+            Backend = Backend.Stub,
+            Batch = 1,
+            Json = new System.Text.Json.JsonSerializerOptions { Converters = { encoder } }
+        });
+        TaskCompletionSource cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await DropAfterFirstRow(client, cancelled);
+        Task limit = Task.Delay(TimeSpan.FromSeconds(10));
+        while (!cancelled.Task.IsCompleted && !limit.IsCompleted)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            await Task.WhenAny(cancelled.Task, Task.Delay(10));
+        }
+        Check(cancelled.Task.IsCompleted, "dropped stream never cancelled its call");
+        Check(encoder.Threads[0].Join(TimeSpan.FromSeconds(10)), "dropped stream left its driver thread running");
+    }
+
+    // The enumerator must be unreachable once this returns, so it lives only in this frame.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task DropAfterFirstRow(ThinkThenClient client, TaskCompletionSource cancelled)
+    {
+        async IAsyncEnumerable<ThreadRecord> Input([EnumeratorCancellation] CancellationToken token = default)
+        {
+            // This token is the one whose registration calls the native cancel.
+            token.Register(() => cancelled.TrySetResult());
+            yield return new ThreadRecord(0);
+            await Task.Delay(Timeout.Infinite, token);
+        }
+        var iterator = client.DecideStreamAsync("Ready?", Input()).GetAsyncEnumerator();
+        Check(await iterator.MoveNextAsync(), "dropped stream returned no first row");
     }
 
     private static async Task AdmissionRace(string loopback)

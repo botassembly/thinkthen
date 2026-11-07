@@ -175,8 +175,8 @@ impl Record {
     /// null, becomes the row's id, and `on` names its field. A string is judged as its text and
     /// any other value as its JSON spelling.
     ///
-    /// A line that is not JSON fails with `usage.record`, and a pointer that finds
-    /// nothing fails with `usage.missing`. Either fails only this record's row.
+    /// A line that is not JSON fails with `record.json`, and a pointer that finds
+    /// nothing fails with `record.missing`. Either fails only this record's row.
     #[must_use]
     pub(crate) fn json(line: &str, on: &Pointer) -> Self {
         let Ok(record) = serde_json::from_str::<&RawValue>(line) else {
@@ -251,7 +251,7 @@ impl Record {
     /// Read a pointer within this record's selected field. Text stays text.
     ///
     /// # Errors
-    /// Returns the record's admission error, or `usage.missing` for an absent member.
+    /// Returns the record's admission error, or `record.missing` for an absent member.
     pub(crate) fn field_at(&self, on: &Pointer) -> Result<String, Error> {
         let text = self.field.as_ref().map_err(Clone::clone)?;
         if on.tokens.is_empty() {

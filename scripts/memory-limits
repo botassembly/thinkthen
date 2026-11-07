@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""Measure the command's peak memory at the workbook and record limits.
+
+Run by hand through the job runner, not from a gate, on Linux:
+scripts/native-tools-env scripts/memory-limits
+Every workload uses the stub backend, so it sends no request. Exits 1 if one fails.
+Files are streamed because a spawned child's peak starts from this process's own.
+"""
+
+import hashlib
+import math
+import os
+from pathlib import Path
+import platform
+import random
+import re
+import subprocess
+import sys
+import tempfile
+import time
+import zipfile
+
+ROOT = Path(__file__).resolve().parent.parent
+PAGES = ('docs/resource-observations.md', 'site/src/content/docs/command-line/file-types.mdx')
+ROWS = 100_000
+ANSWER = rb'(?:TRUE|FALSE)'
+SPREADSHEET = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+RELATIONSHIPS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+PACKAGE = 'http://schemas.openxmlformats.org/package/2006'
+OFFICE_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml'
+PARTS = {
+    '[Content_Types].xml': f'<Types xmlns="{PACKAGE}/content-types">'
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    '<Default Extension="xml" ContentType="application/xml"/>'
+    f'<Override PartName="/xl/workbook.xml" ContentType="{OFFICE_TYPE}.sheet.main+xml"/>'
+    f'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="{OFFICE_TYPE}.worksheet+xml"/>'
+    f'<Override PartName="/xl/sharedStrings.xml" ContentType="{OFFICE_TYPE}.sharedStrings+xml"/></Types>',
+    '_rels/.rels': f'<Relationships xmlns="{PACKAGE}/relationships">'
+    f'<Relationship Id="rId1" Type="{RELATIONSHIPS}/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    'xl/workbook.xml': f'<workbook xmlns="{SPREADSHEET}" xmlns:r="{RELATIONSHIPS}"><sheets>'
+    '<sheet name="Intake" sheetId="1" r:id="rId1"/></sheets></workbook>',
+    'xl/_rels/workbook.xml.rels': f'<Relationships xmlns="{PACKAGE}/relationships">'
+    f'<Relationship Id="rId1" Type="{RELATIONSHIPS}/worksheet" Target="worksheets/sheet1.xml"/>'
+    f'<Relationship Id="rId2" Type="{RELATIONSHIPS}/sharedStrings" Target="sharedStrings.xml"/></Relationships>',
+}
+
+
+class Failed(Exception):
+    """A workload did not end the way the command promises."""
+
+
+def source_limit(path, name):
+    source = (ROOT / path).read_text(encoding='utf-8')
+    product = re.search(rf'const {name}: \w+ = ([0-9_ *]+);', source).group(1)
+    return math.prod(int(factor) for factor in product.split('*'))
+
+
+def require(condition, message):
+    if not condition:
+        raise Failed(message)
+
+
+def measured(name, binary, arguments, scratch):
+    """Run one workload alone and return its exit status, stderr and peak."""
+    log = scratch / 'stderr'
+    environment = {'PATH': os.environ['PATH'], 'HOME': str(scratch), 'TMPDIR': str(scratch)}
+    started = time.monotonic()
+    with log.open('wb') as stderr:
+        child = subprocess.Popen([binary, *arguments], stdin=subprocess.DEVNULL,
+                                 stdout=subprocess.DEVNULL, stderr=stderr, env=environment)
+        _, status, usage = os.wait4(child.pid, 0)
+    child.returncode = os.waitstatus_to_exitcode(status)
+    peak = usage.ru_maxrss * 1024
+    print(f'{name}: exit {child.returncode}, peak {peak} bytes ({peak / 2**20:.1f} MiB), '
+          f'{time.monotonic() - started:.1f} seconds', flush=True)
+    return child.returncode, log.read_text(encoding='utf-8', errors='replace')[-2000:]
+
+
+def write_workbook(path, text_bytes):
+    pool = random.Random(598).randbytes(text_bytes).hex()
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED, compresslevel=1) as workbook:
+        for name, contents in PARTS.items():
+            workbook.writestr(name, contents)
+        with workbook.open('xl/worksheets/sheet1.xml', 'w') as sheet:
+            sheet.write(f'<worksheet xmlns="{SPREADSHEET}"><dimension ref="A1:A{ROWS + 1}"/><sheetData>'
+                        '<row r="1"><c r="A1" t="inlineStr"><is><t>Body</t></is></c></row>'.encode())
+            for row in range(2, ROWS + 2):
+                sheet.write(f'<row r="{row}"><c r="A{row}" t="s"><v>{row - 2}</v></c></row>'.encode())
+            sheet.write(b'</sheetData></worksheet>')
+        with workbook.open('xl/sharedStrings.xml', 'w') as strings:
+            strings.write(f'<sst xmlns="{SPREADSHEET}" count="{ROWS}" uniqueCount="{ROWS}">'.encode())
+            for index in range(ROWS):
+                label = f'Message {index:06d} '
+                start = index % text_bytes
+                text = label + pool[start:start + text_bytes - len(label)]
+                strings.write(f'<si><t>{text}</t></si>'.encode())
+            strings.write(b'</sst>')
+
+
+def workbook_workload(binary, limits):
+    # Each entry counts its text and a fixed cost against the table limit.
+    text_bytes = limits['shared'] // ROWS - limits['entry']
+    held = ROWS * (text_bytes + limits['entry'])
+    print(f'workbook: {ROWS} rows, {text_bytes} bytes each, {held} of {limits["shared"]} limit bytes')
+    with tempfile.TemporaryDirectory(prefix='memory-limits-') as folder:
+        scratch = Path(folder)
+        source, output = scratch / 'limit.xlsx', scratch / 'limit.answers.xlsx'
+        write_workbook(source, text_bytes)
+        status, stderr = measured('workbook', binary, [
+            'decide', 'Ready?', '--backend', 'stub', '--from', 'xlsx', str(source), '--sheet', 'Intake',
+            '--column', 'Body', '--into', 'ready', '--output', str(output)], scratch)
+        require(status == 0, f'workbook exited {status}: {stderr}')
+        with zipfile.ZipFile(source) as before, zipfile.ZipFile(output) as after:
+            name = 'xl/sharedStrings.xml'
+            require(before.getinfo(name).CRC == after.getinfo(name).CRC, 'workbook strings changed')
+            sheet = after.read('xl/worksheets/sheet1.xml')
+        rows, answers = sheet.count(b'<row '), len(re.findall(rb'<c r="B[0-9]+"', sheet))
+        require((rows, answers) == (ROWS + 1, ROWS + 1), f'workbook has {rows} rows, {answers} answers')
+
+
+def write_chunks(handle, digest, data, size):
+    chunk = data * (2**20 // len(data))
+    while size:
+        part = chunk[:min(size, len(chunk))]
+        handle.write(part)
+        digest.update(part)
+        size -= len(part)
+
+
+def record_workload(name, binary, limit, judged):
+    """Hold one record of exactly the limit in the judged or in an unjudged column."""
+    with tempfile.TemporaryDirectory(prefix='memory-limits-') as folder:
+        scratch = Path(folder)
+        source, output = scratch / 'limit.csv', scratch / 'limit.answers.csv'
+        digest = hashlib.sha256()
+        with source.open('wb') as table:
+            table.write(b'Body,Attachment\nfirst,small\n')
+            if judged:
+                write_chunks(table, digest, b'x', limit - len(b',small'))
+                table.write(b',small')
+                digest.update(b',small')
+            else:
+                table.write(b'Ready for review,')
+                digest.update(b'Ready for review,')
+                write_chunks(table, digest, b'x', limit - len(b'Ready for review,'))
+            table.write(b'\nlast,small\n')
+        status, stderr = measured(name, binary, [
+            'decide', 'Ready?', '--backend', 'stub', '--from', 'csv', str(source),
+            '--column', 'Body', '--into', 'ready', '--threshold', '0.5', '--output', str(output)], scratch)
+        # A single threshold makes every answered row yes or no, so an empty cell means failed.
+        # Every backend refuses a judged text larger than one request.
+        expected = 6 if judged else 0
+        require(status == expected, f'{name} exited {status}, not {expected}: {stderr}')
+        named = re.findall(r'^thinkthen: ([a-z.-]+): row ([0-9]+): ', stderr, re.MULTILINE)
+        require(named == ([('record.too-large', '3')] if judged else []), f'{name} named {named}: {stderr}')
+        kept = hashlib.sha256()
+        with output.open('rb') as table:
+            require(table.readline() == b'Body,Attachment,ready\n', f'{name} header changed')
+            require(re.fullmatch(rb'first,small,' + ANSWER + rb'\n', table.readline()),
+                    f'{name} first row has no answer')
+            remaining = limit
+            while remaining:
+                part = table.read(min(remaining, 2**20))
+                require(part, f'{name} record was cut short')
+                kept.update(part)
+                remaining -= len(part)
+            rest = table.read()
+        require(kept.digest() == digest.digest(), f'{name} record changed')
+        cell = b'' if judged else ANSWER
+        require(re.fullmatch(b',' + cell + rb'\nlast,small,' + ANSWER + rb'\n', rest),
+                f'{name} rows after the record: {rest!r}')
+
+
+def machine():
+    memory = re.search(r'MemTotal:\s+([0-9]+) kB', Path('/proc/meminfo').read_text(encoding='utf-8'))
+    libc = ' '.join(platform.libc_ver())
+    return (f'{platform.system()} {platform.release()} {platform.machine()}, {libc}, '
+            f'{os.cpu_count()} cores, {int(memory.group(1)) / 2**20:.1f} GiB memory')
+
+
+def main():
+    if sys.platform != 'linux':
+        sys.exit('memory-limits reads Linux peak memory; run it on the Linux build machine')
+    limits = {
+        'shared': source_limit('crates/thinkthen/src/files/xlsx.rs', 'MAX_SHARED_BYTES'),
+        'entry': source_limit('crates/thinkthen/src/files/xlsx.rs', 'SHARED_ENTRY_BYTES'),
+        'record': source_limit('crates/thinkthen/src/files/mod.rs', 'MAX_RECORD_BYTES'),
+    }
+    for page in PAGES:
+        text = (ROOT / page).read_text(encoding='utf-8')
+        for limit in (limits['shared'], limits['record']):
+            if f'{limit // 2**20} MiB' not in text:
+                sys.exit(f'{page} does not state the {limit // 2**20} MiB limit')
+    subprocess.run(['cargo', 'build', '--release', '--locked', '-p', 'thinkthen', '--bin', 'thinkthen'],
+                   cwd=ROOT, check=True)
+    binary = str(Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')).resolve() / 'release/thinkthen')
+    version = subprocess.run([binary, '--version'], check=True, capture_output=True, text=True).stdout.strip()
+    print(f'machine: {machine()}\ncommand: {version}, release build', flush=True)
+    failed = False
+    for name, workload, arguments in (
+            ('workbook', workbook_workload, (binary, limits)),
+            ('record-unjudged', record_workload, ('record-unjudged', binary, limits['record'], False)),
+            ('record-judged', record_workload, ('record-judged', binary, limits['record'], True))):
+        try:
+            workload(*arguments)
+        except Failed as failure:
+            print(f'FAILED {name}: {failure}', flush=True)
+            failed = True
+    sys.exit(1 if failed else 0)
+
+
+if __name__ == '__main__':
+    main()

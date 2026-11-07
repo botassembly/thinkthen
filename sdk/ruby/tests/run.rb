@@ -12,6 +12,7 @@ isolated_ruby_environment do
   require_relative "lifecycle"
   require_relative "input_interruption"
   require_relative "traversal_lifetime"
+  require_relative "exit_lifetime"
   require_relative "allocator"
   require_relative "toolbox_json"
   require_relative "contracts"
@@ -34,6 +35,10 @@ isolated_ruby_environment do
   ruby_filter_rows
   ruby_row_values
   ruby_abandoned_streams
+  ruby_close_during_input
+  ruby_killed_readers
+  ruby_exit_with_open_stream
+  ruby_killed_helper
   ruby_single_admission
   ruby_fork_ownership
   ruby_enumeration
@@ -45,6 +50,7 @@ isolated_ruby_environment do
   ruby_reader_lifetime
   ruby_completion_interruption
   ruby_repeated_interruption
+  ruby_repeated_interruption(proc { |worker| worker.kill })
   ruby_scheduler_cancellation
   ruby_execution_names
   ruby_conversion_contract

@@ -3,8 +3,57 @@
 #[path = "../../loopback/src/lib.rs"]
 pub mod loopback;
 
+use serde_json::Value;
+use std::collections::BTreeSet;
+use std::path::Path;
 use std::time::Duration;
-use thinkthen::{BackendName, Decide, Key, Record, Retry, Settings};
+use thinkthen::{BackendName, Code, Decide, Key, Record, Retry, Settings};
+
+/// Gather each `code` or `error` string in a shared case.
+fn case_codes(value: &Value, found: &mut BTreeSet<String>) {
+    match value {
+        Value::Array(items) => items.iter().for_each(|item| case_codes(item, found)),
+        Value::Object(fields) => {
+            for (name, field) in fields {
+                match field.as_str() {
+                    Some(code) if name == "code" || name == "error" => {
+                        found.insert(code.to_owned());
+                    }
+                    _ => case_codes(field, found),
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+#[test]
+fn shared_cases_carry_only_registry_codes() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../conformance");
+    let mut folders = vec![root];
+    let mut found = BTreeSet::new();
+    while let Some(folder) = folders.pop() {
+        for entry in std::fs::read_dir(folder).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                folders.push(path);
+            } else if path
+                .extension()
+                .is_some_and(|extension| extension == "json")
+            {
+                let case = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+                case_codes(&case, &mut found);
+            }
+        }
+    }
+    // One code from each spelling, so a walk that reads nothing cannot pass.
+    for code in ["usage.question", "local.cancelled", "backend.transport"] {
+        assert!(found.contains(code), "{code} left the shared cases");
+    }
+    found.retain(|code| !Code::ALL.iter().any(|known| known.as_str() == code));
+    assert!(found.is_empty(), "not in the registry: {found:?}");
+}
+
 #[test]
 fn settings_admission_preserves_distinct_codes() {
     for (raw, code) in [

@@ -170,6 +170,7 @@ for name in manifest["cases"]:
                                         env=dict(environment, THINKTHEN_TEST_URL=url))))
             if isinstance(case["expected"], dict):
                 assert actual.get("error") == case["expected"]["error"], (name, provider, actual)
+                assert actual.get("http_status") == case["expected"].get("http_status"), (name, provider, actual)
                 assert actual["family"] == f"thinkthen_{families[actual['error']]}_error", actual
                 assert not actual.get("rows"), (name, provider, actual)
                 server.stdin.write("count\n")

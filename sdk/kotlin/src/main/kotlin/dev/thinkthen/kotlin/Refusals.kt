@@ -24,19 +24,19 @@ public fun ThinkThen.decide(question: String, record: Flow<*>, threshold: Thresh
 
 /** Refuses a list or other collection as one record: pass many records to [chooseStream]. */
 @Deprecated("A one-record call takes one record; pass many records to chooseStream", ReplaceWith("chooseStream(question, record, choices)"), DeprecationLevel.ERROR)
-public fun ThinkThen.choose(question: String, record: Iterable<*>, choices: List<String>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
+public fun ThinkThen.choose(question: String, record: Iterable<*>, choices: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
 
 /** Refuses an array as one record: pass many records to [chooseStream]. */
 @Deprecated("A one-record call takes one record; pass many records to chooseStream", ReplaceWith("chooseStream(question, record, choices)"), DeprecationLevel.ERROR)
-public fun ThinkThen.choose(question: String, record: Array<*>, choices: List<String>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
+public fun ThinkThen.choose(question: String, record: Array<*>, choices: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
 
 /** Refuses a sequence as one record: pass many records to [chooseStream]. */
 @Deprecated("A one-record call takes one record; pass many records to chooseStream", ReplaceWith("chooseStream(question, record, choices)"), DeprecationLevel.ERROR)
-public fun ThinkThen.choose(question: String, record: Sequence<*>, choices: List<String>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
+public fun ThinkThen.choose(question: String, record: Sequence<*>, choices: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
 
 /** Refuses a flow as one record: pass many records to [chooseStream]. */
 @Deprecated("A one-record call takes one record; pass many records to chooseStream", ReplaceWith("chooseStream(question, record, choices)"), DeprecationLevel.ERROR)
-public fun ThinkThen.choose(question: String, record: Flow<*>, choices: List<String>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
+public fun ThinkThen.choose(question: String, record: Flow<*>, choices: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Nothing = refusedMany()
 
 /** Refuses a list or other collection as one record: pass many records to [tagStream]. */
 @Deprecated("A one-record call takes one record; pass many records to tagStream", ReplaceWith("tagStream(question, record, labels)"), DeprecationLevel.ERROR)

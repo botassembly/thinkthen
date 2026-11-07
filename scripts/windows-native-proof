@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from csharp_dependencies import prepare_project
+from jvm_repository import consumer as stage_jvm_consumer
 import hashlib
 import json
 import shutil
@@ -13,8 +14,8 @@ import xml.etree.ElementTree as ET
 import zipfile
 from functools import partial
 
-from release_windows_cache import check_cache
-from release_windows_sdks import environment, run, runtime_environment
+from release_windows_cache import check_cache, check_elevated
+from release_windows_sdks import environment, go_temporary_cache, run, runtime_environment
 from release_native import source_inputs, stage_outputs
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +50,7 @@ def nuget_config(path, feeds=()):
     ET.ElementTree(config).write(path, encoding='unicode')
 
 
-def go(scratch, native, env, runtime):
+def go(scratch, native, env, runtime, check=None):
     package = scratch / 'package'
     shutil.copytree(ROOT / 'sdk/go/thinkthen', package, ignore=shutil.ignore_patterns('tests'))
     copy(native, package / 'native/library')
@@ -67,15 +68,17 @@ def go(scratch, native, env, runtime):
     build('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(package), cwd=consumer, env=env)
     binary = scratch / 'Consumer.exe'
     build('go', 'test', '-mod=mod', '-c', '-o', binary, cwd=consumer, env=env)
-    check_cache([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=30m'],
-                scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
-                                                 'THINKTHEN_CASES': str(ROOT / 'conformance')}, 'library.dll')
+    (check or check_cache)([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=30m'],
+                           scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
+                                                            'THINKTHEN_CASES': str(ROOT / 'conformance')}, 'library.dll')
+    go_temporary_cache(partial(run, cwd=scratch, env=runtime, resolve_path=env['PATH']), binary)
 
 
-def jvm(scratch, native, env, runtime):
+def jvm(scratch, native, env, runtime, check=None):
     source = scratch / 'source/sdk'
     for name in ('java', 'kotlin'):
-        shutil.copytree(ROOT / 'sdk' / name, source / name, ignore=shutil.ignore_patterns('target'))
+        shutil.copytree(ROOT / 'sdk' / name, source / name, ignore=shutil.ignore_patterns('target', 'kotlin-tests'))
+    stage_jvm_consumer(ROOT, source / 'java/consumer')
     build(sys.executable, ROOT / 'scripts/jvm-generated', source / 'java', cwd=scratch, env=env)
     copy(native, source / 'java/library/target/classes/io/thinkthen/native/windows-amd64/thinkthen_ffi.dll')
     repository = scratch / 'm2'
@@ -96,9 +99,9 @@ def jvm(scratch, native, env, runtime):
     classes = os.pathsep.join([str(installed), *jars])
     java = shutil.which('java', path=env['PATH'])
     for name in ('ConsumerCases', 'KotlinCasesKt'):
-        check_cache([java, '--enable-native-access=ALL-UNNAMED', '-cp', classes,
-                     name, ROOT / 'construction/stub.json', '--stub-only'],
-                    scratch / (name + '-cache-proof'), runtime, 'thinkthen_ffi.dll')
+        (check or check_cache)([java, '--enable-native-access=ALL-UNNAMED', '-cp', classes,
+                                name, ROOT / 'construction/stub.json', '--stub-only'],
+                               scratch / (name + '-cache-proof'), runtime, 'thinkthen_ffi.dll')
 
 
 def csharp(scratch, native, env, runtime):
@@ -132,6 +135,27 @@ def csharp(scratch, native, env, runtime):
               cwd=scratch, env=runtime, resolve_path=env['PATH']), end='')
 
 
+def consumers(scratch, native, env, runtime):
+    """Build Go, Java and Kotlin and leave their runs to the elevated parent."""
+    found = []
+
+    def record(command, root, environment, filename):
+        found.append({'command': list(map(str, command)), 'root': str(root), 'environment': environment,
+                      'filename': filename})
+
+    go(scratch, native, env, runtime, record)
+    jvm(scratch, native, env, runtime, record)
+    (scratch / 'consumers.json').write_text(json.dumps(found), encoding='utf-8')
+
+
+def normal_probe(scratch):
+    """Before any build, open this proof's own empty folder to a normal user and check that user runs."""
+    from windows_caller_process import probe
+    (scratch / 'normal-probe').mkdir(parents=True)
+    subprocess.run(['icacls', str(scratch), '/grant', os.environ['USERNAME'] + ':(OI)(CI)F', '/T', '/Q'], check=True)
+    probe(ROOT, dict(os.environ), normal=scratch / 'normal-probe')
+
+
 def main():
     if os.name != 'nt':
         raise SystemExit('This proof requires native Windows')
@@ -143,10 +167,15 @@ def main():
         probe(ROOT, dict(os.environ))
         return
     phase, folder = arguments
-    if phase in ('go', 'jvm', 'csharp') and not isolated:
+    if phase in ('go', 'jvm', 'csharp', 'elevated') and not isolated:
         from windows_caller_process import launch
+        if phase == 'elevated':
+            normal_probe(Path(folder).resolve() / phase)
         launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', phase, folder],
                cwd=ROOT, env=dict(os.environ))
+        if phase == 'elevated':
+            check_elevated(json.loads((Path(folder).resolve() / phase / 'consumers.json').read_text(encoding='utf-8')))
+            print('Windows elevated cache: every run answered', flush=True)
         return
     output = Path(folder).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -187,14 +216,14 @@ def main():
                               'sha256': hashlib.sha256((output / 'cli/thinkthen.exe').read_bytes()).hexdigest()}), flush=True)
         return
     scratch = output / phase
-    scratch.mkdir()
+    scratch.mkdir(exist_ok=phase == 'elevated')
     env = environment(scratch)
     # Maven's Windows launcher and the single-file apphost need runtime locations.
     for name in ('JAVA_HOME', 'DOTNET_ROOT', 'DOTNET_ROOT_X64'):
         if name in os.environ: env[name] = os.environ[name]
     runtime = runtime_environment(scratch, env)
-    {'go': go, 'jvm': jvm, 'csharp': csharp}[phase](scratch, native, env, runtime)
-    print('Windows installed ' + phase + ': proof passed', flush=True)
+    {'go': go, 'jvm': jvm, 'csharp': csharp, 'elevated': consumers}[phase](scratch, native, env, runtime)
+    print('Windows installed ' + phase + ': ' + ('consumers built' if phase == 'elevated' else 'proof passed'), flush=True)
 
 
 if __name__ == '__main__':

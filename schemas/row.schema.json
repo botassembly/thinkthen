@@ -1083,6 +1083,26 @@
           "const": "usage.option"
         },
         {
+          "description": "usage.column",
+          "type": "string",
+          "const": "usage.column"
+        },
+        {
+          "description": "usage.sheet",
+          "type": "string",
+          "const": "usage.sheet"
+        },
+        {
+          "description": "usage.output",
+          "type": "string",
+          "const": "usage.output"
+        },
+        {
+          "description": "usage.table",
+          "type": "string",
+          "const": "usage.table"
+        },
+        {
           "description": "record.json",
           "type": "string",
           "const": "record.json"

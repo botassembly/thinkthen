@@ -45,9 +45,9 @@ fn invalid_native_input_is_a_failed_record() {
         .unwrap();
     child.stdin.take().unwrap().write_all(&input).unwrap();
     let output = child.wait_with_output().unwrap();
-    assert_eq!(output.status.code(), Some(6));
+    assert_eq!(output.status.code().map(i64::from), case["exit"].as_i64());
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(row["error"]["code"], "record.invalid");
+    assert_eq!(row["error"]["code"], case["code"]);
 }
 
 #[test]

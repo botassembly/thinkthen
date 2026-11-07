@@ -133,10 +133,8 @@ class [[nodiscard]] choose : public detail::question<choose> {
     choose(std::string_view text, const std::vector<std::string>& choices) : question(THINKTHEN_FUNCTION_CHOOSE, text) {
         add(choices, thinkthen_question_add_choice); complete();
     }
-    /// Return a question with this cutoff or not-sure band.
-    [[nodiscard]] choose threshold(thinkthen::threshold value) const { return changed([&](auto* q) { value.apply(q); }); }
-    /// Return a question with this cutoff or not-sure band.
-    [[nodiscard]] choose threshold(double value) const { return threshold(thinkthen::threshold::cutoff(value)); }
+    /// Return a question with this cutoff.
+    [[nodiscard]] choose threshold(double value) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_cut, q, value); }); }
 };
 /// An immutable tag question admitted and validated by the engine.
 class [[nodiscard]] tag : public detail::question<tag> {

@@ -13,14 +13,26 @@
 tt_answer <- function(rows, errors = "error") {
   producer <- .tt_result(rows)
   errors <- .tt_errors(errors)
-  .tt_failures(rows, errors)
-  if (producer == "annotate") return(.tt_annotation_answers(rows))
-  if (producer == "rank") {
+  answers <- if (producer == "annotate") {
+    .tt_annotation_answers(rows)
+  } else if (producer == "rank") {
     size <- attr(rows, ".thinkthen_input_size", exact = TRUE)
     if (is.null(size)) size <- max(c(0, rows$position))
-    return(rows$answer[match(seq_len(size), rows$position)])
+    rows$answer[match(seq_len(size), rows$position)]
+  } else {
+    rows$answer
   }
-  rows$answer
+  .tt_report(rows, errors, answers)
+}
+
+#' List the failures of an errors = "na" result or of any result rows.
+#'
+#' @rdname tt_failures
+#' @export
+tt_failures <- function(x) {
+  if (inherits(x, "tt_rows")) return(.tt_failure_table(x))
+  failures <- attr(x, ".thinkthen_failures", exact = TRUE)
+  if (is.null(failures)) .tt_failure_table(.tt_frame(list(), "decide")) else failures
 }
 
 #' Attach outcome columns by position to a copy of the original data frame.
@@ -82,17 +94,50 @@ tt_bind <- function(data, rows, prefix) {
   errors
 }
 
-.tt_failures <- function(rows, errors, kept = NULL) {
-  if (errors == "na") return(invisible(NULL))
-  failed <- which(rows$status == "failed")
-  children <- if (.tt_result(rows) == "annotate") unlist(lapply(rows$answer, function(entries) {
+.tt_child_failures <- function(rows) {
+  if (!inherits(rows, "tt_annotate_rows")) return(list())
+  lapply(rows$answer, function(entries) {
     Filter(function(entry) isTRUE(entry$status == "failed"), entries)
-  }), recursive = FALSE) else list()
-  if (!length(failed) && !length(children)) return(invisible(NULL))
-  first <- if (length(failed)) as.character(rows$error_code[failed[[1]]]) else as.character(children[[1]]$error$code)
-  rlang::abort("ThinkThen returned failed records.", class = c("thinkthen_failed_rows", "thinkthen_error"),
-    code = first, rows = rows, failed_rows = rows[failed, ], kept = kept,
-    entries = children, call = rlang::caller_env())
+  })
+}
+
+.tt_failure_table <- function(rows) {
+  failed <- which(rows$status == "failed")
+  children <- .tt_child_failures(rows)
+  entries <- unlist(children, recursive = FALSE)
+  child_errors <- unname(lapply(entries, `[[`, "error"))
+  owners <- c(failed, rep(seq_along(children), lengths(children)))
+  table <- tibble::tibble(
+    position = rows$position[owners],
+    id = rows$id[owners],
+    question = c(rep(NA_character_, length(failed)), as.character(names(entries))),
+    error_code = factor(c(as.character(rows$error_code[failed]),
+      .tt_scalar(child_errors, "code", NA_character_, as.character)), levels = unname(.tt_code_names)),
+    error_message = c(rows$error_message[failed], .tt_scalar(child_errors, "message", NA_character_)),
+    error_http_status = c(rows$error_http_status[failed], .tt_scalar(child_errors, "http_status", NA_integer_))
+  )
+  table[order(table$position), ]
+}
+
+# Raise for errors = "error"; otherwise warn once and keep the failures beside the value.
+.tt_report <- function(rows, errors, value, kept = NULL) {
+  failures <- .tt_failure_table(rows)
+  if (!nrow(failures)) return(value)
+  codes <- unique(as.character(failures$error_code))
+  counts <- vapply(codes, function(code) {
+    length(unique(failures$position[failures$error_code == code]))
+  }, integer(1))
+  message <- paste0("ThinkThen returned failed records: ", paste0(codes, " (", counts, ")", collapse = ", "), ".")
+  fields <- list(code = codes[[1]], codes = codes, rows = rows,
+    failed_rows = rows[which(rows$status == "failed"), ], kept = kept,
+    entries = as.list(unlist(.tt_child_failures(rows), recursive = FALSE)))
+  if (errors == "error") {
+    rlang::abort(message, class = c("thinkthen_failed_rows", "thinkthen_error"), !!!fields,
+      call = rlang::caller_env())
+  }
+  rlang::warn(paste(message, "tt_failures() lists them."), class = "thinkthen_failed_rows_warning", !!!fields)
+  attr(value, ".thinkthen_failures") <- failures
+  value
 }
 
 .tt_annotation_answers <- function(rows) {

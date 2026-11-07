@@ -2,7 +2,8 @@
 use crate::retry::{CancelWake, cancelled};
 use crate::{Cancel, Error};
 use std::collections::VecDeque;
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::mpsc::TrySendError;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::task::Waker;
 #[cfg(feature = "stream")]
 use std::task::{Context, Poll};
@@ -53,18 +54,34 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
     }
     pub(super) fn send(&self, item: T) -> Result<(), Error> {
         let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        let mut state = self
+        let state = self
             .space
-            .wait_while(state, |s| {
-                let occupied = s.items.len();
-                #[cfg(any(feature = "native", feature = "command"))]
-                let occupied = occupied + s.reserved;
-                occupied >= self.capacity && !s.closed && !s.cancelled
-            })
+            .wait_while(state, |s| self.full(s) && !s.closed && !s.cancelled)
             .unwrap_or_else(PoisonError::into_inner);
         if state.cancelled || state.closed {
             return Err(cancelled());
         }
+        self.publish(state, item);
+        Ok(())
+    }
+    pub(super) fn try_send(&self, item: T) -> Result<(), TrySendError<T>> {
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        if state.cancelled || state.closed {
+            return Err(TrySendError::Disconnected(item));
+        }
+        if self.full(&state) {
+            return Err(TrySendError::Full(item));
+        }
+        self.publish(state, item);
+        Ok(())
+    }
+    fn full(&self, state: &State<T>) -> bool {
+        let occupied = state.items.len();
+        #[cfg(any(feature = "native", feature = "command"))]
+        let occupied = occupied + state.reserved;
+        occupied >= self.capacity
+    }
+    fn publish(&self, mut state: MutexGuard<'_, State<T>>, item: T) {
         state.items.push_back(item);
         let waker = state.waker.take();
         drop(state);
@@ -73,7 +90,6 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
         if let Some(w) = waker {
             w.wake();
         }
-        Ok(())
     }
     #[cfg(any(feature = "native", feature = "command"))]
     pub(super) fn try_receive(&self) -> Option<Received<T>> {
@@ -142,7 +158,7 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
     #[cfg(any(feature = "native", feature = "command"))]
     pub(super) fn reserve(&self) -> bool {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        if state.closed || state.cancelled || state.items.len() + state.reserved >= self.capacity {
+        if state.closed || state.cancelled || self.full(&state) {
             return false;
         }
         state.reserved += 1;
@@ -157,14 +173,7 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
         // NEEDS_INPUT grants this slot until send or end_input. A concurrent
         // cancellation must leave the host free to read the original call error.
         state.reserved -= 1;
-        state.items.push_back(item);
-        let waker = state.waker.take();
-        drop(state);
-        self.ready.notify_all();
-        self.changed();
-        if let Some(waker) = waker {
-            waker.wake();
-        }
+        self.publish(state, item);
         Ok(())
     }
     fn take(state: &mut State<T>) -> Received<T> {

@@ -49,6 +49,17 @@ Output:
 [1] "record.empty"
 ```
 
+Pass `errors = "na"` to keep going past a failure. The answers stay a plain vector with `NA` for both, the call warns with every failed code, and `tt_failures()` lists each failure, so you can tell it from not sure:
+
+```r
+library(thinkthen)
+
+texts <- c("Please refund my order.", "")
+is_refund <- tt_decide(texts, question = "Does the customer request a refund?",
+                       errors = "na")
+tt_failures(is_refund)[c("position", "error_code")]
+```
+
 ## Next
 
 The [R SDK page](https://thinkthen.dev/sdks/r/) shows all ten functions. The [R guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/r.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/r/API.md) cover every option.

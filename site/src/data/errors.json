@@ -9,22 +9,14 @@
       "example": "exit-usage"
     },
     "usage.question": {
-      "means": "the question or its table input is wrong",
-      "when": "the question is blank or cannot be read, or a table file cannot be judged as asked",
-      "cause": "The command checks the question, and for table input the file and its columns, before it judges any record. The message names the part it rejected and what it expected. The common cases are in the table below. A wrong command option, such as an unknown option or a missing `--choice`, reports [`usage.option`](/reference/errors/usage-option/) instead.",
+      "means": "the question is wrong",
+      "when": "the question is blank or cannot be read, or a toolbox entry cannot be used as asked",
+      "cause": "The command checks the question before it judges any record. The message names the part it rejected and what it expected. The common cases are in the table below. A wrong command option, such as an unknown option or a missing `--choice`, reports [`usage.option`](/reference/errors/usage-option/) instead, and a mistake in a CSV, TSV or Excel file reports [`usage.column`](/reference/errors/usage-column/), [`usage.sheet`](/reference/errors/usage-sheet/), [`usage.output`](/reference/errors/usage-output/) or [`usage.table`](/reference/errors/usage-table/).",
       "fix": "Find the message in the table and apply its fix. Each [function page](/functions/) shows a question for that function.",
       "cases": [
         [
           "`question: expected nonblank text`",
           "The question is empty. Pass the question in quotes."
-        ],
-        [
-          "`columns: expected at least one field column`",
-          "CSV, TSV and xlsx input needs `--column` to name the text to judge."
-        ],
-        [
-          "`file: … output already exists`",
-          "Pick a new `--output` path, or add `--in-place`."
         ],
         [
           "`toolbox FILE: entry: expected one of …`",
@@ -187,6 +179,100 @@
         ]
       ],
       "example": "error-choices"
+    },
+    "usage.column": {
+      "means": "a table column is wrong",
+      "when": "`--column`, `--into` or a field pointer does not fit a CSV, TSV or Excel file",
+      "cause": "The command checks the columns you name against the file before it judges any record. The message names the column it rejected. The common cases are in the table below.",
+      "fix": "Change `--column`, `--into` or the field pointer. The message lists the columns the file has.",
+      "cases": [
+        [
+          "`columns: expected at least one field column`",
+          "CSV, TSV and Excel input needs `--column` to name the text to judge."
+        ],
+        [
+          "`column: expected one of … received unknown field`",
+          "The file has no such column. Use the suggestion after `did you mean`."
+        ],
+        [
+          "`answer column … already exists`",
+          "Pick a new name for `--into`."
+        ],
+        [
+          "`selects none of the --column names`",
+          "Select the column the field pointer names, or remove the pointer."
+        ],
+        [
+          "`selected field intersects merged cells`",
+          "Select a column with no merged cells."
+        ]
+      ],
+      "example": "error-column"
+    },
+    "usage.sheet": {
+      "means": "the worksheet choice is wrong",
+      "when": "`--sheet` does not fit the file: it names no worksheet, the file is CSV or TSV, or a workbook has several worksheets and none is named",
+      "cause": "Only an Excel workbook has worksheets, and a workbook with several needs one named. The message names what it expected.",
+      "fix": "Name one of the worksheets the message lists, or drop `--sheet` for a CSV or TSV file.",
+      "example": "error-sheet"
+    },
+    "usage.output": {
+      "means": "the answers cannot go where you asked",
+      "when": "the output file exists, names the input or has the wrong extension, or `--in-place` cannot safely replace the input",
+      "cause": "ThinkThen never overwrites a file, and it keeps the format of the input, so it checks where the answers go before it judges any record. The common cases are in the table below.",
+      "fix": "Choose a new `--output` path with the extension of the input, or apply the fix in the table.",
+      "cases": [
+        [
+          "`output already exists`",
+          "Pick a new `--output` path, or add `--in-place`."
+        ],
+        [
+          "`output names the input`",
+          "Add `--in-place`, which keeps a backup, or pick a new `--output` path."
+        ],
+        [
+          "`output must have a`",
+          "Give `--output` the extension of the input."
+        ],
+        [
+          "`in-place input cannot be a symbolic link`",
+          "Pass the real path of the file."
+        ],
+        [
+          "`Excel appears to have the workbook open`",
+          "Close the workbook, then run the command again."
+        ]
+      ],
+      "example": "error-output"
+    },
+    "usage.table": {
+      "means": "the table file cannot be used as it is",
+      "when": "a CSV, TSV or Excel file has a format, a header or a row ThinkThen cannot read",
+      "cause": "The command reads the whole file before it judges any record, so a mistake anywhere in the file stops the call. The message names the row or cell. The common cases are in the table below.",
+      "fix": "Fix the file as the message says, then run the command again.",
+      "cases": [
+        [
+          "`unsupported workbook format`",
+          "Save the file as `.xlsx` or CSV."
+        ],
+        [
+          "`headers: expected nonempty, unique column headers`",
+          "Give every column its own name in the first row."
+        ],
+        [
+          "`input has no header row`",
+          "Add a first row of column names."
+        ],
+        [
+          "`expected N fields`",
+          "A row has more or fewer fields than the header. Quote a field that holds the separator, or remove the extra separator."
+        ],
+        [
+          "`save a clean .xlsx copy`",
+          "The workbook is damaged or unusual. Open it in Excel and save a new copy."
+        ]
+      ],
+      "example": "error-table"
     },
     "record.json": {
       "means": "a line of the input is not JSON",

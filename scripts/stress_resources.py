@@ -170,7 +170,7 @@ def growth(samples, verified_records=None, *, short_gate=False, memory_window=No
     nonempty windows in the later half all strictly rise and endpoint growth
     reaches MEMORY_BYTES_PER_RECORD_FLOOR per verified record between those
     endpoints. Explicit short gate checks report memory without failing it; counts fail only
-    when their four late-window peaks rise strictly.
+    when their four late-window peaks never fall and rise at least twice.
     Counts belong to synchronous completed rounds. A single retained RSS
     step can pass. Other resources still fail when their later-half minimum
     exceeds their warmup maximum, including a one-time retained resource leak.
@@ -201,8 +201,10 @@ def growth(samples, verified_records=None, *, short_gate=False, memory_window=No
     if short_gate:
         for key in METRICS[1:]:
             peaks = [max(row[key] for row in window) for window in windows]
+            steps = list(zip(peaks, peaks[1:]))
             checks[key].update(late_window_maxima=peaks,
-                               passed=not all(before < after for before, after in zip(peaks, peaks[1:])))
+                               passed=(any(before > after for before, after in steps) or
+                                       sum(before < after for before, after in steps) < 2))
     maxima = [max(row['memory_bytes'] for row in window) for window in windows]
     memory = checks['memory_bytes']
     if memory_window is not None:

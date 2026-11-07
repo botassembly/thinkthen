@@ -163,7 +163,7 @@ fn every_function_serializes_the_shared_rows_from_both_wires() {
                     .spawn()
                     .unwrap();
                 let mut input = child.stdin.take().unwrap();
-                if case["expected"].is_array() {
+                if case["expected"].is_array() || case["requests"] != 0 {
                     for record in case["request"]["records"].as_array().unwrap() {
                         writeln!(input, "{record}").unwrap();
                     }
@@ -173,12 +173,12 @@ fn every_function_serializes_the_shared_rows_from_both_wires() {
                 if let Some(code) = case["expected"]["error"].as_str() {
                     assert_eq!(
                         output.status.code(),
-                        Some(2),
+                        Some(if code.starts_with("backend.") { 4 } else { 2 }),
                         "{name} {backend}: {output:?}"
                     );
                     assert!(output.stdout.is_empty());
                     assert!(String::from_utf8_lossy(&output.stderr).contains(code));
-                    assert_eq!(server.count(), 0);
+                    assert_eq!(server.count() as u64, case["requests"].as_u64().unwrap());
                     return;
                 }
                 if case["expected"]

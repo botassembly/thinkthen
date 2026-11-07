@@ -42,6 +42,14 @@ enum class errc : std::int32_t {
     usage_argument = THINKTHEN_CODE_USAGE_ARGUMENT,
     /** usage.option: An option is not valid for this function. */
     usage_option = THINKTHEN_CODE_USAGE_OPTION,
+    /** usage.column: A table column, answer column or field pointer is not valid. */
+    usage_column = THINKTHEN_CODE_USAGE_COLUMN,
+    /** usage.sheet: The table sheet selection is not valid. */
+    usage_sheet = THINKTHEN_CODE_USAGE_SHEET,
+    /** usage.output: The table answers cannot go to the output asked for. */
+    usage_output = THINKTHEN_CODE_USAGE_OUTPUT,
+    /** usage.table: The table input file cannot be used as it is. */
+    usage_table = THINKTHEN_CODE_USAGE_TABLE,
     /** record.json: The record is not valid JSON. A record error: that record's row fails and the call goes on. */
     record_json = THINKTHEN_CODE_RECORD_JSON,
     /** record.missing: The record is a missing value. A record error: that record's row fails and the call goes on. */
@@ -88,6 +96,10 @@ inline bool known_code(std::int32_t value) noexcept {
         case THINKTHEN_CODE_USAGE_OFFSETS: return true;
         case THINKTHEN_CODE_USAGE_ARGUMENT: return true;
         case THINKTHEN_CODE_USAGE_OPTION: return true;
+        case THINKTHEN_CODE_USAGE_COLUMN: return true;
+        case THINKTHEN_CODE_USAGE_SHEET: return true;
+        case THINKTHEN_CODE_USAGE_OUTPUT: return true;
+        case THINKTHEN_CODE_USAGE_TABLE: return true;
         case THINKTHEN_CODE_RECORD_JSON: return true;
         case THINKTHEN_CODE_RECORD_MISSING: return true;
         case THINKTHEN_CODE_RECORD_TOO_LARGE: return true;

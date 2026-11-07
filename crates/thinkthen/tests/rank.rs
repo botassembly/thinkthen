@@ -3,14 +3,15 @@
 #[path = "../../loopback/src/lib.rs"]
 pub mod loopback;
 
-use loopback::{KEY, Loopback};
+use loopback::{HeldReply, KEY, Loopback};
 use serde_json::json;
 use std::num::NonZeroUsize;
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
 };
-use thinkthen::{Cancel, Key, Rank, Record, Request, Settings};
+use std::time::Duration;
+use thinkthen::{Cancel, Code, Key, NoAnswer, Rank, Record, Request, Retry, Settings};
 
 fn settings(server: &Loopback) -> Settings {
     Settings::default()
@@ -97,6 +98,93 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
         }
         assert_eq!(server.count(), 6);
     }
+}
+
+/// A caller's own type, neither `Clone` nor `Serialize`.
+#[derive(Debug)]
+struct Ticket {
+    id: u64,
+    body: String,
+}
+
+#[test]
+fn rank_returns_each_callers_item_with_its_row_best_first_and_failures_last() {
+    let cases: [(Option<usize>, &[u64]); 2] = [(None, &[3, 5, 1, 2, 4]), (Some(1), &[3, 2, 4])];
+    for (top, expected) in cases {
+        let server = Loopback::answering(|q| {
+            let text = q["instructions"].as_str().unwrap();
+            if text.contains("broken") {
+                return json!({});
+            }
+            let p = if text.contains("low") {
+                0.1
+            } else if text.contains("middle") {
+                0.5
+            } else {
+                0.9
+            };
+            json!({"type":"score","probabilities":{"0":1.0-p,"1":p}})
+        })
+        .unwrap();
+        let engine = settings(&server).engine(|_| None).unwrap();
+        let mut question = Rank::new("Priority?", ["low", "high"]).unwrap();
+        if let Some(top) = top {
+            question = question.top(NonZeroUsize::new(top).unwrap()).unwrap();
+        }
+        let tickets = ["low", "broken", "high", "broken-again", "middle"]
+            .into_iter()
+            .zip(1..)
+            .map(|(body, id)| Ticket {
+                id,
+                body: body.to_owned(),
+            })
+            .collect::<Vec<_>>();
+        let ranked = engine
+            .rank(&question, tickets, |ticket| ticket.body.clone())
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(
+            ranked
+                .iter()
+                .map(|(ticket, _)| ticket.id)
+                .collect::<Vec<_>>(),
+            expected
+        );
+        let places = expected.len() - 2;
+        for (index, (ticket, row)) in ranked.into_iter().enumerate() {
+            assert_eq!(row.position(), ticket.id, "{} kept its row", ticket.body);
+            match row.into_answer() {
+                Ok(place) => assert_eq!(place.get(), index + 1, "{} ranked", ticket.body),
+                Err(NoAnswer::Failed(error)) => {
+                    assert!(index >= places, "{} failed after ranked items", ticket.body);
+                    assert_eq!(error.code().as_str(), "backend.reply");
+                }
+                Err(other) => panic!("{} was not failed: {other:?}", ticket.body),
+            }
+        }
+    }
+}
+
+#[test]
+fn cancelling_a_rank_ends_it_with_one_cancelled_error() {
+    let (server, arrived, _closed) = Loopback::holding(HeldReply::Headers).unwrap();
+    let engine = settings(&server)
+        .retry(Retry::new(0, Duration::ZERO, Duration::from_secs(30)).unwrap())
+        .engine(|_| None)
+        .unwrap();
+    let question = Rank::new("Priority?", ["low", "high"]).unwrap();
+    let mut ranked = engine.rank(&question, ["evidence"], |text| *text).unwrap();
+    arrived.recv_timeout(Duration::from_secs(10)).unwrap();
+    ranked.cancel();
+    assert_eq!(
+        ranked.next().unwrap().unwrap_err().code(),
+        Code::LocalCancelled
+    );
+    assert!(
+        ranked.next().is_none(),
+        "cancelled error ends the iteration"
+    );
 }
 
 #[test]

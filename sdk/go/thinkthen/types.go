@@ -1,3 +1,5 @@
+//go:build cgo
+
 // Package thinkthen provides typed semantic judgments through the native engine.
 package thinkthen
 

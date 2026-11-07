@@ -34,7 +34,7 @@ cp LICENSE sdk/typescript/LICENSE
 trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$stage"; rm -f sdk/typescript/thinkthen.node sdk/typescript/LICENSE; exit "$gate_status"' EXIT
 trap 'exit 1' HUP INT TERM
 npm --prefix sdk/typescript ci --offline --ignore-scripts --no-audit --no-fund
-(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js bridge.js stream.js answers.js platform.js --max-warnings 0)
+(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js bridge.js stream.js answers.js libc.js platform.js --max-warnings 0 && npx knip --include dependencies)
 (cd sdk/typescript && npm pack --pack-destination "$stage" --ignore-scripts --quiet)
 # Node 22.12 supports require(esm); attw's Node 16 resolver predates it.
 # The installed import/require test proves that supported runtime path.

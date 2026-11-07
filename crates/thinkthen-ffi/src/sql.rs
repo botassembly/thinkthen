@@ -5,8 +5,8 @@
 )]
 use crate::{ClientHandle, HostError, HostRow, QuestionHandle, builders::TextView};
 use crate::{
-    exports::{END, NEEDS_INPUT, OK, operation},
-    memory::{bytes, row_size, text},
+    exports::{THINKTHEN_END, THINKTHEN_NEEDS_INPUT, THINKTHEN_OK, named_request, operation},
+    memory::{bytes, live, live_mut, row_size, text},
 };
 use std::{ffi::c_void, ptr, time::Duration};
 use thinkthen::{Request, native};
@@ -74,7 +74,7 @@ pub unsafe extern "C" fn thinkthen_sql_client_open_with_policy(
                 |name| std::env::var(name).ok(),
             )?)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn thinkthen_sql_client_open(
             out.write(ptr::null_mut());
             let engine = crate::engine(native::sql_settings(text(settings, len)?)?)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -131,15 +131,12 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_question(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let mut request = Request::new((*question).build()?);
-            if !name.is_null() {
-                request = request.named(text((*name).data, (*name).len)?)?;
-            }
+            let request = named_request(question, name)?;
             out.write(Box::into_raw(Box::new(SqlHandle {
-                call: SqlCall::open(&(*client).0, &request)?,
+                call: SqlCall::open(&live(client)?.0, &request)?,
                 error_reported: false,
             })));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -170,7 +167,7 @@ pub unsafe extern "C" fn thinkthen_sql_question_from_json(
             out.write(Box::into_raw(Box::new(QuestionHandle::new(
                 native::QuestionBuilder::snapshot(&question),
             ))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -197,12 +194,12 @@ pub unsafe extern "C" fn thinkthen_sql_question_set_threshold(
     unsafe {
         operation(error, || {
             native::sql_threshold(
-                &mut (*question).builder,
+                &mut live_mut(question)?.builder,
                 cut.as_ref().copied(),
                 low.as_ref().copied(),
                 high.as_ref().copied(),
             )?;
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -232,10 +229,10 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_json(
             out.write(ptr::null_mut());
             let request = Request::from_json(text(data, len)?)?;
             out.write(Box::into_raw(Box::new(SqlHandle {
-                call: SqlCall::open(&(*client).0, &request)?,
+                call: SqlCall::open(&live(client)?.0, &request)?,
                 error_reported: false,
             })));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -318,8 +315,8 @@ unsafe fn send_chunk(
                     }
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            (*call).call.send_chunk(chunk)?;
-            Ok(OK)
+            live_mut(call)?.call.send_chunk(chunk)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -331,7 +328,11 @@ unsafe fn send_chunk(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_end_input(call: *mut SqlHandle) {
     // SAFETY: caller grants exclusive access.
-    let _ = crate::exports::guarded(|| unsafe { (*call).call.end_input() });
+    let _ = crate::exports::guarded(|| {
+        if let Ok(call) = unsafe { live_mut(call) } {
+            call.call.end_input();
+        }
+    });
 }
 /// Wait for the next row, request for input, or end, on the database thread.
 ///
@@ -398,12 +399,12 @@ unsafe fn poll(
         operation(error, || {
             let size = row_size(out)?;
             HostRow::empty(size).write(out);
-            let handle = &mut *call;
+            let handle = live_mut(call)?;
             let call = &mut handle.call;
             match call.poll(Duration::from_millis(u64::from(timeout_ms)), || {
                 interrupted.is_some_and(|probe| probe(context) != 0)
             })? {
-                Some(SqlEvent::NeedsChunk) => Ok(NEEDS_INPUT),
+                Some(SqlEvent::NeedsChunk) => Ok(THINKTHEN_NEEDS_INPUT),
                 Some(SqlEvent::Row(row)) => {
                     let row = if postgres {
                         native::sql_postgres_row(row)?
@@ -411,15 +412,15 @@ unsafe fn poll(
                         row
                     };
                     HostRow::from_row(size, row)?.write(out);
-                    Ok(OK)
+                    Ok(THINKTHEN_OK)
                 }
                 Some(SqlEvent::Finished) => {
                     if handle.error_reported {
-                        return Ok(END);
+                        return Ok(THINKTHEN_END);
                     }
                     handle.error_reported = true;
                     call.final_error()
-                        .map_or(Ok(END), |error| Err(error.clone()))
+                        .map_or(Ok(THINKTHEN_END), |error| Err(error.clone()))
                 }
                 None => Ok(THINKTHEN_PENDING),
             }
@@ -447,7 +448,7 @@ pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
         operation(error, || {
             row_size(row)?;
             if id.is_null() {
-                return Ok(OK);
+                return Ok(THINKTHEN_OK);
             }
             let value = text((*id).data, (*id).len)?;
             let failure = native::sql_postgres_id_error(value)?;
@@ -468,7 +469,7 @@ pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
             } else {
                 (*row).id = crate::Buffer::new(value.to_owned());
             }
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -495,7 +496,9 @@ pub unsafe extern "C" fn thinkthen_sql_call_free(call: *mut SqlHandle) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_cancel(call: *mut SqlHandle) {
     // SAFETY: caller retains the live statement handle.
-    let _ = crate::exports::guarded(|| unsafe {
-        (*call).call.cancel();
+    let _ = crate::exports::guarded(|| {
+        if let Ok(call) = unsafe { live(call) } {
+            call.call.cancel();
+        }
     });
 }

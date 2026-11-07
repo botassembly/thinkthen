@@ -17,7 +17,7 @@ if [ ! -x "$cache/$java_folder/bin/java" ]; then
   rm "$cache/$asset"
 fi
 if [ ! -x "$cache/apache-maven-3.9.11/bin/mvn" ]; then
-  url=https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz
+  url=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.tar.gz
   python3 scripts/release_downloads.py "$url" "$cache/maven.tar.gz"
   tar -xzf "$cache/maven.tar.gz" -C "$cache"
   rm "$cache/maven.tar.gz"

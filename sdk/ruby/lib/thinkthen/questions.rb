@@ -62,7 +62,7 @@ module ThinkThen
   # A question selecting one named choice.
   class ChooseQuestion < Question
     def initialize(text, choices:, threshold: nil, field: nil, descriptions: nil)
-      super(:choose, text, **{**Question.list(:choices, choices, descriptions), threshold: Question.threshold(threshold, band: true), field: Question.field(field)}.reject { |_, value| value.nil? })
+      super(:choose, text, **{**Question.list(:choices, choices, descriptions), threshold: Question.threshold(threshold, band: false), field: Question.field(field)}.reject { |_, value| value.nil? })
     end
   end
   # A question selecting every label above the threshold.

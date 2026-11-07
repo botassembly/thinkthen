@@ -124,6 +124,30 @@
       "value": 1018
     },
     {
+      "family": "usage",
+      "name": "usage.column",
+      "record": false,
+      "value": 1019
+    },
+    {
+      "family": "usage",
+      "name": "usage.sheet",
+      "record": false,
+      "value": 1020
+    },
+    {
+      "family": "usage",
+      "name": "usage.output",
+      "record": false,
+      "value": 1021
+    },
+    {
+      "family": "usage",
+      "name": "usage.table",
+      "record": false,
+      "value": 1022
+    },
+    {
       "family": "record",
       "name": "record.json",
       "record": true,

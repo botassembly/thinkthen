@@ -201,7 +201,7 @@ macro_rules! functions {
 functions! {
     annotatable {
         Decide: DecideWire=1 => ("Judge whether a record answers a question", command::ThresholdOption::Band, true, None),
-        Choose: ChooseWire=2 => ("Choose one answer from ordered choices", command::ThresholdOption::Band, true, Some(("choice", "choices", "THINKTHEN_CHOICES", "Choice; repeat in order"))),
+        Choose: ChooseWire=2 => ("Choose one answer from ordered choices", command::ThresholdOption::Cut, true, Some(("choice", "choices", "THINKTHEN_CHOICES", "Choice; repeat in order"))),
         Tag: TagWire=3 => ("Assign labels to records", command::ThresholdOption::Cut, false, Some(("label", "labels", "THINKTHEN_LABELS", "Label; repeat in order"))),
         Score: ScoreWire=4 => ("Score records on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high"))),
         Filter: FilterWire=5 => ("Keep records that answer a question", command::ThresholdOption::Band, true, None),

@@ -21,11 +21,15 @@ struct NativeClient(RefCell<Option<Engine>>);
 struct NativeCall(RefCell<Option<Call>>);
 
 fn failure(error: thinkthen::Error) -> List {
+    let http_status = error
+        .http_status()
+        .map_or_else(|| Robj::from(()), |status| Robj::from(i32::from(status)));
     list!(
         error = list!(
             code = error.code().as_str(),
             family = error.code().family().as_str(),
-            message = error.to_string()
+            message = error.to_string(),
+            http_status = http_status
         )
     )
 }

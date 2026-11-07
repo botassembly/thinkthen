@@ -192,7 +192,7 @@ def execute_case(test, settings)
   output
 rescue ThinkThen::Error => error
   equal(test.fetch("expected_rows"), output, "rows before call failure") if test.key?("expected_rows")
-  {"error" => error.code.to_s}
+  {"error" => error.code.to_s, "http_status" => error.http_status}.compact
 end
 
 def normalized_contract(value)

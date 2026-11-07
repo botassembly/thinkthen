@@ -94,5 +94,30 @@
     "code": "usage.question",
     "message": "question.rules[0].source: expected a string; received integer `1`",
     "kind": "admission"
+  },
+  {
+    "name": "Choose band in a saved toolbox",
+    "boundary": "toolbox",
+    "input": {
+      "entries": {
+        "ready": {
+          "question": {
+            "function": "choose",
+            "question": "Which?",
+            "choices": [
+              "a",
+              "b"
+            ],
+            "threshold": {
+              "low": 0.2,
+              "high": 0.8
+            }
+          }
+        }
+      }
+    },
+    "code": "usage.threshold",
+    "message": "threshold: expected a single numeric cut; received a low/high band",
+    "kind": "admission"
   }
 ]

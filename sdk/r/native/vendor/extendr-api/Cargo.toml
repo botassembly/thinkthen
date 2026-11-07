@@ -204,7 +204,8 @@ optional = true
 version = "1.21.3"
 
 [dependencies.paste]
-version = "1.0.15"
+version = "0.2.3"
+package = "pastey"
 
 [dependencies.serde]
 version = "1.0.219"

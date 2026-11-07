@@ -5,8 +5,8 @@
 )]
 use crate::{
     HostError, QuestionHandle,
-    exports::{OK, operation},
-    memory::text,
+    exports::{THINKTHEN_OK, operation},
+    memory::{live_mut, text},
 };
 use serde_json::{Map, Value};
 use thinkthen::{Error, FunctionName, Question, native};
@@ -81,14 +81,14 @@ unsafe fn change(
     /* SAFETY: one thread drives the builder and lends the error slot until return. */
     unsafe {
         operation(error, || {
-            let handle = &mut *question;
+            let handle = live_mut(question)?;
             let mut next = handle.meanings.clone();
             edit(&mut next)?;
             if let Ok(complete) = handle.builder.build() {
                 next.apply(complete)?;
             }
             handle.meanings = next;
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }

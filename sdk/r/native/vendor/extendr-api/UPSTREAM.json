@@ -3,9 +3,14 @@
   "checksum": "e002a15028421248374d3beb66d1802ce70d738b666a043a1f4dfffad14bc595",
   "license_sha256": "fb9c2cccbdcb61ea51e0d553a6474297031544104985279c5c32d25c5c99977e",
   "name": "extendr-api",
-  "patch_file": "ownership-capacity.patch",
-  "patch_sha256": "fece7fb4bbd03d8766eb2dfb85f0a40575db53b28b10491a6adfa57f88b0d2dc",
+  "patch_file": "local-changes.patch",
+  "patch_sha256": "8412252c1353d123748b5f665f93d0f179878d1608012e0c296f1523700b91e9",
   "replacements": [
+    {
+      "after": "[dependencies.paste]\nversion = \"0.2.3\"\npackage = \"pastey\"",
+      "before": "[dependencies.paste]\nversion = \"1.0.15\"",
+      "path": "Cargo.toml"
+    },
     {
       "after": "let live_count = self.objects.values().filter(|object| object.refcount != 0).count();\n        let new_size = live_count * 2 + EXTRA_PRESERVATION_SIZE;",
       "before": "let new_size = self.cur_index * 2 + EXTRA_PRESERVATION_SIZE;",

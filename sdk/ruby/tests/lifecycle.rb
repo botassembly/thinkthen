@@ -49,6 +49,90 @@ ensure
   end
 end
 
+# Feature: killing a reading thread cancels its native call and ends its reader.
+def ruby_killed_readers
+  {each: proc { |stream| stream.to_a }, next: proc { |stream| stream.next }}.each do |name, read|
+    Backend.open("--held", "headers") do |backend|
+      ThinkThen::Client.open(backend: :systemone, url: backend.url, api_key: "synthetic-loopback-key") do |client|
+        before = Thread.list
+        stream = client.decide_each("Ready?", ["record"])
+        worker = Thread.new { read.call(stream) }
+        equal("arrived", backend.command("arrived"), "#{name} read reaches the backend")
+        worker.kill
+        assert(worker.join(10), "#{name} read outlives Thread#kill")
+        equal("closed", backend.command("closed"), "#{name} kill cancels the native call")
+        assert(stream.closed?, "#{name} kill closes the stream")
+        equal([], Thread.list - before, "#{name} kill ends the reader thread")
+      end
+    end
+  end
+end
+
+# Feature: close returns while a reader waits on caller input, and that reader cleans up later.
+def ruby_close_during_input
+  [:stream, :client].each do |closing|
+    ThinkThen::Client.open(backend: :stub) do |client|
+      before = Thread.list
+      waiting, release = Queue.new, Queue.new
+      records = Enumerator.new do |output|
+        waiting << true
+        output << release.pop
+      end
+      stream = client.decide_each("Ready?", records)
+      worker = Thread.new { raises(ThinkThen::UsageError) { stream.to_a } }
+      begin
+        waiting.pop
+        closer = Thread.new { closing == :stream ? stream.close : client.close }
+        assert(closer.join(10), "#{closing} close waits for caller input")
+        assert(stream.closed?, "#{closing} close releases the native call")
+      ensure
+        release << "late"
+        worker.join
+      end
+      equal(:"usage.closed", worker.value.code, "late input finds the call closed")
+      equal([], Thread.list - before, "the reader leaves no thread behind")
+    end
+  end
+end
+
+# Feature: a killed reader helper answers its driver with an error, never a hang or a short stream.
+def ruby_killed_helper
+  reader = ThinkThen.const_get(:NativeReader)
+  original = reader.method(:worker)
+  ThinkThen::Client.open(backend: :stub) do |client|
+    before = Thread.list
+    stream = client.decide_each("Ready?", %w[first second])
+    stream.next
+    (Thread.list - before).each { |helper| helper.kill.join }
+    raises(ThreadError) { stream.next }
+
+    held, gate, queues = Queue.new, Queue.new, []
+    reader.define_singleton_method(:worker) do |requests, reference|
+      first = true
+      requests.define_singleton_method(:pop) do |*arguments|
+        if first
+          first = false
+          held << true
+          gate.pop
+        end
+        super(*arguments)
+      end
+      queues << requests
+      original.call(requests, reference)
+    end
+    before = Thread.list
+    stream = client.decide_each("Ready?", ["record"])
+    driver = Thread.new { raises(ThreadError) { stream.next } }
+    held.pop
+    Thread.pass until queues.first.size == 1
+    (Thread.list - before - [driver]).each(&:kill)
+    assert(driver.join(10), "a queued read outlives its killed helper")
+    driver.value
+  end
+ensure
+  reader&.define_singleton_method(:worker, original) if original
+end
+
 # Feature: each Ruby call opens one native call and never opens a temporary client.
 def ruby_single_admission
   native = ThinkThen.send(:native)

@@ -5,9 +5,9 @@ public struct ChooseOptions: Sendable, Codable, Equatable, Hashable {
   /// A JSON pointer selecting the field, or nil to use the whole record.
   public let field: String?
   /// The threshold used to decide whether the engine is sure enough.
-  public let threshold: Threshold?
+  public let threshold: Double?
   /// Create this value from its typed fields.
-  public init(field: String? = nil, threshold: Threshold? = nil) {
+  public init(field: String? = nil, threshold: Double? = nil) {
     self.field = field
     self.threshold = threshold
   }

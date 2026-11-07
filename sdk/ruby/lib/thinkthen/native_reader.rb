@@ -19,6 +19,11 @@ module ThinkThen
       @ready.close
     end
 
+    def abandon
+      @error = ThreadError.new("native reader stopped")
+      @ready.close
+    end
+
     def value
       @ready.pop
       error = @error
@@ -41,10 +46,22 @@ module ThinkThen
 
     def self.worker(requests, reference)
       Thread.new do
-        Thread.handle_interrupt(Exception => :never) do
-          while (read = requests.pop)
-            read.run(reference.__getobj__)
-            read = nil
+        # @type var read: untyped
+        read = nil
+        Thread.handle_interrupt(Object => :never) do
+          begin
+            # Ruby's kill at exit must reach an idle helper, and must never split a read.
+            while Thread.handle_interrupt(Object => :immediate) { read = requests.pop }
+              read.run(reference.__getobj__)
+              read = nil
+            end
+          ensure
+            # A driver waits on every read it started, so none may stay unanswered.
+            requests.close
+            read&.abandon
+            while (read = requests.pop)
+              read.abandon
+            end
           end
         end
       end
@@ -52,7 +69,11 @@ module ThinkThen
 
     def start(native)
       read = NativeRead.new(native)
-      @requests << read
+      begin
+        @requests << read
+      rescue ClosedQueueError
+        read.abandon
+      end
       read
     end
 

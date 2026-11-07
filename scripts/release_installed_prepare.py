@@ -25,7 +25,7 @@ def dotnet(scratch):
 def jvm(packages, scratch, *, prepared=None):
     repository = scratch / 'm2'
     if prepared is None:
-        url = 'https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz'
+        url = 'https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.tar.gz'
         archive = fetch(url, scratch / 'maven.tar.gz')
         with tarfile.open(archive) as packed:
             packed.extractall(scratch / 'tools', filter='data')

@@ -101,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix='windows-cli-job-test-') as temporary:
     inventory_report['tools'][0]['installations'] = [{'path': 'C:/Python313/python.exe', 'file_version': '3.13.0'}]
     inventory_raw = (json.dumps(inventory_report) + '\r\n').encode()
     fixture = '''#!/usr/bin/env python3
-import base64, hashlib, json, os, pathlib, sys, zipfile
+import base64, hashlib, json, os, pathlib, sys, time, zipfile
 with pathlib.Path({log!r}).open('a') as log: log.write(pathlib.Path(sys.argv[0]).name+' '+repr(sys.argv[1:])+'\\n')
 if pathlib.Path(sys.argv[0]).name == 'ssh':
  script=base64.b64decode(sys.argv[-1].split()[-1]).decode('utf-16-le')
@@ -173,7 +173,10 @@ elif pathlib.Path(sys.argv[0]).name == 'node':
  print('Strict cached replay boundary; no keys or upstream calls'); sys.exit(0)
 else:
  if sys.argv[1] == 'stop' and os.environ.get('STOP_FAIL'): sys.exit(1)
- if sys.argv[1] == 'inspect': print('true' if os.environ.get('STILL_RUNNING') else 'false')
+ if sys.argv[1] == 'stop' and os.environ.get('LATE_STOP'): time.sleep(6)
+ if sys.argv[1] == 'inspect' and os.environ.get('INSPECT_FAIL'): sys.exit(1)
+ late=os.environ.get('LATE_STOP') and pathlib.Path({log!r}).read_text().count("docker ['inspect'")<3
+ if sys.argv[1] == 'inspect': print('true' if late or os.environ.get('STILL_RUNNING') else 'false')
 '''.format(log=str(commands), inventory=inventory_raw, remote=str(root / 'remote'))
     (root / 'remote').mkdir()
     for name in ('ssh', 'docker', 'scp'):
@@ -217,12 +220,14 @@ else:
                                       '--cleanup-root', 'C:/Windows'], env=environment,
                                      capture_output=True, timeout=5)
     assert invalid_cleanup.returncode == 2 and not commands.read_text(), 'inventory attempted cleanup'
-    for mode in ('signal', 'timeout', 'eof', 'stop-failure', 'running', 'primary-failure', 'readiness-failure', 'python-hash'):
+    for mode in ('signal', 'timeout', 'eof', 'late-stop', 'inspect-failure', 'stop-failure', 'running', 'primary-failure', 'readiness-failure', 'python-hash'):
         commands.write_text('')
         arguments = [sys.executable, str(ENTRY), 'hold', str(output), '--seconds', '3' if mode in ('signal', 'eof') else '0.02']
         if mode == 'eof': arguments.append('--until-eof')
         if mode == 'readiness-failure': arguments.extend(['--ready-seconds', '0.01'])
         control = dict(environment)
+        if mode == 'late-stop': control['LATE_STOP'] = '1'
+        if mode == 'inspect-failure': control['INSPECT_FAIL'] = '1'
         if mode == 'readiness-failure': control['READINESS_FAIL'] = '1'
         if mode == 'python-hash': control['WRONG_PYTHON_HASH'] = '1'
         if mode in ('stop-failure', 'running', 'primary-failure'): control['STOP_FAIL'] = '1'
@@ -235,8 +240,8 @@ else:
             assert ready['ready'] and ready['binary'] == metadata['binary']
         if mode == 'signal': process.send_signal(signal.SIGTERM)
         _, stderr = process.communicate(timeout=10)
-        assert (process.returncode == 0) == (mode in ('timeout', 'eof')), stderr
-        if mode in ('stop-failure', 'running', 'primary-failure'): assert b'Windows VM cleanup failed:' in stderr, stderr
+        assert (process.returncode == 0) == (mode in ('timeout', 'eof', 'late-stop')), stderr
+        if mode in ('inspect-failure', 'stop-failure', 'running', 'primary-failure'): assert b'Windows VM cleanup failed:' in stderr, stderr
         if mode == 'python-hash': assert b'Native owned Python runtime differs' in stderr, stderr
         if mode == 'primary-failure': assert b'Retained native CLI differs from its build' in stderr, stderr
         if mode == 'readiness-failure':
@@ -246,10 +251,12 @@ else:
             assert b'Missing Windows prerequisite: git' in stderr, stderr
             assert b'TimeoutError: Native Windows' in stderr, stderr
         seen = commands.read_text().splitlines()
+        if mode == 'late-stop':
+            assert sum(line.startswith("docker ['inspect'") for line in seen) == 3, seen
         assert any(line.startswith("docker ['start'") for line in seen), seen
         assert any(line.startswith("docker ['stop'") for line in seen), seen
         lock = root / 'home/.windows-vm-lock'
-        assert lock.exists() == (mode in ('running', 'primary-failure')), (mode, stderr)
+        assert lock.exists() == (mode in ('inspect-failure', 'running', 'primary-failure')), (mode, stderr)
         if lock.exists():
             assert b'Windows VM stop unconfirmed; retain owned lock' in stderr, stderr
             (lock / 'owner').unlink()

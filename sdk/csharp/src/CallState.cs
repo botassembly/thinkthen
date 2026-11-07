@@ -2,6 +2,17 @@ using System.Collections.Concurrent;
 
 namespace ThinkThen;
 
+// A driver thread keeps its CallState alive, so a dropped enumerator would leave it waiting for
+// ever. Only the enumerator holds this lease, which lets the collector report the drop.
+internal sealed class CallLease(CallState call, Action<CallState> forget)
+{
+    ~CallLease() => _ = Task.Run(async () =>
+    {
+        await call.Close().ConfigureAwait(false);
+        forget(call);
+    });
+}
+
 // This owner closes independently of a consumer paused after a yielded row.
 internal sealed class CallState
 {

@@ -53,13 +53,15 @@ with tempfile.TemporaryDirectory() as temporary:
     subprocess.run(["cargo", "metadata", "--offline", "--format-version", "1"], cwd=engine, env=environment, check=True, stdout=subprocess.DEVNULL)
     vendor = subprocess.run(["cargo", "vendor", "--offline", "--locked", "--versioned-dirs", "vendor"], cwd=engine, env=environment, check=True, capture_output=True, text=True)
     (engine / "vendor-config.toml").write_text(vendor.stdout)
-    # Unix source installs do not use vendored Windows import libraries or Wasm
-    # objects. Upstream test snapshots can also have non-portable filenames.
+    # No source install uses vendored import libraries or Wasm objects, but
+    # ring's Windows x86-64 build links its pre-assembled -nasm.o objects.
+    # Upstream test snapshots can also have non-portable filenames.
     for checksum in (engine / "vendor").glob("*/.cargo-checksum.json"):
         metadata = json.loads(checksum.read_text())
         for name in list(metadata["files"]):
             path = checksum.parent / name
-            if path.suffix in (".a", ".o", ".dll", ".so", ".lib") or "~" in path.name or path.name in ("rust-toolchain", "rust-toolchain.toml"):
+            binary = path.suffix in (".a", ".o", ".dll", ".so", ".lib") and not path.name.endswith("-nasm.o")
+            if binary or "~" in path.name or path.name in ("rust-toolchain", "rust-toolchain.toml"):
                 path.unlink()
                 del metadata["files"][name]
         checksum.write_text(json.dumps(metadata))

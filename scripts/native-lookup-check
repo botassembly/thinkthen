@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Prove a consumer finds its native library by the documented lookup rule.
+
+Each case runs a fresh process from a working folder that holds decoys. On Linux
+and Windows the loader's own search path points there too. The Mac runs leave
+DYLD_LIBRARY_PATH alone, because it outranks even a full path, so they prove the
+working folder only. Use only a private installed runtime.
+The packaged library is restored after each case, even when one fails.
+"""
+import argparse
+from contextlib import contextmanager
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+VARIABLE = 'THINKTHEN_LIBRARY'
+REFUSAL = VARIABLE + ' must be an absolute path'
+BROKEN = b'not a shared library\n'
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('engine', type=Path, help='the installed library, or a copy of it with --embedded')
+parser.add_argument('--embedded', action='store_true', help='the package carries the library inside itself')
+split = sys.argv.index('--')
+args = parser.parse_args(sys.argv[1:split])
+command = sys.argv[split + 1:]
+engine = args.engine.resolve()
+# argv[0] stays a bare name, as when a shell finds the program on PATH.
+program = Path(shutil.which(command[0])).resolve()
+argv = [program.name, *command[1:]]
+# Go's package names its copy `library`; a loader adds `.dll` to a name with no suffix.
+name = engine.name if engine.suffix else engine.name + '.dll'
+decoy_names = {Path(name)}
+if engine.is_relative_to(program.parent):
+    decoy_names.add(engine.relative_to(program.parent))
+
+
+def plant(folder, content):
+    for name in decoy_names:
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        (folder / name).write_bytes(content)
+
+
+def run(folder, **variables):
+    env = {key: value for key, value in os.environ.items() if key != VARIABLE}
+    env['THINKTHEN_BACKEND'] = 'stub'
+    if sys.platform == 'win32':
+        env['PATH'] = f'{folder}{os.pathsep}{env["PATH"]}'
+    elif sys.platform == 'linux':
+        env['LD_LIBRARY_PATH'] = str(folder)
+    result = subprocess.run(argv, executable=program, cwd=folder, env=env | variables, text=True,
+                            encoding='utf-8', errors='replace', capture_output=True, timeout=600)
+    return result.returncode, result.stdout + result.stderr
+
+
+@contextmanager
+def packaged_library_removed():
+    backup = engine.with_name(engine.name + '.lookup-check-original')
+    engine.rename(backup)
+    try:
+        yield
+    finally:
+        backup.rename(engine)
+
+
+def packaged(folder, _):
+    plant(folder, BROKEN)
+    status, output = run(folder)
+    assert status == 0, ('a decoy displaced the packaged library', output)
+
+
+def not_searched(folder, private):
+    plant(folder, private.read_bytes())
+    status, output = run(folder)
+    assert status != 0, ('a working-folder library was loaded', output)
+
+
+def override(folder, private):
+    plant(folder, BROKEN)
+    status, output = run(folder, **{VARIABLE: str(private)})
+    assert status == 0, ('the absolute override did not load', output)
+
+
+def override_only(folder, private):
+    broken = private.with_name('broken-' + private.name)
+    broken.write_bytes(BROKEN)
+    status, output = run(folder, **{VARIABLE: str(broken)})
+    assert status != 0, ('a failed override fell back to another library', output)
+    assert str(broken) in output, ('the failed override is not named', output)
+
+
+def relative(folder, private):
+    plant(folder, private.read_bytes())
+    for value in (private.name, '\\foo\\' + private.name, 'C:foo\\' + private.name):
+        status, output = run(folder, **{VARIABLE: value})
+        assert status != 0, ('a relative override was loaded', value, output)
+        assert REFUSAL in output, ('a relative override was not refused by name', value, output)
+
+
+def empty(folder, _):
+    plant(folder, BROKEN)
+    status, output = run(folder, **{VARIABLE: ''})
+    assert status == 0, ('an empty override did not count as unset', output)
+
+
+CASES = [(packaged, False), (empty, False), (override_only, False), (relative, False)]
+CASES += [(override, False)] if args.embedded else [(override, True), (not_searched, True)]
+
+failed = []
+with tempfile.TemporaryDirectory(prefix='native-lookup-') as temporary:
+    private = Path(temporary) / 'private' / name
+    private.parent.mkdir()
+    shutil.copy2(engine, private)
+    for case, remove in CASES:
+        folder = Path(temporary) / case.__name__
+        folder.mkdir()
+        try:
+            if remove:
+                with packaged_library_removed():
+                    case(folder, private)
+            else:
+                case(folder, private)
+            print(f'native lookup: {program.name} {case.__name__} passed', flush=True)
+        except AssertionError as error:
+            failed.append(case.__name__)
+            print(f'native lookup: {program.name} {case.__name__} FAILED: {error}', flush=True)
+if failed:
+    sys.exit('native lookup failed: ' + ' '.join(failed))

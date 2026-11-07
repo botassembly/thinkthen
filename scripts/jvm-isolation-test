@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Prove Maven consumers keep their own existing engines. Usage: jvm-isolation-test NEW_NATIVE OLD_NATIVE."""
+"""Prove Maven consumers keep their own existing engines.
+
+Usage: jvm-isolation-test ENGINE OTHER_ENGINE PLATFORM LIBRARY. Run from jvm-gate, which selects JAVA_HOME.
+The two engines must give the public case different outcomes.
+"""
 import multiprocessing
 import os
 from pathlib import Path
-import platform
 import shutil
 import subprocess
 import sys
@@ -13,8 +16,7 @@ from jvm_repository import seed, verify
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = Path(os.environ.get('THINKTHEN_JVM_CACHE', Path.home() / '.local/share/thinkthen-build-tools/jvm'))
-JAVA = CACHE / ('jdk-22.0.2+9/Contents/Home' if platform.system() == 'Darwin' else 'jdk-22.0.2+9')
-PLATFORM = 'macos-arm64' if platform.system() == 'Darwin' else 'linux-amd64'
+JAVA = Path(os.environ['JAVA_HOME'])
 SOURCE = '''import dev.thinkthen.*;
 import java.util.List;
 public class IsolationCase {
@@ -29,7 +31,7 @@ public class IsolationCase {
 '''
 
 
-def worker(connection, root, repository, native):
+def worker(connection, root, repository, native, platform, library):
     try:
         env = dict(os.environ, JAVA_HOME=str(JAVA), PATH=f'{JAVA}/bin:{CACHE}/apache-maven-3.9.11/bin:' + os.environ['PATH'])
         for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'CLASSPATH', 'THINKTHEN_API_KEY', 'OPENAI_API_KEY'):
@@ -39,9 +41,9 @@ def worker(connection, root, repository, native):
         def mvn(*args):
             return run('mvn', '-o', '-B', '-q', f'-Dmaven.repo.local={repository}', *args)
         resources = root / 'sdk/java/library/target/classes/io/thinkthen/native'
-        resource = resources / PLATFORM
+        resource = resources / platform
         resource.mkdir(parents=True)
-        shutil.copy2(native, resource / native.name)
+        shutil.copy2(native, resource / library)
         assert connection.recv() == 'install'
         run(sys.executable, ROOT / 'scripts/jvm-generated', root / 'sdk/java')
         mvn('-f', 'sdk/java/pom.xml', 'install', '-DskipTests')
@@ -65,7 +67,7 @@ def worker(connection, root, repository, native):
         if result != expected:
             failures.append(f'expected {expected}, got {result}')
         try:
-            verify(root, classpath.split(':'), resources, PLATFORM, native)
+            verify(root, classpath.split(':'), resources, platform, resource / library)
         except AssertionError as error:
             failures.append(str(error))
         connection.send('failed: ' + '; '.join(failures) if failures else 'passed')
@@ -75,7 +77,7 @@ def worker(connection, root, repository, native):
         connection.close()
 
 
-def scenario(scratch, natives, shared):
+def scenario(scratch, natives, shared, platform, library):
     repository = seed(CACHE / 'm2', scratch / 'shared') if shared else None
     connections, processes = [], []
     for label, native in zip(('A', 'B'), natives):
@@ -83,7 +85,7 @@ def scenario(scratch, natives, shared):
         shutil.copytree(ROOT / 'sdk', root / 'sdk', ignore=shutil.ignore_patterns('target'))
         repo = repository or seed(CACHE / 'm2', scratch / f'm2-{label}')
         parent, child = multiprocessing.Pipe()
-        process = multiprocessing.Process(target=worker, args=(child, root, repo, native))
+        process = multiprocessing.Process(target=worker, args=(child, root, repo, native, platform, library))
         process.start()
         child.close()
         connections.append(parent)
@@ -102,7 +104,11 @@ def scenario(scratch, natives, shared):
             connection.send('resolve')
             results.append(connection.recv())
         print(('shared control' if shared else 'private repositories') + ': ' + '; '.join(results), flush=True)
-        assert results == ['passed', 'passed'] if not shared else 'expected rejected=' in results[0] and 'JVM artifact differs' in results[0] and results[1] == 'passed'
+        if shared:
+            assert f'expected {baselines[0]}, got {baselines[1]}' in results[0] and 'JVM artifact differs' in results[0], results
+            assert results[1] == 'passed', results
+        else:
+            assert results == ['passed', 'passed'], results
     finally:
         for connection in connections:
             connection.close()
@@ -114,12 +120,12 @@ def scenario(scratch, natives, shared):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 5:
         sys.exit(__doc__)
-    natives = [Path(p).resolve(strict=True) for p in sys.argv[1:]]
+    natives = [Path(p).resolve(strict=True) for p in sys.argv[1:3]]
     with tempfile.TemporaryDirectory(prefix='thinkthen-jvm-isolation-') as directory:
         for shared in (True, False):
             scratch = Path(directory) / ('control' if shared else 'private')
             scratch.mkdir()
-            scenario(scratch, natives, shared)
+            scenario(scratch, natives, shared, *sys.argv[3:])
     print('JVM consumers retain their own engine hashes and public results')

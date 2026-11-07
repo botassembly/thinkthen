@@ -10,14 +10,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let by_urgency =
         Rank::new("How urgent is the request?", ["routine", "urgent"])?;
     // Rank 1 is the most urgent.
-    for ranked in engine.rows(&by_urgency, messages)? {
-        let ranked = ranked?;
-        let rank = ranked.answer()?;
-        let (_, message) = ranked
-            .record()
-            .expect("a rank row keeps its record")
-            .original();
-        println!("{rank} {}", String::from_utf8_lossy(message));
+    for ranked in engine.rank(&by_urgency, messages, |message| *message)? {
+        let (message, row) = ranked?;
+        println!("{} {message}", row.answer()?);
     }
     Ok(())
 }

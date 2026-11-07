@@ -2,7 +2,7 @@
 
 ThinkThen is a classifier you call like a function: it reads text, answers one bounded question, and returns a typed value. `await` gives you the answer, ready for an `if`.
 
-Run `npm install thinkthen@0.2.0` in a Node.js 22.12 or later project. The package runs on Linux (x64 or Arm64, with glibc), macOS on Apple silicon and Windows x64, and carries its native engine and TypeScript types. It is an ES module: `import` it, or `require` it on Node.js 22.12 and later. Every example below runs as written in a `.mjs` file with `node example.mjs`. In TypeScript, each answer gets its type from the call.
+Run `npm install thinkthen@0.2.0` in a Node.js 22.12 or later project. The package runs on Linux (x64 or Arm64, with glibc 2.28 or later), macOS on Apple silicon and Windows x64, and carries its native engine and TypeScript types. It is an ES module: `import` it, or `require` it on Node.js 22.12 and later. Every example below runs as written in a `.mjs` file with `node example.mjs`. In TypeScript, each answer gets its type from the call.
 
 ## Ask a question
 
@@ -71,7 +71,7 @@ try {
 
 A row has `status` (`answered`, `unsure` or `failed`), `function`, `position`, `id` when the record has one, and `source`. Only an answered row has `answer`; only a failed row has `error`. TypeScript makes you check `status` before reading either.
 
-`threshold` sets when an answer counts. A number is a cut: yes at or above it, no below. `{ low, high }` is a band: no below `low`, not sure from `low` up to `high`, yes at or above `high`. The default is a cut at 0.5, so decide is never not sure until you set a band. Choose takes either form and is not sure unless its best choice reaches the upper cut. Tag, find, recognize and relate take only a number.
+`threshold` sets when an answer counts. A number is a cut: yes at or above it, no below. `{ low, high }` is a band: no below `low`, not sure from `low` up to `high`, yes at or above `high`. The default is a cut at 0.5, so decide is never not sure until you set a band. Choose takes only a number and is not sure unless its best choice reaches it. Tag, find, recognize and relate take only a number.
 
 ## Judge many messages at once
 

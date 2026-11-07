@@ -4,7 +4,7 @@
     reason = "detail exports borrow live value handles and exclusive output slots"
 )]
 use super::{ProbabilityView, RelationView, SpanView, ValueHandle, project, views};
-use crate::HostError;
+use crate::{HostError, memory::live};
 use std::collections::BTreeMap;
 use thinkthen::{
     Error, FunctionName, Probability, native, questions,
@@ -74,7 +74,11 @@ pub unsafe extern "C" fn thinkthen_value_label_count(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: value is borrowed and outputs are exclusive until return. */
-    unsafe { project(out, error, || Ok(labels(&*value)?.map_or(0, BTreeMap::len))) }
+    unsafe {
+        project(out, error, || {
+            Ok(labels(live(value)?)?.map_or(0, BTreeMap::len))
+        })
+    }
 }
 /// Write the label probability at index, chosen or not, to *out.
 ///
@@ -98,7 +102,7 @@ pub unsafe extern "C" fn thinkthen_value_label_at(
     unsafe {
         project(out, error, || {
             probability(
-                labels(&*value)?
+                labels(live(value)?)?
                     .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?,
                 index,
             )
@@ -122,7 +126,7 @@ pub unsafe extern "C" fn thinkthen_value_level_count(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: value is borrowed and output slots are exclusive. */
-    unsafe { project(out, error, || Ok(levels(&*value)?.map_or(0, Vec::len))) }
+    unsafe { project(out, error, || Ok(levels(live(value)?)?.map_or(0, Vec::len))) }
 }
 /// Write the probability of the level at index, in question order, to *out.
 ///
@@ -144,7 +148,7 @@ pub unsafe extern "C" fn thinkthen_value_level_at(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
         project(out, error, || {
-            Ok(levels(&*value)?
+            Ok(levels(live(value)?)?
                 .and_then(|levels| levels.get(index))
                 .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?
                 .get())
@@ -170,7 +174,7 @@ pub unsafe extern "C" fn thinkthen_value_piece_count(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
         project(out, error, || {
-            Ok((*value)
+            Ok(live(value)?
                 .detail::<questions::Recognize>()?
                 .map_or(0, |detail| detail.pieces().len()))
         })
@@ -197,7 +201,7 @@ pub unsafe extern "C" fn thinkthen_value_piece_at(
     /* SAFETY: returned text borrows value until cleanup. */
     unsafe {
         project(out, error, || {
-            let piece = piece(&*value, index)?;
+            let piece = piece(live(value)?, index)?;
             Ok(SpanView {
                 present: 1,
                 text: views::text(piece.text()),
@@ -225,7 +229,7 @@ pub unsafe extern "C" fn thinkthen_value_piece_tag_count(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
-    unsafe { project(out, error, || Ok(piece(&*value, index)?.tags().len())) }
+    unsafe { project(out, error, || Ok(piece(live(value)?, index)?.tags().len())) }
 }
 /// Write boundary probability tag of the piece at index to *out.
 ///
@@ -249,7 +253,7 @@ pub unsafe extern "C" fn thinkthen_value_piece_tag_at(
     /* SAFETY: returned text borrows value and output slots are exclusive. */
     unsafe {
         project(out, error, || {
-            probability(piece(&*value, index)?.tags(), tag)
+            probability(piece(live(value)?, index)?.tags(), tag)
         })
     }
 }
@@ -272,7 +276,7 @@ pub unsafe extern "C" fn thinkthen_value_kind_count(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
         project(out, error, || {
-            Ok((*value)
+            Ok(live(value)?
                 .detail::<questions::Recognize>()?
                 .map_or(0, |detail| detail.names().len()))
         })
@@ -299,7 +303,7 @@ pub unsafe extern "C" fn thinkthen_value_kind_span(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
         project(out, error, || {
-            let kind = kind(&*value, index)?;
+            let kind = kind(live(value)?, index)?;
             Ok(SpanView {
                 present: 1,
                 text: views::text(kind.text()),
@@ -327,7 +331,7 @@ pub unsafe extern "C" fn thinkthen_value_kind_probability_count(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
-    unsafe { project(out, error, || Ok(kind(&*value, index)?.kinds().len())) }
+    unsafe { project(out, error, || Ok(kind(live(value)?, index)?.kinds().len())) }
 }
 /// Write kind probability choice of the proposed name at index to *out.
 ///
@@ -351,7 +355,7 @@ pub unsafe extern "C" fn thinkthen_value_kind_probability_at(
     /* SAFETY: kind text borrows value and output slots are exclusive. */
     unsafe {
         project(out, error, || {
-            probability(kind(&*value, index)?.kinds(), choice)
+            probability(kind(live(value)?, index)?.kinds(), choice)
         })
     }
 }
@@ -374,7 +378,7 @@ pub unsafe extern "C" fn thinkthen_value_pair_count(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
         project(out, error, || {
-            Ok((*value)
+            Ok(live(value)?
                 .detail::<questions::Relate>()?
                 .map_or(0, |detail| detail.pairs().len()))
         })
@@ -402,7 +406,7 @@ pub unsafe extern "C" fn thinkthen_value_pair_at(
     unsafe {
         project(out, error, || {
             Ok(views::relation(
-                (*value)
+                live(value)?
                     .detail::<questions::Relate>()?
                     .and_then(|detail| detail.pairs().get(index))
                     .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?,

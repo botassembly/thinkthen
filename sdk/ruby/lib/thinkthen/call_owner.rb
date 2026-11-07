@@ -38,7 +38,7 @@ module ThinkThen
 
     def close
       check_process
-      Thread.handle_interrupt(Exception => :never) do
+      Thread.handle_interrupt(Object => :never) do
         @mutex.synchronize do
           return if !@pointer
           @closing = true

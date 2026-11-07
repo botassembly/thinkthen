@@ -5,8 +5,8 @@
 )]
 use crate::{
     HostError, QuestionHandle,
-    exports::{OK, operation},
-    memory::text,
+    exports::{THINKTHEN_OK, operation},
+    memory::{live, live_mut, text},
 };
 use std::ptr;
 use thinkthen::{FunctionName, native, questions};
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn thinkthen_question_new(
                 .ok_or_else(|| thinkthen::native::argument_error(thinkthen::Code::UsageFunction))?;
             let question = native::QuestionBuilder::new(function, text(data, len)?)?;
             out.write(Box::into_raw(Box::new(QuestionHandle::new(question))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -91,10 +91,10 @@ pub unsafe extern "C" fn thinkthen_question_add_choice(
     /* SAFETY: the builder is exclusive and borrowed bytes are live until return. */
     unsafe {
         operation(error, || {
-            (*question)
+            live_mut(question)?
                 .builder
                 .add_item(FunctionName::Choose, text(data, len)?)?;
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -120,10 +120,10 @@ pub unsafe extern "C" fn thinkthen_question_add_label(
     /* SAFETY: the builder is exclusive and counted bytes remain readable. */
     unsafe {
         operation(error, || {
-            (*question)
+            live_mut(question)?
                 .builder
                 .add_item(FunctionName::Tag, text(data, len)?)?;
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -149,10 +149,10 @@ pub unsafe extern "C" fn thinkthen_question_add_level(
     /* SAFETY: the builder is exclusive and counted bytes remain readable. */
     unsafe {
         operation(error, || {
-            (*question)
+            live_mut(question)?
                 .builder
                 .add_item(FunctionName::Score, text(data, len)?)?;
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -178,10 +178,10 @@ pub unsafe extern "C" fn thinkthen_question_add_kind(
     /* SAFETY: the builder is exclusive and counted bytes remain readable. */
     unsafe {
         operation(error, || {
-            (*question)
+            live_mut(question)?
                 .builder
                 .add_item(FunctionName::Recognize, text(data, len)?)?;
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -208,8 +208,10 @@ pub unsafe extern "C" fn thinkthen_question_add_rule(
     /* SAFETY: the caller lends the complete rule and its counted fields until return. */
     unsafe {
         operation(error, || {
-            (*question).builder.add_rule(relation_rule(&*rule)?)?;
-            Ok(OK)
+            live_mut(question)?
+                .builder
+                .add_rule(relation_rule(&*rule)?)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -253,14 +255,14 @@ pub unsafe extern "C" fn thinkthen_question_set_cut(
     /* SAFETY: the builder and output are exclusively owned. */
     unsafe {
         operation(error, || {
-            (*question).builder.set_cut(cut)?;
-            Ok(OK)
+            live_mut(question)?.builder.set_cut(cut)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
 /// Set a band of probabilities, from low to high, that gives THINKTHEN_UNSURE.
 ///
-/// Only decide, filter and choose take a band. Returns THINKTHEN_OK, or a negative code with
+/// Only decide and filter take a band. Returns THINKTHEN_OK, or a negative code with
 /// the question unchanged: -THINKTHEN_CODE_USAGE_THRESHOLD when the band is out of order,
 /// outside 0 to 1, or the function takes none.
 /// # Safety
@@ -279,8 +281,8 @@ pub unsafe extern "C" fn thinkthen_question_set_band(
     /* SAFETY: the builder and output are exclusively owned. */
     unsafe {
         operation(error, || {
-            (*question).builder.set_band(low, high)?;
-            Ok(OK)
+            live_mut(question)?.builder.set_band(low, high)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -306,8 +308,8 @@ pub unsafe extern "C" fn thinkthen_question_set_field(
     /* SAFETY: the driver owns the builder and lends counted bytes until return. */
     unsafe {
         operation(error, || {
-            (*question).builder.set_field(text(data, len)?)?;
-            Ok(OK)
+            live_mut(question)?.builder.set_field(text(data, len)?)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -330,8 +332,8 @@ pub unsafe extern "C" fn thinkthen_question_set_top(
     /* SAFETY: the builder and output are exclusively owned. */
     unsafe {
         operation(error, || {
-            (*question).builder.set_top(top)?;
-            Ok(OK)
+            live_mut(question)?.builder.set_top(top)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -361,10 +363,10 @@ pub unsafe extern "C" fn thinkthen_question_add_entry(
     /* SAFETY: only the parent is mutated; no borrowed child or bytes are retained. */
     unsafe {
         operation(error, || {
-            (*question)
+            live_mut(question)?
                 .builder
-                .add_entry(text(name, len)?, (*child).build()?)?;
-            Ok(OK)
+                .add_entry(text(name, len)?, live(child)?.build()?)?;
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -402,11 +404,11 @@ pub unsafe extern "C" fn thinkthen_question_clone(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let question = (*source).build()?;
+            let question = live(source)?.build()?;
             out.write(Box::into_raw(Box::new(QuestionHandle::new(
                 native::QuestionBuilder::snapshot(&question),
             ))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }
@@ -438,7 +440,7 @@ pub unsafe extern "C" fn thinkthen_question_from_json(
             out.write(Box::into_raw(Box::new(QuestionHandle::new(
                 native::QuestionBuilder::snapshot(&question),
             ))));
-            Ok(OK)
+            Ok(THINKTHEN_OK)
         })
     }
 }

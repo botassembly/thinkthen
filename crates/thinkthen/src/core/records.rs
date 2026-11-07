@@ -54,6 +54,20 @@ pub enum RecordId {
     String(String),
 }
 impl RecordId {
+    /// The largest whole number every float below it holds exactly. Past it,
+    /// a float id may already be a neighbor of the id the caller meant.
+    const EXACT_FLOAT: f64 = 9_007_199_254_740_991.0;
+
+    /// Read a JSON id. A whole-number float, as a table column with gaps
+    /// produces, is that integer. `None` refuses any other value.
+    fn from_raw(value: &RawValue) -> Option<Self> {
+        serde_json::from_str(value.get()).ok().or_else(|| {
+            let number = serde_json::from_str::<f64>(value.get()).ok()?;
+            (number.fract() == 0.0 && number.abs() <= Self::EXACT_FLOAT)
+                .then(|| Self::integer_decimal(&format!("{number:.0}")).ok())
+                .flatten()
+        })
+    }
     /// Admit an explicit decimal integer without a floating-point intermediate.
     /// # Errors
     /// Rejects fractions, exponents, whitespace and integers outside both ranges.
@@ -139,7 +153,7 @@ impl From<u64> for RecordId {
 enum Input {
     Text(String),
     Json(Box<RawValue>),
-    Failed(Error),
+    Failed(Box<Error>),
 }
 /// One owned input, including host missing and conversion failures.
 #[non_exhaustive]
@@ -175,6 +189,12 @@ impl Record {
             "the record cannot be converted without loss",
         )
     }
+    fn null_id() -> Self {
+        Self::failed(
+            Code::RecordInvalid,
+            &crate::core::diagnostic::requirement("id", "a string or a whole number", "null"),
+        )
+    }
     /// Admit a JSON record, retaining integer identifiers exactly.
     #[must_use]
     pub fn from_json(json: &str) -> Self {
@@ -188,10 +208,11 @@ impl Record {
             .ok()
             .and_then(|fields| fields.get("id").copied());
         let id = match id
-            .map(|value| serde_json::from_str::<RecordId>(value.get()))
+            .map(|value| RecordId::from_raw(value).ok_or(value))
             .transpose()
         {
             Ok(id) => id,
+            Err(value) if value.get() == "null" => return Self::null_id(),
             Err(_) => return Self::invalid(),
         };
         Self {
@@ -260,7 +281,7 @@ impl Record {
     }
     pub(crate) fn failed(code: Code, message: &str) -> Self {
         Self {
-            input: Input::Failed(Error::from_contract(code, message)),
+            input: Input::Failed(Box::new(Error::from_contract(code, message))),
             id: None,
             selection: Vec::new(),
             original_encoding: None,
@@ -302,7 +323,7 @@ impl Record {
                 super::Record::json_fields(raw.get(), &self.selection)
             }
             Input::Json(raw) => super::Record::json(raw.get(), pointer),
-            Input::Failed(error) => super::Record::failed(error.clone()),
+            Input::Failed(error) => super::Record::failed((**error).clone()),
         }
     }
 }

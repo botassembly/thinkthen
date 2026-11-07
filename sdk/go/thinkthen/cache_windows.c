@@ -3,7 +3,9 @@
 #include <stdlib.h>
 
 /* Only the caller and the operating system's administrators may modify the
- * cache. Reparse points and unsupported allow-ACE forms fail closed. */
+ * cache. An elevated caller's objects belong to Administrators, an owner no
+ * ordinary user can set and one that already controls the machine. Reparse
+ * points and unsupported allow-ACE forms fail closed. */
 int tt_cache_secure(const char *path, int directory) {
     int result = 0;
     HANDLE token = NULL;
@@ -27,10 +29,10 @@ int tt_cache_secure(const char *path, int directory) {
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) goto done;
     GetTokenInformation(token, TokenUser, NULL, 0, &size);
     user = malloc(size);
-    if (!user || !GetTokenInformation(token, TokenUser, user, size, &size)
-            || !EqualSid(owner, user->User.Sid)) goto done;
+    if (!user || !GetTokenInformation(token, TokenUser, user, size, &size)) goto done;
     if (!CreateWellKnownSid(WinLocalSystemSid, NULL, system, &system_size)
             || !CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, administrators, &admin_size)) goto done;
+    if (!EqualSid(owner, user->User.Sid) && !EqualSid(owner, administrators)) goto done;
     for (DWORD index = 0; index < acl->AceCount; ++index) {
         ACE_HEADER *header;
         if (!GetAce(acl, index, (void **)&header)) goto done;
@@ -41,7 +43,7 @@ int tt_cache_secure(const char *path, int directory) {
         DWORD writes = GENERIC_WRITE | GENERIC_ALL | FILE_WRITE_DATA | FILE_APPEND_DATA
             | FILE_WRITE_EA | FILE_WRITE_ATTRIBUTES | FILE_DELETE_CHILD | DELETE | WRITE_DAC | WRITE_OWNER;
         PSID principal = (PSID)&ace->SidStart;
-        if ((ace->Mask & writes) && !EqualSid(principal, owner)
+        if ((ace->Mask & writes) && !EqualSid(principal, user->User.Sid)
                 && !EqualSid(principal, system) && !EqualSid(principal, administrators)) goto done;
     }
     result = 1;

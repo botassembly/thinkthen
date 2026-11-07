@@ -101,7 +101,8 @@ def check_windows(workflow)
   end
   step = steps[trust]
   expected_environment = {
-    'CARGO_BUILD_JOBS' => '2', 'RUSTFLAGS' => '-C target-feature=+crt-static'
+    'CARGO_BUILD_JOBS' => '2', 'RUSTFLAGS' => '-C target-feature=+crt-static',
+    'THINKTHEN_EXPECT_WINDOWS_STORE' => '1', 'THINKTHEN_TEST_WINDOWS_STORE' => '1'
   }
   commands = [
     %q{$env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"},
@@ -121,6 +122,28 @@ def check_windows(workflow)
 end
 
 
+# windows-prepare repeats windows-check's steps through Kotlin, minus the candidate download.
+def check_windows_prepare(workflow)
+  jobs = workflow.fetch('jobs')
+  early = jobs['windows-prepare']
+  raise 'Windows preparation must run in the windows-prepare job' unless early
+  raise 'windows-prepare must start with the first jobs' if early.key?('needs')
+  waiting = jobs.select { |_, job| Array(job['needs']).include?('windows-prepare') }.keys
+  raise "windows-prepare must not hold back #{waiting.join(', ')}" unless waiting.empty?
+  check = jobs.fetch('windows-check')
+  unless %w[if runs-on permissions env defaults].all? { |key| early[key] == check[key] }
+    raise 'windows-prepare must run on the same terms as windows-check'
+  end
+  steps = check.fetch('steps')
+  kotlin = steps.index { |step| step['id'] == 'prepare-kotlin-readme-compiler-dependencies' }
+  raise 'windows-check lost its Kotlin preparation' unless kotlin
+  preparation = steps[0..kotlin].reject { |step| step['uses'].to_s.start_with?('actions/download-artifact@') }
+  unless early.fetch('steps') == preparation + [steps.last]
+    raise "windows-prepare steps drifted from windows-check's"
+  end
+end
+
+
 def windows_self_test(workflow)
   check_windows(workflow)
   mutations = {
@@ -129,6 +152,7 @@ def windows_self_test(workflow)
     'loopback overrides short build folder' => ->(steps) { steps.find { |step| step['id'] == 'windows-loopback' }['env']['CARGO_TARGET_DIR'] = 'long/target' },
     'trust overrides short build folder' => ->(steps) { steps.find { |step| step['id'] == 'transport-trust' }['env']['CARGO_TARGET_DIR'] = 'long/target' },
     'trust before native build' => ->(steps) { steps.reverse! },
+    'store test skipped' => ->(steps) { steps.find { |step| step['id'] == 'transport-trust' }['env'].delete('THINKTHEN_TEST_WINDOWS_STORE') },
     'online trust test' => ->(steps) { steps.find { |step| step['id'] == 'transport-trust' }['run'].sub!('--offline ', '') },
     'ignored fetch failure' => lambda do |steps|
       steps.find { |step| step['id'] == 'transport-trust' }['run'].sub!("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\n", '')
@@ -144,6 +168,47 @@ def windows_self_test(workflow)
       next
     end
     raise "accepted Windows qualification defect: #{name}"
+  end
+  early_self_test(workflow)
+end
+
+
+def early_self_test(workflow)
+  check_windows_prepare(workflow)
+  step = ->(jobs, name, id) { jobs.fetch(name).fetch('steps').find { |entry| entry['id'] == id } }
+  mutations = {
+    'windows-prepare removed' => ->(jobs) { jobs.delete('windows-prepare') },
+    'windows-prepare gains a needs' => ->(jobs) { jobs['windows-prepare']['needs'] = 'build-windows' },
+    'windows-prepare gates a job' => ->(jobs) { jobs['build-windows']['needs'] += ['windows-prepare'] },
+    'windows-prepare gates a job by name' => ->(jobs) { jobs['build']['needs'] = 'windows-prepare' },
+    'windows-prepare loses always' => ->(jobs) { jobs['windows-prepare'].delete('if') },
+    'windows-prepare changes host' => ->(jobs) { jobs['windows-prepare']['runs-on'] = 'windows-2025' },
+    'windows-prepare changes shell' => ->(jobs) { jobs['windows-prepare']['defaults'] = {'run' => {'shell' => 'pwsh'}} },
+    'windows-prepare drops Swift preparation' => lambda do |jobs|
+      jobs['windows-prepare']['steps'].reject! { |entry| entry['id'] == 'prepare-installed-package-runtimes' }
+    end,
+    'windows-prepare reorders steps' => ->(jobs) { jobs['windows-prepare']['steps'][1..-2] = jobs['windows-prepare']['steps'][1..-2].reverse },
+    'windows-prepare loses its report' => ->(jobs) { jobs['windows-prepare']['steps'].pop },
+    'windows-prepare downloads the candidate' => lambda do |jobs|
+      download = jobs['windows-check']['steps'].find { |entry| entry['uses'].to_s.start_with?('actions/download-artifact@') }
+      jobs['windows-prepare']['steps'].insert(-2, download)
+    end,
+    'windows-check pin moves alone' => ->(jobs) { step.call(jobs, 'windows-check', 'setup-dotnet')['with']['dotnet-version'] = '0.0.0' },
+    'windows-prepare pin moves alone' => ->(jobs) { step.call(jobs, 'windows-prepare', 'setup-dotnet')['with']['dotnet-version'] = '0.0.0' },
+    'windows-check gains a preparation step' => lambda do |jobs|
+      jobs['windows-check']['steps'].insert(1, {'id' => 'new-preparation', 'if' => 'always()', 'run' => 'true'})
+    end
+  }
+  mutations.each do |name, mutate|
+    copy = Marshal.load(Marshal.dump(workflow))
+    mutate.call(copy.fetch('jobs'))
+    begin
+      check_windows_prepare(copy)
+    rescue RuntimeError
+      puts "rejected: #{name}"
+      next
+    end
+    raise "accepted Windows preparation defect: #{name}"
   end
 end
 
@@ -215,9 +280,15 @@ begin
   workflow = YAML.safe_load_file(arguments.first || File.join(ROOT, '.github/workflows/release.yml'), aliases: true)
   test ? self_test(workflow) : check(workflow)
   windows = YAML.safe_load_file(File.join(ROOT, '.github/workflows/native-qualification.yml'), aliases: true)
-  test ? windows_self_test(windows) : check_windows(windows)
+  if test
+    windows_self_test(windows)
+  else
+    check_windows(windows)
+    check_windows_prepare(windows)
+  end
   puts 'release workflow: credentials reach only their own sites'
   puts 'Windows workflow: transport trust runs offline after the native build'
+  puts 'Windows workflow: windows-prepare repeats windows-check preparation with the first jobs'
 rescue RuntimeError, Psych::Exception => error
   warn "release-workflow-check: #{error.message}"
   exit 1

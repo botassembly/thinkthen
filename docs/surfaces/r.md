@@ -24,7 +24,7 @@ print(is_refund)
 
 The text comes first and the question second, as in every tidyverse function. Name `question =` so a swapped call can't answer the wrong question.
 
-R-universe serves binary packages for many R versions and platforms. Elsewhere it installs from source, which also needs R development headers, a C compiler, GNU make and Rust 1.95.0 or later. Source installs work on Unix; Windows uses the binary package.
+R-universe serves binary packages for many R versions and platforms. Elsewhere it installs from source, which also needs R development headers, a C compiler, GNU make and Rust 1.95.0 or later. On Windows x86-64 a source install also needs the Rtools that matches your R, Rust with the `x86_64-pc-windows-gnu` target and, when Rust's host toolchain is MSVC, the Visual Studio C++ linker. We test Windows with R 4.6, Rtools 4.5 and an MSVC host, so R 4.2 to 4.5 and a GNU host are untested there, and we test our own build, not R-universe's. Windows support is x86-64 only; Windows ARM64 is untested.
 
 ## Handle not sure and failures
 
@@ -45,9 +45,9 @@ if (is.na(is_refund)) {
 
 <!-- output: capture -->
 
-`c(0.2, 0.8)` answers no below 0.2, not sure from 0.2 up to 0.8, and yes at 0.8 or above. Decide, choose and filter take a band or a single cut; tag, find, recognize and relate take a single cut.
+`c(0.2, 0.8)` answers no below 0.2, not sure from 0.2 up to 0.8, and yes at 0.8 or above. Decide and filter take a band or a single cut; choose, tag, find, recognize and relate take a single cut.
 
-A failed record, such as an `NA` or a blank text, sends nothing to the backend. ThinkThen judges every other record first, then raises one `thinkthen_failed_rows` error. Its `code` is the first failure's code, `rows` holds every outcome already paid for, and `failed_rows` holds the failed ones:
+A failed record, such as an `NA` or a blank text, sends nothing to the backend. ThinkThen judges every other record first, then raises one `thinkthen_failed_rows` error. Its message names every failed code, `codes` lists them, `code` is the first of them, `rows` holds every outcome already paid for, and `failed_rows` holds the failed ones:
 
 ```r
 messages <- c("Please refund my order.", "", "Where is my parcel?")
@@ -62,7 +62,16 @@ refund_checks <- tryCatch(
 
 <!-- output: capture -->
 
-Look for position 2 with `record.empty`. `errors = "na"` turns failed records into `NA` instead of an error, so they read like not sure; use it only where both go to a person anyway. To keep every outcome with its status, call the `_rows` form, as [Judge many records](#judge-many-records) shows.
+Look for position 2 with `record.empty`. To keep going past a failure, pass `errors = "na"`. The answers stay a plain vector with `NA` for not sure and for a failure, so `ifelse()` and dplyr use them as they are. The call warns once and names every failed code, and `suppressWarnings()` silences it. `tt_failures()` lists each failure, so you can tell it from not sure:
+
+```r
+messages <- c("Please refund my order.", NA, "")
+is_refund <- tt_decide(messages, question = "Does the customer request a refund?",
+                       threshold = c(0.2, 0.8), errors = "na")
+tt_failures(is_refund)[c("position", "error_code")]
+```
+
+Each row of `tt_failures()` has the failure's `position` in your input, `id`, `question`, `error_code`, `error_message` and `error_http_status`. `question` names the annotate question. A result with no failure has no warning, stays `identical()` to the plain answers, and gives zero rows. `tt_filter()`, `tt_keep()` and `tt_annotate()` work the same way. Subsetting with `[` drops the list, so read it before you subset. To keep every outcome with its status, call the `_rows` form, as [Judge many records](#judge-many-records) shows.
 
 Mistakes in the call itself raise at once, such as a bad threshold, a missing key, or a `descriptions` name that is not one of the choices. Every ThinkThen error inherits `thinkthen_error` and carries a `code`; [Errors and cancellation](#errors-and-cancellation) lists the classes.
 
@@ -291,7 +300,7 @@ triage_inbox <- function(messages) {
 
 ## Errors and cancellation
 
-Every ThinkThen error is an rlang condition that inherits `thinkthen_error` and carries `code`, a name from the shared list such as `usage.threshold` or `backend.status`. It also has a class for its family: `thinkthen_usage_error`, `thinkthen_record_error`, `thinkthen_backend_error`, `thinkthen_local_error` or `thinkthen_internal_error`. Failed records raise `thinkthen_failed_rows`, as [Handle not sure and failures](#handle-not-sure-and-failures) shows.
+Every ThinkThen error is an rlang condition that inherits `thinkthen_error` and carries `code`, a name from the shared list such as `usage.threshold` or `backend.status`, and `http_status` when the backend answered one. It also has a class for its family: `thinkthen_usage_error`, `thinkthen_record_error`, `thinkthen_backend_error`, `thinkthen_local_error` or `thinkthen_internal_error`. Failed records raise `thinkthen_failed_rows`, as [Handle not sure and failures](#handle-not-sure-and-failures) shows.
 
 Esc or Ctrl-C cancels a running call and raises `thinkthen_cancelled_error`. An interactive session shows a progress bar; `.progress = FALSE` hides it. `options(thinkthen.verbose = TRUE)` prints when each call starts and which positions fail.
 

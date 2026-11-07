@@ -15,13 +15,13 @@ pub(crate) use cleanup::TemporaryPaths;
 pub(crate) use cleanup::force_cleanup;
 
 use crate::core::diagnostic;
-use crate::{Error, Family};
+use crate::{Code, Error, Family};
 use std::path::PathBuf;
 
 pub(crate) const MAX_RECORD_BYTES: usize = 64 * 1024 * 1024;
 pub(crate) const RECORD_LIMIT_MESSAGE: &str = "record exceeds the 64 MiB limit";
 pub(crate) fn record_limit() -> FileError {
-    FileError::Invalid(RECORD_LIMIT_MESSAGE.into())
+    FileError::Invalid(Code::UsageTable, RECORD_LIMIT_MESSAGE.into())
 }
 
 /// The explicitly selected table encoding.
@@ -83,9 +83,9 @@ pub(crate) enum FileError {
     /// The original engine admission or final call error.
     #[error("{0}")]
     Engine(#[from] Error),
-    /// Invalid table arguments or data.
-    #[error("{}", crate::escape_diagnostic(.0))]
-    Invalid(String),
+    /// A table mistake, with the code naming what the caller must change.
+    #[error("{}", crate::escape_diagnostic(.1))]
+    Invalid(Code, String),
     /// File access, preservation or publication failed.
     #[error("{}", crate::escape_diagnostic(.0))]
     Local(String),
@@ -97,8 +97,8 @@ impl FileError {
     pub(crate) fn code(&self) -> &str {
         match self {
             Self::Engine(error) => error.code().as_str(),
-            Self::Invalid(_) => crate::Code::UsageQuestion.as_str(),
-            Self::Local(_) => crate::Code::LocalIo.as_str(),
+            Self::Invalid(code, _) => code.as_str(),
+            Self::Local(_) => Code::LocalIo.as_str(),
         }
     }
 
@@ -107,7 +107,7 @@ impl FileError {
     pub(crate) fn family(&self) -> Family {
         match self {
             Self::Engine(error) => error.code().family(),
-            Self::Invalid(_) => Family::Usage,
+            Self::Invalid(..) => Family::Usage,
             Self::Local(_) => Family::Local,
         }
     }
@@ -117,7 +117,8 @@ impl FileJob {
     /// Admit a file operation's explicit framing and selected column names.
     ///
     /// # Errors
-    /// Returns `usage.question` for missing or repeated column selections.
+    /// Returns `usage.table` for an unsupported format, `usage.column` for missing
+    /// or repeated column selections and `usage.sheet` for a sheet on CSV or TSV.
     pub(crate) fn new(
         input: PathBuf,
         format: FileFormat,
@@ -133,35 +134,43 @@ impl FileJob {
                 extension.eq_ignore_ascii_case("xls") || extension.eq_ignore_ascii_case("ods")
             })
         {
-            return Err(FileError::Invalid(diagnostic::requirement(
-                "input.format",
-                "xlsx, CSV or TSV",
-                "unsupported workbook format; save as .xlsx or CSV before running ThinkThen",
-            )));
+            return Err(FileError::Invalid(
+                Code::UsageTable,
+                diagnostic::requirement(
+                    "input.format",
+                    "xlsx, CSV or TSV",
+                    "unsupported workbook format; save as .xlsx or CSV before running ThinkThen",
+                ),
+            ));
         }
         if columns.is_empty() {
-            return Err(FileError::Invalid(diagnostic::requirement(
-                "columns",
-                "at least one field column with --column",
-                "an empty selection",
-            )));
+            return Err(FileError::Invalid(
+                Code::UsageColumn,
+                diagnostic::requirement(
+                    "columns",
+                    "at least one field column with --column",
+                    "an empty selection",
+                ),
+            ));
         }
         let mut unique = std::collections::BTreeSet::new();
         for column in &columns {
             if column.is_empty() || !unique.insert(column) {
-                return Err(FileError::Invalid(diagnostic::requirement(
-                    "columns",
-                    "nonempty, distinct field column names",
-                    "an empty or repeated name",
-                )));
+                return Err(FileError::Invalid(
+                    Code::UsageColumn,
+                    diagnostic::requirement(
+                        "columns",
+                        "nonempty, distinct field column names",
+                        "an empty or repeated name",
+                    ),
+                ));
             }
         }
         if format != FileFormat::Xlsx && sheet.is_some() {
-            return Err(FileError::Invalid(diagnostic::requirement(
-                "sheet",
-                "xlsx framing",
-                "CSV or TSV framing",
-            )));
+            return Err(FileError::Invalid(
+                Code::UsageSheet,
+                diagnostic::requirement("sheet", "xlsx framing", "CSV or TSV framing"),
+            ));
         }
         Ok(Self {
             input,
@@ -191,19 +200,25 @@ fn local(error: impl std::fmt::Display) -> FileError {
 fn headers(headers: &[String], selected: &[String]) -> Result<(), FileError> {
     let mut unique = std::collections::BTreeSet::new();
     if headers.is_empty() || headers.iter().any(|h| h.is_empty() || !unique.insert(h)) {
-        return Err(FileError::Invalid(diagnostic::requirement(
-            "headers",
-            "nonempty, unique column headers",
-            "empty or repeated column headers",
-        )));
+        return Err(FileError::Invalid(
+            Code::UsageTable,
+            diagnostic::requirement(
+                "headers",
+                "nonempty, unique column headers",
+                "empty or repeated column headers",
+            ),
+        ));
     }
     for name in selected {
         if !unique.contains(name) {
-            return Err(FileError::Invalid(diagnostic::unknown(
-                "column",
-                name,
-                &headers.iter().map(String::as_str).collect::<Vec<_>>(),
-            )));
+            return Err(FileError::Invalid(
+                Code::UsageColumn,
+                diagnostic::unknown(
+                    "column",
+                    name,
+                    &headers.iter().map(String::as_str).collect::<Vec<_>>(),
+                ),
+            ));
         }
     }
     Ok(())

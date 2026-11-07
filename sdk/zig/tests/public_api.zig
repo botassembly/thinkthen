@@ -495,28 +495,43 @@ test "an empty collection yields no rows without reaching the backend" {
     try testing.expectError(error.Backend, row.answer(&diagnostic));
 }
 
-extern "c" fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
-extern "c" fn unsetenv(name: [*:0]const u8) c_int;
-fn environmentBackend() !void {
-    defer _ = unsetenv("THINKTHEN_BACKEND");
-    try testing.expectEqual(@as(c_int, 0), setenv("THINKTHEN_BACKEND", "stub", 1));
+// Rust reads the process environment, which Windows keeps apart from the C runtime's copy.
+const backend_environment = if (builtin.os.tag == .windows) struct {
+    const name = std.unicode.utf8ToUtf16LeStringLiteral("THINKTHEN_BACKEND");
+    extern "kernel32" fn SetEnvironmentVariableW([*:0]const u16, ?[*:0]const u16) callconv(.winapi) c_int;
+    fn set(comptime value: []const u8) !void {
+        try testing.expect(SetEnvironmentVariableW(name, std.unicode.utf8ToUtf16LeStringLiteral(value)) != 0);
+    }
+    fn unset() void {
+        _ = SetEnvironmentVariableW(name, null);
+    }
+} else struct {
+    extern "c" fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
+    extern "c" fn unsetenv(name: [*:0]const u8) c_int;
+    fn set(comptime value: [:0]const u8) !void {
+        try testing.expectEqual(@as(c_int, 0), setenv("THINKTHEN_BACKEND", value, 1));
+    }
+    fn unset() void {
+        _ = unsetenv("THINKTHEN_BACKEND");
+    }
+};
+
+// Feature: a client with no backend reads THINKTHEN_BACKEND, and an explicit backend wins.
+test "an unset backend reads THINKTHEN_BACKEND and the engine admits its name" {
+    defer backend_environment.unset();
+    try backend_environment.set("stub");
     var client = try tt.Client.init(.{}, null);
     defer client.deinit();
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const row = try client.decide(arena.allocator(), "Ready?", .{ .text = "evidence" }, .{}, null);
     try testing.expectEqual(tt.Backend.stub, row.source.backend);
-    try testing.expectEqual(@as(c_int, 0), setenv("THINKTHEN_BACKEND", "not-a-backend", 1));
+    try backend_environment.set("not-a-backend");
     var diagnostic: tt.Diagnostic = .{};
     try testing.expectError(error.Usage, tt.Client.init(.{}, &diagnostic));
     try testing.expectEqual(tt.ErrorCode.usage_backend, diagnostic.code.?);
     var explicit = try tt.Client.init(.{ .backend = .stub }, null);
     explicit.deinit();
-}
-
-// Feature: a client with no backend reads THINKTHEN_BACKEND, and an explicit backend wins.
-test "an unset backend reads THINKTHEN_BACKEND and the engine admits its name" {
-    if (builtin.os.tag == .windows) return error.SkipZigTest else try environmentBackend();
 }
 
 // Feature: rank rows carry native-owned original bytes, without retaining the input stream.

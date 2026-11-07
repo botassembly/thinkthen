@@ -65,41 +65,6 @@ def verify(path, expected=None):
             raise ValueError('wheel License-File metadata omits bundled terms')
 
 
-def candidate(folder):
-    """Compare final package inventories with the currently resolved target graphs."""
-    from release_notices import bundle
-    from release_notice_packages import package_files, runtime_files, native_notices
-    target = json.loads((folder / 'build.json').read_text())['platform']
-    produced = json.loads((folder / 'compiled-crates.json').read_text())
-    if produced['target'] != target: raise ValueError('compiled target differs')
-    for family, path in package_files(folder, target.startswith('windows')):
-        expected = json.loads(bundle(target, family, compiled=produced['crates'])[NOTICE + '/index.json'])
-        verify(path, expected)
-        files = contents(path)
-        prefix = '' if family == 'sqlite' or target.startswith('windows') else 'share/thinkthen-' + family + '/'
-        for name, data in native_notices(family, target).items():
-            if files.get(prefix + name) != data:
-                raise ValueError('package native notices differ: ' + str(path))
-    from release_jvm_notices import check as jvm_notices
-    jvm_notices(folder)
-    from release_r_dependencies import directories, terms, metadata
-    from release_notices import ROOT
-    for directory in directories(folder):
-        inventory = json.loads((directory / 'inventory.json').read_text())
-        for filename in inventory['install_order']:
-            path = directory / filename
-            verify(path)
-            files = contents(path)
-            for name, data in terms(path, ROOT).items():
-                if files[metadata(path)['Package'] + '/' + name] != data:
-                    raise ValueError('R dependency terms differ: ' + filename)
-    if (folder / 'prerequisites/swift-runtime').is_dir():
-        for name, data in runtime_files('swift-icu').items():
-            if (folder / 'prerequisites/swift-runtime' / name).read_bytes() != data:
-                raise ValueError('Swift ICU runtime terms differ')
-    print('all package and runtime notices match: ' + target)
-
-
 def package_notices(path):
     """Reuse delivered terms when registry assembly reuses the delivered engine."""
     files = contents(path)

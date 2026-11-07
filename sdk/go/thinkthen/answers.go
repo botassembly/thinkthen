@@ -1,3 +1,5 @@
+//go:build cgo
+
 package thinkthen
 
 // NoDetail marks functions without a detail payload.

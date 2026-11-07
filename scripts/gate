@@ -50,6 +50,7 @@ for tool in python3 git cargo rustc cc c++ make cmake pkg-config uv node npm rub
 done
 if [ "$(uname -s)" = Linux ]; then stage tool-docker command -v docker; fi
 stage python-version python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
+stage tomllib-test scripts/tomllib-test
 stage gate-report-test scripts/gate-report-test
 stage stress-dispatch-test scripts/stress-dispatch-test
 stage release-metadata python3 scripts/release_metadata.py

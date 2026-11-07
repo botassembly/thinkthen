@@ -132,7 +132,7 @@ def test_native_error_family_selects_the_public_exception(
     from thinkthen import _native, _runtime
 
     def native_failure() -> None:
-        raise _native.Error(entry["family"], entry["name"], "fixture error")
+        raise _native.Error(entry["family"], entry["name"], "fixture error", None)
 
     expected: type[tt.ThinkThenError] = (
         tt.UsageError if entry["family"] == "usage" else tt.SetupError

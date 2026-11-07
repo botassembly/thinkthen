@@ -409,9 +409,43 @@ def swift_consumer(options, native, revision):
     result.check_returncode()
 
 
+def csharp_consumer(options, native, revision):
+    source = stage_source(ROOT, revision, options.output / 'source.tar.gz')
+    (options.output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
+    upload_archive(options, native + '/source.tar.gz', options.output / 'source.tar.gz',
+                   source['archive_sha256'])
+    checksum = hashlib.sha256(options.csharp_package.read_bytes()).hexdigest()
+    print('Genuine Windows NuGet package sha256 ' + checksum, flush=True)
+    upload_archive(options, native + '/' + options.csharp_package.name, options.csharp_package, checksum)
+    script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; & " + quote(options.python_home + '/python.exe') + " source/scripts/windows-csharp-check " + quote(options.csharp_package.name) + " proof; exit $LASTEXITCODE"
+    with (options.output / 'csharp-consumer.log').open('wb') as log:
+        result = subprocess.run(ssh_command(options, script), stdout=log,
+                                stderr=subprocess.STDOUT, timeout=1800)
+    sys.stdout.buffer.write((options.output / 'csharp-consumer.log').read_bytes())
+    # Restored packages are too many for the seconds cleanup gets while the VM stops.
+    ssh(options, "$ErrorActionPreference='Stop'; Remove-Item -LiteralPath " + quote(native) + " -Recurse -Force", timeout=120)
+    result.check_returncode()
+
+
+def confirmed_stopped(container, seconds=3):
+    """Ask until Docker says stopped; with the 2s scratch and 4s stop bounds, fit pm's 10s grace."""
+    deadline = time.monotonic() + seconds
+    while True:
+        left = deadline - time.monotonic()
+        try:
+            state = run('docker', 'inspect', '--format', '{{.State.Running}}', container, timeout=max(left, 0.1))
+            if state.stdout.strip() == b'false':
+                return True
+        except (subprocess.SubprocessError, OSError):
+            pass
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.25)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme', 'readme-input', 'readme-build', 'swift'))
+    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme', 'readme-input', 'readme-build', 'swift', 'csharp'))
     parser.add_argument('output', type=Path)
     parser.add_argument('--source', default='HEAD')
     parser.add_argument('--host', default='Docker@localhost')
@@ -426,16 +460,19 @@ def main():
     parser.add_argument('--replay-inputs', type=Path, help='verified Linux version-probe CLI and public cache for the one strict Windows replay')
     parser.add_argument('--binary', type=Path, help='existing genuine candidate executable for readme mode; never build')
     parser.add_argument('--swift-inputs', type=Path, help='verified genuine candidate Swift input bundle')
+    parser.add_argument('--csharp-package', type=Path, help='genuine candidate Windows NuGet package')
     options = parser.parse_args()
     if (options.mode == 'swift') != (options.swift_inputs is not None):
         parser.error('swift mode requires --swift-inputs; other modes do not accept it')
+    if (options.mode == 'csharp') != (options.csharp_package is not None):
+        parser.error('csharp mode requires --csharp-package; other modes do not accept it')
     if (options.mode in ('readme', 'readme-input')) != (options.binary is not None):
         parser.error('readme mode requires --binary; other modes do not accept it')
     options.python_home = None
     if any(not math.isfinite(value) or value <= 0 for value in (options.seconds, options.ready_seconds, options.lock_seconds)):
         parser.error('duration bounds must be finite and positive')
-    if options.cleanup_root and options.mode != 'build':
-        parser.error('ended-job cleanup is available only during an owned build lifecycle')
+    if options.cleanup_root and options.mode not in ('build', 'csharp'):
+        parser.error('ended-job cleanup is available only during an owned build or C# lifecycle')
     if options.replay_inputs and options.mode != 'build':
         parser.error('strict Windows replay is available only during the owned build lifecycle')
     for ended_root in options.cleanup_root:
@@ -502,7 +539,7 @@ def main():
                 raise ValueError('Cannot remove the active owned native root')
             cleanup = "$ErrorActionPreference='Stop'; if(Test-Path -LiteralPath " + quote(ended_root) + "){Remove-Item -LiteralPath " + quote(ended_root) + " -Recurse -Force}; [Console]::Out.WriteLine('Removed ended-job native root: ' + " + quote(ended_root) + ")"
             python_ssh(options, cleanup, phase='cleanup-' + ended_root.rsplit('/', 1)[1])
-        if options.mode in ('build', 'readme', 'readme-input', 'readme-build', 'swift'):
+        if options.mode in ('build', 'readme', 'readme-input', 'readme-build', 'swift', 'csharp'):
             provision_python(options, native, python_manifest)
         elif options.mode == 'hold':
             verify_python(options, native, python_manifest)
@@ -513,6 +550,8 @@ def main():
             inventory(options)
         elif options.mode == 'swift':
             swift_consumer(options, native, revision)
+        elif options.mode == 'csharp':
+            csharp_consumer(options, native, revision)
         elif options.mode in ('readme', 'readme-input'):
             source = stage_source(ROOT, revision, output / 'source.tar.gz')
             upload_archive(options, native + '/source.tar.gz', output / 'source.tar.gz', source['archive_sha256'])
@@ -600,15 +639,13 @@ def main():
                 # waiting CLI dies. All cleanup fits pm's ten-second grace.
                 try:
                     run('docker', 'stop', '--time', '3', options.container, timeout=4)
+                except subprocess.TimeoutExpired:
+                    pass  # A loaded host stops the VM late; the state below decides.
                 except (subprocess.SubprocessError, OSError) as error:
                     cleanup_error = error
-                try:
-                    state = run('docker', 'inspect', '--format', '{{.State.Running}}', options.container, timeout=2)
-                    stopped = state.stdout.strip() == b'false'
-                    if not stopped:
-                        cleanup_error = RuntimeError('Docker did not confirm a stopped VM')
-                except (subprocess.SubprocessError, OSError) as error:
-                    cleanup_error = error
+                stopped = confirmed_stopped(options.container)
+                if not stopped:
+                    cleanup_error = RuntimeError('Docker did not confirm a stopped VM')
         finally:
             if stopped:
                 try:

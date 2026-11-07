@@ -35,6 +35,42 @@ static int decide(const thinkthen_client *client) {
     return 0;
 }
 
+static void band(const thinkthen_client *client, double low, double high, bool start) {
+    bool answer = start;
+    int rc = thinkthen_decide_band(client, "Ready?", low, high, "The build passed.",
+                                   THINKTHEN_NUL_TERMINATED, &answer, NULL);
+    printf("band %.1f %.1f rc=%d answer=%d\n", low, high, rc, answer);
+}
+
+static int decide_band(const thinkthen_client *client) {
+    /* Each start differs from the answer a correct call writes, or holds when it writes none. */
+    band(client, 0.6, 0.8, true);
+    band(client, 0.4, 0.8, true);
+    band(client, 0.4, 0.8, false);
+    band(client, 0.2, 0.4, false);
+    band(client, 0.8, 0.2, true);
+    thinkthen_error error = THINKTHEN_ERROR_INIT;
+    const char *const passed = "The build passed.";
+    const size_t whole = THINKTHEN_NUL_TERMINATED;
+    bool answer = true;
+    int rc = thinkthen_decide_band(NULL, "Ready?", 0.2, 0.8, passed, whole, &answer, &error);
+    printf("client rc=%d code=%d answer=%d\n", rc, error.code, answer);
+    rc = thinkthen_decide_band(client, NULL, 0.2, 0.8, passed, whole, &answer, &error);
+    printf("question rc=%d code=%d answer=%d\n", rc, error.code, answer);
+    rc = thinkthen_decide_band(client, "Ready?", 0.2, 0.8, NULL, 0, &answer, &error);
+    printf("text rc=%d code=%d answer=%d\n", rc, error.code, answer);
+    rc = thinkthen_decide_band(client, "Ready?", 0.2, 0.8, passed, whole, NULL, &error);
+    printf("answer rc=%d code=%d\n", rc, error.code);
+    rc = thinkthen_decide_band(client, "Ready \xff?", 0.2, 0.8, passed, whole, &answer, &error);
+    printf("wording rc=%d code=%d answer=%d\n", rc, error.code, answer);
+    rc = thinkthen_decide_band(client, "Ready?", 0.2, 0.8, "a \xff", whole, &answer, &error);
+    printf("invalid rc=%d code=%d answer=%d\n", rc, error.code, answer);
+    rc = thinkthen_decide_band(client, "Ready?", 0.2, 0.8, "  \n", 3, &answer, &error);
+    printf("blank rc=%d code=%d answer=%d\n", rc, error.code, answer);
+    thinkthen_error_free(&error);
+    return 0;
+}
+
 static int choose(const thinkthen_client *client) {
     const char *const teams[] = {"billing", "shipping", "other"};
     size_t team = 99;
@@ -225,7 +261,7 @@ int main(int argc, char **argv) {
     static const struct {
         const char *name;
         int (*run)(const thinkthen_client *);
-    } modes[] = {{"decide", decide}, {"choose", choose}, {"tag", tag}, {"score", score},
+    } modes[] = {{"decide", decide}, {"band", decide_band}, {"choose", choose}, {"tag", tag}, {"score", score},
                  {"find", find}, {"recognize", recognize}, {"relate", relate},
                  {"annotate", annotate}, {"filter", filter}, {"meanings", meanings}};
     int status = 2;

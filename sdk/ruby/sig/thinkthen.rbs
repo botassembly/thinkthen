@@ -300,6 +300,7 @@ module ThinkThen
     private
     def produce: (Enumerator::Yielder) -> void
     def pull: () -> untyped
+    def release: () -> void
     def drive: () -> untyped
     def blocking_next: (untyped) -> untyped
     def supply_input: () -> untyped
@@ -338,7 +339,7 @@ module ThinkThen
   end
   type choose_result = Answered[String, LabelDetail] | Unsure[LabelDetail] | Failed
   class ChooseQuestion < Question
-    def initialize: (String, choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?) -> void
+    def initialize: (String, choices: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?) -> void
   end
   type tag_result = Answered[Array[String], LabelDetail] | Unsure[LabelDetail] | Failed
   class TagQuestion < Question
@@ -386,11 +387,11 @@ module ThinkThen
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
       | (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
-    def choose: (String, json, choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> choose_result
+    def choose: (String, json, choices: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> choose_result
       | (ChooseQuestion, json, ?name: String?, ?cancel: CancelToken?) -> choose_result
-    def choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
+    def choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
-      | (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
+      | (String, Enumerable[json], choices: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
     def tag: (String, json, labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> tag_result
       | (TagQuestion, json, ?name: String?, ?cancel: CancelToken?) -> tag_result
@@ -452,11 +453,11 @@ module ThinkThen
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
       | (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
-  def self.choose: (String, json, choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> choose_result
+  def self.choose: (String, json, choices: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> choose_result
       | (ChooseQuestion, json, ?name: String?, ?cancel: CancelToken?) -> choose_result
-  def self.choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
+  def self.choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
-      | (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
+      | (String, Enumerable[json], choices: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
   def self.tag: (String, json, labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> tag_result
       | (TagQuestion, json, ?name: String?, ?cancel: CancelToken?) -> tag_result

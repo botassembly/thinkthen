@@ -28,7 +28,7 @@ pub fn saved(allocator: std.mem.Allocator, json: []const u8) ![]u8 {
     const record: tt.Record = .{ .json = "{\"body\":\"Bill\"}" };
     const actual = try client.choose(a, topic.question, topic.choices, record, topic.options, null);
     const choices = [_]tt.Choice{ .{ .name = "billing" }, .{ .name = "shipping" } };
-    const direct = try client.choose(a, "Which topic?", &choices, record, .{ .field = "/body", .threshold = .{ .cut = 0.7 } }, null);
+    const direct = try client.choose(a, "Which topic?", &choices, record, .{ .field = "/body", .threshold = 0.7 }, null);
     const direct_json = try std.json.Stringify.valueAlloc(a, direct, .{ .emit_null_optional_fields = false });
     const actual_json = try std.json.Stringify.valueAlloc(a, actual, .{ .emit_null_optional_fields = false });
     try std.testing.expectEqualStrings(direct_json, actual_json);

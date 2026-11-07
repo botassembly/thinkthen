@@ -126,9 +126,9 @@ public class Filtered<out T> internal constructor(
     override fun toString(): String = "Filtered(item=$item, row=$row)"
 }
 
-/** A rank outcome with the engine's snapshot of its record. The answer is the record's rank; [position] is its input order. */
+/** A rank outcome with a copy of its record. The answer is the record's rank; [position] is its input order. */
 public class Ranked<out T> internal constructor(
-    /** The record as the engine saw it: a `JsonValue` snapshot, with `JsonNull` for a missing or invalid record. */
+    /** An equal copy of the record, read back through its serializer, not the same object. A missing or invalid record keeps its original. */
     public val item: T,
     /** The record's row. */
     public val row: Row<Long, LevelDetail>,

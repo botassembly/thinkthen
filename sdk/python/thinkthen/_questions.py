@@ -224,7 +224,7 @@ class ChooseQuestion(_LabelQuestion[_Label]):
         question: str,
         *,
         choices: TypeForm[_Label],
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         descriptions: Descriptions[_Label] | None = None,
     ) -> None: ...
@@ -235,7 +235,7 @@ class ChooseQuestion(_LabelQuestion[_Label]):
         question: str,
         *,
         choices: list[_Label] | tuple[_Label, ...],
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         descriptions: Descriptions[_Label] | None = None,
     ) -> None: ...
@@ -245,7 +245,7 @@ class ChooseQuestion(_LabelQuestion[_Label]):
         question: str,
         *,
         choices: ChoiceInput[_Label],
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         descriptions: Descriptions[_Label] | None = None,
     ) -> None:

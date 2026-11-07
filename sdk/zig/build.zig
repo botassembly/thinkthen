@@ -16,7 +16,6 @@ pub fn build(b: *std.Build) !void {
     });
     module.addImport("c", header.createModule());
     module.addImport("codes", b.createModule(.{ .root_source_file = b.path("src/error_codes.zig"), .target = target, .optimize = optimize }));
-    if (target.result.os.tag != .windows) module.addRPathSpecial(if (target.result.os.tag == .macos) "@loader_path" else "$ORIGIN");
     if (target.result.os.tag == .linux) module.linkSystemLibrary("dl", .{ .use_pkg_config = .no });
     const tests = b.addTest(.{ .root_module = b.createModule(.{
         .root_source_file = b.path("tests/public_api.zig"),
@@ -62,7 +61,7 @@ fn nativeAsset(target: std.Target) error{UnsupportedTarget}!struct { []const u8,
             .{ "linux-arm64", "libthinkthen_ffi.so" }
         else
             error.UnsupportedTarget,
-        .windows => if (target.cpu.arch == .x86_64 and target.abi == .msvc)
+        .windows => if (target.cpu.arch == .x86_64 and (target.abi == .gnu or target.abi == .msvc))
             .{ "win-x64", "thinkthen_ffi.dll" }
         else
             error.UnsupportedTarget,

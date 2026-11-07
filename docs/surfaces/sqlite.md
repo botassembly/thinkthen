@@ -289,7 +289,7 @@ A JSON array in one cell is one record, not several. Text read without `format =
 | `field = '/text'` | all | Judges one field of a JSON record, chosen by a JSON pointer. |
 | `params = '[1]'` | all | Binds values to the source query's `?` slots. |
 | `threshold = 0.8` | decide, filter, choose, tag, find, recognize, relate | Sets the cut an answer must reach. |
-| `low = 0.2 AND high = 0.8` | decide, filter, choose | Sets a band. Decide answers no below `low`, yes at or above `high`, and not sure between them. |
+| `low = 0.2 AND high = 0.8` | decide, filter | Sets a band. Decide answers no below `low`, yes at or above `high`, and not sure between them. |
 | `top = 5` | rank | Keeps the first five ranks. |
 | `yes_means = '...'`, `no_means = '...'` | decide, filter | Says what yes and no mean for this question. |
 | `descriptions = '{"billing": "Invoices, fees and refunds."}'` | choose, tag, score, rank | Describes some or all options or levels. A key that is not an option or level is refused. |

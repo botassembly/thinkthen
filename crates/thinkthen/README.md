@@ -68,6 +68,37 @@ Output:
 Not sure (0.7): ask a person.
 ```
 
+## Rank many messages
+
+`engine.rank` gives back your own items, best first, each with its row. The closure picks the text to judge from each item. A failed message comes last, and its row's `into_answer()` gives the error.
+
+```rust
+use thinkthen::{Engine, Rank};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let engine = Engine::from_env()?;
+    let messages = vec![
+        "Please refund my order.",
+        "Where is my parcel?",
+        "I was charged twice for one invoice.",
+    ];
+    let by_urgency = Rank::new("How urgent is the request?", ["routine", "urgent"])?;
+    for ranked in engine.rank(&by_urgency, messages, |message| *message)? {
+        let (message, row) = ranked?;
+        println!("{} {message}", row.answer()?);
+    }
+    Ok(())
+}
+```
+
+Output:
+
+```text
+1 I was charged twice for one invoice.
+2 Where is my parcel?
+3 Please refund my order.
+```
+
 ## Next
 
 The [Rust SDK page](https://thinkthen.dev/sdks/rust/) shows all ten functions. The [Rust guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/rust.md) and the [API reference](https://docs.rs/thinkthen/0.2.0/thinkthen/) cover every option.

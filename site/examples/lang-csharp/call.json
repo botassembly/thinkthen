@@ -1,5 +1,5 @@
 {
-  "anchor": "var refund = await client.DecideAsync(",
+  "anchor": "bool isRefund = await client.DecideAsync(",
   "before": 0,
   "after": 2
 }

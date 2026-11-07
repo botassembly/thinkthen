@@ -2,8 +2,6 @@
 db-path = "$THINKTHEN_ADVISORY_DB_ROOT"
 db-urls = ["https://github.com/RustSec/advisory-db"]
 yanked = "deny"
-# The existing R adapter uses this compile-time macro; product ruling keeps R unchanged.
-ignore = [{ id = "RUSTSEC-2024-0436", reason = "compile-time macro via extendr-api 0.8.2" }]
 
 [licenses]
 include-dev = true

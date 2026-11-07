@@ -5,8 +5,8 @@
 )]
 use crate::{
     CallHandle, ClientHandle, HostError,
-    exports::{OK, operation},
-    memory::{bytes, text},
+    exports::{THINKTHEN_OK, named_request, operation},
+    memory::{bytes, live, text},
 };
 use std::ptr;
 use thinkthen::{
@@ -89,21 +89,45 @@ pub unsafe extern "C" fn thinkthen_call_open_records_json(
             if !request.records().is_empty() {
                 return Err(native::abi_error());
             }
-            let offsets = OffsetUnit::from_abi(offsets)
-                .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
-            let (initial, originals) = admit_records(
+            open(
+                client,
+                &request,
                 records,
                 count,
                 record_stride,
-                request.question().function() == thinkthen::FunctionName::Filter,
-            )?;
-            let call = native::Call::open_records(&(*client).0, &request, initial, offsets)?;
-            out.write(Box::into_raw(Box::new(CallHandle::new(
-                call, &request, originals,
-            ))));
-            Ok(OK)
+                offsets,
+                out,
+            )
         })
     }
+}
+
+// Admit the records, open the call over them and publish it into the empty slot.
+unsafe fn open(
+    client: *const ClientHandle,
+    request: &Request,
+    records: *const RecordInput,
+    count: usize,
+    record_stride: usize,
+    offsets: u32,
+    out: *mut *mut CallHandle,
+) -> Result<i32, Error> {
+    let offsets = OffsetUnit::from_abi(offsets)
+        .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
+    /* SAFETY: the caller lends counted inputs, a live client and an exclusive output. */
+    unsafe {
+        let (initial, originals) = admit_records(
+            records,
+            count,
+            record_stride,
+            request.question().function() == thinkthen::FunctionName::Filter,
+        )?;
+        let call = native::Call::open_records(&live(client)?.0, request, initial, offsets)?;
+        out.write(Box::into_raw(Box::new(CallHandle::new(
+            call, request, originals,
+        ))));
+    }
+    Ok(THINKTHEN_OK)
 }
 
 unsafe fn admit_records(
@@ -172,23 +196,16 @@ pub unsafe extern "C" fn thinkthen_call_open_records_question(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let mut request = Request::new((*question).build()?);
-            if !name.is_null() {
-                request = request.named(text((*name).data, (*name).len)?)?;
-            }
-            let offsets = OffsetUnit::from_abi(offsets)
-                .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
-            let (initial, originals) = admit_records(
+            let request = named_request(question, name)?;
+            open(
+                client,
+                &request,
                 records,
                 count,
                 record_stride,
-                request.question().function() == thinkthen::FunctionName::Filter,
-            )?;
-            let call = native::Call::open_records(&(*client).0, &request, initial, offsets)?;
-            out.write(Box::into_raw(Box::new(CallHandle::new(
-                call, &request, originals,
-            ))));
-            Ok(OK)
+                offsets,
+                out,
+            )
         })
     }
 }

@@ -300,17 +300,6 @@ impl StreamInput {
             format,
         })
     }
-    pub(super) fn next(&mut self) -> Result<Option<(Record, Vec<u8>, bool)>, Error> {
-        loop {
-            match self.poll()? {
-                InputEvent::Record(record, bytes, start) => {
-                    return Ok(Some((record, bytes, start)));
-                }
-                InputEvent::Finished => return Ok(None),
-                InputEvent::Pending => {}
-            }
-        }
-    }
     pub(super) fn poll(&mut self) -> Result<InputEvent, Error> {
         use std::sync::mpsc::RecvTimeoutError;
         if self.cancel.is_cancelled() {

@@ -24,7 +24,8 @@
     "windows": "$zip = \"thinkthen-0.2.0-windows-x86_64.zip\"\n$line = Get-Content .\\SHA256SUMS | Where-Object { $_.EndsWith(\" $zip\") }\n$want = \"$line\".Split(\" \")[0]\n$got = (Get-FileHash $zip -Algorithm SHA256).Hash\nif ($want -and $got -eq $want) { \"Checksum matches\" } else { \"No match\" }",
     "windowsUnpack": "Unblock-File $zip\nExpand-Archive $zip .\\thinkthen-0.2.0\n$env:Path = \"$PWD\\thinkthen-0.2.0;$env:Path\"",
     "installer": "curl -fsSL https://thinkthen.dev/install.sh | sh",
-    "installerWindows": "irm https://thinkthen.dev/install.ps1 | iex"
+    "installerWindows": "irm https://thinkthen.dev/install.ps1 | iex",
+    "windowsUtf8": "$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new()"
   },
   "limits": {
     "requestBytes": "96,000",
@@ -54,6 +55,7 @@
       "package": "github.com/botassembly/thinkthen/sdk/go/thinkthen",
       "install": "go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0",
       "installLang": "sh",
+      "installWindows": "$env:CGO_ENABLED = \"1\"\ngo mod init example\ngo get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0\ngo build -o example.exe .\n.\\example.exe",
       "requires": "Go 1.23 or later with cgo enabled and a C compiler"
     },
     "java": {
@@ -94,6 +96,7 @@
       "package": "the C archive from the release",
       "install": "cc -std=c11 -Wall -Wextra -Werror example.c -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
       "installLang": "sh",
+      "installWindows": "clang-cl /nologo /std:c11 /MD /Ithinkthen\\include example.c /Fe:example.exe /link thinkthen\\lib\\thinkthen_ffi.lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
       "requires": "A C11 compiler and pkg-config"
     },
     "cpp": {
@@ -102,6 +105,7 @@
       "package": "the C++ and C archives from the release",
       "install": "c++ -std=c++17 -Wall -Wextra -Werror example.cpp -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
       "installLang": "sh",
+      "installWindows": "clang-cl /nologo /std:c++17 /EHsc /MD /Ithinkthen\\include example.cpp /Fe:example.exe /link thinkthen\\lib\\thinkthen_ffi.lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
       "requires": "A C++17 compiler and the matching C library"
     },
     "ruby": {
@@ -126,6 +130,7 @@
       "package": "the Zig archive from the release",
       "install": "release=https://github.com/botassembly/thinkthen/releases/\\\ndownload/v0.2.0\nzig fetch --save=thinkthen \\\n  \"$release/thinkthen-zig-0.2.0-linux-x86_64.tar.gz\"",
       "installLang": "sh",
+      "installWindows": "zig fetch --save=thinkthen \"https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-zig-0.2.0-windows-x86_64.zip\"\nzig build\n.\\zig-out\\bin\\example.exe",
       "requires": "Zig 0.17.0"
     },
     "rust": {

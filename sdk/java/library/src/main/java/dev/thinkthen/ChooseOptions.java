@@ -48,7 +48,13 @@ public final class ChooseOptions {
          * @param value the value to set
          * @return the threshold result
          */
-        public Builder threshold(Threshold value) { values.put("threshold", value instanceof Threshold.Cut cut ? cut.value() : value); return this; }
+        public Builder threshold(Threshold.Cut value) { values.put("threshold", value instanceof Threshold.Cut cut ? cut.value() : value); return this; }
+        /**
+         * Set the cutoff or uncertainty band.
+         * @param value the value to set
+         * @return the threshold result
+         */
+        public Builder threshold(double value) { return threshold(Threshold.cut(value)); }
         /**
          * Build this immutable value.
          * @return the build result

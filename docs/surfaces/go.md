@@ -396,7 +396,7 @@ func run(ctx context.Context) error {
 - `tt.Collect(seq)` gathers rows into a slice and stops at the first error the sequence yields: a call error, or a failed record in `FilterAll`.
 - `WithField("/text")` judges one field of an object record, by JSON Pointer. Escape `/` in a key as `~1` and `~` as `~0`. Without it, ThinkThen judges the whole record.
 - `YesMeans("the customer asks for money back")` and `NoMeans(...)` on decide and filter say what each answer means. `Descriptions(map[string]string{"billing": "charges, invoices and refunds"})` on choose, tag, score and rank describes each choice, label or level by name.
-- `WithThreshold(tt.Cutoff(0.8))` sets one cut. Decide, choose and filter also take `tt.Band(low, high)`. Tag, find, recognize and relate take only a cut.
+- `WithThreshold(tt.Cutoff(0.8))` sets one cut. Decide and filter also take `tt.Band(low, high)`. Choose, tag, find, recognize and relate take only a cut.
 
 ## Settings, keys and cancellation
 

@@ -11,6 +11,7 @@ use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use std::io::Write;
 use std::process::Stdio;
+use std::time::{Duration, Instant};
 
 #[test]
 fn rank_prints_originals_or_positions_and_applies_levels_and_top() {
@@ -84,6 +85,46 @@ fn rank_prints_originals_or_positions_and_applies_levels_and_top() {
             }
         }
     }
+}
+
+#[test]
+fn rank_asks_while_it_reads_and_top_still_sees_the_last_line() {
+    let server = Loopback::answering(|q| {
+        let p = if q["instructions"].as_str().unwrap().contains("late") {
+            0.9
+        } else {
+            0.1
+        };
+        json!({"type":"score", "probabilities":{"0":1.0-p,"1":p}})
+    })
+    .unwrap();
+    let mut child = support::command()
+        .args(["rank", "Priority?", "--level", "low", "--level", "high"])
+        .args(["--from", "lines", "--top", "1", "--batch", "1"])
+        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_API_KEY", KEY)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut input = child.stdin.take().unwrap();
+    input.write_all(b"early\n").unwrap();
+    input.flush().unwrap();
+    // The input stays open, so a command that reads it all first sends nothing.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while server.count() == 0 {
+        assert!(
+            Instant::now() < deadline,
+            "rank sent nothing before its input ended"
+        );
+        std::thread::park_timeout(Duration::from_millis(1));
+    }
+    input.write_all(b"late\n").unwrap();
+    drop(input);
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "late\n");
 }
 
 #[test]

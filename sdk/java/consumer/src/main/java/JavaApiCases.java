@@ -137,7 +137,13 @@ public final class JavaApiCases {
             equal(row.id().orElseThrow(), JsonValue.parse(id), "identifier preserves JSON kind and exact integer");
             check(row.status() != Status.FAILED, "valid identifier reaches the engine");
         }
-        List<JsonValue> invalid = List.of("true", "null", "1.0", "1e0", "1.5", "[]", "{}", "18446744073709551616", "-9223372036854775809")
+        for (String id : List.of("1.0", "1e0")) {
+            JsonValue record = JsonValue.parse("{\"id\":" + id + ",\"body\":\"alpha\"}");
+            var row = client.decide("Ready?", record);
+            equal(row.id().orElseThrow(), JsonValue.parse("1"), "whole-number float identifier becomes that integer");
+            check(row.status() != Status.FAILED, "whole-number float identifier reaches the engine");
+        }
+        List<JsonValue> invalid = List.of("true", "null", "1.5", "[]", "{}", "18446744073709551616", "-9223372036854775809")
             .stream().map(id -> JsonValue.parse("{\"id\":" + id + ",\"body\":\"alpha\"}")).toList();
         try (var rows = client.decideStream("Ready?", invalid)) {
             var output = rows.toList();
@@ -202,7 +208,7 @@ public final class JavaApiCases {
             check(jar.stream().noneMatch(entry -> entry.getName().startsWith("dev/thinkthen/internal/Client")),
                 "built jar contains no internal Client classes");
         }
-        for (String call : List.of("c.choose(\"Q?\", \"x\")", "c.tag(\"Q?\", \"x\")", "c.score(\"Q?\", \"x\")", "c.recognize(\"x\")", "c.relate(\"x\")", "c.rank(\"Q?\", List.of(\"x\"))", "AnnotationQuestions.builder().put(\"r\", RankQuestion.of(\"Q?\", List.of(\"low\", \"high\")))", "c.annotate(Toolbox.builder().build(), \"x\")", "TagOptions.builder().threshold(Threshold.band(0.2, 0.8))", "DecideOptions.builder().threshold(\"0.2:0.8\")")) {
+        for (String call : List.of("c.choose(\"Q?\", \"x\")", "c.tag(\"Q?\", \"x\")", "c.score(\"Q?\", \"x\")", "c.recognize(\"x\")", "c.relate(\"x\")", "c.rank(\"Q?\", List.of(\"x\"))", "AnnotationQuestions.builder().put(\"r\", RankQuestion.of(\"Q?\", List.of(\"low\", \"high\")))", "c.annotate(Toolbox.builder().build(), \"x\")", "ChooseOptions.builder().threshold(Threshold.band(0.2, 0.8))", "TagOptions.builder().threshold(Threshold.band(0.2, 0.8))", "DecideOptions.builder().threshold(\"0.2:0.8\")")) {
             String source = "import dev.thinkthen.*; import java.util.*; final class SignatureCase { void call(ThinkThen c) { " + call + "; }}";
             check(!compiles(compiler, source), "unsupported API must fail compilation: " + call);
         }

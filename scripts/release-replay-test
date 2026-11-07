@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import runpy
 import subprocess
 import sys
@@ -247,6 +248,15 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
             receipt['selected_version'] = '10.0.103'
             with self.assertRaisesRegex(ValueError, 'claimed dotnet default'):
                 replay['setup_equivalent'](step, receipt, dict(os.environ))
+
+    def test_hosted_dotnet_pins_name_the_windows_archive_in_its_feature_band(self):
+        pins = json.loads((ROOT / 'scripts/release-downloads.json').read_text())
+        archive, = [url for url in pins if '/Sdk/' in url and url.endswith('-win-x64.zip')]
+        version = archive.split('/Sdk/')[1].split('/')[0]
+        self.assertRegex(version, r'^10\.0\.1[0-9]{2}$')
+        for name in ('native-qualification', 'release-prepare', 'windows'):
+            text = (ROOT / '.github/workflows' / (name + '.yml')).read_text()
+            self.assertEqual(set(re.findall(r"dotnet-version: '([^']+)'", text)), {version}, name)
 
     def test_complete_candidate_survives_failed_windows_smoke(self):
         with tempfile.TemporaryDirectory() as directory:

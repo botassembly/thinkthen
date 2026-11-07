@@ -63,7 +63,9 @@ def test_star_import_preserves_builtin_filter_and_default_client_is_configurable
             "-c",
             (
                 "from thinkthen import *; import builtins; assert filter is builtins.filter; "
-                "from thinkthen.aio import *; assert filter is builtins.filter"
+                "from thinkthen.aio import *; assert filter is builtins.filter; "
+                "from thinkthen import aio; "
+                "assert set_default_client is aio.set_default_client"
             ),
         ],
         check=True,

@@ -5,6 +5,8 @@ module ThinkThen
     ABI_VERSION = 131074
     ABI_CODE = "usage.abi"
     ABI_MESSAGE = "the native ABI is incompatible"
+    LIBRARY_VARIABLE = "THINKTHEN_LIBRARY"
+    LIBRARY_PATH_MESSAGE = "THINKTHEN_LIBRARY must be an absolute path"
     FUNCTION_NAMES = {
     1 => "decide",
     2 => "choose",
@@ -64,6 +66,10 @@ module ThinkThen
     1016 => "usage.offsets",
     1017 => "usage.argument",
     1018 => "usage.option",
+    1019 => "usage.column",
+    1020 => "usage.sheet",
+    1021 => "usage.output",
+    1022 => "usage.table",
     2001 => "record.json",
     2002 => "record.missing",
     2003 => "record.too-large",

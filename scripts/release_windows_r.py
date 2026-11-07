@@ -15,6 +15,11 @@ import zipfile
 
 from release_prepare_common import ROOT, TOOLS, fetch, run
 
+# R-universe builds Windows binaries with the Rtools for the R it targets.
+RTOOLS = ('https://cran.r-project.org/bin/windows/Rtools/rtools45/files/rtools45-6768-6492.exe',
+          '614c7378150a012e70b16edcfe5236dcead47f491f1f54203ea8d451c7743a75')
+SILENT = ('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-')
+
 
 def revision():
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
@@ -116,7 +121,7 @@ def runtime():
     installer = next(name for name in selected if name.startswith('R-'))
     r = TOOLS / 'windows' / installer.removesuffix('-win.exe')
     if not (r / 'bin/x64/R.dll').is_file():
-        run(TOOLS / 'windows' / installer, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/DIR=' + str(r))
+        run(TOOLS / 'windows' / installer, *SILENT, '/DIR=' + str(r))
     with tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-') as temporary:
         inventory = dependencies(temporary, r)
         for dependency in inventory['install_order']:
@@ -245,10 +250,63 @@ def build(folder):
     print('Native Windows R binary and exact-source inventory are ready')
 
 
+def universe(folder):
+    """Follow the R install page on Windows, with a local repository for R-universe."""
+    if os.name != 'nt':
+        raise ValueError('The R-universe Windows path requires native Windows')
+    selected = inputs()
+    installer = next(name for name in selected if name.startswith('R-'))
+    folder = Path(folder).resolve()
+    folder.mkdir(parents=True)
+    r, rtools = folder / 'R', folder / 'rtools'
+    run(TOOLS / 'windows' / installer, *SILENT, '/DIR=' + str(r))
+    run(fetch(RTOOLS[0], folder / 'rtools.exe', RTOOLS[1]), *SILENT, '/DIR=' + str(rtools))
+    from release_rust import prepare as rust
+    rust('x86_64-pc-windows-gnu')
+    env = environment(r)
+    del env['RUSTFLAGS']
+    # With this set, rustc takes link.exe from PATH, where MSYS2's coreutils tool
+    # comes first. Unset, it finds the Visual Studio linker itself, as R users' does.
+    env.pop('VCINSTALLDIR', None)
+    # Rtools make reads a drive colon in a target path as a rule separator.
+    env.pop('CARGO_TARGET_DIR', None)
+    env['RTOOLS45_HOME'] = str(rtools)
+    env['PATH'] = os.pathsep.join((str(rtools / 'x86_64-w64-mingw32.static.posix/bin'), str(rtools / 'usr/bin'), env['PATH']))
+    run('cargo', 'fetch', '--locked', env=dict(env, CARGO_NET_OFFLINE='false'))
+    series = installer.removeprefix('R-').removesuffix('-win.exe').rsplit('.', 1)[0]
+    contrib = folder / 'repository/bin/windows/contrib' / series
+    contrib.mkdir(parents=True)
+    for name in selected:
+        if name.endswith('.zip'):
+            shutil.copy2(TOOLS / 'windows' / name, contrib / name)
+    repository = (folder / 'repository').as_uri()
+    rscript = r / 'bin/x64/Rscript.exe'
+    index = 'tools::write_PACKAGES(commandArgs(TRUE), type="win.binary")'
+    install = 'a <- commandArgs(TRUE); install.packages(a[-(1:2)], lib=a[[1]], repos=a[[2]])'
+    build_library, library = folder / 'build-library', folder / 'library'
+    build_library.mkdir()
+    library.mkdir()
+    run(rscript, '--vanilla', '-e', index, contrib, env=env)
+    imports = ('jsonlite', 'vctrs', 'rlang', 'cli', 'tibble', 'withr')
+    run(rscript, '--vanilla', '-e', install, build_library, repository, *imports, env=env)
+    source = folder / 'source'
+    run(sys.executable, ROOT / 'scripts/r-package', '--source', source, env=env)
+    run(r / 'bin/x64/R.exe', 'CMD', 'INSTALL', '--build', '--library=' + str(build_library), source,
+        env=dict(env, R_LIBS=str(build_library)), cwd=contrib)
+    run(rscript, '--vanilla', '-e', index, contrib, env=env)
+    # Nothing but the repository's binary can satisfy this clean library.
+    run(rscript, '--vanilla', '-e', install, library, repository, 'thinkthen', env=env)
+    run(rscript, '--vanilla', ROOT / 'sdk/r/tests/release-cases.R', ROOT / 'construction/stub.json',
+        env=dict(env, R_LIBS=str(library)))
+    print('R-universe Windows path: Rtools binary installs into clean R and answers the stub cases')
+
+
 if __name__ == '__main__':
     if sys.argv[1:] == ['prepare']:
         prepare()
     elif len(sys.argv) == 3 and sys.argv[1] == 'build':
         build(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == 'universe':
+        universe(sys.argv[2])
     else:
-        sys.exit('usage: release_windows_r.py prepare | build DESTINATION')
+        sys.exit('usage: release_windows_r.py prepare | build DESTINATION | universe DESTINATION')

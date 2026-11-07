@@ -198,6 +198,7 @@ def candidate(destination):
         from release_notice_packages import distribute
         distribute(out, 'windows-x86_64', source)
         finish_readmes(out, packages, root=source)
+        run(sys.executable, source / 'scripts/notices', '--packages', out)
     from release_install import checksums
     checksums(out)
     smoke(out)
@@ -350,22 +351,26 @@ def check_sources(out):
     """Keep portable installed consumers with the candidate, away from the checkout."""
     for path in (ROOT / 'scripts/release').iterdir():
         if path.is_file(): copy(path, out / 'checks' / path.name)
+    copy(ROOT / 'scripts/native-lookup-check', out / 'checks/native-lookup-check')
     for source, name in [('sdk/python/tests/frames.py', 'python-frames.py'),
                          ('sdk/python/tests/conformance.py', 'conformance.py'),
+                         ('sdk/python/tests/entry_forms.py', 'entry_forms.py'),
                          ('scripts/test_control.py', 'test_control.py')]:
         copy(ROOT / source, out / 'checks' / name)
     shutil.copytree(ROOT / 'conformance/typed', out / 'checks/conformance/typed')
-    for family, patterns in {'go': ['*.go', 'go.mod'], 'c': ['conformance.c', 'rows.h'],
-                              'cpp': ['consumer.cpp', '*.hpp'], 'swift': ['*.swift'], 'zig': ['*.zig', '*.zon']}.items():
+    for name in ('stream-concurrency.test.js', 'support.js'):
+        copy(ROOT / 'sdk/typescript/tests' / name, out / 'checks/typescript' / name)
+    for family, patterns in {'go': ['*.go', 'go.mod'], 'c': ['conformance.c', 'rows.h', 'stress.h'],
+                              'cpp': ['consumer.cpp', '*.hpp'], 'zig': ['*.zig', '*.zon']}.items():
         for pattern in patterns:
             for path in (ROOT / 'sdk' / family / 'tests').glob(pattern):
                 copy(path, out / 'checks' / family / path.name)
-    run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md',
-        out / 'checks/swift/Readme')
-    run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md',
-        out / 'checks/swift/Examples')
-    run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift',
-        out / 'checks/swift/Guide')
+    run(sys.executable, ROOT / 'scripts/swift-consumer-stage', out / 'checks/swift')
+    for source, name in [('conformance/stress.json', 'stress.json'), ('sdk/r/tests/stress.R', 'r-stress.R'),
+                         ('sdk/ruby/tests/stress.rb', 'ruby-stress.rb'),
+                         ('sdk/typescript/tests/stress.test.js', 'typescript/stress.test.js'),
+                         ('sdk/typescript/tests/support.js', 'typescript/support.js')]:
+        copy(ROOT / source, out / 'checks' / name)
     copy(ROOT / 'sdk/r/tests/run.R', out / 'checks/run.R')
     copy(ROOT / 'sdk/r/tests/support.R', out / 'checks/support.R')
     copy(ROOT / 'sdk/r/tests/release-cases.R', out / 'checks/r-cases.R')

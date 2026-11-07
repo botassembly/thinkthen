@@ -97,6 +97,8 @@ def typed_optional_frames(
         ThinkThenFrameNamespace(polars_series.to_frame()).filter("Ready?"), pl.DataFrame
     )
     assert_type(ThinkThenNamespace(polars_series).decide("Ready?"), pl.Series)
+    assert_type(ThinkThenAccessor(pandas_series).failures(), pd.DataFrame)
+    assert_type(ThinkThenNamespace(polars_series).failures(), pl.DataFrame)
 
 
 def typed_choice_sets(client: tt.Client, text: str) -> None:

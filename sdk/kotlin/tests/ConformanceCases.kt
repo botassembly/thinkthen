@@ -50,7 +50,7 @@ private suspend fun exercise(client: ThinkThen, request: JsonObject, expected: J
         "decide" -> collectRows(if (generic) client.askStream(Decide(requireNotNull(text),q.threshold(),field,name),input)
             else client.decideStream(requireNotNull(text), input, q.threshold(), field, name), expected, selected, name, model,
             { JsonPrimitive(it) }, { error("Decide has no detail") })
-        "choose" -> collectRows(client.chooseStream(requireNotNull(text), input, q.strings("choices"), q.threshold(), field, name), expected, selected, name, model,
+        "choose" -> collectRows(client.chooseStream(requireNotNull(text), input, q.strings("choices"), q.cut(), field, name), expected, selected, name, model,
             { JsonPrimitive(it) }, { contractValue(it) })
         "tag" -> collectRows(client.tagStream(requireNotNull(text), input, q.strings("labels"), q.cut(), field, name), expected, selected, name, model,
             { contractValue(it) }, { contractValue(it) })
@@ -76,7 +76,7 @@ private suspend fun exercise(client: ThinkThen, request: JsonObject, expected: J
             }, expected, selected, name, model, { JsonPrimitive(it) }, { error("Filter has no detail") })
         "rank" -> collectRows(
             client.rank(requireNotNull(text), input, q.strings("levels"), q["top"]?.jsonPrimitive?.int, field, name).map { item ->
-                check(snapshotMatches(item.item, records[(item.row.position - 1L).toInt()])) { "Rank snapshot ${item.item} differs from its input" }
+                check(item.item == records[(item.row.position - 1L).toInt()]) { "Rank item ${item.item} differs from its input" }
                 item.row
             }, expected, selected, name, model, { JsonPrimitive(it) }, { contractValue(it) })
         else -> error("Unknown shared function; update the public consumer")
@@ -145,6 +145,7 @@ private suspend fun runSample(path: Path, sample: JsonObject, selected: Backend,
             check(sample["cancelled"]?.jsonPrimitive?.boolean == true && outcome is JsonObject && outcome.required("error").jsonPrimitive.content == "local.cancelled") { "Unexpected cancellation: $path" }
         } catch (error: ThinkThenException) {
             check(outcome is JsonObject && error.code.wireName == outcome.required("error").jsonPrimitive.content) { "Unexpected admission error: $error" }
+            check(error.httpStatus == outcome["http_status"]?.jsonPrimitive?.int) { "Call error HTTP status: $error" }
         }
     }
     if(stub) checked(null)
