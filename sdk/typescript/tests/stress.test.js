@@ -39,9 +39,13 @@ async function adapter(sample) {
       const iterator = client.decideStream("Ready?", records(), { signal: controller.signal })[Symbol.asyncIterator]();
       const pending = assert.rejects(iterator.next(), e => e instanceof sdk.CancelledError && e.code === "local.cancelled");
       const lines = createInterface({ input: process.stdin });
+      // The cancel check prints stderr when a call outlives its limit, so a hang names its step.
       for await (const line of lines) { assert.equal(line, "cancel"); controller.abort(); break; }
+      console.error("cancel: aborted");
       await pending;
+      console.error("cancel: rejected");
       assert.equal((await iterator.next()).done, true);
+      console.error("cancel: stream ended");
       calls = 1;
     } else {
       for (let round = 0; round < sample.rounds; round++) {
@@ -52,6 +56,8 @@ async function adapter(sample) {
     }
     console.log(JSON.stringify({ calls, rows, failed, read_ahead_records: pulled, cancelled: sample.cancel, identifier_width_mask: [...widths].reduce((mask, width) => mask + 2 ** width, 0) }));
   } finally { await client.close(); }
+  // After the finally, so this line can't replace an earlier error.
+  if (sample.cancel) console.error("cancel: client closed", process.getActiveResourcesInfo());
 }
 
 if (process.env.THINKTHEN_STRESS_CASE) {

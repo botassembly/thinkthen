@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <aclapi.h>
 #include <stdlib.h>
+#include <wchar.h>
 
 /* Only the caller and the operating system's administrators may modify the
  * cache. An elevated caller's objects belong to Administrators, an owner no
@@ -18,9 +19,14 @@ int tt_cache_secure(const char *path, int directory) {
     DWORD system_size = sizeof(system), admin_size = sizeof(administrators);
     int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
     if (!count) return 0;
-    wchar_t *wide = malloc((size_t)count * sizeof(*wide));
+    /* These calls stop near 260 characters, where Go's file calls and the loader
+     * do not. Only the extended prefix lets them read a deep temp cache. */
+    const wchar_t *prefix = count >= 248 && path[1] == ':' ? L"\\\\?\\" : L"";
+    size_t skip = wcslen(prefix);
+    wchar_t *wide = malloc((skip + (size_t)count) * sizeof(*wide));
     if (!wide) return 0;
-    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, count)) goto done;
+    wmemcpy(wide, prefix, skip);
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide + skip, count)) goto done;
     DWORD attributes = GetFileAttributesW(wide);
     if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)
             || (!!(attributes & FILE_ATTRIBUTE_DIRECTORY) != !!directory)) goto done;

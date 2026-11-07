@@ -43,7 +43,8 @@ class AbiPlatformRouting(unittest.TestCase):
                     self.assertEqual(command, ['scripts/swift-gate'])
                     self.assertEqual(mounts, (stage.parent, Path(expected).parent))
                     self.assertEqual(forwarded, {**assets, 'THINKTHEN_LOOPBACK': expected,
-                                                'THINKTHEN_SWIFT_PACKAGE': stage, 'THINKTHEN_GATE_STRICT': '1'})
+                                                'THINKTHEN_SWIFT_PACKAGE': stage, 'THINKTHEN_GATE_STRICT': '1',
+                                                'THINKTHEN_STRESS_FULL': ''})
 
     def test_abi_consumers_use_the_platform_runner_while_native_commands_stay_local(self):
         module = runpy.run_path(str(ROOT / 'scripts/abi-minor-check'))

@@ -7,6 +7,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+from long_path_scratch import EXTENDED, extended
+
 
 def cache_environment(root, environment):
     """Keep PowerShell's known-folder fallback out of the checked package."""
@@ -192,14 +194,17 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
 
     def root_fallback(label):
         """Check that a consumer leaves an unsafe root for temp: a safe temp answers, an unsafe one refuses."""
-        # Short names: the library path under temp must stay within Windows' 260 limit.
-        safe, unsafe = root.with_name(label[0] + 's'), root.with_name(label[0] + 'u')
+        # A deep safe temp puts the library past 260 characters on every runner, as a deep %TEMP% does.
+        safe = root.with_name(label[0] + 's' + 'x' * max(0, 95 - len(str(root.parent))))
+        unsafe = root.with_name(label[0] + 'u')
         private_root(safe, env)
         private_root(unsafe, env)
         icacls(unsafe, '/grant', '*S-1-1-0:(OI)(CI)(M)')
         status, output = run_consumer(command, env | {'TEMP': str(safe), 'TMP': str(safe)})
         assert status == 0, 'consumer did not answer from a safe temp: ' + output
-        assert len(list(safe.glob('thinkthen-*/thinkthen/native/*/' + filename))) == 1, 'consumer answered without the temp cache'
+        copies = list(Path(extended(safe)).glob('thinkthen-*/thinkthen/native/*/' + filename))
+        assert len(copies) == 1, f'consumer answered without the temp cache: {copies}'
+        assert len(str(copies[0]).removeprefix(EXTENDED)) > 260, f'the temp cache is not past 260 characters: {copies[0]}'
         status, output = run_consumer(command, env | {'TEMP': str(unsafe), 'TMP': str(unsafe)})
         assert status != 0, 'consumer accepted an unsafe temp: ' + output
         assert 'cache owner or permissions' in output.lower(), output

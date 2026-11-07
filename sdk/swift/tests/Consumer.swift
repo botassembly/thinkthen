@@ -216,6 +216,14 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       precondition(code.contains("backend."))
       return
     }
+    // An engine that will not load fails the process. It is not a case result.
+    do {
+      _ = try Client(.init(backend: .stub))
+    } catch {
+      let message = (error as? ThinkThenError)?.failure?.message ?? String(describing: error)
+      FileHandle.standardError.write(Data((message + "\n").utf8))
+      exit(1)
+    }
     let value = try JSONSerialization.jsonObject(
       with: Data(contentsOf: URL(fileURLWithPath: args[1])))
     let cases = (value as? [[String: Any]]) ?? [value as! [String: Any]]

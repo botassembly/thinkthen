@@ -22,6 +22,10 @@ final class WindowsIdentity {
     static boolean administrators(String account) throws IOException {
         return known(account, ADMINISTRATORS);
     }
+    /** Security calls stop near 260 characters, where Java's file calls do not. Only the extended prefix reaches further. */
+    static String securityPath(String path) {
+        return path.length() >= 248 && path.charAt(1) == ':' ? "\\\\?\\" + path : path;
+    }
     /** Count the entries in a path's own access list, or return -1 when it has no list. */
     @SuppressWarnings("restricted")
     static int accessEntries(Path path) throws IOException {
@@ -32,7 +36,8 @@ final class WindowsIdentity {
                     ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             var free = linker.downcallHandle(SymbolLookup.libraryLookup("Kernel32.dll", arena).find("LocalFree").orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
-            var name = arena.allocateFrom(ValueLayout.JAVA_BYTE, (path + "\0").getBytes(StandardCharsets.UTF_16LE));
+            var name = arena.allocateFrom(ValueLayout.JAVA_BYTE,
+                (securityPath(path.toAbsolutePath().toString()) + "\0").getBytes(StandardCharsets.UTF_16LE));
             var list = arena.allocate(ValueLayout.ADDRESS);
             var descriptor = arena.allocate(ValueLayout.ADDRESS);
             // SE_FILE_OBJECT and DACL_SECURITY_INFORMATION.

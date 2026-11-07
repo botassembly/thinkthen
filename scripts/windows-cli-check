@@ -6,6 +6,7 @@ from ctypes import wintypes
 import hashlib
 import http.server
 import csv
+import faulthandler
 import io
 import json
 import os
@@ -25,6 +26,7 @@ import zipfile
 from test_control import read_line
 
 ROOT = Path(__file__).resolve().parent.parent
+CASE_SECONDS = 240  # The slowest case holds three PowerShell runs of 60 seconds at most.
 TEXT = '漢字 café evidence 5'
 
 
@@ -265,14 +267,17 @@ def ctrl_c(binary, folder, environment):
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
     kernel.SetConsoleCtrlHandler.argtypes = [ctypes.c_void_p, wintypes.BOOL]
     private_console(kernel)
-    previous = signal.signal(signal.SIGINT, lambda *_: None)
+    # A new console drops this process's earlier handlers, and Ctrl-C would end the check itself.
+    survive = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.DWORD)(lambda _event: True)
+    if not kernel.SetConsoleCtrlHandler(survive, True):
+        raise ctypes.WinError(ctypes.get_last_error())
     def send(_child):
         if not kernel.GenerateConsoleCtrlEvent(signal.CTRL_C_EVENT, 0):
             raise ctypes.WinError(ctypes.get_last_error())
     try:
         interrupt(binary, folder, environment, creationflags=0, send=send)
     finally:
-        signal.signal(signal.SIGINT, previous)
+        kernel.SetConsoleCtrlHandler(survive, False)
         kernel.FreeConsole()
         # The cases after this one need a console as well.
         if not kernel.AttachConsole(ctypes.c_ulong(-1).value) and not kernel.AllocConsole():
@@ -393,6 +398,21 @@ def interrupt(binary, folder, environment, *, creationflags=None,
             worker.join()
 
 
+def watchdog(name):
+    """End a hung case by name, with its stacks, and stop the processes it started."""
+    def expired():
+        try:
+            print(f'Windows CLI: {name}: FAIL: no result within {CASE_SECONDS} seconds', flush=True)
+            faulthandler.dump_traceback()
+            subprocess.run(['taskkill', '/T', '/F', '/PID', str(os.getpid())], capture_output=True, timeout=30)
+        finally:
+            os._exit(1)
+    timer = threading.Timer(CASE_SECONDS, expired)
+    timer.daemon = True
+    timer.start()
+    return timer
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
@@ -420,10 +440,13 @@ def main():
             for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('powershell-default', default_pipes), ('ctrl-break', interrupt), ('ctrl-c', ctrl_c), ('stream', stream), ('forced-exit', forced_exit)]:
                 if args.case and name != args.case:
                     continue
+                # A console event can end this process, so the log names the case first.
+                print('Windows CLI: ' + name + ': START', flush=True)
                 folder = Path(temporary) / name
                 folder.mkdir()
                 environment = {key: value for key, value in os.environ.items() if not key.startswith('THINKTHEN_')}
                 environment.update(HOME=str(folder), USERPROFILE=str(folder), TMP=str(folder), TEMP=str(folder), PYTHONUTF8='1')
+                timer = watchdog(name)
                 try:
                     if name == 'powershell-unicode':
                         powershell(binary, folder, environment, shell=args.powershell, console=console)
@@ -433,6 +456,8 @@ def main():
                 except Exception as error:
                     failures.append(name)
                     print('Windows CLI: ' + name + ': FAIL: ' + str(error), flush=True)
+                finally:
+                    timer.cancel()
         if failures:
             sys.exit('Windows CLI failures: ' + ', '.join(failures))
     finally:
