@@ -1,9 +1,9 @@
 #![cfg(test)]
 //! Fixture recording stays bounded and dropping it closes active peers.
-use loopback::{Loopback, StressFixture};
+use loopback::{Loopback, StressFixture, stress_table};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const REQUEST: &[u8] =
     b"POST /v1/systemone HTTP/1.1\r\nContent-Length: 16\r\n\r\n{\"questions\":{}}";
@@ -101,6 +101,31 @@ fn answering_scenarios_serve_each_request_on_one_kept_connection() {
         assert_eq!(fixture.stats()["requests"], 2, "{scenario}");
         assert_eq!(fixture.stats()["connections"], 1, "{scenario}");
     }
+}
+
+#[test]
+fn slow_reply_soak_delays_every_reply_of_all_its_rounds() {
+    let table = stress_table().unwrap();
+    let case = &table["slow_replies"];
+    let fault = &case["faults"][0];
+    let requests = case["records"]
+        .as_u64()
+        .unwrap()
+        .div_ceil(table["client"]["batch"].as_u64().unwrap())
+        * table["records"]["soak_rounds"].as_u64().unwrap();
+    assert!(fault["repeat"].as_u64().unwrap() >= requests);
+    let delay = Duration::from_millis(fault["delay_ms"].as_u64().unwrap());
+    let fixture = StressFixture::open(case["name"].as_str().unwrap()).unwrap();
+    let mut peer = connect(&fixture);
+    let mut reader = BufReader::new(peer.try_clone().unwrap());
+    for _ in 0..2 {
+        let sent = Instant::now();
+        peer.write_all(REQUEST).unwrap();
+        let reply = read_reply(&mut reader);
+        assert!(reply.starts_with("HTTP/1.1 200"), "{reply}");
+        assert!(sent.elapsed() >= delay);
+    }
+    assert_eq!(fixture.stats()["connections"], 1);
 }
 
 #[test]

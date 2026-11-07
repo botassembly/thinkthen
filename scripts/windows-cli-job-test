@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """The foreground VM owner stops and unlocks on signal, timeout and control EOF."""
+import calendar
 import hashlib
 import ast
+import io
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import runpy
 import shutil
@@ -12,6 +15,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 from types import SimpleNamespace
 from unittest import mock
 import zipfile
@@ -105,6 +109,18 @@ import base64, hashlib, json, os, pathlib, sys, time, zipfile
 with pathlib.Path({log!r}).open('a') as log: log.write(pathlib.Path(sys.argv[0]).name+' '+repr(sys.argv[1:])+'\\n')
 if pathlib.Path(sys.argv[0]).name == 'ssh':
  script=base64.b64decode(sys.argv[-1].split()[-1]).decode('utf-16-le')
+ def clock():
+  reads=pathlib.Path({remote!r})/'clock-reads'
+  count=int(reads.read_text())+1 if reads.exists() else 1
+  reads.write_text(str(count))
+  wrong=os.environ.get('CLOCK_WRONG','')
+  print('Windows clock: '+str(int((time.time()+(28800 if wrong=='always' or str(count) in wrong.split(',') else 0))*1000)))
+ if os.environ.get('CLOCK_SSH_FAIL') and 'Windows clock: ' in script and 'Windows SSH ready' not in script: sys.exit(255)
+ if 'smoke.py' in script and '$bytes=' not in script:
+  (pathlib.Path({remote!r})/'smoke-lock-owner').write_text(pathlib.Path(os.environ['HOME'],'.windows-vm-lock/owner').read_text())
+  print('Simulated smoke boundary')
+  sys.exit(1 if os.environ.get('SMOKE_FAIL') else 0)
+ if 'rd /s /q' in script and os.environ.get('RD_FAIL'): sys.exit(1)
  if 'scripts/windows-native-proof cli' in script:
   source=json.loads((pathlib.Path(os.environ['FULL_BUILD_OUTPUT'])/'source.json').read_text())['source']
   binary=b'simulated native CLI'
@@ -119,7 +135,7 @@ if pathlib.Path(sys.argv[0]).name == 'ssh':
   data=(pathlib.Path({remote!r})/name).read_bytes()
   print(json.dumps(dict(bytes=len(data),sha256=hashlib.sha256(data).hexdigest()))); sys.exit(0)
  if os.environ.get('INVENTORY_ONLY'):
-  if 'Windows SSH ready' in script: sys.exit(0)
+  if 'Windows clock: ' in script: clock(); sys.exit(0)
   if 'version_kind=' not in script: sys.exit(90)
   if os.environ.get('INVENTORY_FAIL'):
    sys.stdout.buffer.write(b'partial inventory\\r\\n')
@@ -141,6 +157,7 @@ if pathlib.Path(sys.argv[0]).name == 'ssh':
   sys.stderr.buffer.write(b'Missing Windows prerequisite: git\\r\\n')
   sys.exit(127)
  if 'Get-FileHash' in script: print(('c' if os.environ.get('WRONG_HASH') else 'b')*64)
+ if 'Windows clock: ' in script: clock()
 elif pathlib.Path(sys.argv[0]).name == 'scp':
  fault=os.environ.get('SCP_FAULT')
  if fault=='exit':
@@ -410,6 +427,134 @@ else:
         assert sum(line.startswith('ssh ') for line in seen) == 2, seen
         assert any(line.startswith("docker ['stop'") for line in seen), seen
         assert any(line.startswith("docker ['inspect'") for line in seen), seen
+    # Clock after boot: the real main; only the VM's answers are actors, and a wrong reading is 8 hours ahead.
+    clock_reads = root / 'remote/clock-reads'
+    lock = root / 'home/.windows-vm-lock'
+
+    def boot(mode, name, *arguments, **control):
+        commands.write_text('')
+        clock_reads.unlink(missing_ok=True)
+        return subprocess.run([sys.executable, str(ENTRY), mode, str(name), *arguments], env=dict(environment, **control),
+                              stdin=subprocess.DEVNULL, capture_output=True, timeout=30)
+
+    right = boot('inventory', root / 'clock-right', INVENTORY_ONLY='1')
+    assert right.returncode == 0, right.stderr
+    assert clock_reads.read_text() == '1', 'a right clock waited'
+    assert re.search(rb'Windows clock \S+Z, host clock \S+Z, [0-9.]+ s apart, waited 0 s', right.stderr), right.stderr
+    first = __import__('base64').b64decode(ast.literal_eval(commands.read_text().splitlines()[1][4:])[-1].split()[-1]).decode('utf-16-le')
+    assert "Set-TimeZone -Id 'UTC'" in first, 'the boot path left the guest zone alone: ' + first
+    off = boot('inventory', root / 'clock-off', '--clock-wait-seconds', '0.01', INVENTORY_ONLY='1', CLOCK_WRONG='always')
+    assert off.returncode != 0, off.stderr
+    assert clock_reads.read_text() == '2', 'a wrong clock did not wait'
+    named = re.search(rb'Windows clock (\S+Z), host clock (\S+Z): more than 120 s apart', off.stderr)
+    assert named, off.stderr
+    guest, host = (calendar.timegm(time.strptime(value.decode(), '%Y-%m-%dT%H:%M:%SZ')) for value in named.groups())
+    assert abs(guest - host - 28800) <= 5, off.stderr
+    assert not (root / 'clock-off/inventory.stdout').exists(), 'a stage ran on a wrong clock'
+    assert not lock.exists() and any(line.startswith("docker ['stop'") for line in commands.read_text().splitlines())
+    lost = boot('inventory', root / 'clock-lost', '--clock-wait-seconds', '0.01', INVENTORY_ONLY='1', CLOCK_WRONG='always', CLOCK_SSH_FAIL='1')
+    assert lost.returncode != 0 and clock_reads.read_text() == '1', lost.stderr
+    assert re.search(rb'Windows clock \S+Z, host clock \S+Z: more than 120 s apart', lost.stderr), lost.stderr
+    corrected = boot('inventory', root / 'clock-corrected', INVENTORY_ONLY='1', CLOCK_WRONG='1')
+    assert corrected.returncode == 0, corrected.stderr
+    assert clock_reads.read_text() == '2' and (root / 'clock-corrected/inventory.json').exists()
+    wide = boot('inventory', root / 'clock-wide', '--clock-tolerance-seconds', '30000', INVENTORY_ONLY='1', CLOCK_WRONG='always')
+    assert wide.returncode == 0 and clock_reads.read_text() == '1', wide.stderr
+    prerequisites = boot('hold', output, '--seconds', '0.02', CLOCK_WRONG='2')
+    assert prerequisites.returncode == 0, prerequisites.stderr
+    assert clock_reads.read_text() == '3', 'the check with prerequisites took a wrong clock'
+    # Smoke mode: the real main and staging; only VM, SCP and the Python download are actors.
+    package_archive = root / 'smoke-assembly.tar.gz'
+    package_archive.write_bytes(b'smoke assembly')
+    smoke_program = root / 'smoke-program.py'
+    smoke_program.write_text('# the rendered native program\n')
+
+    def smoke(name, **control):
+        commands.write_text('')
+        (root / 'remote/smoke-lock-owner').unlink(missing_ok=True)
+        handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+        arguments = [str(ENTRY), 'smoke', str(root / name), '--package', str(package_archive), '--program', str(smoke_program), '--lock-seconds', '0.01']
+        try:
+            with mock.patch.dict(os.environ, dict(environment, **control), clear=True), mock.patch.object(sys, 'argv', arguments), \
+                 mock.patch.object(release_windows_host, 'fetch', side_effect=fetch_fixture):
+                entry()
+        finally:
+            for sig, handler in handlers.items(): signal.signal(sig, handler)
+
+    def smoke_calls():
+        decoded = [__import__('base64').b64decode(ast.literal_eval(line[4:])[-1].split()[-1]).decode('utf-16-le')
+                   for line in commands.read_text().splitlines() if line.startswith('ssh ')]
+        run_script, = [script for script in decoded if 'smoke.py' in script and '$bytes=' not in script]
+        return run_script, decoded[-1]
+
+    with zipfile.ZipFile(fixture_archive, 'w') as package:
+        for name in ('python.exe', 'python313.dll', 'python313.zip'):
+            package.writestr(name, b'fixture ' + name.encode())
+        package.writestr('python313._pth', original_paths)
+    smoke('smoke')
+    run_script, cleanup = smoke_calls()
+    assert (root / 'remote/smoke-lock-owner').read_text().startswith('thinkthen '), 'smoke ran without the VM lock'
+    assert (root / 'remote/package.tar.gz').read_bytes() == b'smoke assembly'
+    assert (root / 'remote/smoke.py').read_text() == smoke_program.read_text()
+    with tarfile.open(root / 'remote/source.tar.gz') as archive:
+        staged = archive.extractfile('source/scripts/qualification-readmes').read()
+        assert archive.getmember('source/.git/HEAD'), 'the source install needs Git'
+    assert staged == subprocess.check_output(['git', '-C', str(ENTRY.parent), 'show', 'HEAD:scripts/qualification-readmes'])
+    temporary = run_script.split("smoke.py' '", 1)[1].split("'", 1)[0]
+    assert len(temporary) >= 56, 'a temp root shorter than the replay passes the long-path bug falsely: ' + temporary
+    native_root = temporary.removesuffix('/workflow-smoke')
+    expected_cleanup = 'cmd /c rd /s /q \\\\?\\' + native_root.replace('/', '\\')
+    assert expected_cleanup in cleanup and 'Remove-Item' not in cleanup, cleanup
+    assert not lock.exists()
+    assert any(line.startswith("docker ['stop'") for line in commands.read_text().splitlines())
+    try:
+        smoke('smoke-failed', SMOKE_FAIL='1')
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        raise AssertionError('a failed smoke passed')
+    assert expected_cleanup.rsplit('-', 1)[0] in smoke_calls()[1], 'a failed smoke left its root'
+    assert not lock.exists(), 'a failed smoke kept the VM lock'
+    try:
+        smoke('smoke-cleanup-failed', RD_FAIL='1')
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        raise AssertionError('a smoke that could not clean up passed')
+    assert not lock.exists()
+    captured = io.TextIOWrapper(io.BytesIO())
+    real_run = subprocess.run
+
+    def hung(command, **options):
+        log = options.get('stdout')
+        if not getattr(log, 'name', '').endswith('smoke.log'):
+            return real_run(command, **options)
+        log.write(b'smoke output before the hang\n')
+        raise subprocess.TimeoutExpired(command, options['timeout'])
+
+    try:
+        with mock.patch.object(sys, 'stdout', captured), mock.patch.object(subprocess, 'run', hung):
+            smoke('smoke-hung')
+    except subprocess.TimeoutExpired:
+        pass
+    else:
+        raise AssertionError('a hung smoke passed')
+    assert b'smoke output before the hang' in captured.buffer.getvalue(), 'a hung smoke left no evidence in the job log'
+    assert not lock.exists(), 'a hung smoke kept the VM lock'
+    lock.mkdir()
+    commands.write_text('')
+    try:
+        smoke('smoke-locked')
+    except TimeoutError:
+        pass
+    else:
+        raise AssertionError('smoke ran while another owner held the VM')
+    assert not any(line.startswith('docker ') for line in commands.read_text().splitlines())
+    lock.rmdir()
+    refused = subprocess.run([sys.executable, str(ENTRY), 'smoke', str(root / 'unused')], env=environment, capture_output=True, timeout=5)
+    assert refused.returncode == 2 and b'smoke mode requires' in refused.stderr, refused.stderr
+print('A VM clock 8 hours off waits and then fails naming both times, a clock that corrects passes, and a right clock passes at once, with or without prerequisites; no real VM used')
+print('Windows smoke holds the lock, stages this commit, keeps a long temp root, and cleans up and unlocks after a failure; no real VM used')
 print('Windows inventory retains raw success/failure output with no staging or tool retries.')
 print('Windows VM controls preserve primary failures and retain ownership until a confirmed stop; no real VM used')
 if REPLAY_CHECK:

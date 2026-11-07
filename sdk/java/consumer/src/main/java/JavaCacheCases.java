@@ -5,7 +5,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.Locale;
 
-/** Feature: unavailable user caches fall back without hiding unsafe cache contents. */
+/** Feature: unavailable or unsafe user cache roots fall back; an unsafe ThinkThen entry fails closed. */
 public final class JavaCacheCases {
     private JavaCacheCases() {}
     public static void main(String[] args) throws Exception {
@@ -17,13 +17,19 @@ public final class JavaCacheCases {
         }
         Path root = Files.createTempDirectory("thinkthen-cache-consumer-");
         try {
-            for (String mode : java.util.List.of("fresh","unavailable","unsafe","missing-home","relative","occupied")) {
+            for (String mode : java.util.List.of("fresh","unavailable","unsafe-root","unsafe-entry","unsafe-native","missing-home","relative","occupied")) {
                 Path home = Files.createDirectories(root.resolve(mode));
                 boolean mac = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac");
                 Path cache = mac ? home.resolve("Library/Caches") : home.resolve("cache");
+                boolean refused = mode.equals("unsafe-entry") || mode.equals("unsafe-native");
+                Path entry = cache.resolve(mode.equals("unsafe-native") ? "thinkthen/native" : "thinkthen");
                 if (!mode.equals("fresh")) {
                     Files.createDirectories(cache);
-                    Files.setPosixFilePermissions(cache,PosixFilePermissions.fromString(mode.equals("unsafe") ? "rwxrwx---" : "r-x------"));
+                    Files.setPosixFilePermissions(cache,PosixFilePermissions.fromString(mode.equals("unsafe-root") ? "rwxrwx---" : refused ? "rwx------" : "r-x------"));
+                }
+                if (refused) {
+                    Files.createDirectories(entry,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+                    Files.setPosixFilePermissions(entry,PosixFilePermissions.fromString("rwxrwx---"));
                 }
                 Path temporary = Files.createDirectories(home.resolve("temporary"));
                 if (mode.equals("occupied")) {
@@ -47,13 +53,16 @@ public final class JavaCacheCases {
                 if (mode.equals("fresh")) {
                     JavaApiCases.equal(exit,0,"new cache loads under a group-writable umask: " + output);
                     JavaApiCases.equal(Files.getPosixFilePermissions(cache),PosixFilePermissions.fromString("rwx------"),"new cache is private");
-                } else if (!mode.equals("unsafe")) {
+                } else if (!refused) {
                     JavaApiCases.equal(exit,0,"unavailable user cache loads from private temporary cache: " + output);
                     try (var files = Files.walk(temporary)) {
                         JavaApiCases.check(files.anyMatch(p -> p.getFileName().toString().startsWith("libthinkthen_ffi")),"fallback contains engine");
                     }
                 } else {
-                    JavaApiCases.check(exit != 0 && output.contains("Unsafe ThinkThen native cache owner or permissions"),"unsafe cache fails closed: " + output);
+                    JavaApiCases.check(exit != 0 && output.contains("Unsafe ThinkThen native cache owner or permissions: " + entry),"unsafe cache entry fails closed: " + output);
+                    try (var files = Files.walk(temporary)) {
+                        JavaApiCases.check(files.noneMatch(p -> p.getFileName().toString().startsWith("libthinkthen_ffi")),"unsafe entry does not fall back");
+                    }
                 }
                 Files.setPosixFilePermissions(cache,PosixFilePermissions.fromString("rwx------"));
             }

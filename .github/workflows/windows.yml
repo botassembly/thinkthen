@@ -73,6 +73,10 @@ jobs:
         id: csharp
         if: always() && inputs.surface != 'cache'
         run: python scripts/windows-native-proof csharp "$env:RUNNER_TEMP/windows-native-proof"
+      - name: Prove file operations on Windows
+        id: spreadsheets
+        if: always() && inputs.surface == 'all'
+        run: cargo test --locked -p thinkthen --test cli_spreadsheets
       - name: Report every Windows qualification failure
         if: always()
         env:

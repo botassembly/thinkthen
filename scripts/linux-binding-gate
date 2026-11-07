@@ -133,6 +133,7 @@ def swift():
         environment = {name: os.environ[name] for name in names}
         environment.update(THINKTHEN_LOOPBACK=loopback, THINKTHEN_SWIFT_PACKAGE=stage)
         environment['THINKTHEN_GATE_STRICT'] = os.environ.get('THINKTHEN_GATE_STRICT', '0')
+        environment['THINKTHEN_STRESS_FULL'] = os.environ.get('THINKTHEN_STRESS_FULL', '')
         swift_command(['scripts/swift-gate'], (Path(temporary), Path(loopback).parent), environment)
 
 

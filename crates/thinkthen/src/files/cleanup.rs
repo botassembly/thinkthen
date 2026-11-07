@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, PersistError};
 
 #[derive(Default)]
 struct Paths {
@@ -179,11 +179,12 @@ impl Backup {
         &mut self,
         file: NamedTempFile,
         output: &Path,
+        failed: impl FnOnce(PersistError) -> crate::files::FileError,
     ) -> Result<File, crate::files::FileError> {
         let mut registry = paths();
         active(&registry).map_err(crate::files::local)?;
         crate::files::admission::check_cancel(&self.cancel)?;
-        let file = file.persist(output).map_err(crate::files::local)?;
+        let file = file.persist(output).map_err(failed)?;
         // Atomic replacement commits this publication. Forced cleanup must not
         // remove the retained original after that point.
         registry.paths.remove(&self.path);

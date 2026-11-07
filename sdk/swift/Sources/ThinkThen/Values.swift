@@ -323,8 +323,6 @@ public struct ThinkThenError: LocalizedError, Sendable, Equatable, CustomStringC
     public init(rawValue: String) { self.rawValue = rawValue }
     /// The engine value.
     public static let engine = Self(rawValue: "engine")
-    /// The engineUnavailable value.
-    public static let engineUnavailable = Self(rawValue: "engineUnavailable")
     /// The engineVersion value.
     public static let engineVersion = Self(rawValue: "engineVersion")
     /// The encoding value.
@@ -357,10 +355,6 @@ public struct ThinkThenError: LocalizedError, Sendable, Equatable, CustomStringC
   /// Wrap a record failure without changing its stable code or message.
   public static func engine(_ failure: RowFailure) -> Self {
     Self(kind: .engine, message: failure.message, failure: failure)
-  }
-  /// Describe an engine loading failure.
-  public static func engineUnavailable(message: String) -> Self {
-    Self(kind: .engineUnavailable, message: message)
   }
   /// Report a value that could not be encoded.
   public static func encoding(message: String) -> Self { Self(kind: .encoding, message: message) }

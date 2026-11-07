@@ -17,6 +17,20 @@ test("single await returns its answer and row reads the same execution", async (
   } finally {await client.close(); await server.close();}
 });
 
+test("unsure and failed blank single call rejects on both read paths", async () => {
+  const server = await backend(caseFor({}, [], []));
+  const client = new sdk.ThinkThen({url:server.url});
+  try {
+    const blank = error => error instanceof sdk.RecordError && error.code === "record.empty" && error.rows.length === 1;
+    const call = client.decide("Ready?", "");
+    await assert.rejects(call.row(), blank);
+    await assert.rejects(Promise.resolve(call), blank);
+    const rows = await client.decideStream("Ready?", [" "]).toArray();
+    assert.equal(rows[0].error.code, "record.empty");
+    assert.equal(await server.count(), 0);
+  } finally {await client.close(); await server.close();}
+});
+
 test("unsure and failed answers reject while their rows stay available", async () => {
   const server = await backend(caseFor({}, [], [{ answer: {type:"noul", noul:0.5} }]));
   const client = new sdk.ThinkThen({url:server.url});

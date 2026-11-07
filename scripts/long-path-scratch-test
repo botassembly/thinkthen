@@ -7,6 +7,7 @@ import runpy
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -14,6 +15,7 @@ from unittest.mock import patch
 import long_path_scratch as scratch_module
 
 README = Path(__file__).resolve().parent / 'qualification-readmes'
+SOURCE_INSTALL = README.with_name('source-install-check')
 READMES = ('command', 'Python', 'TypeScript', 'c', 'cpp', 'Java', 'Kotlin', 'C#', 'R', 'sqlite', 'duckdb')
 LEFTOVER = 'npm-cache/_cacache/content-v2/sha512/2a/cd/held'
 PLAIN_NPM = """
@@ -92,7 +94,7 @@ def readme_child(failure, package):
             raise FileNotFoundError(2, 'injected long path is unreachable', os.fspath(path))
         return real_unlink(path, *args, **kwargs)
 
-    sys.argv = [str(README), package]
+    sys.argv = [str(README), package, *(['--only', 'TypeScript'] if failure == 'only' else [])]
     with patch.object(scratch_module, 'long_path_scratch', scratch), patch.object(os, 'unlink', unlink):
         runpy.run_path(str(README), run_name='__main__')
 
@@ -120,6 +122,59 @@ def readme_cleanup():
             assert 'Directory not empty' in result.stderr, result.stderr
             assert (retained[0] / LEFTOVER).is_file(), 'cleanup failure lost its evidence'
     print('README check: every README runs before cleanup; a held npm cache fails the step and is kept')
+
+
+def readme_only():
+    """Scenario: --only runs the one named README check."""
+    assert runpy.run_path(str(README), run_name='import')['CHECKS'] == READMES
+    with tempfile.TemporaryDirectory(prefix='thinkthen-readme-only-test-') as directory:
+        result = subprocess.run([sys.executable, __file__, 'only', directory], capture_output=True, text=True,
+                                env=dict(os.environ, TMPDIR=directory), timeout=300)
+    assert result.returncode != 0, result.stdout
+    assert [name for name in READMES if 'README: ' + name + ': FAIL' in result.stdout] == ['TypeScript'], result.stdout
+    assert 'README checks failed: TypeScript' in result.stderr, result.stderr
+    unknown = subprocess.run([sys.executable, str(README), 'unused', '--only', 'Cobol'], capture_output=True, text=True)
+    assert unknown.returncode == 2 and 'invalid choice' in unknown.stderr, unknown.stderr
+    print('README check: --only runs one named check; an unknown name stops before any check')
+
+
+def source_child(package, *only):
+    """Run the real source-install check with its shared setup and every command stubbed."""
+    import release_notice_check, release_registry, release_source, release_workflow
+
+    def run(*arguments, **_):
+        if arguments[:2] == ('git', 'archive'):
+            with tarfile.open(arguments[4], 'w'):
+                pass
+        return ''
+
+    sys.argv = [str(SOURCE_INSTALL), package, *only]
+    with patch.object(release_registry, 'native_libraries', return_value={}), \
+         patch.object(release_registry, 'one', return_value=Path(package)), \
+         patch.object(release_source, 'stage', side_effect=lambda _libraries, folder, _notices: Path(folder).mkdir()), \
+         patch.object(release_notice_check, 'package_notices', return_value={}), \
+         patch.object(release_workflow, 'run', run):
+        runpy.run_path(str(SOURCE_INSTALL), run_name='__main__')
+
+
+def source_only():
+    """Scenario: the source install runs every check, or with --only the one it names."""
+    with tempfile.TemporaryDirectory(prefix='thinkthen-source-only-test-') as directory:
+        package = Path(directory) / 'package'
+        package.mkdir()
+        (package / 'build.json').write_text('{"platform": "fixture"}', encoding='utf-8')
+        def checks(*only):
+            result = subprocess.run([sys.executable, __file__, 'source', str(package), *only], capture_output=True,
+                                    text=True, env=dict(os.environ, TMPDIR=directory), timeout=300)
+            ran = [name for name in ('Go', 'Swift', 'Zig', 'Ruby') if 'source install ' + name + ': ' in result.stdout]
+            return ran, result
+        ran, result = checks()
+        assert ran == ['Go', 'Swift', 'Zig', 'Ruby'], result.stdout + result.stderr
+        ran, result = checks('--only', 'Go')
+        assert ran == ['Go'] and result.returncode != 0, result.stdout + result.stderr
+        ran, result = checks('--only', 'Zig', '--tag-source')
+        assert not ran and result.returncode == 2, result.stdout + result.stderr
+    print('Source install: every check runs by default; --only runs the one it names')
 
 
 def windows_run_check():
@@ -158,9 +213,13 @@ def windows_run_check():
     print('Windows-run check: a plain npm folder or rmtree fails, the helper passes, and Linux scripts stay free')
 
 
-if len(sys.argv) == 3:
+if sys.argv[1:2] == ['source']:
+    source_child(*sys.argv[2:])
+elif len(sys.argv) == 3:
     readme_child(sys.argv[1], sys.argv[2])
 else:
     windows_root()
     readme_cleanup()
+    readme_only()
+    source_only()
     windows_run_check()

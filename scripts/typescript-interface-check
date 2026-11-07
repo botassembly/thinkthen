@@ -1,8 +1,0 @@
-#!/bin/sh
-# Select prepared build tools before running the installed TypeScript checks.
-set -eu
-cd "$(dirname "$0")/.."
-. scripts/native-tools-env
-cargo fmt --all -- --check
-cargo clippy --locked -p thinkthen-node --all-targets -- -D warnings
-exec sh scripts/typescript-gate "$@"

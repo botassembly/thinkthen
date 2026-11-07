@@ -71,6 +71,13 @@ for version in 3.41.0 3.54.1; do
     THINKTHEN_LOOPBACK="${THINKTHEN_LOOPBACK:-$target/debug/loopback}" \
         python3 scripts/stress-adapters.py --surface sqlite -- python3 extensions/sqlite/tests/stress.py "$scratch/consumer-$version" "$scratch/installed/$extension" || status=1
 done
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+    for backend in systemone openai; do
+        THINKTHEN_LOOPBACK="${THINKTHEN_LOOPBACK:-$target/debug/loopback}" \
+            python3 scripts/stress-adapters.py --surface sqlite --rounds 60 --backend "$backend" --evidence-path "$THINKTHEN_SOAK_FOLDER/sqlite-$backend.jsonl" \
+            -- python3 extensions/sqlite/tests/stress.py "$scratch/consumer-3.54.1" "$scratch/installed/$extension" || status=1
+    done
+fi
 python3 scripts/sql-stress-lifetime-test "$root" sqlite "${THINKTHEN_LOOPBACK:-$target/debug/loopback}" "$scratch/consumer" "$scratch/installed/$extension" || status=1
 [ "$status" = 0 ] || exit "$status"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then

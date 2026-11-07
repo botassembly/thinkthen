@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-publish-test-') as temporary:
     digest = inventory()
     state = scratch / 'state.json'
     other = {'package': 'other', 'url': 'https://example.invalid/other'}
-    state.write_text(json.dumps({'calls': [], 'release': {'id': 7, 'draft': True,
+    state.write_text(json.dumps({'calls': [], 'unattested': [], 'revision': revision, 'release': {'id': 7, 'draft': True,
         'tag_name': 'review-v0.2.0', 'target_commitish': revision}, 'packages': [other]}))
     binary = scratch / 'bin'
     binary.mkdir()
@@ -85,6 +85,11 @@ data['calls'].append(args)
 if args[:2]==['release','download']:
     destination=Path(args[args.index('--dir')+1])
     for path in Path(os.environ['REHEARSAL_ASSETS']).iterdir(): shutil.copy2(path,destination/path.name)
+elif args[:2]==['attestation','verify']:
+    assert args[3:]==['--repo','botassembly/thinkthen','--signer-workflow','botassembly/thinkthen/.github/workflows/release-prepare.yml','--source-ref','refs/heads/main','--source-digest',data['revision']],args
+    if Path(args[2]).name in data['unattested']:
+        state.write_text(json.dumps(data))
+        sys.exit(1)
 elif args[:2]==['release','view']:
     release=data['release']
     if args[2]!=release['tag_name']:
@@ -141,6 +146,15 @@ state.write_text(json.dumps(data))
     assert result.returncode and 'checksum' in result.stderr, result
     no_tags()
     bundle.write_bytes(original)
+    data = json.loads(state.read_text())
+    data['unattested'] = [bundle.name]
+    state.write_text(json.dumps(data))
+    result = publish(digest)
+    assert result.returncode and bundle.name + ' has no attestation' in result.stderr, result
+    no_tags()
+    data = json.loads(state.read_text())
+    data['unattested'] = []
+    state.write_text(json.dumps(data))
     hook = additions / '.GiT/hooks/pre-commit'
     hook.parent.mkdir(parents=True)
     marker = scratch / 'hook-ran'
@@ -188,6 +202,8 @@ state.write_text(json.dumps(data))
     assert 'sdk/swift/tests/development.swift' not in tree
     assert 'sdk/swift/generate-codes.py' not in tree
     data = json.loads(state.read_text())
+    verified = {Path(call[2]).name for call in data['calls'] if call[:2] == ['attestation', 'verify']}
+    assert verified == {path.name for path in assets.iterdir()}, verified
     assert data['release']['tag_name'] == 'v0.2.0' and not data['release']['draft']
     assert data['release']['target_commitish'] == revision
     assert data['packages'] == [other, entry]

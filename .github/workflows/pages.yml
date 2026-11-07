@@ -2,11 +2,19 @@ name: Deploy documentation
 
 on:
   workflow_dispatch:
+    inputs:
+      installers:
+        description: Before release, held keeps the live installers. After release, pick release; it serves the repo's installers only while they match the published SHA256SUMS, and held refuses
+        required: true
+        default: held
+        type: choice
+        options: [held, release]
 
 permissions: {}
 env:
   PYTHONDONTWRITEBYTECODE: '1'
   HELD_INSTALLER_SHA: 2e0bd5f3619cee856a27ad5e495113c2842ffb351c37ba38175838784511606d
+  INSTALLERS: ${{ inputs.installers }}
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -38,8 +46,8 @@ jobs:
           echo "SITE_BIN_DIR=$RUNNER_TEMP/pages-target/debug" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: {node-version: '${{ steps.tools.outputs.node }}'}
-      - name: Preserve the installers still served before release
-        run: python3 site/scripts/pages-installers.py snapshot "$RUNNER_TEMP/pages-installers" --expected-sha "$HELD_INSTALLER_SHA"
+      - name: Capture the approved installers
+        run: python3 site/scripts/pages-installers.py snapshot "$RUNNER_TEMP/pages-installers" --installers "$INSTALLERS" --expected-sha "$HELD_INSTALLER_SHA"
       - name: Build only the command used to render help
         run: cargo build --locked -p thinkthen --bin thinkthen
       - name: Render and check the documentation from this commit
@@ -50,8 +58,8 @@ jobs:
           node scripts/agent-files.mjs
           node scripts/host-files.mjs
           node scripts/check.mjs
-      - name: Keep unreleased installers out of the Pages artifact
-        run: python3 site/scripts/pages-installers.py restore "$RUNNER_TEMP/pages-installers" site/dist --expected-sha "$HELD_INSTALLER_SHA"
+      - name: Put only the approved installers in the Pages artifact
+        run: python3 site/scripts/pages-installers.py restore "$RUNNER_TEMP/pages-installers" site/dist --installers "$INSTALLERS" --expected-sha "$HELD_INSTALLER_SHA"
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with: {path: site/dist}
   deploy:
@@ -71,7 +79,7 @@ jobs:
         with:
           name: github-pages
           path: ${{ runner.temp }}/pages-artifact
-      - name: Verify held installers inside the downloaded Pages artifact
-        run: python3 site/scripts/pages-installers.py verify "$RUNNER_TEMP/pages-artifact/artifact.tar" --expected-sha "$HELD_INSTALLER_SHA"
+      - name: Verify the approved installers inside the downloaded Pages artifact
+        run: python3 site/scripts/pages-installers.py verify "$RUNNER_TEMP/pages-artifact/artifact.tar" --installers "$INSTALLERS" --expected-sha "$HELD_INSTALLER_SHA"
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

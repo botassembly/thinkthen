@@ -117,6 +117,11 @@ def runtime_environment(scratch, prepared):
     return env
 
 
+def go_load_failure(execute, binary):
+    execute(binary, '-test.run=^TestNativeLoadFailure$', '-test.count=1', '-test.v',
+            '-test.timeout=10m', stream_output=True)
+
+
 def go_temporary_cache(execute, binary):
     execute(binary, '-test.run=^TestNativeTemporaryCache$', '-test.count=1', '-test.v',
             '-test.timeout=10m', stream_output=True)
@@ -221,6 +226,7 @@ def full(folder, build, *, caller_owned=False):
             check_cache([go_binary, *go_arguments],
                         scratch / 'go-cache-proof', runtime | go_env, 'library.dll')
             go_temporary_cache(execute, go_binary)
+            go_load_failure(execute, go_binary)
             lookup_check(execute, checks, go / 'package/native/library', go_binary, *go_arguments,
                          embedded=True, extra=go_env)
             cancel('Go', go_binary, '-test.run=^TestSharedStress$', '-test.count=1', '-test.timeout=5m')

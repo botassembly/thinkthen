@@ -29,7 +29,7 @@ fi
 test_image=$(docker image inspect "${THINKTHEN_POSTGRES_TEST_IMAGE:-thinkthen-postgres-build:18.6}" --format '{{.Id}}')
 docker run --pull=never --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
     -v "$root:/src:ro" -v "$scratch:/work" -v "${THINKTHEN_LOOPBACK:-$target/debug/loopback}:/loopback:ro" \
-    -v "$scratch/built/build:/work/build" -v "$target:$target" \
+    -v "$scratch/built/build:/work/build" -v "$target:$target" -v "${THINKTHEN_SOAK_FOLDER:-$scratch}:/soak" \
     "$test_image" sh -eu -c '
         sh /src/scripts/postgres-install-runtime /src /work "$1" "$2"
         if ! getent passwd "$1" >/dev/null; then
@@ -37,21 +37,27 @@ docker run --pull=never --rm --network none --label "$(python3 scripts/build_tar
         fi
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/built/home \
             PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin LANG=C.UTF-8 LLVM_PROFILE_FILE="$3" \
-            THINKTHEN_LOOPBACK=/loopback THINKTHEN_STRESS_FULL="$5" THINKTHEN_GATE_STRICT="$6" sh -eu -c '\''
+            THINKTHEN_LOOPBACK=/loopback THINKTHEN_STRESS_FULL="$5" THINKTHEN_GATE_STRICT="$6" THINKTHEN_SOAK_FOLDER="$7" sh -eu -c '\''
                 # Each step runs even after an earlier one fails, so one run reports every failure.
                 status=0
                 python3 /src/extensions/postgres/tests/typed_api.py /loopback \
                     --abi-mismatch-extension /work/built/build/thinkthen_postgres_mismatch.so \
                     --systemone-url-env THINKTHEN_TEST_LOOPBACK_URL --openai-url-env THINKTHEN_TEST_LOOPBACK_URL --group "$1" || status=1
                 case "$1" in
-                    all) python3 /src/scripts/stress-adapters.py --surface postgres -- python3 /src/extensions/postgres/tests/stress.py || status=1 ;;
+                    all) python3 /src/scripts/stress-adapters.py --surface postgres -- python3 /src/extensions/postgres/tests/stress.py || status=1
+                        if [ -n "$THINKTHEN_SOAK_FOLDER" ]; then
+                            for backend in systemone openai; do
+                                python3 /src/scripts/stress-adapters.py --surface postgres --rounds 60 --backend "$backend" \
+                                    --evidence-path "$THINKTHEN_SOAK_FOLDER/postgres-$backend.jsonl" -- python3 /src/extensions/postgres/tests/stress.py || status=1
+                            done
+                        fi ;;
                 esac
                 case "$1" in
                     all|ownership) python3 /src/scripts/sql-stress-lifetime-test /src postgres /loopback || status=1 ;;
                 esac
                 exit "$status"
             '\'' sh "$4"
-    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}" "${THINKTHEN_STRESS_FULL:-}" "${THINKTHEN_GATE_STRICT:-0}"
+    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}" "${THINKTHEN_STRESS_FULL:-}" "${THINKTHEN_GATE_STRICT:-0}" "${THINKTHEN_SOAK_FOLDER:+/soak}"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     cp "$scratch/installed/lib/thinkthen_postgres.so" "$target/debug/thinkthen-sql-postgres.so"
 fi

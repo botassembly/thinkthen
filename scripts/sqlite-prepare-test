@@ -24,7 +24,9 @@ def main():
     print('preparation evidence: ' + str(scratch), flush=True)
     env = dict(os.environ, HOME=str(scratch / 'home'), CARGO_TARGET_DIR=str(scratch / 'target'),
                PYTHONDONTWRITEBYTECODE='1')
-    for name in ('THINKTHEN_SQLITE_PREPARE_LOCK', 'THINKTHEN_FLOOR_BUILD'):
+    # A job's tools wrapper pins these to the real HOME; this test must use only its own scratch.
+    for name in ('THINKTHEN_SQLITE_PREPARE_LOCK', 'THINKTHEN_FLOOR_BUILD', 'THINKTHEN_RUNTIME_PREFIX',
+                 'THINKTHEN_JANSSON_ROOT', 'THINKTHEN_SQLITE_ROOT', 'PKG_CONFIG_PATH', 'R_LIBS_USER'):
         env.pop(name, None)
     sys.path.insert(0, str(ROOT / 'scripts'))
     from release_images import image
@@ -52,13 +54,16 @@ def main():
     workflow.host_tools = lambda: calls.append('host tools')
     workflow.floor_inputs = lambda: calls.append('floor inputs')
 
-    def prepared_floor(command):
-        assert command == 'scripts/floors/prepare-image', command
-        calls.append('floor image')
-        env['THINKTHEN_FLOOR_IMAGE'] = image('floor')
+    steps = {'scripts/floors/prepare-image': 'floor image', 'scripts/installer-test': 'installer image',
+             'scripts/floors/prepare-swift': 'Swift inputs'}
+
+    def prepared_floor(command, *_):
+        calls.append(steps[command])
+        if command == 'scripts/floors/prepare-image':
+            env['THINKTHEN_FLOOR_IMAGE'] = image('floor')
 
     def dependencies():
-        assert calls == ['host tools', 'floor image'], calls
+        assert calls == ['host tools', 'floor image', 'installer image'], calls
         calls.append('language inputs')
         run('cold', '--refresh')
 
@@ -66,7 +71,7 @@ def main():
     workflow.language_inputs = dependencies
     assert not floor.exists()
     workflow.prepare('linux-x86_64' if os.uname().machine == 'x86_64' else 'linux-arm64')
-    assert calls == ['host tools', 'floor image', 'language inputs', 'floor inputs'], calls
+    assert calls == ['host tools', 'floor image', 'installer image', 'language inputs', 'floor inputs', 'Swift inputs'], calls
     cold = contents(floor)
     run('strict-cold')
     run('valid-warm', '--refresh')

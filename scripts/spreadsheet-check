@@ -1,8 +1,0 @@
-#!/bin/sh
-# Check the command's spreadsheet boundary without building native consumers.
-set -eu
-cd "$(dirname "$0")/.."
-. scripts/native-tools-env
-cargo fmt --all --check
-cargo clippy -p thinkthen --all-targets --features stream --locked -- -D warnings
-cargo test -p thinkthen --locked --test cli_spreadsheets --test files_public_contract

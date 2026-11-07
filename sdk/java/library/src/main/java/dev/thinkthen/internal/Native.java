@@ -1,7 +1,6 @@
 package dev.thinkthen.internal;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.Linker;
 import java.lang.foreign.MemoryLayout;
@@ -45,7 +44,7 @@ final class Native {
                 && !(platform.equals("windows-amd64") && (arch.equals("amd64") || arch.equals("x86_64")))
                 && !(platform.equals("linux-aarch64") && arm)
                 && !(platform.equals("macos-arm64") && arm)) {
-            throw new UnsatisfiedLinkError("No packaged ThinkThen native engine for " + os + " " + arch);
+            throw new IOException("No packaged ThinkThen native engine for " + os + " " + arch);
         }
         String file = platform.startsWith("linux") ? "libthinkthen_ffi.so" : platform.startsWith("windows") ? "thinkthen_ffi.dll" : "libthinkthen_ffi.dylib";
         return NativeAsset.resolve("/io/thinkthen/native/" + platform + "/" + file, file);
@@ -56,7 +55,7 @@ final class Native {
             SymbolLookup symbols;
             try { symbols = SymbolLookup.libraryLookup(asset, Arena.global()); }
             catch (IllegalArgumentException error) {
-                throw new UnsatisfiedLinkError("Cannot load native engine " + asset + ": " + error.getMessage());
+                throw loadFailure("cannot load native engine " + asset + ": " + error.getMessage(), error);
             }
             var linker = Linker.nativeLinker();
             var functions = new HashMap<String, MethodHandle>();
@@ -78,8 +77,13 @@ final class Native {
             }
             return Map.copyOf(functions);
         } catch (IOException error) {
-            throw new UncheckedIOException(error);
+            throw loadFailure(error.getMessage(), error);
         }
+    }
+    private static ThinkThenException loadFailure(String message, Exception cause) {
+        var failure = new ThinkThenException("local.io", message);
+        failure.initCause(cause);
+        return failure;
     }
     private static void bind(Map<String, MethodHandle> functions, SymbolLookup symbols, Linker linker, String name) {
         functions.put(name, linker.downcallHandle(symbols.find("thinkthen_" + name).orElseThrow(() -> new ThinkThenException(Contract.ABI_CODE, Contract.ABI_MESSAGE)), NativeSignatures.descriptor(name)));

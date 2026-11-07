@@ -185,7 +185,7 @@ fn cancellation_after_backup_removes_only_the_pending_publication() {
     }
 }
 
-fn wait_for<T>(child: &mut Child, mut observe: impl FnMut() -> Option<T>) -> T {
+pub(super) fn wait_for<T>(child: &mut Child, mut observe: impl FnMut() -> Option<T>) -> T {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         assert!(

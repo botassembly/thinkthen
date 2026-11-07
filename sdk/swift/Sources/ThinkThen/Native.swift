@@ -84,11 +84,11 @@ final class Native: Sendable {
     #elseif os(macOS) && arch(arm64)
       let resource = "osx-arm64/libthinkthen_ffi.dylib"
     #else
-      throw ThinkThenError.engineUnavailable(message: "No packaged engine for this host")
+      throw engineLoadFailure("No packaged engine for this host")
     #endif
     let chosen = ProcessInfo.processInfo.environment[THINKTHEN_LIBRARY_VARIABLE] ?? ""
     guard chosen.isEmpty || isFullPath(chosen) else {
-      throw ThinkThenError.engineUnavailable(message: THINKTHEN_LIBRARY_PATH_MESSAGE)
+      throw engineLoadFailure(THINKTHEN_LIBRARY_PATH_MESSAGE)
     }
     let folders = [Bundle.main.bundleURL, Bundle.main.executableURL?.deletingLastPathComponent()]
     let bundles = folders.compactMap { $0 }.flatMap { base in
@@ -98,9 +98,8 @@ final class Native: Sendable {
     }
     let packaged = bundles.first(where: { FileManager.default.fileExists(atPath: $0) })
     guard let path = chosen.isEmpty ? packaged : chosen else {
-      throw ThinkThenError.engineUnavailable(
-        message:
-          "Cannot load packaged engine; searched \(bundles.joined(separator: ", ")); set \(THINKTHEN_LIBRARY_VARIABLE) to the native library path"
+      throw engineLoadFailure(
+        "cannot load native engine; searched \(bundles.joined(separator: ", ")); set \(THINKTHEN_LIBRARY_VARIABLE) to the native library path"
       )
     }
     #if os(Windows)
@@ -113,13 +112,12 @@ final class Native: Sendable {
       guard
         let handle = file.withCString(encodedAs: UTF16.self, { LoadLibraryExW($0, nil, flags) })
       else {
-        throw ThinkThenError.engineUnavailable(
-          message: "Cannot load packaged engine \(path): \(GetLastError())")
+        throw engineLoadFailure("cannot load native engine \(path): system error \(GetLastError())")
       }
     #else
       guard let handle = dlopen(path, RTLD_NOW | RTLD_LOCAL) else {
-        throw ThinkThenError.engineUnavailable(
-          message: "Cannot load packaged engine \(path): "
+        throw engineLoadFailure(
+          "cannot load native engine \(path): "
             + (dlerror().map { String(cString: $0) } ?? "unknown loader error"))
       }
     #endif
@@ -130,8 +128,7 @@ final class Native: Sendable {
         let address = dlsym(handle, name)
       #endif
       guard let address else {
-        throw ThinkThenError.engineUnavailable(
-          message: "Cannot load packaged engine \(path): missing native symbol " + name)
+        throw rowABIFailure(THINKTHEN_ABI_ERROR_MESSAGE + ": missing native symbol " + name)
       }
       return unsafeBitCast(address, to: T.self)
     }
@@ -421,6 +418,10 @@ private func isFullPath(_ path: String) -> Bool {
   #else
     return path.hasPrefix("/")
   #endif
+}
+
+func engineLoadFailure(_ message: String) -> ThinkThenError {
+  .engine(RowFailure(code: .localIO, message: message, httpStatus: nil))
 }
 
 func rowABIFailure(_ message: String) -> ThinkThenError {

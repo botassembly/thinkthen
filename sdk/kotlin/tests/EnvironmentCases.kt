@@ -5,6 +5,11 @@ import kotlinx.coroutines.runBlocking
 
 // Feature: a client with no backend set reads THINKTHEN_BACKEND, as the command does; a set backend wins.
 fun main() = runBlocking {
+    if (System.getenv("THINKTHEN_BACKEND") == "") {
+        try { ThinkThen().close(); error("An empty THINKTHEN_BACKEND was accepted") }
+        catch (failure: ThinkThenException) { check(codeName(failure.code) == "usage.backend") }
+        return@runBlocking
+    }
     check(System.getenv("THINKTHEN_BACKEND") == "stub") { "Run with THINKTHEN_BACKEND=stub" }
     ThinkThen().use { client ->
         val row = client.decide("Ready?", "alpha")

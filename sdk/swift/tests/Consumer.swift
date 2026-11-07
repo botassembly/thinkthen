@@ -148,9 +148,20 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
         guard let typed = error as? ThinkThenError else { throw error }
         switch typed.kind {
         case .engineVersion: print("version")
-        case .engineUnavailable: print(typed.message)
+        case .engine: print(typed.message)
         default: throw error
         }
+      }
+      return
+    }
+    if args[1] == "load-failure" {
+      do {
+        _ = try Client(.init(backend: .stub))
+        preconditionFailure("unloadable engine was accepted")
+      } catch {
+        guard let failure = (error as? ThinkThenError)?.failure, failure.code == .localIO,
+          failure.message.contains(args[2])
+        else { throw error }
       }
       return
     }

@@ -231,6 +231,42 @@ fn a_choice_above_the_protocol_limit_fails_before_sending() {
 }
 
 #[test]
+fn a_reply_with_the_wrong_answer_count_fails_every_record_it_covers() {
+    let question = Decide::new("Is it urgent?").unwrap();
+    let yes = json!({"type":"predicate","probability":0.9});
+    let no = json!({"type":"predicate","probability":0.1});
+    let dropped_first = json!([no, yes]);
+    let one_extra = json!([yes, no, yes, no]);
+    let right_size = json!([yes, no, yes]);
+    for (answers, expected) in [
+        (dropped_first, None),
+        (one_extra, None),
+        (right_size, Some([true, false, true])),
+    ] {
+        let server =
+            Loopback::start(move |_| Reply::json(200, &json!({"answers": answers}))).unwrap();
+        let rows: Vec<_> = engine(&server)
+            .rows(
+                &question,
+                ["one", "two", "three"].into_iter().map(Record::text),
+            )
+            .unwrap()
+            .map(|row| serde_json::to_value(row.unwrap()).unwrap())
+            .collect();
+        assert_eq!(rows.len(), 3);
+        assert_eq!(server.count(), 1);
+        for (place, row) in rows.iter().enumerate() {
+            if let Some(expected) = expected {
+                assert_eq!(row["answer"], expected[place], "{row}");
+            } else {
+                assert_eq!(row["status"], "failed", "{row}");
+                assert_eq!(row["error"]["code"], "backend.reply", "{row}");
+            }
+        }
+    }
+}
+
+#[test]
 fn the_adapter_limit_closes_requests_between_records() {
     let question = Decide::new("Is it urgent?").unwrap();
     for count in [400, 401] {

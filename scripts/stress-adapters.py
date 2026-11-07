@@ -4,6 +4,8 @@
 Usage: stress-adapters.py --surface LABEL [--full] [--sequential] -- ADAPTER [ARG ...]
 For one extended healthy soak, add --rounds 60 --backend NAME --evidence-path FILE.
 This selects the full record count and evaluates memory over rounds 41 to 60.
+--full also runs the table's slow_replies soak once, on the first backend, with the
+short check's verdicts: counts fail and memory is only reported.
 THINKTHEN_LOOPBACK names the prepared loopback executable. Each adapter reads the
 JSON file at THINKTHEN_STRESS_CASE. Fields: client (wire settings including URL and
 synthetic key), scenario (shared expected status/code), records, probability,
@@ -116,8 +118,8 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
         with tempfile.TemporaryDirectory(prefix='thinkthen-stress-') as directory:
             path = Path(directory) / 'case.json'
             client = dict(table['client'], backend=wire, url=fixture.url, api_key='loopback-only')
-            if cancel:
-                client["retry"] = dict(client["retry"], attempt_timeout_ms=60000)
+            client['retry'] = dict(client['retry'], attempt_timeout_ms=
+                scenario.get('attempt_timeout_ms', client['retry']['attempt_timeout_ms']))
             path.write_text(json.dumps(dict(client=client, scenario=scenario, records=count,
                 probability=table['replies'][0]['probability'], concurrency=concurrency,
                 rounds=rounds, cancel=cancel, identifier_base=basis, read_ahead_limit=read_ahead_limit)))
@@ -184,7 +186,7 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                     if packing:
                         report['input_packing'] = packing
                         report['idle_added_requests'] = idle_added
-                    if idle_added and scenario['name'] != 'healthy':
+                    if idle_added and scenario['name'] not in ('healthy', table['slow_replies']['name']):
                         raise RuntimeError('idle request allowance requires a healthy workload')
                     retries = sum(fault.get('repeat', 1) for fault in scenario.get('faults', [])
                                   if fault['kind'] == 'status' and fault.get('status') in (429, 503))
@@ -269,6 +271,8 @@ def main():
         backends = [args.backend]
     count = table['records']['full' if args.full else 'smoke']
     healthy = next(s for s in table['scenarios'] if s['name'] == 'healthy')
+    slow_replies = table['slow_replies']
+    slow_soak = args.full and not args.sanitizer and args.rounds is None
     calls = rows = failed = failed_statements = 0
     reports = []
     for wire in backends:
@@ -277,16 +281,18 @@ def main():
         cases += [pair, (healthy, 1, 1, True)]
         if args.full or not args.sanitizer:
             cases += [(healthy, 1, table['records']['soak_rounds'], False)]
+        if slow_soak and wire == backends[0]:
+            cases += [(slow_replies, 1, table['records']['soak_rounds'], False)]
         if args.rounds is not None:
             cases = [(healthy, 1, args.rounds, False)]
         for scenario, concurrency, rounds, cancel in cases:
             result = {}
             try:
                 run(command, table, wire, scenario,
-                    min(count, table["client"]["batch"]) if scenario["status"] == "failed" else count,
+                    min(count, table["client"]["batch"]) if scenario["status"] == "failed" else scenario.get('records', count),
                     concurrency, rounds, cancel,
                     resources=not args.sanitizer and rounds == (args.rounds or table['records']['soak_rounds']) and Path('/proc/self/status').exists(),
-                    short_gate=not args.full,
+                    short_gate=not args.full or scenario is slow_replies,
                     memory_window=(41, 60) if args.rounds is not None else None,
                     evidence_path=args.evidence_path,
                     result=result, surface=args.surface)
@@ -305,7 +311,7 @@ def main():
             break
     measured = sum('resources' in case for case in reports)
     resource_growth = ('not measured under sanitizer instrumentation' if args.sanitizer else
-        'completed-round verdicts' if measured == len(backends) else
+        'completed-round verdicts' if measured == len(backends) + slow_soak else
         'not measured: Linux /proc unavailable' if not Path('/proc/self/status').exists() else
         'not measured: suite stopped before every required resource workload')
     print(json.dumps(dict(adapter=command[0], full=args.full,

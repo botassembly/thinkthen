@@ -48,10 +48,10 @@
       "example": "error-backend-name"
     },
     "usage.url": {
-      "means": "the address is not HTTPS",
-      "when": "`--url` or `THINKTHEN_BASE_URL` names a plain `http://` address on another machine",
-      "cause": "ThinkThen sends your key with each request, so it refuses to send it in the clear. It accepts an `https://` address anywhere, and `http://` only to `localhost`, `127.0.0.1` or `[::1]`.",
-      "fix": "Use the service's `https://` address, or run your server on the local machine. Once the address passes this check, a wrong address shows as [`backend.transport`](/reference/errors/backend-transport/) instead.",
+      "means": "the address is not one ThinkThen will send your key to",
+      "when": "`--url` or `THINKTHEN_BASE_URL` names a plain `http://` address on another machine, or an address holding a user name or password",
+      "cause": "ThinkThen sends your key with each request, so it refuses to send it in the clear. It accepts an `https://` address anywhere, and `http://` only to `localhost`, `127.0.0.1` or `[::1]`. It refuses a user name or password in the address, because it prints the address in its settings.",
+      "fix": "Use the service's `https://` address, or run your server on the local machine. Take any user name or password out of the address, and put the key in the backend's key variable. Once the address passes this check, a wrong address shows as [`backend.transport`](/reference/errors/backend-transport/) instead.",
       "example": "error-url"
     },
     "usage.key-missing": {

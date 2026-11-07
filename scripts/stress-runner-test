@@ -58,7 +58,7 @@ calls=case['concurrency']*case['rounds']
 requests=(0 if case['scenario']['name']=='refused' else ((case['records']+case['client']['batch']-1)//case['client']['batch'])*calls+sum(f.get('repeat',1) for f in case['scenario'].get('faults',[]) if f['kind']=='status'))
 if case['cancel']: requests=min(4,(case['records']+case['client']['batch']-1)//case['client']['batch'])
 Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') and not case['cancel'] else 0)))
-if os.environ.get('REPORTED_IDLE_SPLIT') and not case['cancel'] and case['scenario']['name']=='healthy':
+if os.environ.get('REPORTED_IDLE_SPLIT') and not case['cancel'] and case['scenario']['name'] in ('healthy','slow-replies'):
     requests += calls
     Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') else 0)))
     summaries=[dict(run=os.environ['THINKTHEN_INPUT_REPORT_RUN'],pid=os.getpid(),call=call,
@@ -76,7 +76,7 @@ if case['cancel']:
     assert sys.stdin.readline().strip()=='cancel'
 calls=case['concurrency']*case['rounds']
 rows=0 if case['cancel'] else calls*case['records']
-print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],read_ahead_records=(case.get('read_ahead_limit') or 0)+(1 if os.environ.get('BAD_READ_AHEAD') else 0),identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
+print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeout_ms'],calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],read_ahead_records=(case.get('read_ahead_limit') or 0)+(1 if os.environ.get('BAD_READ_AHEAD') else 0),identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
 ''')
     env = dict(os.environ, THINKTHEN_LOOPBACK=str(fixture), THINKTHEN_GATE_STRICT='0')
     sys.path.insert(0, str(root / 'scripts'))
@@ -105,6 +105,7 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
         assert report['sanitizer'] == mode
         assert report['resource_growth'] == 'not measured under sanitizer instrumentation'
         assert all('resources' not in case for case in report['cases'])
+        assert all(case['scenario'] != 'slow-replies' for case in report['cases']), report
         assert {case['concurrency'] for case in report['cases']} == {1, 2}
         assert {case['rounds'] for case in report['cases']} == {1, 4}
         assert any(case['cancelled'] for case in report['cases'])
@@ -153,9 +154,28 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
                                capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr[-1000:]
     long_report = json.loads(completed.stdout)
-    assert len(long_report['cases']) == 20, long_report
+    assert len(long_report['cases']) == 21, long_report
     assert all(case['command'] == shlex.join(long_command) for case in long_report['cases']), long_report
-    soaks = [case for case in long_report['cases'] if 'resources' in case]
+    assert long_report['resource_growth'] == 'completed-round verdicts', long_report
+    # Feature: --full adds one slow-reply soak with short-check verdicts.
+    slow = [case for case in long_report['cases'] if case['scenario'] == 'slow-replies']
+    assert len(slow) == 1, long_report
+    slow = slow[0]
+    assert (slow['backend'], slow['rounds'], slow['records'], slow['attempt_timeout_ms']) == (
+        'systemone', 8, 500, 10000), slow
+    assert slow['case'] == 'slow-replies/concurrency=1/rounds=8/cancel=False', slow
+    assert slow['resources']['growth']['metrics']['memory_bytes']['report_only'] is True, slow
+    assert slow['resources']['growth']['metrics']['descriptors']['late_window_maxima'], slow
+    idle_slow = subprocess.run([*command, '--', *long_command], env=dict(env, REPORTED_IDLE_SPLIT='1'),
+                               capture_output=True, text=True)
+    assert idle_slow.returncode == 0, idle_slow.stderr[-1000:]
+    smoke_run = subprocess.run([sys.executable, str(root / 'scripts/stress-adapters.py'), '--surface', 'fixture',
+                                '--', *long_command], env=env, capture_output=True, text=True)
+    assert smoke_run.returncode == 0, smoke_run.stderr[-1000:]
+    smoke_report = json.loads(smoke_run.stdout)
+    assert smoke_report['resource_growth'] == 'completed-round verdicts', smoke_report
+    assert all(case['scenario'] != 'slow-replies' for case in smoke_report['cases']), smoke_report
+    soaks = [case for case in long_report['cases'] if 'resources' in case and case is not slow]
     assert len(soaks) == 2, long_report
     for case in soaks:
         group = case['resources']['groups']['workload']

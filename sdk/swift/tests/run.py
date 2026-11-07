@@ -21,6 +21,11 @@ root = Path(root)
 not_applicable = 0
 sys.path.insert(0, str(root / "scripts"))
 from test_control import read_line, request as fixture_request
+with tempfile.TemporaryDirectory() as folder:
+    broken = Path(folder) / "broken-engine"
+    broken.write_bytes(b"not a shared library\n")
+    for unloadable in (Path(folder) / "missing-engine", broken):
+        subprocess.run([consumer, "load-failure", str(unloadable)], env=dict(env, THINKTHEN_LIBRARY=str(unloadable)), check=True, timeout=120)
 subprocess.run([sys.executable, str(root / "sdk/c/tests/toolbox.py"), consumer, str(root)], env=env, check=True)
 network_env = dict(env, THINKTHEN_API_KEY="loopback-test-key", OPENAI_API_KEY="loopback-test-key")
 

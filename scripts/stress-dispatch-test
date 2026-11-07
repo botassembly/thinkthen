@@ -139,3 +139,12 @@ with tempfile.TemporaryDirectory(prefix='floor-diagnostics-') as temporary:
     assert 'CalledProcessError' not in errors, errors
     assert len(errors.split('last output lines:\n', 1)[1].encode()) <= 16385, errors
 print('floor diagnostics: live output, inner cause, bounded tail and child exit37 retained')
+# A full run reaches the Swift container, which takes only the names it is handed.
+swift = runpy.run_path(str(Path(__file__).with_name('linux-binding-gate')))['swift']
+handed = []
+with patch.dict(swift.__globals__, run=lambda *_: None,
+                swift_command=lambda _command, _mounts, environment: handed.append(environment)), \
+        patch.dict(os.environ, THINKTHEN_STRESS_FULL='1', THINKTHEN_LOOPBACK='/loopback', THINKTHEN_CSHARP_NATIVE_ASSETS='csharp',
+                   THINKTHEN_JVM_NATIVE_ASSETS='jvm', THINKTHEN_NATIVE_FIXTURES='fixtures'):
+    swift()
+assert handed[0]['THINKTHEN_STRESS_FULL'] == '1', handed

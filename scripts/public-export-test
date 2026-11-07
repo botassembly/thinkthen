@@ -96,6 +96,11 @@ class Export(unittest.TestCase):
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 23, result.stderr)
             self.assertEqual(events.read_text().splitlines(), ['verify'])
+            events.unlink()
+            result = subprocess.run([*command[:2], '--inside-soaks', *command[3:]], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(events.read_text().splitlines(),
+                             ['verify', 'native-env', 'sdk --extended-soaks-inside'])
 
     def test_candidate_gate_uses_a_symlinked_temporary_root(self):
         entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
@@ -155,6 +160,32 @@ class Export(unittest.TestCase):
             observed = json.loads((evidence / 'temporary.json').read_text())
             self.assertNotEqual(observed['alias'], observed['physical'])
             self.assertFalse(Path(observed['physical']).exists(), 'successful candidate scratch survived')
+
+    def test_a_skipped_or_short_soak_refuses_the_receipt(self):
+        from stress_resources import METRICS
+        entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
+        rows = [dict(dict.fromkeys(METRICS, 0), completed_round=index) for index in range(1, 61)]
+
+        def text(chosen):
+            return ''.join(json.dumps(row) + '\n' for row in [{'completed_round': None}, *chosen])
+
+        with tempfile.TemporaryDirectory(prefix='soak-receipt-') as temporary:
+            evidence = Path(temporary)
+            for name in entry['SOAKS']:
+                (evidence / (name + '.jsonl')).write_text(text(rows))
+            entry['soak_receipt'](evidence, 'a' * 40, 'j1')
+            receipt = json.loads((evidence / 'receipt.json').read_text())
+            self.assertEqual((receipt['job'], receipt['public'], receipt['verdict']), ('j1', 'a' * 40, 'passed'))
+            self.assertEqual(len(receipt['soaks']), 8)
+            self.assertEqual(receipt['soaks']['postgres-openai']['measurement_start_round'], 41)
+            (evidence / 'receipt.json').unlink()
+            (evidence / 'sqlite-openai.jsonl').unlink()
+            with self.assertRaisesRegex(ValueError, 'soak evidence is missing: sqlite-openai.jsonl'):
+                entry['soak_receipt'](evidence, 'a' * 40, 'j1')
+            (evidence / 'sqlite-openai.jsonl').write_text(text(rows[:59]))
+            with self.assertRaisesRegex(ValueError, 'soak did not complete 60 rounds: sqlite-openai.jsonl'):
+                entry['soak_receipt'](evidence, 'a' * 40, 'j1')
+            self.assertFalse((evidence / 'receipt.json').exists())
 
     def test_private_publication_changes_only_records(self):
         with tempfile.TemporaryDirectory(prefix='landing-equivalence-') as temporary:

@@ -71,9 +71,10 @@ export THINKTHEN_URL=https://models.example.com/v1
 export THINKTHEN_MODEL=my-model
 ```
 
-Three rules apply to the address:
+Four rules apply to the address:
 
 - It must use HTTPS, or plain HTTP to `localhost`, `127.0.0.1` or `[::1]`. Any other `http://` address stops with `usage.url` before a request is sent.
+- It must not hold a user name or password, as in `https://name:password@host`, because ThinkThen prints the address in its settings. It stops with `usage.url`. Put the key in the backend's key variable instead.
 - `THINKTHEN_URL` sets only the System One address, taking precedence over `THINKTHEN_BASE_URL`. OpenAI reads `OPENAI_BASE_URL`. An explicit `--url` or SDK `Settings.url` overrides the address for the chosen backend, including when `THINKTHEN_BACKEND` chooses it.
 - If your server's certificate comes from your own certificate authority, set `THINKTHEN_CA_FILE` to that authority's PEM file. ThinkThen trusts it as well as your system's certificates.
 
@@ -102,7 +103,7 @@ A bar you tuned on one model belongs to that model. If you change the model, che
 
 The Go, Swift, Zig, C#, Java, Kotlin and Ruby SDKs load ThinkThen's native library when your program starts using them. They all follow one rule:
 
-1. If `THINKTHEN_LIBRARY` is set, the SDK loads that file and no other. The value must be an absolute path. A relative path stops with `THINKTHEN_LIBRARY must be an absolute path`, and a file that won't load stops with an error that names it. An empty value counts as unset.
+1. If `THINKTHEN_LIBRARY` is set, the SDK loads that file and no other. The value must be an absolute path. A relative path stops with `THINKTHEN_LIBRARY must be an absolute path`, and a file that won't load stops with a `local.io` error that names it. An empty value counts as unset.
 2. If it isn't set, the SDK loads the library it installed, by its full path. Swift and Zig look beside your program. C# and Ruby look inside their installed package. Java, Kotlin and Go unpack the library they carry into your user cache folder and load it from there.
 
 An SDK doesn't look in the working folder or on a system search path, so a file of the same name left there can't take the library's place. On Windows too, the SDK always gives the system a full path.

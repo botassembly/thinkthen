@@ -77,5 +77,5 @@ for failure in ('missing', 'broken'):
         result = subprocess.run([java, '--enable-native-access=ALL-UNNAMED', f'-Duser.home={scratch}/home', '-cp', replaced, *surface], text=True, capture_output=True)
         output = result.stdout + result.stderr
         assert result.returncode != 0 and attempted in output, (failure, surface, output)
-        assert 'Cannot load' in output and 'usage.abi' not in output and 'incompatible' not in output, output
+        assert 'cannot load' in output.lower() and 'usage.abi' not in output and 'incompatible' not in output, output
         print(f'{surface[0]}: {failure} reports load failure and attempted path')

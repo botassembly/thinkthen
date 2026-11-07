@@ -31,14 +31,14 @@ final class NativeAsset {
     private NativeAsset() {}
     static Path resolve(String resource, String file) throws IOException {
         var url = Native.class.getResource(resource);
-        if (url == null) throw new UnsatisfiedLinkError("Cannot load packaged ThinkThen native engine: " + resource);
+        if (url == null) throw new IOException("Cannot load packaged ThinkThen native engine: " + resource);
         if (url.getProtocol().equals("file")) {
             try { return Path.of(url.toURI()); }
             catch (URISyntaxException error) { throw new IOException(error); }
         }
         byte[] digest;
         try (var input = url.openStream()) { digest = checksum(input); }
-        try { return cached(cache(), file, url, digest); }
+        try { return cached(userCache(), file, url, digest); }
         catch (java.nio.file.FileSystemException error) {
             return cached(temporaryCache(), file, url, digest);
         }
@@ -159,6 +159,13 @@ final class NativeAsset {
             try { secure(fresh, true); return fresh; }
             catch (IOException error) { Files.deleteIfExists(fresh); throw error; }
         }
+    }
+    /** The user cache root belongs to other programs too, so an unsafe root is only unavailable. */
+    private static Path userCache() throws IOException {
+        var base = cache();
+        if (!Files.exists(base, LinkOption.NOFOLLOW_LINKS)) return base;
+        try { secure(base, true); return base; }
+        catch (IOException unsafe) { return temporaryCache(); }
     }
     private static Path cache() throws IOException {
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);

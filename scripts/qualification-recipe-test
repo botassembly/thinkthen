@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise qualification preparation boundaries without native builds or downloads."""
 import ast
+from contextlib import redirect_stdout
 import io
 import os
 from pathlib import Path, PureWindowsPath
@@ -245,18 +246,21 @@ rust.prepare('wasm32-unknown-unknown')
             self.assertEqual(Path(environment['THINKTHEN_CASES']) / '../schemas/row.schema.json', ROOT / 'conformance/../schemas/row.schema.json')
             captured.append(command)
         temporary_cache = []
+        load_failure = []
         with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=lambda *args, **options: None, check_cache=cache,
-                                                                    go_temporary_cache=lambda execute, binary: temporary_cache.append(binary)):
+                                                                    go_temporary_cache=lambda execute, binary: temporary_cache.append(binary),
+                                                                    go_load_failure=lambda execute, binary: load_failure.append(binary)):
             scratch = Path(directory)
             native = scratch / 'engine.dll'
             native.write_bytes(b'native fixture')
             action(scratch, native, {'PATH': ''}, {})
         self.assertIn('-test.timeout=30m', captured[0])
         self.assertEqual(temporary_cache, [captured[0][0]])
+        self.assertEqual(load_failure, [captured[0][0]])
 
     def test_source_and_registry_go_launchers_expose_canonical_fixtures(self):
         source = (ROOT / 'scripts/source-install-check').read_text()
-        source = textwrap.dedent(source[source.index('        go_env ='):source.index('        if args.readmes:')])
+        source = textwrap.dedent(source[source.index('            go_env ='):source.index('            if args.readmes:')])
         with tempfile.TemporaryDirectory() as directory:
             for platform, recipe in [('linux', source), ('darwin', source)]:
                 with self.subTest(platform=platform, recipe='source'):
@@ -399,6 +403,74 @@ rust.prepare('wasm32-unknown-unknown')
         self.assertTrue(options['stream_output'])
         self.assertIn('-test.timeout=10m', direct)
         self.assertEqual(list(direct), cached[0])
+
+    def test_normal_token_probe_reports_named_programs_and_only_refuses_an_administrator(self):
+        import windows_caller_process
+        with tempfile.TemporaryDirectory() as directory:
+            launched = []
+            def launch(command, **options):
+                launched.append((Path(command[-1]).read_text(encoding='utf-8'), options))
+            with patch.object(windows_caller_process, 'launch', launch):
+                windows_caller_process.probe(directory, {'SYSTEMROOT': directory}, normal=Path(directory))
+        (script, options), = launched
+        self.assertEqual(options['env']['TT_NORMAL_PROBE'], '1')
+        self.assertEqual(options['normal_log'], Path(directory) / 'child.log')
+        self.assertNotIn('whoami /groups', script, 'a bare name lets PATH choose the program')
+        for text in ("Start-Probe (Join-Path $system 'whoami.exe') @('/groups')",
+                     "Start-Probe (Join-Path $system 'cmd.exe')",
+                     "'Normal token PATH finds whoami.exe at: '",
+                     "$found=@(Find-Programs 'whoami.exe')",  # One result would otherwise index as a string.
+                     "'Normal token could not start ' + $program",
+                     "': exit ' + $LASTEXITCODE + ': ' + ($output -join ' | ')",
+                     "throw 'Normal token is an administrator'"):
+            self.assertIn(text, script)
+        start = script.index('function Start-Probe')
+        self.assertNotIn('throw', script[start:script.index("$directory=Join-Path")],
+                         'a failed start only reports; the consumer runs from Python decide')
+
+    def normal_token_calls(self, integrity):
+        import ctypes
+        from windows_caller_process import normal_token
+        user, label, sids, restricted, classes, aces, sizes = 0x1234, 0x5678, {}, [], [], [], []
+        def string_sid(text, value):
+            value._obj.value = sids.setdefault(text, 0x1000 + len(sids))
+            return 1
+        def token_info(_token, kind, buffer, _length, size):
+            size._obj.value = 16
+            if buffer is None:
+                return 0
+            ctypes.cast(buffer, ctypes.POINTER(ctypes.c_void_p))[0] = {1: user, 25: label}[kind]
+            return 1
+        def sid_text(pointer, value):
+            self.assertEqual(pointer, label)
+            value._obj.value = integrity
+            return 1
+        def restrict(_source, flags, count, disabled, *_rest):
+            restricted.append((flags, count, disabled._obj.sid))
+            return 1
+        def acl(_acl, size, revision):
+            sizes.append((size, revision))
+            return 1
+        functions = dict(GetCurrentProcess=lambda: 1, OpenProcessToken=lambda *_: 1, CloseHandle=lambda _: 1,
+                         LocalFree=lambda _: None, ConvertStringSidToSidW=string_sid, GetTokenInformation=token_info,
+                         ConvertSidToStringSidW=sid_text,
+                         CreateRestrictedToken=restrict, GetLengthSid=lambda _: 12, InitializeAcl=acl,
+                         AddAccessAllowedAce=lambda _acl, _revision, mask, sid: aces.append((mask, getattr(sid, 'value', sid))) or 1,
+                         SetTokenInformation=lambda _token, kind, *_: classes.append(kind) or 1)
+        with redirect_stdout(io.StringIO()):
+            normal_token(functions)
+        return sids, restricted, classes, aces, sizes, user
+
+    def test_normal_token_keeps_administrators_deny_only_and_grants_new_objects_to_the_user(self):
+        sids, restricted, classes, aces, sizes, user = self.normal_token_calls('S-1-16-8192')
+        self.assertEqual(restricted, [(1, 1, sids['S-1-5-32-544'])])
+        self.assertEqual(classes, [25, 6], 'medium integrity, then the default DACL')
+        self.assertEqual(aces, [(0x10000000, user), (0x10000000, sids['S-1-5-18'])])
+        self.assertEqual(sizes, [(8 + 2 * (8 + 12), 2)])
+
+    def test_normal_token_refuses_any_integrity_but_medium_without_a_child_program(self):
+        with self.assertRaisesRegex(RuntimeError, 'not medium integrity: S-1-16-12288'):
+            self.normal_token_calls('S-1-16-12288')
 
     def test_child_output_is_forwarded_before_child_exit_and_final_bytes_are_drained(self):
         from windows_caller_process import stream

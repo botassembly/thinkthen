@@ -48,7 +48,7 @@ fun main(args: Array<String>) = runBlocking {
                     check(accept) { "Accepted incompatible engine ABI" }
                     check(client.decide("Ready?","alpha") !is Row.Failed)
                 }
-            } catch(failure: ThinkThenException) { check(!accept && codeName(failure.code) == "usage.abi") }
+            } catch(failure: ThinkThenException) { if (accept) throw failure; check(codeName(failure.code) == "usage.abi") }
         }
         else -> error("Expected registry PATH or abi BOOLEAN")
     }

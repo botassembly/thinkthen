@@ -5,6 +5,7 @@ https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securityb
 https://learn.microsoft.com/en-us/windows/win32/secauthz/owner-of-a-new-object
 https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw
 https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-createrestrictedtoken
+https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_default_dacl
 """
 from contextlib import nullcontext
 import ctypes as C
@@ -51,6 +52,8 @@ def api():
         'ConvertSidToStringSidW': (security, [C.c_void_p, C.POINTER(W.LPWSTR)], W.BOOL),
         'ConvertStringSidToSidW': (security, [W.LPCWSTR, C.POINTER(C.c_void_p)], W.BOOL),
         'GetLengthSid': (security, [C.c_void_p], W.DWORD),
+        'InitializeAcl': (security, [C.c_void_p, W.DWORD, W.DWORD], W.BOOL),
+        'AddAccessAllowedAce': (security, [C.c_void_p, W.DWORD, W.DWORD, C.c_void_p], W.BOOL),
         'CreateRestrictedToken': (security, [W.HANDLE, W.DWORD, W.DWORD, C.c_void_p, W.DWORD,
             C.c_void_p, W.DWORD, C.c_void_p, C.POINTER(W.HANDLE)], W.BOOL),
         'CreateProcessAsUserW': (security, [W.HANDLE, W.LPCWSTR, W.LPWSTR, C.c_void_p,
@@ -96,6 +99,29 @@ def string_sid(functions, text):
     return value
 
 
+def user_default_dacl(functions, token):
+    """Grant new objects to the user and SYSTEM, as a normal shell's token does.
+
+    An elevated token's default grants Administrators, which this token holds deny-only,
+    so without this its child processes lack full access to their own process and token.
+    """
+    info = token_info(functions, token, 1)  # TokenUser; the SID lives inside this buffer
+    user = C.cast(info, C.POINTER(C.c_void_p))[0]
+    system = string_sid(functions, 'S-1-5-18')
+    try:
+        sids = (user, system)
+        size = 8 + sum(8 + functions['GetLengthSid'](value) for value in sids)  # ACL, then each ACE
+        acl = (W.DWORD * (size // 4))()
+        checked(functions['InitializeAcl'](acl, size, 2), 'InitializeAcl')
+        for value in sids:
+            checked(functions['AddAccessAllowedAce'](acl, 2, 0x10000000, value), 'AddAccessAllowedAce')  # GENERIC_ALL
+        default = C.c_void_p(C.addressof(acl))
+        checked(functions['SetTokenInformation'](token, 6, C.byref(default), C.sizeof(default)),
+                'SetTokenInformation(TokenDefaultDacl)')
+    finally:
+        functions['LocalFree'](system)
+
+
 def normal_token(functions):
     """Return the current user's token as a normal shell has it: no Administrators, medium integrity."""
     source, token = W.HANDLE(), W.HANDLE()
@@ -113,6 +139,11 @@ def normal_token(functions):
         label = SidAttributes(medium, 0x20)  # SE_GROUP_INTEGRITY
         size = C.sizeof(label) + functions['GetLengthSid'](medium)
         checked(functions['SetTokenInformation'](token, 25, C.byref(label), size), 'SetTokenInformation(TokenIntegrityLevel)')
+        user_default_dacl(functions, token)
+        integrity = sid(functions, token_info(functions, token, 25))  # TokenIntegrityLevel
+        if integrity != 'S-1-16-8192':
+            raise RuntimeError('Normal token is not medium integrity: ' + integrity)
+        print('Windows proof token: normal integrity=' + integrity, flush=True)
         return token
     finally:
         functions['LocalFree'](medium)
@@ -214,7 +245,30 @@ if ($i.User.Value -ne $i.Owner.Value) { throw 'Child token default owner is not 
 if ($env:TT_NORMAL_PROBE) {
   $administrators=New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544');
   if ((New-Object System.Security.Principal.WindowsPrincipal($i)).IsInRole($administrators)) { throw 'Normal token is an administrator' };
-  if (-not (whoami /groups | Select-String 'S-1-16-8192')) { throw 'Normal token is not medium integrity' }
+  function Start-Probe($program, [string[]]$arguments) {
+    $ErrorActionPreference='Continue';
+    try {
+      $output=@(& $program @arguments 2>&1 | ForEach-Object { [string]$_ });
+      [Console]::WriteLine('Normal token started ' + $program + ': exit ' + $LASTEXITCODE + ': ' + ($output -join ' | '));
+    } catch {
+      [Console]::WriteLine('Normal token could not start ' + $program + ': ' + $_.Exception.Message);
+    }
+  };
+  function Find-Programs($name) {
+    @(Get-Command $name -All -CommandType Application -ErrorAction SilentlyContinue | ForEach-Object { $_.Source })
+  };
+  # These only report. The real proof starts its consumers from Python, so the
+  # consumer runs decide; launch reads the integrity level from the token itself.
+  $system=Join-Path $env:SYSTEMROOT 'System32';
+  Start-Probe (Join-Path $system 'whoami.exe') @('/groups');
+  Start-Probe (Join-Path $system 'cmd.exe') @('/c','exit 0');
+  $found=@(Find-Programs 'whoami.exe');
+  [Console]::WriteLine('Normal token PATH finds whoami.exe at: ' + ($found -join '; '));
+  if ($found) { Start-Probe $found[0] @('/?') };
+  foreach ($tool in @(@('go.exe','version'),@('java.exe','-version'))) {
+    $path=@(Find-Programs $tool[0]);
+    if ($path) { Start-Probe $path[0] @($tool[1]) }
+  }
 };
 $directory=Join-Path $env:TT_OWNER_PROBE 'directory';
 $file=Join-Path $directory 'file';

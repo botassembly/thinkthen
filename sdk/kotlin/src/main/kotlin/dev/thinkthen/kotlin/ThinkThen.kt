@@ -34,7 +34,7 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
     private val collectors = mutableSetOf<Job>()
     private var closed = false
     init {
-        val bytes = settings.encoded(true, System.getenv("THINKTHEN_BACKEND")?.takeIf { it.isNotEmpty() })
+        val bytes = settings.encoded(true, System.getenv("THINKTHEN_BACKEND"))
         try { driver = translate { DriverClient(bytes) } }
         finally { bytes.fill(0) }
     }

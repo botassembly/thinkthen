@@ -15,7 +15,7 @@ import zipfile
 from functools import partial
 
 from release_windows_cache import check_cache, check_elevated
-from release_windows_sdks import environment, go_temporary_cache, run, runtime_environment
+from release_windows_sdks import environment, go_load_failure, go_temporary_cache, run, runtime_environment
 from release_native import source_inputs, stage_outputs
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -71,7 +71,9 @@ def go(scratch, native, env, runtime, check=None):
     (check or check_cache)([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=30m'],
                            scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
                                                             'THINKTHEN_CASES': str(ROOT / 'conformance')}, 'library.dll')
-    go_temporary_cache(partial(run, cwd=scratch, env=runtime, resolve_path=env['PATH']), binary)
+    execute = partial(run, cwd=scratch, env=runtime, resolve_path=env['PATH'])
+    go_temporary_cache(execute, binary)
+    go_load_failure(execute, binary)
 
 
 def jvm(scratch, native, env, runtime, check=None):

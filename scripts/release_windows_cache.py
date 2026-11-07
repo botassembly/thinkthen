@@ -191,7 +191,7 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
             raise RuntimeError('installed cache consumer failed: ' + output)
 
     def root_fallback(label):
-        """Check that Go leaves an unsafe root for temp: a safe temp answers, an unsafe one refuses."""
+        """Check that a consumer leaves an unsafe root for temp: a safe temp answers, an unsafe one refuses."""
         # Short names: the library path under temp must stay within Windows' 260 limit.
         safe, unsafe = root.with_name(label[0] + 's'), root.with_name(label[0] + 'u')
         private_root(safe, env)
@@ -206,8 +206,8 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
         print('Windows cache: unsafe root answered from safe temp and refused in unsafe temp: ' + label, flush=True)
 
     def refused(path, label):
-        # Only Go falls back at the root. Java and Kotlin refuse there.
-        if path == root and filename == 'library.dll':
+        # The root belongs to other programs too, so every consumer falls back there.
+        if path == root:
             root_fallback(label)
         else:
             consumer(rejected=True)

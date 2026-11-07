@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 
 from release_home import checked_home
+from release_retry import REPOSITORY
 
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {
@@ -166,6 +167,24 @@ def collect(source, destination, sha, targets):
     print(f'release: bundled {len(targets)} checked platform archives')
 
 
+def armed(value):
+    if value != 'true':
+        raise ValueError('RELEASE_ARMED must be true: this release run builds and qualifies nothing without it')
+
+
+def attested(files, sha, repository=REPOSITORY):
+    """Refuse any file without provenance: the draft job signs only after every job it needs passed."""
+    for path in files:
+        result = subprocess.run(
+            ['gh', 'attestation', 'verify', str(path), '--repo', repository,
+             '--signer-workflow', f'{repository}/.github/workflows/release-prepare.yml',
+             '--source-ref', 'refs/heads/main', '--source-digest', sha],
+            capture_output=True, text=True)
+        if result.returncode:
+            raise ValueError(f'{path.name} has no attestation from a passed release run at {sha}: '
+                             + result.stderr.strip())
+
+
 def draft(source, tag, sha, dry_run):
     if tag != 'v' + version():
         raise ValueError('draft version differs from the qualified release')
@@ -189,6 +208,8 @@ def draft(source, tag, sha, dry_run):
     if {p.name for p in files} != expected:
         raise ValueError('draft requires every platform, checksums and install guide')
     checksums(source)
+    if not dry_run:
+        attested(files, sha)
     args = ['gh', 'release', 'create', 'review-' + tag, '--draft', '--target', sha,
             '--title', f'ThinkThen {version()}', '--notes-file', str(source / 'INSTALL.md'),
             *map(str, files)]
@@ -204,6 +225,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('resolve').add_argument('tag')
+    commands.add_parser('armed').add_argument('value')
     commands.add_parser('prepare-registry')
     prep = commands.add_parser('prepare')
     prep.add_argument('target', choices=TARGETS)
@@ -227,6 +249,9 @@ def main():
     command.add_argument('tag')
     command.add_argument('sha')
     command.add_argument('--dry-run', action='store_true')
+    command = commands.add_parser('attested')
+    command.add_argument('source', type=Path)
+    command.add_argument('sha')
     command = commands.add_parser('registry')
     command.add_argument('source', type=Path)
     command.add_argument('destination', type=Path)
@@ -239,6 +264,8 @@ def main():
     if args.command in ('prepare', 'prepare-registry', 'build'):
         checked_home()
     if args.command == 'resolve': resolve(args.tag)
+    elif args.command == 'armed': armed(args.value)
+    elif args.command == 'attested': attested(sorted(args.source.resolve().iterdir()), args.sha)
     elif args.command == 'prepare-registry':
         from release_registry_prepare import prepare
         prepare()

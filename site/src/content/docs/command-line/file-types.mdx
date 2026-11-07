@@ -51,6 +51,8 @@ Where the new table goes depends on how you give the file:
 
 Empty lines at the end of a CSV or TSV file are ignored, and the new table leaves them out. An empty line with more rows after it stops the command before any question is asked, and the error names the line, so no row goes unjudged. Delete the line and run again.
 
+CSV and TSV output keeps text as it came, even text that looks like a formula, such as `=SUM(A1:A9)`. A spreadsheet program may run that text as a formula when it opens the file, so open output from text you don't trust with the program's text import settings.
+
 ThinkThen never overwrites an output file. If `messages.thinkthen.csv` already exists, the command stops with exit code 2; choose a new `--output` name or remove the old file. Repeat `--column` to judge several columns of each row together. `--details` adds five more columns for each answer, such as its status and probability.
 
 ## Read a TSV file

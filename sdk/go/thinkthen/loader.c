@@ -1,6 +1,7 @@
 #include "loader.h"
 #ifdef _WIN32
 #include <windows.h>
+#include <stdio.h>
 #include <stdlib.h>
 #else
 #include <dlfcn.h>
@@ -12,6 +13,21 @@ static int32_t load_code = THINKTHEN_CODE_USAGE_ABI;
 int32_t tt_load_code(void) { return load_code; }
 static __typeof__(&thinkthen_abi_version) p_abi_version;
 static __typeof__(&thinkthen_abi_compatible) p_abi_compatible;
+#ifdef _WIN32
+/* The system's reason, as UTF-8. The Go caller holds its load lock. */
+static const char *system_error(DWORD code) {
+    static char text[1024];
+    wchar_t reason[256];
+    DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, code, 0, reason, 256, NULL);
+    while (length && reason[length - 1] == L' ') length--;
+    int used = snprintf(text, sizeof text, "system error %lu", (unsigned long)code);
+    if (length) {
+        used += snprintf(text + used, sizeof text - (size_t)used, ": ");
+        text[used + WideCharToMultiByte(CP_UTF8, 0, reason, (int)length, text + used, (int)sizeof text - used - 1, NULL, NULL)] = 0;
+    }
+    return text;
+}
+#endif
 const char *tt_load(const char *path) {
     load_code = THINKTHEN_CODE_USAGE_ABI;
 #ifdef _WIN32
@@ -22,8 +38,9 @@ const char *tt_load(const char *path) {
     if (!wide) return "Cannot allocate native library path";
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, count);
     HMODULE handle = LoadLibraryExW(wide, NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
+    DWORD failure = handle ? 0 : GetLastError();
     free(wide);
-    if (!handle) { load_code = THINKTHEN_CODE_LOCAL_IO; return "cannot load native engine"; }
+    if (!handle) { load_code = THINKTHEN_CODE_LOCAL_IO; return system_error(failure); }
 #define CLOSE() FreeLibrary(handle)
 #define LOAD(name) p_##name = (__typeof__(p_##name))GetProcAddress(handle, "thinkthen_" #name); if (!p_##name) { CLOSE(); return THINKTHEN_ABI_ERROR_MESSAGE; }
 #else

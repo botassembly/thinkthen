@@ -1,5 +1,29 @@
 //! Read tabular field and append judgments without replacing existing cells.
 
+#[cfg(windows)]
+#[allow(unsafe_code, reason = "the standard library has no access-list call")]
+mod access_list;
+#[cfg(not(windows))]
+mod access_list {
+    //! Elsewhere the file mode does this job, so there is no list to carry.
+
+    use std::fs::File;
+    use std::io;
+    use std::path::Path;
+
+    #[derive(Debug)]
+    pub(crate) struct AccessList;
+
+    impl AccessList {
+        pub(crate) fn read(_file: &File) -> io::Result<Option<Self>> {
+            Ok(Some(Self))
+        }
+
+        pub(crate) fn apply(&self, _path: &Path) -> io::Result<()> {
+            Ok(())
+        }
+    }
+}
 mod admission;
 mod cells;
 mod cleanup;

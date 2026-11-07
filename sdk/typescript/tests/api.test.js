@@ -191,9 +191,8 @@ test("installed error code values equal the engine registry", async () => {
 test("raw and structured evidence retain the same bytes", async () => {
   const client = new sdk.ThinkThen({backend:"stub"});
   try {
-    for (const text of ["", "a\0b\0", 'quoted "text"\n😀']) {
-      assert.deepEqual(await client.decide("Ready?", text, {field:"/body"}).row(), await client.decide("Ready?", {body:text}, {field:"/body"}).row());
-    }
+    const row = async record => (await client.decideStream("Ready?", [record], {field:"/body"}).toArray())[0];
+    for (const text of ["", "a\0b\0", 'quoted "text"\n😀']) assert.deepEqual(await row(text), await row({body:text}));
   } finally { await client.close(); }
 });
 

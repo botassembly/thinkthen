@@ -32,17 +32,17 @@ int thinkthen_test_questions_created(void) { return atomic_load(&questions); }
         real(value); if (value) atomic_fetch_sub(&owners, 1); \
     }
 #define JSON_OPEN(name, type, question) \
-    OPEN(name, (const uint8_t *data, size_t len, struct type **out, struct thinkthen_error *error), \
+    OPEN(name, (const char *data, size_t len, struct type **out, struct thinkthen_error *error), \
          (data, len, out, error), question)
 JSON_OPEN(thinkthen_question_from_json, thinkthen_question, 1)
 JSON_OPEN(thinkthen_toolbox_from_json, thinkthen_toolbox, 0)
 JSON_OPEN(thinkthen_toolbox_from_definitions_json, thinkthen_toolbox, 0)
 JSON_OPEN(thinkthen_client_open_json, thinkthen_client, 0)
 OPEN(thinkthen_question_new,
-     (uint32_t function, const uint8_t *data, size_t len, struct thinkthen_question **out, struct thinkthen_error *error),
+     (thinkthen_function function, const char *data, size_t len, struct thinkthen_question **out, struct thinkthen_error *error),
      (function, data, len, out, error), 1)
 OPEN(thinkthen_toolbox_select_as,
-     (const struct thinkthen_toolbox *toolbox, const uint8_t *data, size_t len, uint32_t function,
+     (const struct thinkthen_toolbox *toolbox, const char *data, size_t len, thinkthen_function function,
       struct thinkthen_question **out, struct thinkthen_error *error),
      (toolbox, data, len, function, out, error), 1)
 OPEN(thinkthen_call_open_question,

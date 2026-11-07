@@ -317,7 +317,8 @@ impl Backend {
     }
 }
 
-/// Refuse unencrypted remote connections before credentials can be sent.
+/// Refuse unencrypted remote connections before credentials can be sent, and
+/// credentials in the URL, which settings and debug output print.
 pub(crate) fn validate_url(url: &str) -> Result<ureq::http::Uri, Error> {
     let uri = url.parse::<ureq::http::Uri>().map_err(|_| {
         Error::new(
@@ -329,6 +330,19 @@ pub(crate) fn validate_url(url: &str) -> Result<ureq::http::Uri, Error> {
             ),
         )
     })?;
+    if uri
+        .authority()
+        .is_some_and(|authority| authority.as_str().contains('@'))
+    {
+        return Err(Error::new(
+            ErrorKind::Url,
+            crate::core::diagnostic::requirement(
+                "url",
+                "an address with no user name or password",
+                "a URL holding credentials (contents redacted)",
+            ),
+        ));
+    }
     match (uri.scheme_str(), uri.host()) {
         (Some("https"), Some(_)) | (Some("http"), Some("localhost" | "127.0.0.1" | "[::1]")) => {
             Ok(uri)

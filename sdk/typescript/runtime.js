@@ -2,7 +2,7 @@
 import { ThinkThenError, RULE_FIELDS, conversion, encode, snapshot, loadNative, nativeError, rejectRecordKind } from "./bridge.js";
 import { readFile } from "node:fs/promises";
 import { stream } from "./stream.js";
-import { answerPromise, keptRecords } from "./answers.js";
+import { answerPromise, keptRecords, singleRow } from "./answers.js";
 export { answer, UnsureError, RecordError } from "./answers.js";
 export { ThinkThenError, UsageError, BackendError, CancelledError } from "./bridge.js";
 export { ERROR_CODES } from "./errors.js";
@@ -158,7 +158,7 @@ export class ThinkThen {
         && (Symbol.iterator in record || Symbol.asyncIterator in record), () => loadNative().rejectRecordKind());
       if (collection) rejectRecordKind();
       const call = this.#stream(name, question, [record], options);
-      try { return /** @type {import('./index.d.ts').AnyRow} */((await call.toArray())[0]); }
+      try { return singleRow(/** @type {import('./index.d.ts').AnyRow} */((await call.toArray())[0])); }
       finally { await call.return(); }
     })();
     return answerPromise(row);

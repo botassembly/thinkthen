@@ -29,6 +29,11 @@ export function answer(row) {
   if (row.status === "failed") throw new RecordError([row]);
   return /** @type {import('./index.d.ts').AnswerOf<R>} */(row.answer);
 }
+/** A blank single record raises, as on every surface; other failed rows stay readable. @param {Row} row @returns {Row} */
+export function singleRow(row) {
+  if (row.status === "failed" && row.error.code === "record.empty") throw new RecordError([row]);
+  return row;
+}
 /** @template {Row} R @param {Promise<R>} row @returns {import('./index.d.ts').AnswerPromise<R>} */
 export function answerPromise(row) {
   const pending = row.then(answer);

@@ -5,7 +5,9 @@ Run on the VM's Linux host through pm job. Build takes a fresh external output;
 hold takes that build output, prints native capture paths, and owns the VM until
 SIGTERM/SIGINT, its duration bound, or --until-eof for a pipe controller. pm jobs
 have no stdin, so EOF control is explicitly selected. Inventory reads tool paths
-and executable version metadata without launching the tools. No recorder runs here.
+and executable version metadata without launching the tools. Smoke runs a caller's
+program against this commit's scripts and an existing package, and builds nothing.
+No recorder runs here.
 """
 import argparse
 import base64
@@ -32,6 +34,14 @@ ROOT = Path(__file__).resolve().parent.parent
 WINDOWS_HOST_SETUP = r"""$toolRoot = 'C:\tt0106'
 $selected = @("$toolRoot\Git\cmd", "$env:USERPROFILE\.cargo\bin")
 """
+# The long-path bug needs a long temp root: with the job root this makes 58 characters,
+# the length of the replay's own temporary folder, and a shorter one passes falsely.
+SMOKE_TEMPORARY = '/workflow-smoke'
+SMOKE_SECONDS = 540
+# Each ready answer carries this reading, so the check needs no extra call and reads the first answer.
+WINDOWS_CLOCK = "[Console]::Out.WriteLine('Windows clock: ' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+# Default for both the allowed difference and the wait for it.
+CLOCK_SECONDS = 120
 
 
 def run(*command, **options):
@@ -83,6 +93,34 @@ def quote(value):
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def clock_reading(answer):
+    return int(answer.rsplit(b'Windows clock: ', 1)[1].split()[0]) / 1000, time.time()
+
+
+def clock_times(guest, host):
+    stamp = '%Y-%m-%dT%H:%M:%SZ'
+    return 'Windows clock ' + time.strftime(stamp, time.gmtime(guest)) + ', host clock ' + time.strftime(stamp, time.gmtime(host))
+
+
+def clock_agrees(options, answer):
+    """Wait until the VM's clock agrees with this host's, starting from the reading in a ready answer."""
+    tolerance = getattr(options, 'clock_tolerance_seconds', CLOCK_SECONDS)
+    wait = getattr(options, 'clock_wait_seconds', CLOCK_SECONDS)
+    start = time.monotonic()
+    guest, host = clock_reading(answer)
+    while abs(guest - host) > tolerance:
+        waited = time.monotonic() - start
+        if waited >= wait:
+            raise TimeoutError(clock_times(guest, host) + ': more than %g s apart after waiting %.0f s' % (tolerance, waited))
+        time.sleep(1)
+        try:
+            guest, host = clock_reading(ssh(options, WINDOWS_CLOCK, timeout=8).stdout)
+        except (subprocess.SubprocessError, OSError):
+            pass  # A lost answer keeps the last reading, which the failure names.
+    # Stdout belongs to the mode's own report.
+    print(clock_times(guest, host) + ', %.1f s apart, waited %.0f s' % (abs(guest - host), time.monotonic() - start), file=sys.stderr, flush=True)
+
+
 def ready(options, *, prerequisites=True):
     deadline = time.monotonic() + options.ready_seconds
     script = """$ErrorActionPreference='Stop'
@@ -102,12 +140,14 @@ foreach($name in @('python','git','tar')) {
         if($LASTEXITCODE -ne 0) { [Console]::Error.WriteLine('Python standard-library bootstrap failed'); exit $LASTEXITCODE }
     }
 }
-exit 0
-"""
+""" + WINDOWS_CLOCK + '\nexit 0\n'
     if prerequisites:
         script = '$pythonExecutable = ' + quote(options.python_home + '/python.exe') + '\n' + script
     else:
-        script = "[Console]::Out.WriteLine('Windows SSH ready'); exit 0"
+        # The VM's hardware clock is UTC. Any other zone reads it as local time until the time service corrects it.
+        script = ("$ErrorActionPreference='Stop'\n"
+                  "if((Get-TimeZone).Id -ne 'UTC'){Set-TimeZone -Id 'UTC'; [Console]::Out.WriteLine('Windows zone set to UTC')}\n"
+                  "[Console]::Out.WriteLine('Windows SSH ready')\n" + WINDOWS_CLOCK + '\nexit 0\n')
     while True:
         try:
             result = ssh(options, script, timeout=8)
@@ -115,7 +155,7 @@ exit 0
             (options.output / (phase + '.stdout')).write_bytes(result.stdout)
             (options.output / (phase + '.stderr')).write_bytes(result.stderr)
             (options.output / (phase + '.json')).write_text(json.dumps({'exit': 0}) + '\n')
-            return
+            break
         except (subprocess.SubprocessError, OSError) as error:
             if prerequisites or time.monotonic() >= deadline:
                 stdout = getattr(error, 'stdout', None) or b''
@@ -132,6 +172,7 @@ exit 0
                 print(stderr.decode('utf-8', errors='replace'), file=sys.stderr, end='')
                 raise TimeoutError('Native Windows SSH/Python/Git/tar did not become ready') from None
             time.sleep(1)
+    clock_agrees(options, result.stdout)
 
 
 def inventory(options):
@@ -409,6 +450,32 @@ def swift_consumer(options, native, revision):
     result.check_returncode()
 
 
+def long_path_removal(folder):
+    """Remove a folder through its extended-length form, which reaches npm caches past 260 characters."""
+    return ('if(Test-Path -LiteralPath ' + quote(folder) + '){cmd /c rd /s /q \\\\?\\' + folder.replace('/', '\\')
+            + '}; if(Test-Path -LiteralPath ' + quote(folder) + '){exit 1}')
+
+
+def smoke(options, native, revision):
+    source = stage_source(ROOT, revision, options.output / 'source.tar.gz')
+    (options.output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
+    upload_archive(options, native + '/source.tar.gz', options.output / 'source.tar.gz', source['archive_sha256'])
+    package = native + '/package.tar.gz'
+    for path, item in ((package, options.package), (native + '/smoke.py', options.program)):
+        upload_archive(options, path, item, hashlib.sha256(item.read_bytes()).hexdigest())
+    script = ("$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; Set-Location source; & "
+              + quote(options.python_home + '/python.exe') + ' ' + quote(native + '/smoke.py') + ' '
+              + quote(native + SMOKE_TEMPORARY) + ' ' + quote(package) + '; exit $LASTEXITCODE')
+    try:
+        with (options.output / 'smoke.log').open('wb') as log:
+            result = subprocess.run(ssh_command(options, script), stdout=log, stderr=subprocess.STDOUT, timeout=SMOKE_SECONDS)
+    finally:
+        # The job deletes this folder, so a hung smoke's only evidence is the job log.
+        sys.stdout.buffer.write((options.output / 'smoke.log').read_bytes())
+        sys.stdout.buffer.flush()
+    result.check_returncode()
+
+
 def csharp_consumer(options, native, revision):
     source = stage_source(ROOT, revision, options.output / 'source.tar.gz')
     (options.output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
@@ -445,7 +512,7 @@ def confirmed_stopped(container, seconds=3):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme', 'readme-input', 'readme-build', 'swift', 'csharp'))
+    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme', 'readme-input', 'readme-build', 'swift', 'smoke', 'csharp'))
     parser.add_argument('output', type=Path)
     parser.add_argument('--source', default='HEAD')
     parser.add_argument('--host', default='Docker@localhost')
@@ -455,13 +522,19 @@ def main():
     parser.add_argument('--seconds', type=float, default=600)
     parser.add_argument('--ready-seconds', type=float, default=300)
     parser.add_argument('--lock-seconds', type=float, default=600)
+    parser.add_argument('--clock-tolerance-seconds', type=float, default=CLOCK_SECONDS, help="largest allowed difference between the VM's clock and this host's")
+    parser.add_argument('--clock-wait-seconds', type=float, default=CLOCK_SECONDS, help="how long to wait for the VM's clock to agree after boot")
     parser.add_argument('--until-eof', action='store_true')
     parser.add_argument('--cleanup-root', action='append', default=[], help='exact ended-job native root authorized for removal')
     parser.add_argument('--replay-inputs', type=Path, help='verified Linux version-probe CLI and public cache for the one strict Windows replay')
     parser.add_argument('--binary', type=Path, help='existing genuine candidate executable for readme mode; never build')
     parser.add_argument('--swift-inputs', type=Path, help='verified genuine candidate Swift input bundle')
+    parser.add_argument('--package', type=Path, help='existing assembled package archive for smoke mode; never build')
+    parser.add_argument('--program', type=Path, help='native program smoke mode runs, given its temp root and package')
     parser.add_argument('--csharp-package', type=Path, help='genuine candidate Windows NuGet package')
     options = parser.parse_args()
+    if any((options.mode == 'smoke') != (value is not None) for value in (options.package, options.program)):
+        parser.error('smoke mode requires --package and --program; other modes do not accept them')
     if (options.mode == 'swift') != (options.swift_inputs is not None):
         parser.error('swift mode requires --swift-inputs; other modes do not accept it')
     if (options.mode == 'csharp') != (options.csharp_package is not None):
@@ -469,7 +542,7 @@ def main():
     if (options.mode in ('readme', 'readme-input')) != (options.binary is not None):
         parser.error('readme mode requires --binary; other modes do not accept it')
     options.python_home = None
-    if any(not math.isfinite(value) or value <= 0 for value in (options.seconds, options.ready_seconds, options.lock_seconds)):
+    if any(not math.isfinite(value) or value <= 0 for value in (options.seconds, options.ready_seconds, options.lock_seconds, options.clock_tolerance_seconds, options.clock_wait_seconds)):
         parser.error('duration bounds must be finite and positive')
     if options.cleanup_root and options.mode not in ('build', 'csharp'):
         parser.error('ended-job cleanup is available only during an owned build or C# lifecycle')
@@ -539,7 +612,7 @@ def main():
                 raise ValueError('Cannot remove the active owned native root')
             cleanup = "$ErrorActionPreference='Stop'; if(Test-Path -LiteralPath " + quote(ended_root) + "){Remove-Item -LiteralPath " + quote(ended_root) + " -Recurse -Force}; [Console]::Out.WriteLine('Removed ended-job native root: ' + " + quote(ended_root) + ")"
             python_ssh(options, cleanup, phase='cleanup-' + ended_root.rsplit('/', 1)[1])
-        if options.mode in ('build', 'readme', 'readme-input', 'readme-build', 'swift', 'csharp'):
+        if options.mode in ('build', 'readme', 'readme-input', 'readme-build', 'swift', 'smoke', 'csharp'):
             provision_python(options, native, python_manifest)
         elif options.mode == 'hold':
             verify_python(options, native, python_manifest)
@@ -550,6 +623,8 @@ def main():
             inventory(options)
         elif options.mode == 'swift':
             swift_consumer(options, native, revision)
+        elif options.mode == 'smoke':
+            smoke(options, native, revision)
         elif options.mode == 'csharp':
             csharp_consumer(options, native, revision)
         elif options.mode in ('readme', 'readme-input'):
@@ -630,11 +705,18 @@ def main():
             if started:
                 paths = [] if native is None else ([native + '/source', native + '/source.tar.gz', native + '/cli.zip'] if options.mode == 'build' and success and not options.replay_inputs else [native])
                 script = '$ErrorActionPreference="Stop"; ' + '; '.join('if(Test-Path -LiteralPath ' + quote(item) + '){Remove-Item -LiteralPath ' + quote(item) + ' -Recurse -Force}' for item in paths)
+                # Only a signal has pm's grace to fit; a smoke root holds whole npm caches.
+                limit = 2
+                if options.mode == 'smoke':
+                    script = long_path_removal(native)
+                    limit = 2 if isinstance(primary, KeyboardInterrupt) else 120
                 try:
                     if native is not None:
-                        ssh(options, script, timeout=2)
-                except (subprocess.SubprocessError, OSError):
+                        ssh(options, script, timeout=limit)
+                except (subprocess.SubprocessError, OSError) as error:
                     print('Native scratch cleanup was not confirmed; retained owned root: ' + native, file=sys.stderr)
+                    if options.mode == 'smoke':
+                        cleanup_error = error
                 # Docker's daemon owns the submitted stop request even if its
                 # waiting CLI dies. All cleanup fits pm's ten-second grace.
                 try:

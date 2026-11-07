@@ -74,7 +74,7 @@ internal static partial class Native
         { rid = "osx-arm64"; filename = "libthinkthen_ffi.dylib"; }
         else if (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         { rid = "win-x64"; filename = "thinkthen_ffi.dll"; }
-        else throw new DllNotFoundException("The ThinkThen package has no native asset for this runtime.");
+        else throw new ThinkThenException(new(ErrorCode.LocalIo, "The ThinkThen package has no native asset for this runtime."));
         string root = AppContext.BaseDirectory;
         string path = Path.Combine(root, "runtimes", rid, "native", filename);
         return !File.Exists(path) && File.Exists(Path.Combine(root, filename)) ? Path.Combine(root, filename) : path;
@@ -86,8 +86,16 @@ internal static partial class Native
         if (!string.IsNullOrEmpty(chosen) && !Path.IsPathFullyQualified(chosen))
             throw new ThinkThenException(new(ErrorCode.LocalIo, Contract.LibraryPathMessage));
         string path = string.IsNullOrEmpty(chosen) ? PackagedPath() : chosen;
-        nint library = NativeLibrary.Load(Path.GetFullPath(path), typeof(Native).Assembly,
-            DllImportSearchPath.System32 | DllImportSearchPath.UseDllDirectoryForDependencies);
+        nint library;
+        try
+        {
+            library = NativeLibrary.Load(Path.GetFullPath(path), typeof(Native).Assembly,
+                DllImportSearchPath.System32 | DllImportSearchPath.UseDllDirectoryForDependencies);
+        }
+        catch (Exception error) when (error is DllNotFoundException or BadImageFormatException)
+        {
+            throw new ThinkThenException(new(ErrorCode.LocalIo, $"cannot load native engine {path}: {error.Message}"), error);
+        }
         try
         {
             var version = (delegate* unmanaged[Cdecl]<uint>)NativeLibrary.GetExport(library, "thinkthen_abi_version");

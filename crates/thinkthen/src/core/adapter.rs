@@ -83,11 +83,12 @@ impl Adapter {
         }
     }
 
-    /// The reply read from `body`, or `backend.reply` when it is not a reply at all.
-    pub(crate) fn decode(self, body: &[u8]) -> Result<Reply, Error> {
+    /// The reply read from `body`, or `backend.reply` when it is not a reply at all
+    /// or an ordered reply cannot be matched to the `asked` questions.
+    pub(crate) fn decode(self, body: &[u8], asked: usize) -> Result<Reply, Error> {
         match self {
             Self::SystemOne => systemone::decode(body).map(Reply::SystemOne),
-            Self::OpenAi => openai::decode(body).map(Reply::OpenAi),
+            Self::OpenAi => openai::decode(body, asked).map(Reply::OpenAi),
         }
     }
 }

@@ -8,7 +8,9 @@ import tarfile
 import tempfile
 
 from release_metadata import source_tags, version
+from release_retry import REPOSITORY
 from release_upload import verify_download
+from release_workflow import attested
 
 
 def run(*args, **options):
@@ -54,6 +56,7 @@ def publish(tag, digest, remote, repository):
         revision = provenance['revision']
         if provenance != {'revision': revision, 'version': version()}:
             raise ValueError('draft and package source revisions differ')
+        attested(sorted(assets.iterdir()), revision, repository)
         additions = scratch / 'additions'
         with tarfile.open(staged / 'tag-source.tar.gz') as archive:
             if any(part.casefold() == '.git' for member in archive.getmembers() for part in Path(member.name).parts):
@@ -126,7 +129,7 @@ def main():
     parser.add_argument('tag')
     parser.add_argument('checksum', help='Approved SHA-256 of the draft SHA256SUMS file')
     parser.add_argument('--ian-approved', action='store_true', help='Confirm Ian authorized this publication')
-    parser.add_argument('--repository', default='botassembly/thinkthen', help='GitHub release repository')
+    parser.add_argument('--repository', default=REPOSITORY, help='GitHub release repository')
     parser.add_argument('--remote', help='Git remote for the release repository')
     args = parser.parse_args()
     if not args.ian_approved:

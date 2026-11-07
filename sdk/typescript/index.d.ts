@@ -375,63 +375,63 @@ export interface FilterItem<T> {
   readonly row: FilterRow;
   /** True only for an answered yes. */
   readonly kept: boolean; }
-/** Evaluate decide for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate decide for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function decide(question: string, record: RecordInput, options?: BooleanOptions): AnswerPromise<DecideRow>;
-/** Evaluate decide for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate decide for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function decide(question: DecideQuestion, record: RecordInput, options?: SignalOptions): AnswerPromise<DecideRow>;
 /** Evaluate decide lazily and retain every outcome with its input position. */
 export function decideStream(question: string, records: Records, options?: BooleanOptions): RowStream<DecideRow>;
 /** Evaluate decide lazily and retain every outcome with its input position. */
 export function decideStream(question: DecideQuestion, records: Records, options?: SignalOptions): RowStream<DecideRow>;
-/** Evaluate choose for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate choose for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function choose<const C extends readonly string[]>(question: string, record: RecordInput, options: ChooseOptions<C>): AnswerPromise<ChooseRow<C[number]>>;
-/** Evaluate choose for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate choose for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function choose<const C extends readonly string[]>(question: ChooseQuestion<C>, record: RecordInput, options?: SignalOptions): AnswerPromise<ChooseRow<C[number]>>;
 /** Evaluate choose lazily and retain every outcome with its input position. */
 export function chooseStream<const C extends readonly string[]>(question: string, records: Records, options: ChooseOptions<C>): RowStream<ChooseRow<C[number]>>;
 /** Evaluate choose lazily and retain every outcome with its input position. */
 export function chooseStream<const C extends readonly string[]>(question: ChooseQuestion<C>, records: Records, options?: SignalOptions): RowStream<ChooseRow<C[number]>>;
-/** Evaluate tag for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate tag for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function tag<const L extends readonly string[]>(question: string, record: RecordInput, options: TagOptions<L>): AnswerPromise<TagRow<L[number]>>;
-/** Evaluate tag for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate tag for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function tag<const L extends readonly string[]>(question: TagQuestion<L>, record: RecordInput, options?: SignalOptions): AnswerPromise<TagRow<L[number]>>;
 /** Evaluate tag lazily and retain every outcome with its input position. */
 export function tagStream<const L extends readonly string[]>(question: string, records: Records, options: TagOptions<L>): RowStream<TagRow<L[number]>>;
 /** Evaluate tag lazily and retain every outcome with its input position. */
 export function tagStream<const L extends readonly string[]>(question: TagQuestion<L>, records: Records, options?: SignalOptions): RowStream<TagRow<L[number]>>;
-/** Evaluate score for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate score for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function score(question: string, record: RecordInput, options: ScoreOptions): AnswerPromise<ScoreRow>;
-/** Evaluate score for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate score for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function score(question: ScoreQuestion, record: RecordInput, options?: SignalOptions): AnswerPromise<ScoreRow>;
 /** Evaluate score lazily and retain every outcome with its input position. */
 export function scoreStream(question: string, records: Records, options: ScoreOptions): RowStream<ScoreRow>;
 /** Evaluate score lazily and retain every outcome with its input position. */
 export function scoreStream(question: ScoreQuestion, records: Records, options?: SignalOptions): RowStream<ScoreRow>;
-/** Evaluate find for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate find for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function find(question: string, record: RecordInput, options?: NumericOptions): AnswerPromise<FindRow>;
-/** Evaluate find for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate find for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function find(question: FindQuestion, record: RecordInput, options?: SignalOptions): AnswerPromise<FindRow>;
 /** Evaluate find lazily and retain every outcome with its input position. */
 export function findStream(question: string, records: Records, options?: NumericOptions): RowStream<FindRow>;
 /** Evaluate find lazily and retain every outcome with its input position. */
 export function findStream(question: FindQuestion, records: Records, options?: SignalOptions): RowStream<FindRow>;
-/** Evaluate recognize for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate recognize for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function recognize<const K extends readonly string[]>(question: K, record: RecordInput, options?: NumericOptions): AnswerPromise<RecognizeRow<K[number]>>;
-/** Evaluate recognize for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate recognize for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function recognize<const K extends readonly string[]>(question: RecognizeQuestion<K>, record: RecordInput, options?: SignalOptions): AnswerPromise<RecognizeRow<K[number]>>;
 /** Evaluate recognize lazily and retain every outcome with its input position. */
 export function recognizeStream<const K extends readonly string[]>(question: K, records: Records, options?: NumericOptions): RowStream<RecognizeRow<K[number]>>;
 /** Evaluate recognize lazily and retain every outcome with its input position. */
 export function recognizeStream<const K extends readonly string[]>(question: RecognizeQuestion<K>, records: Records, options?: SignalOptions): RowStream<RecognizeRow<K[number]>>;
-/** Evaluate relate for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate relate for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function relate<const R extends readonly RelationRule[]>(question: R, record: RecordInput, options?: NumericOptions): AnswerPromise<RelateRow<R[number]["name"]>>;
-/** Evaluate relate for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate relate for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function relate<const R extends readonly RelationRule[]>(question: RelateQuestion<R>, record: RecordInput, options?: SignalOptions): AnswerPromise<RelateRow<R[number]["name"]>>;
 /** Evaluate relate lazily and retain every outcome with its input position. */
 export function relateStream<const R extends readonly RelationRule[]>(question: R, records: Records, options?: NumericOptions): RowStream<RelateRow<R[number]["name"]>>;
 /** Evaluate relate lazily and retain every outcome with its input position. */
 export function relateStream<const R extends readonly RelationRule[]>(question: RelateQuestion<R>, records: Records, options?: SignalOptions): RowStream<RelateRow<R[number]["name"]>>;
-/** Evaluate annotate for one record. Await its answer; call row() for every status and metadata. */
+/** Evaluate annotate for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
 export function annotate<const T extends AnnotationQuestions>(question: T, record: RecordInput, options?: CallOptions): AnswerPromise<AnnotateRow<T>>;
 /** Evaluate annotate lazily and retain every outcome with its input position. */
 export function annotateStream<const T extends AnnotationQuestions>(question: T, records: Records, options?: CallOptions): RowStream<AnnotateRow<T>>;
@@ -452,35 +452,35 @@ export declare class ThinkThen implements AsyncDisposable {
   close(): Promise<void>;
   /** Close the client when leaving an await using scope. */
   [Symbol.asyncDispose](): Promise<void>;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly decide: typeof decide;
   /** Evaluate decide lazily, retaining all outcomes. */
   readonly decideStream: typeof decideStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly choose: typeof choose;
   /** Evaluate choose lazily, retaining all outcomes. */
   readonly chooseStream: typeof chooseStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly tag: typeof tag;
   /** Evaluate tag lazily, retaining all outcomes. */
   readonly tagStream: typeof tagStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly score: typeof score;
   /** Evaluate score lazily, retaining all outcomes. */
   readonly scoreStream: typeof scoreStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly find: typeof find;
   /** Evaluate find lazily, retaining all outcomes. */
   readonly findStream: typeof findStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly recognize: typeof recognize;
   /** Evaluate recognize lazily, retaining all outcomes. */
   readonly recognizeStream: typeof recognizeStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly relate: typeof relate;
   /** Evaluate relate lazily, retaining all outcomes. */
   readonly relateStream: typeof relateStream;
-  /** Judge one record; await the answer or read its row(). */
+  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
   readonly annotate: typeof annotate;
   /** Evaluate annotate lazily, retaining all outcomes. */
   readonly annotateStream: typeof annotateStream;
@@ -549,7 +549,7 @@ export type AnswerOf<R> = R extends {
   readonly status: "answered";
   /** The answered value; absent on failed and not-sure outcomes. */
   readonly answer: infer A } ? A : never;
-/** Await the answer, or use row() to inspect every status from the same call. */
+/** Await the answer, or use row() to inspect every status from the same call. A blank record rejects either way. */
 export interface AnswerPromise<R extends AnyRow> extends Promise<AnswerOf<R>> {
   /** Read the immutable row without extracting its answer or executing again. */
   row(): Promise<R>;

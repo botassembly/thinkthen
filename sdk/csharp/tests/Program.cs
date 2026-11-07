@@ -28,6 +28,23 @@ internal static partial class Program
             Console.WriteLine("C# empty backend environment refused by shared admission.");
             return;
         }
+        if (args is ["--load-failure", var attempted])
+        {
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                try
+                {
+                    using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
+                    throw new Exception("unloadable engine was accepted");
+                }
+                catch (ThinkThenException error)
+                {
+                    Check(error.ErrorCode == ErrorCode.LocalIo && error.Message.Contains(attempted, StringComparison.Ordinal),
+                        "load failure lost its code or path: " + error.Message);
+                }
+            }
+            return;
+        }
         if (args is ["--rank-snapshot"]) { await RankSnapshotCases(); return; }
         if (args is ["--surface-interface"]) { await InterfaceNativeCases(); return; }
         if (args is ["--registry", var contract])

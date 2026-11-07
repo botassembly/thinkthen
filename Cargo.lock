@@ -1878,6 +1878,7 @@ dependencies = [
  "unicode-general-category",
  "unicode-normalization",
  "ureq",
+ "windows-sys 0.61.2",
  "zip",
 ]
 

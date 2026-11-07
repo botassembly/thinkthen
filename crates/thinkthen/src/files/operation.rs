@@ -1,6 +1,7 @@
 //! One admitted operation owns its snapshot, stream and publication.
 
 use crate::contract_driver::driver::{Driver, Event};
+use crate::files::access_list::AccessList;
 use crate::files::admission::{check_cancel, copy};
 use crate::files::{
     FileError, FileFormat, FileJob, FileOutput, FileReceipt, NAMED_FAILURES,
@@ -16,6 +17,9 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
+
+const COMPLETED: &str = "completed output";
+const UNPROVEN: &str = "output, whose contents may be incomplete,";
 
 impl FileJob {
     #[cfg(feature = "command")]
@@ -84,6 +88,23 @@ impl FileJob {
         let mut snapshot = temporary_paths.temporary(None).map_err(local)?;
         let mut source = File::open(&self.input).map_err(local)?;
         let permissions = source.metadata().map_err(local)?.permissions();
+        // The source's access list goes on before any data does, so nothing
+        // made from a private source is ever wider than it. A temporary or
+        // list that can't be had here stops the run before the call costs anything.
+        let access = if matches!(self.output, FileOutput::InPlace) {
+            AccessList::read(&source).map_err(local)?
+        } else {
+            None
+        };
+        let mut temporary = match self.output {
+            FileOutput::InPlace => temporary_paths.temporary(Some(parent)),
+            FileOutput::NewFile(_) => temporary_paths.output(parent, &permissions),
+        }
+        .map_err(local)?;
+        if let Some(access) = &access {
+            access.apply(snapshot.path()).map_err(local)?;
+            access.apply(temporary.path()).map_err(local)?;
+        }
         copy(&mut source, &mut snapshot, cancel)?;
         drop(source);
         snapshot.flush().map_err(local)?;
@@ -261,11 +282,6 @@ impl FileJob {
         if filter && matches!(self.output, FileOutput::InPlace) && !receipt.failed.is_empty() {
             return Ok(receipt);
         }
-        let mut temporary = match self.output {
-            FileOutput::InPlace => temporary_paths.temporary(Some(parent)),
-            FileOutput::NewFile(_) => temporary_paths.output(parent, &permissions),
-        }
-        .map_err(local)?;
         if let Some(sheet) = &sheet {
             xlsx::write(
                 snapshot.path(),
@@ -286,16 +302,32 @@ impl FileJob {
                 cancel,
             )?;
         }
-        temporary.flush().map_err(local)?;
-        temporary.as_file().sync_all().map_err(local)?;
+        // From here on the output is finished, so a file error must not lose it.
+        let keeper = Keeper {
+            cancel,
+            output: &output,
+            unchanged: if matches!(self.output, FileOutput::InPlace) {
+                "source was not replaced"
+            } else {
+                "output was not written"
+            },
+        };
+        let flushed = temporary
+            .flush()
+            .and_then(|()| temporary.as_file().sync_all());
+        if let Err(error) = flushed {
+            return Err(keeper.keep(UNPROVEN, error, temporary));
+        }
         check_cancel(cancel)?;
         let backup = if matches!(self.output, FileOutput::InPlace) {
-            let mut backup = self.backup(snapshot.path(), cancel)?;
+            let mut backup = match self.backup(snapshot.path(), access.as_ref(), cancel) {
+                Ok(backup) => backup,
+                Err(error) => return Err(keeper.keep(COMPLETED, error, temporary)),
+            };
             check_cancel(cancel)?;
-            temporary
-                .as_file()
-                .set_permissions(permissions)
-                .map_err(local)?;
+            if let Err(error) = temporary.as_file().set_permissions(permissions.clone()) {
+                return Err(keeper.keep(COMPLETED, error, temporary));
+            }
             // Backup creation can be slow. Inspect the live source after it,
             // immediately before replacing the directory entry.
             let conflict = check_owner(&self.input).and_then(|()| {
@@ -307,20 +339,37 @@ impl FileJob {
             });
             check_cancel(cancel)?;
             if let Err(error) = conflict {
-                let kept = self.keep_completed(temporary)?;
-                return Err(local(format!(
-                    "{error}; source was not replaced; completed output kept at {}",
-                    kept.display()
-                )));
+                return Err(keeper.keep(COMPLETED, error, temporary));
             }
-            backup
-                .replace(temporary, &output)?
-                .sync_all()
-                .map_err(local)?;
+            let unlocked = match unlock_source(&self.input, &permissions) {
+                Ok(unlocked) => unlocked,
+                Err(error) => return Err(keeper.keep(COMPLETED, error, temporary)),
+            };
+            let replaced = backup.replace(temporary, &output, |error| {
+                keeper.keep(COMPLETED, error.error, error.file)
+            });
+            let file = match replaced {
+                Ok(file) => file,
+                Err(error) if unlocked => {
+                    return Err(match fs::set_permissions(&self.input, permissions) {
+                        Ok(()) => error,
+                        Err(flag) => local(format!(
+                            "{error}; the source's read-only flag was not restored: {flag}"
+                        )),
+                    });
+                }
+                Err(error) => return Err(error),
+            };
+            if unlocked {
+                file.set_permissions(permissions).map_err(local)?;
+            }
+            file.sync_all().map_err(local)?;
             sync_directory(parent)?;
             Some(backup.path.clone())
         } else {
-            temporary.persist_noclobber(&output).map_err(local)?;
+            temporary
+                .persist_noclobber(&output)
+                .map_err(|error| keeper.keep(COMPLETED, error.error, error.file))?;
             None
         };
         receipt.output = Some(output);
@@ -398,6 +447,7 @@ impl FileJob {
     fn backup(
         &self,
         snapshot: &Path,
+        access: Option<&AccessList>,
         cancel: &Cancel,
     ) -> Result<crate::files::cleanup::Backup, FileError> {
         for number in 1usize.. {
@@ -414,6 +464,9 @@ impl FileJob {
                 .unwrap_or(Path::new("."));
             let mut temporary_paths = crate::files::cleanup::TemporaryPaths::default();
             let mut temporary = temporary_paths.temporary(Some(parent)).map_err(local)?;
+            if let Some(access) = access {
+                access.apply(temporary.path()).map_err(local)?;
+            }
             copy(
                 &mut File::open(snapshot).map_err(local)?,
                 &mut temporary,
@@ -431,33 +484,6 @@ impl FileJob {
             }
         }
         Err(FileError::Local("no unused backup name remains".into()))
-    }
-
-    fn keep_completed(&self, mut temporary: NamedTempFile) -> Result<PathBuf, FileError> {
-        for number in 1usize.. {
-            let suffix = if number == 1 {
-                "thinkthen".to_owned()
-            } else {
-                format!("thinkthen-{number}")
-            };
-            let path = sibling(&self.input, &suffix)?;
-            match temporary.persist_noclobber(&path) {
-                Ok(file) => {
-                    file.sync_all().map_err(local)?;
-                    sync_directory(
-                        path.parent()
-                            .filter(|p| !p.as_os_str().is_empty())
-                            .unwrap_or(Path::new(".")),
-                    )?;
-                    return Ok(path);
-                }
-                Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
-                    temporary = error.file;
-                }
-                Err(error) => return Err(local(error)),
-            }
-        }
-        Err(local("no unused completed output name remains"))
     }
 
     fn write_delimited(
@@ -565,6 +591,100 @@ fn select(question: &mut Map<String, Value>, columns: &[String]) -> Result<bool,
                 "field pointer `{pointer}` selects none of the --column names; select its column or remove the pointer"
             ),
         )),
+    }
+}
+
+/// Windows refuses a rename over a read-only file, so the swap needs the flag
+/// off. Says whether it was, so the caller can put it back.
+#[cfg(windows)]
+fn unlock_source(source: &Path, permissions: &fs::Permissions) -> std::io::Result<bool> {
+    if !permissions.readonly() {
+        return Ok(false);
+    }
+    let mut writable = permissions.clone();
+    writable.set_readonly(false);
+    fs::set_permissions(source, writable)?;
+    Ok(true)
+}
+
+#[cfg(not(windows))]
+fn unlock_source(_source: &Path, _permissions: &fs::Permissions) -> std::io::Result<bool> {
+    Ok(false)
+}
+
+/// A failed publication must not delete finished, possibly paid-for output.
+struct Keeper<'a> {
+    cancel: &'a Cancel,
+    output: &'a Path,
+    unchanged: &'static str,
+}
+
+impl Keeper<'_> {
+    /// The error for `reason`, naming where `temporary` now is. Cancellation
+    /// publishes nothing, so a cancel that lands with the failure reports itself.
+    fn keep(
+        &self,
+        label: &str,
+        reason: impl std::fmt::Display,
+        temporary: NamedTempFile,
+    ) -> FileError {
+        if let Err(cancelled) = check_cancel(self.cancel) {
+            return cancelled;
+        }
+        let kept = keep_completed(temporary, self.output, label);
+        local(format!("{reason}; {}; {kept}", self.unchanged))
+    }
+}
+
+/// Move the temporary to a sibling of `output`, where it already sits, and say
+/// where it went.
+fn keep_completed(mut temporary: NamedTempFile, output: &Path, label: &str) -> String {
+    for number in 1usize.. {
+        let suffix = if number == 1 {
+            "thinkthen".to_owned()
+        } else {
+            format!("thinkthen-{number}")
+        };
+        let path = match sibling(output, &suffix) {
+            Ok(path) => path,
+            Err(error) => return keep_temporary(temporary, label, error),
+        };
+        match temporary.persist_noclobber(&path) {
+            Ok(file) => {
+                let flushed = file.sync_all().map_err(local).and_then(|()| {
+                    sync_directory(
+                        path.parent()
+                            .filter(|p| !p.as_os_str().is_empty())
+                            .unwrap_or(Path::new(".")),
+                    )
+                });
+                let kept = path.display();
+                return match flushed {
+                    Ok(()) => format!("{label} kept at {kept}"),
+                    Err(error) => {
+                        format!("{label} kept at {kept}, but it may be incomplete: {error}")
+                    }
+                };
+            }
+            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                temporary = error.file;
+            }
+            Err(error) => return keep_temporary(error.file, label, error.error),
+        }
+    }
+    keep_temporary(temporary, label, "no unused kept name remains")
+}
+
+/// No sibling name worked, so the temporary stays under its own name.
+fn keep_temporary(temporary: NamedTempFile, label: &str, reason: impl std::fmt::Display) -> String {
+    match temporary.keep() {
+        // On Unix keep succeeds even when the file has gone, so look for it.
+        Ok((_, path)) if matches!(path.try_exists(), Ok(true)) => format!(
+            "{label} kept under its temporary name {} ({reason})",
+            path.display()
+        ),
+        Ok(_) => format!("{label} could not be kept: {reason}; its temporary file is gone"),
+        Err(error) => format!("{label} could not be kept: {reason}; {error}"),
     }
 }
 

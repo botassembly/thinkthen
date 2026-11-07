@@ -162,8 +162,20 @@ fn malformed() -> Error {
     )
 }
 
-pub(super) fn decode(body: &[u8]) -> Result<Reply, Error> {
-    serde_json::from_slice(body).map_err(|_| malformed())
+/// Answers match questions by position, so a wrong count can match none of them.
+pub(super) fn decode(body: &[u8], asked: usize) -> Result<Reply, Error> {
+    let reply: Reply = serde_json::from_slice(body).map_err(|_| malformed())?;
+    if reply.answers.len() == asked {
+        Ok(reply)
+    } else {
+        Err(Error::new(
+            ErrorKind::Reply,
+            format!(
+                "the backend gave an answer count of {} for {asked} questions",
+                reply.answers.len()
+            ),
+        ))
+    }
 }
 
 fn probability(value: f64) -> Result<Probability, Error> {

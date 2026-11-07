@@ -152,7 +152,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as tempo
     for text in ('Python', 'TypeScript', 'R data frames', 'Go', 'Java', 'Kotlin', 'C#', 'C++',
                  'Swift', 'Zig', 'Ruby', 'DuckDB', 'SQLite', 'PostgreSQL', 'pandas', 'Polars',
                  'CSV', 'TSV', 'Excel', 'thinkthen run', '0.x APIs', 'PyPI', 'npm', 'NuGet',
-                 'Maven Central', 'Homebrew', 'r-universe', 'Swift Package Manager', 'crates.io'):
+                 'Maven Central', 'brew install', 'r-universe', 'Swift Package Manager', 'crates.io'):
         assert text in notes, text
     with tarfile.open(release / f'thinkthen-{version()}-linux-x86_64-packages.tar.gz') as archive:
         assert archive.extractfile(f'{version()}/linux-x86_64/INSTALL.md').read() == b'Offline installation for linux-x86_64'

@@ -25,7 +25,7 @@ required-features = ["command"]
 default = ["command"]
 native = []
 stream = ["dep:futures-core"]
-command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
+command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile", "dep:windows-sys"]
 
 [dependencies]
 httpdate = "1.0.3"
@@ -51,6 +51,9 @@ ureq.workspace = true
 rustls = { version = "0.23", default-features = false, features = ["std", "ring"] }
 rustls-platform-verifier = { version = "0.7.1", default-features = false }
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem"], optional = true }
+
 [dev-dependencies]
 rcgen = "=0.13.2"
 csv = "1.4.0"
@@ -60,8 +63,25 @@ jsonschema = { version = "0.46", default-features = false }
 socket2.workspace = true
 serde_json.workspace = true
 
-[lints]
-workspace = true
+# Forbid can't be lifted for one module, so this crate restates the workspace
+# table with unsafe_code denied. `files::access_list` alone allows it.
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "deny"
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+dbg_macro = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
 
 [[test]]
 name = "cli_transport_logging"

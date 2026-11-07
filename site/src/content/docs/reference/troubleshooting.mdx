@@ -42,6 +42,10 @@ You see `thinkthen: usage.url: url: expected HTTPS, or HTTP to localhost, 127.0.
 
 **Code:** `usage.url`. **Cause:** `--url`, `THINKTHEN_URL` or `THINKTHEN_BASE_URL` is a plain `http://` address on another machine. ThinkThen sends your key with every question, so it won't send it unencrypted. **Fix:** use the `https://` address, or run your server on this machine.
 
+You see `thinkthen: usage.url: url: expected an address with no user name or password; received a URL holding credentials (contents redacted)`.
+
+**Code:** `usage.url`. **Cause:** the address holds a user name or password, as in `https://name:password@host`. ThinkThen prints the address in its settings, so a password there could leak. **Fix:** take them out of the address and put the key in the backend's key variable.
+
 <span id="usage-threshold"></span>
 
 ### It refuses a bar

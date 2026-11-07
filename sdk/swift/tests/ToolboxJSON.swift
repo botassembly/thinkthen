@@ -38,7 +38,7 @@ func toolboxJSON(_ json: String) async throws {
   let direct = try await client.choose(
     ChooseQuestion(
       "Which topic?", choices: ["billing", "shipping"],
-      options: .init(field: "/body", threshold: .value(0.7))), record: record)
+      options: .init(field: "/body", threshold: 0.7)), record: record)
   precondition(actual == direct)
   print(saved)
 }

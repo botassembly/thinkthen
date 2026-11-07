@@ -20,6 +20,8 @@ from release_source import stage, check_tag_source
 from release_metadata import source_tags
 from release_workflow import ROOT, run as release_run, version
 
+CHECKS = ('Go', 'Swift', 'Zig', 'Ruby')
+
 for stream in (sys.stdout, sys.stderr):
     stream.reconfigure(errors='backslashreplace')
 
@@ -36,13 +38,20 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('candidate', type=Path)
 parser.add_argument('--tag-source', action='store_true', help='Install Go and Swift from the final all-platform tag-source archive')
 parser.add_argument('--readmes', action='store_true', help="Run the installed packages README quickstarts too")
+parser.add_argument('--only', choices=CHECKS, help='run this one install instead of every install')
 args = parser.parse_args()
+if args.tag_source and args.only in ('Zig', 'Ruby'):
+    parser.error('--tag-source installs only Go and Swift')
 package = args.candidate.resolve()
 
 
 def example(name, language, match=''):
     blocks = re.findall(r'```' + language + r'\n(.*?)\n```', (package / name / 'README.md').read_text(encoding='utf-8'), re.S)
     return next(block for block in blocks if match in block)
+
+def selected(name):
+    return args.only in (None, name)
+
 
 failures = []
 
@@ -85,137 +94,141 @@ with long_path_scratch('thinkthen-source-install-', 'Source install') as scratch
         for name in source_tags('v' + version()):
             run('git', '-C', tag, 'tag', name)
     except Exception as error:
-        for name in ('Go', 'Swift', 'Zig', 'Ruby'):
+        for name in CHECKS:
             print(f'source install {name}: NOT RUN: shared setup failed: {error}', flush=True)
         raise SystemExit(1) from error
-    with check('Go'):
-        # A file module proxy serves the same tagged module payload as the public site.
-        module = 'github.com/botassembly/thinkthen/sdk/go/thinkthen'
-        label = 'v' + version()
-        proxy = scratch / 'proxy' / module / '@v'
-        proxy.mkdir(parents=True)
-        (proxy / 'list').write_text(label + '\n', encoding='utf-8')
-        (proxy / (label + '.info')).write_text(json.dumps({'Version': label, 'Time': '2026-10-23T00:00:00Z'}), encoding='utf-8')
-        shutil.copy2(tag / 'sdk/go/thinkthen/go.mod', proxy / (label + '.mod'))
-        with zipfile.ZipFile(proxy / (label + '.zip'), 'w') as archive:
-            for path in sorted((tag / 'sdk/go/thinkthen').rglob('*')):
-                relative = path.relative_to(tag / 'sdk/go/thinkthen')
-                # The tests are a separate Go module, excluded by the module proxy.
-                if path.is_file() and relative.parts[0] != 'tests':
-                    archive.write(path, module + '@' + label + '/' + str(relative))
-        go = scratch / 'go-consumer'
-        shutil.copytree(ROOT / 'sdk/go/tests', go)
-        (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.23\n\nrequire ' + module + ' ' + label + '\n', encoding='utf-8')
-        go_env = env | {'GOPROXY': (scratch / 'proxy').as_uri(), 'GOMODCACHE': str(scratch / 'go-modules'),
-                        'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
-                        'THINKTHEN_CASES': str(ROOT / 'conformance')}
-        def go_run(*arguments, cwd):
-            if sys.platform == 'linux':
-                if args.tag_source:
-                    from release_go import command
-                    return run(command(), *arguments, cwd=cwd, env=go_env)
-                floor_env = dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch))
-                values = go_env | {'GOCACHE': str(scratch / 'go-build')}
-                selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_BACKEND', 'THINKTHEN_STUB_CASES', 'THINKTHEN_CASES']
-                return run(ROOT / 'scripts/runtime-floor-build', 'env',
-                           *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env)
-            if sys.platform == 'darwin':
-                return run(sys.executable, ROOT / 'scripts/go-build', *arguments, cwd=cwd, env=go_env)
-            return run('go', *arguments, cwd=cwd, env=go_env)
+    if selected('Go'):
+        with check('Go'):
+            # A file module proxy serves the same tagged module payload as the public site.
+            module = 'github.com/botassembly/thinkthen/sdk/go/thinkthen'
+            label = 'v' + version()
+            proxy = scratch / 'proxy' / module / '@v'
+            proxy.mkdir(parents=True)
+            (proxy / 'list').write_text(label + '\n', encoding='utf-8')
+            (proxy / (label + '.info')).write_text(json.dumps({'Version': label, 'Time': '2026-10-23T00:00:00Z'}), encoding='utf-8')
+            shutil.copy2(tag / 'sdk/go/thinkthen/go.mod', proxy / (label + '.mod'))
+            with zipfile.ZipFile(proxy / (label + '.zip'), 'w') as archive:
+                for path in sorted((tag / 'sdk/go/thinkthen').rglob('*')):
+                    relative = path.relative_to(tag / 'sdk/go/thinkthen')
+                    # The tests are a separate Go module, excluded by the module proxy.
+                    if path.is_file() and relative.parts[0] != 'tests':
+                        archive.write(path, module + '@' + label + '/' + str(relative))
+            go = scratch / 'go-consumer'
+            shutil.copytree(ROOT / 'sdk/go/tests', go)
+            (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.23\n\nrequire ' + module + ' ' + label + '\n', encoding='utf-8')
+            go_env = env | {'GOPROXY': (scratch / 'proxy').as_uri(), 'GOMODCACHE': str(scratch / 'go-modules'),
+                            'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
+                            'THINKTHEN_CASES': str(ROOT / 'conformance')}
+            def go_run(*arguments, cwd):
+                if sys.platform == 'linux':
+                    if args.tag_source:
+                        from release_go import command
+                        return run(command(), *arguments, cwd=cwd, env=go_env)
+                    floor_env = dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch))
+                    values = go_env | {'GOCACHE': str(scratch / 'go-build')}
+                    selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_BACKEND', 'THINKTHEN_STUB_CASES', 'THINKTHEN_CASES']
+                    return run(ROOT / 'scripts/runtime-floor-build', 'env',
+                               *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env)
+                if sys.platform == 'darwin':
+                    return run(sys.executable, ROOT / 'scripts/go-build', *arguments, cwd=cwd, env=go_env)
+                return run('go', *arguments, cwd=cwd, env=go_env)
 
-        go_run('test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=go)
-        if args.readmes:
-            app = scratch / 'go-readme'
-            app.mkdir()
-            (app / 'main.go').write_text(example('go', 'go'), encoding='utf-8')
-            if os.name == 'nt':
-                run(*windows_steps(package / 'go/README.md', app), cwd=app, env=go_env)
-            else:
-                shutil.copy2(go / 'go.mod', app / 'go.mod')
-                go_run('run', '-mod=mod', '.', cwd=app)
-            print('README: Go passes', flush=True)
-    with check('Swift'):
-        # SwiftPM resolves the version tag through its normal mirror facility.
-        swift = scratch / 'swift-consumer'
-        run(sys.executable, ROOT / 'scripts/swift-consumer-stage', swift, *([package / 'swift/README.md'] if args.readmes else []))
-        manifest = swift / 'Package.swift'
-        manifest.write_text(manifest.read_text(encoding='utf-8').replace('.package(path: "../ThinkThen")',
-            '.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version() + '")'), encoding='utf-8')
-        def swift_run(*arguments):
-            if sys.platform == 'linux':
-                from release_images import image
-                toolchain = Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'
-                home = scratch / 'swift-home'
-                home.mkdir(exist_ok=True)
-                return run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
-                    '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
-                    '-v', f'{scratch}:{scratch}', '-v', f'{ROOT}:{ROOT}:ro', '-v', f'{toolchain}:/opt/swift:ro',
-                    '-e', 'THINKTHEN_BACKEND=' + env['THINKTHEN_BACKEND'],
-                    '-e', 'HOME=' + str(home), '-e', 'PATH=/opt/swift/usr/bin:/usr/bin:/bin',
-                    image('swift'), *arguments)
-            return run(*arguments, env=env)
+            go_run('test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=go)
+            if args.readmes:
+                app = scratch / 'go-readme'
+                app.mkdir()
+                (app / 'main.go').write_text(example('go', 'go'), encoding='utf-8')
+                if os.name == 'nt':
+                    run(*windows_steps(package / 'go/README.md', app), cwd=app, env=go_env)
+                else:
+                    shutil.copy2(go / 'go.mod', app / 'go.mod')
+                    go_run('run', '-mod=mod', '.', cwd=app)
+                print('README: Go passes', flush=True)
+    if selected('Swift'):
+        with check('Swift'):
+            # SwiftPM resolves the version tag through its normal mirror facility.
+            swift = scratch / 'swift-consumer'
+            run(sys.executable, ROOT / 'scripts/swift-consumer-stage', swift, *([package / 'swift/README.md'] if args.readmes else []))
+            manifest = swift / 'Package.swift'
+            manifest.write_text(manifest.read_text(encoding='utf-8').replace('.package(path: "../ThinkThen")',
+                '.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version() + '")'), encoding='utf-8')
+            def swift_run(*arguments):
+                if sys.platform == 'linux':
+                    from release_images import image
+                    toolchain = Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'
+                    home = scratch / 'swift-home'
+                    home.mkdir(exist_ok=True)
+                    return run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+                        '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
+                        '-v', f'{scratch}:{scratch}', '-v', f'{ROOT}:{ROOT}:ro', '-v', f'{toolchain}:/opt/swift:ro',
+                        '-e', 'THINKTHEN_BACKEND=' + env['THINKTHEN_BACKEND'],
+                        '-e', 'HOME=' + str(home), '-e', 'PATH=/opt/swift/usr/bin:/usr/bin:/bin',
+                        image('swift'), *arguments)
+                return run(*arguments, env=env)
 
-        swift_run('swift', 'package', '--package-path', swift, 'config', 'set-mirror',
-            '--original', 'https://github.com/botassembly/thinkthen', '--mirror', tag.as_uri())
-        swift_run('swift', 'build', '--package-path', swift, '--disable-sandbox')
-        binary = swift / '.build/debug' / ('Consumer.exe' if os.name == 'nt' else 'Consumer')
-        swift_run('python3' if sys.platform == 'linux' else sys.executable,
-                  ROOT / 'scripts/release/swift.py', binary, ROOT / 'construction/stub.json')
-        if args.readmes:
-            swift_run(binary.parent / ('Readme.exe' if os.name == 'nt' else 'Readme'))
-            print('README: Swift passes', flush=True)
+            swift_run('swift', 'package', '--package-path', swift, 'config', 'set-mirror',
+                '--original', 'https://github.com/botassembly/thinkthen', '--mirror', tag.as_uri())
+            swift_run('swift', 'build', '--package-path', swift, '--disable-sandbox')
+            binary = swift / '.build/debug' / ('Consumer.exe' if os.name == 'nt' else 'Consumer')
+            swift_run('python3' if sys.platform == 'linux' else sys.executable,
+                      ROOT / 'scripts/release/swift.py', binary, ROOT / 'construction/stub.json')
+            if args.readmes:
+                swift_run(binary.parent / ('Readme.exe' if os.name == 'nt' else 'Readme'))
+                print('README: Swift passes', flush=True)
     if args.tag_source:
         if failures:
             raise SystemExit('source install failed: ' + ', '.join(failures))
-        print('release: final all-platform tag source installs Go and Swift by name and answers shared stub cases')
+        print('release: final all-platform tag source installs ' + (args.only or 'Go and Swift') + ' by name and answers shared stub cases')
         raise SystemExit(0)
-    with check('Zig'):
-        # Zig has URL packages rather than a central index. Fetch the named release archive.
-        zig = scratch / 'zig-consumer'
-        shutil.copytree(ROOT / 'sdk/zig/tests', zig)
-        manifest = zig / 'build.zig.zon'
-        bare_manifest = manifest.read_text(encoding='utf-8').replace('.dependencies = .{ .thinkthen = .{ .path = "../package" } },', '.dependencies = .{},')
-        manifest.write_text(bare_manifest, encoding='utf-8')
-        zig_archive = one(package / 'zig', '*.zip' if os.name == 'nt' else '*.tar.gz')
-        zig_env = env | {'ZIG_GLOBAL_CACHE_DIR': str(scratch / 'zig-cache')}
-        def zig_run(*arguments):
-            if sys.platform == 'linux':
-                return run(ROOT / 'scripts/runtime-floor-build', 'env', 'HOME=' + env['HOME'],
-                           'ZIG_GLOBAL_CACHE_DIR=' + zig_env['ZIG_GLOBAL_CACHE_DIR'],
-                           shutil.which('zig'), *arguments, cwd=zig,
-                           env=dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch)))
-            return run('zig', *arguments, cwd=zig, env=zig_env)
-        zig_run('fetch', '--save=thinkthen', zig_archive)
-        zig_run('build', '-j2')
-        run(sys.executable, ROOT / 'scripts/release/zig.py', zig / ('zig-out/bin/consumer.exe' if os.name == 'nt' else 'zig-out/bin/consumer'), ROOT / 'construction/stub.json', env=env)
-        if args.readmes:
-            if os.name == 'nt':
-                app = scratch / 'zig-readme'
-                (app / 'src').mkdir(parents=True)
-                (app / 'build.zig.zon').write_text(bare_manifest, encoding='utf-8')
-                (app / 'build.zig').write_text(example('zig', 'zig', 'pub fn build'), encoding='utf-8')
-                (app / 'src/main.zig').write_text(example('zig', 'zig'), encoding='utf-8')
-                address = f'https://github.com/botassembly/thinkthen/releases/download/v{version()}/{zig_archive.name}'
-                run(*windows_steps(package / 'zig/README.md', app, {address: str(zig_archive)}), cwd=app, env=zig_env)
-            else:
-                (zig / 'consumer.zig').write_text(example('zig', 'zig'), encoding='utf-8')
-                zig_run('build', '-j2')
-                run(zig / 'zig-out/bin/consumer', env=env)
-            print('README: Zig passes', flush=True)
-    with check('Ruby'):
-        # RubyGems resolves both platform gems by their package names.
-        gems = scratch / 'gem-packages'
-        gems.mkdir()
-        for path in (package / 'ruby').rglob('*.gem'): shutil.copy2(path, gems / path.name)
-        gem_env = env | {'GEM_HOME': str(scratch / 'gems'), 'GEM_PATH': str(scratch / 'gems'),
-                         'GEM_SPEC_CACHE': str(scratch / 'gem-specs')}
-        run('gem', 'install', '--local', '--no-document', '--version', version(), 'thinkthen', cwd=gems, env=gem_env)
-        run('ruby', ROOT / 'scripts/release/ruby.rb', ROOT / 'construction/stub.json', env=gem_env)
-        if args.readmes:
-            readme = scratch / 'first.rb'
-            readme.write_text(example('ruby', 'ruby'), encoding='utf-8')
-            run('ruby', readme, env=gem_env)
-            print('README: Ruby passes', flush=True)
+    if selected('Zig'):
+        with check('Zig'):
+            # Zig has URL packages rather than a central index. Fetch the named release archive.
+            zig = scratch / 'zig-consumer'
+            shutil.copytree(ROOT / 'sdk/zig/tests', zig)
+            manifest = zig / 'build.zig.zon'
+            bare_manifest = manifest.read_text(encoding='utf-8').replace('.dependencies = .{ .thinkthen = .{ .path = "../package" } },', '.dependencies = .{},')
+            manifest.write_text(bare_manifest, encoding='utf-8')
+            zig_archive = one(package / 'zig', '*.zip' if os.name == 'nt' else '*.tar.gz')
+            zig_env = env | {'ZIG_GLOBAL_CACHE_DIR': str(scratch / 'zig-cache')}
+            def zig_run(*arguments):
+                if sys.platform == 'linux':
+                    return run(ROOT / 'scripts/runtime-floor-build', 'env', 'HOME=' + env['HOME'],
+                               'ZIG_GLOBAL_CACHE_DIR=' + zig_env['ZIG_GLOBAL_CACHE_DIR'],
+                               shutil.which('zig'), *arguments, cwd=zig,
+                               env=dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch)))
+                return run('zig', *arguments, cwd=zig, env=zig_env)
+            zig_run('fetch', '--save=thinkthen', zig_archive)
+            zig_run('build', '-j2')
+            run(sys.executable, ROOT / 'scripts/release/zig.py', zig / ('zig-out/bin/consumer.exe' if os.name == 'nt' else 'zig-out/bin/consumer'), ROOT / 'construction/stub.json', env=env)
+            if args.readmes:
+                if os.name == 'nt':
+                    app = scratch / 'zig-readme'
+                    (app / 'src').mkdir(parents=True)
+                    (app / 'build.zig.zon').write_text(bare_manifest, encoding='utf-8')
+                    (app / 'build.zig').write_text(example('zig', 'zig', 'pub fn build'), encoding='utf-8')
+                    (app / 'src/main.zig').write_text(example('zig', 'zig'), encoding='utf-8')
+                    address = f'https://github.com/botassembly/thinkthen/releases/download/v{version()}/{zig_archive.name}'
+                    run(*windows_steps(package / 'zig/README.md', app, {address: str(zig_archive)}), cwd=app, env=zig_env)
+                else:
+                    (zig / 'consumer.zig').write_text(example('zig', 'zig'), encoding='utf-8')
+                    zig_run('build', '-j2')
+                    run(zig / 'zig-out/bin/consumer', env=env)
+                print('README: Zig passes', flush=True)
+    if selected('Ruby'):
+        with check('Ruby'):
+            # RubyGems resolves both platform gems by their package names.
+            gems = scratch / 'gem-packages'
+            gems.mkdir()
+            for path in (package / 'ruby').rglob('*.gem'): shutil.copy2(path, gems / path.name)
+            gem_env = env | {'GEM_HOME': str(scratch / 'gems'), 'GEM_PATH': str(scratch / 'gems'),
+                             'GEM_SPEC_CACHE': str(scratch / 'gem-specs')}
+            run('gem', 'install', '--local', '--no-document', '--version', version(), 'thinkthen', cwd=gems, env=gem_env)
+            run('ruby', ROOT / 'scripts/release/ruby.rb', ROOT / 'construction/stub.json', env=gem_env)
+            if args.readmes:
+                readme = scratch / 'first.rb'
+                readme.write_text(example('ruby', 'ruby'), encoding='utf-8')
+                run('ruby', readme, env=gem_env)
+                print('README: Ruby passes', flush=True)
     if failures:
         raise SystemExit('source install failed: ' + ', '.join(failures))
-    print('release: Go, Swift, Zig and Ruby install by name and answer all shared stub cases')
+    print('release: ' + (args.only or 'Go, Swift, Zig and Ruby') + ' install by name and answer all shared stub cases')

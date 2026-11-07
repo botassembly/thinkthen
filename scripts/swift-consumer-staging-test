@@ -71,7 +71,7 @@ def stage(name, revision, root, scratch, package=None):
         body = ast.unparse(function) + '\ncheck_sources(scratch)\n'
         consumer = scratch / 'checks/swift'
     elif name == 'source-install-check':
-        body = statements(text, "        swift = scratch / 'swift-consumer'", '        manifest =')
+        body = statements(text, "            swift = scratch / 'swift-consumer'", '            manifest =')
         environment.update(args=argparse.Namespace(readmes=package is not None), package=package)
         consumer = scratch / 'swift-consumer'
     else:
@@ -208,7 +208,7 @@ def source_install(assets, receipt_path, revision, resolve_only=False):
     recipe = source('source-install-check', revision)
     setup = next(node for node in ast.parse(recipe).body
                  if isinstance(node, ast.With))
-    swift = next(node for node in setup.body if isinstance(node, ast.With)
+    swift = next(node for node in ast.walk(setup) if isinstance(node, ast.With)
                  and ast.unparse(node.items[0].context_expr) == "check('Swift')")
     if resolve_only:
         from release_images import image

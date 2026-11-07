@@ -486,7 +486,7 @@ impl<'a> Request<'a> {
     pub(crate) fn answered(&self, reply: Result<Vec<u8>, Error>) -> RequestAnswers {
         RequestAnswers {
             slots: self.start..self.start + self.questions.len(),
-            reply: reply.and_then(|body| self.adapter.decode(&body)),
+            reply: reply.and_then(|body| self.adapter.decode(&body, self.questions.len())),
         }
     }
 }

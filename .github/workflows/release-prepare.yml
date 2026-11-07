@@ -62,10 +62,13 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: scripts/release-workflow resolve "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+      # A skipped qualification would leave this run green with nothing built.
+      - name: Refuse a release run that is not armed
+        env:
+          RELEASE_ARMED: ${{ vars.RELEASE_ARMED }}
+        run: scripts/release-workflow armed "$RELEASE_ARMED"
 
   qualification:
-    # Source refusal always runs; the existing release flag still holds builds.
-    if: vars.RELEASE_ARMED == 'true'
     needs: source
     permissions: {contents: read}
     uses: ./.github/workflows/native-qualification.yml
@@ -226,7 +229,7 @@ jobs:
   draft:
     needs: [source, bundle, registry-installed]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions: {contents: write, id-token: write, attestations: write}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -253,6 +256,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           if [ "$DRY_RUN" = true ]; then
+            scripts/release-workflow attested release "$RELEASE_SHA"
             scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA" --dry-run
           else
             scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA"

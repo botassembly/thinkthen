@@ -163,6 +163,35 @@ fn only_https_and_named_loopback_http_are_admitted_and_sent() {
 }
 
 #[test]
+fn a_url_holding_credentials_is_refused_without_repeating_them() {
+    for base in [
+        "https://name-part:secret-part@example.invalid/v1",
+        "https://name-part@example.invalid/v1",
+        "https://:secret-part@example.invalid/v1",
+        "http://name-part:secret-part@127.0.0.1:1234/v1",
+    ] {
+        let error = Settings::default()
+            .url(base)
+            .api_key(Key::new("synthetic-key").unwrap())
+            .engine(|_| None)
+            .unwrap_err();
+        assert_eq!(error.code().as_str(), "usage.url", "{base}");
+        assert!(!error.message().contains("name-part"), "{error}");
+        assert!(!error.message().contains("secret-part"), "{error}");
+    }
+    for base in [
+        "https://example.invalid/a@b",
+        "https://example.invalid/v1?a=b@c",
+    ] {
+        Settings::default()
+            .url(base)
+            .api_key(Key::new("synthetic-key").unwrap())
+            .engine(|_| None)
+            .unwrap();
+    }
+}
+
+#[test]
 fn backend_names_reject_unknown_values_before_credentials() {
     let error = Settings::from_json(r#"{"backend":"a-new-name"}"#).unwrap_err();
     assert_eq!(error.code().as_str(), "usage.backend");

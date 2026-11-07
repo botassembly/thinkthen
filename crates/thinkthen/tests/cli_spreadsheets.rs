@@ -17,6 +17,8 @@ mod dates;
 mod hardening;
 #[path = "spreadsheets/limits.rs"]
 mod limits;
+#[path = "spreadsheets/publication.rs"]
+mod publication;
 mod support;
 use serde_json::{Value, json};
 use std::fs;

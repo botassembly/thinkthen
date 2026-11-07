@@ -30,11 +30,10 @@ impl StressFixture {
         let scenario = table
             .get("scenarios")
             .and_then(Value::as_array)
-            .and_then(|cases| {
-                cases
-                    .iter()
-                    .find(|case| case.get("name").is_some_and(|value| value == name))
-            })
+            .into_iter()
+            .flatten()
+            .chain(table.get("slow_replies"))
+            .find(|case| case.get("name").is_some_and(|value| value == name))
             .ok_or_else(|| {
                 io::Error::new(io::ErrorKind::InvalidInput, "unknown stress scenario")
             })?;

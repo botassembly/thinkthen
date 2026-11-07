@@ -84,9 +84,17 @@ java --enable-native-access=ALL-UNNAMED -cp "$classpath" KotlinCasesKt "$root/co
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCases "$root/construction/options.json"
 
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaApiCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaAnswerCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaAnnotationCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaClosedClientCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaInterfaceCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaStreamReachabilityCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaDescriptionCases
-java --enable-native-access=ALL-UNNAMED -Dos.arch=unsupported -cp "$classpath" JavaLoaderFailureCases
+java --enable-native-access=ALL-UNNAMED -Dos.arch=unsupported -cp "$classpath" JavaLoaderFailureCases "No packaged ThinkThen native engine"
+printf 'not a shared library\n' > "$scratch/broken-engine"
+for unloadable in "$scratch/missing-engine" "$scratch/broken-engine"; do
+  (export THINKTHEN_LIBRARY="$unloadable"; java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaLoaderFailureCases "$unloadable")
+done
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaSettingsCases "$root/schemas/contract.json"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SdkConventionCasesKt
 "$jvm_python" "$root/sdk/java/check-packaging"
@@ -122,6 +130,7 @@ java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.ConformanceCasesKt "$root/conformance/typed"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SurfaceCasesKt "$root/conformance"
 THINKTHEN_BACKEND=stub java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.EnvironmentCasesKt
+(export THINKTHEN_BACKEND=; java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.EnvironmentCasesKt)
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.FlowCasesKt "$root/conformance/typed"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaCacheCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaConcurrencyCases

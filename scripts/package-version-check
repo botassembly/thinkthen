@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Check that the ordinary gate refuses a stale package version."""
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -10,7 +9,7 @@ from release_metadata import ROOT, version
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-version-') as temporary:
     source = Path(temporary) / 'source'
-    shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns('.git', 'target', '.build', 'node_modules'))
+    subprocess.run(['git', 'clone', '--quiet', '--shared', str(ROOT), str(source)], check=True)
     command = [sys.executable, str(source / 'scripts/release_metadata.py')]
     subprocess.run(command, check=True)
     manifest = source / 'sdk/python/pyproject.toml'

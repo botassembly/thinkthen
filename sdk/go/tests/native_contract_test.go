@@ -86,6 +86,10 @@ func TestNativeLoadFailure(t *testing.T) {
 		if err == nil || !errors.Is(err, thinkthen.CodeLocalIO) || errors.Is(err, thinkthen.CodeUsageABI) || !strings.Contains(err.Error(), path) {
 			t.Fatalf("wrong load diagnostic: %v", err)
 		}
+		if strings.Count(err.Error(), "cannot load native engine") != 1 || (runtime.GOOS == "windows" && !strings.Contains(err.Error(), "system error")) {
+			t.Fatalf("load diagnostic gives no reason: %v", err)
+		}
+		t.Log(err)
 		if err := os.Unsetenv("THINKTHEN_LIBRARY"); err != nil {
 			t.Fatal(err)
 		}
@@ -103,11 +107,13 @@ func TestNativeLoadFailure(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		command := exec.Command(os.Args[0], "-test.run=^TestNativeLoadFailure$")
+		command := exec.Command(os.Args[0], "-test.run=^TestNativeLoadFailure$", "-test.v")
 		command.Env = append(os.Environ(), "THINKTHEN_MISSING_NATIVE_CHILD="+path, "THINKTHEN_LIBRARY="+path)
-		if output, err := command.CombinedOutput(); err != nil {
+		output, err := command.CombinedOutput()
+		if err != nil {
 			t.Fatalf("%v\n%s", err, output)
 		}
+		t.Logf("%s", output)
 	}
 }
 

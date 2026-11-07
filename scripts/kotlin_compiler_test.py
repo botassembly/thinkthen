@@ -22,8 +22,8 @@ with tempfile.TemporaryDirectory(prefix='kotlin-compiler-check-') as temporary:
     package = scratch / 'package/kotlin'
     package.mkdir(parents=True)
     shutil.copyfile(ROOT / 'sdk/kotlin/README.md', package / 'README.md')
-    jars = list(installed.glob('*.jar'))
-    assert any(jar.name.startswith('thinkthen-kotlin-') for jar in jars), 'supply installed JVM lib folder'
+    jars = list(installed.rglob('*.jar'))
+    assert any(jar.name.startswith('thinkthen-kotlin-') for jar in jars), 'supply an installed JVM lib folder or a package kotlin folder'
     for jar in jars:
         (package / jar.name).symlink_to(jar)
     for reverse in (False, True):

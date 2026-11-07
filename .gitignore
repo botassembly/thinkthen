@@ -14,3 +14,4 @@
 /sdk/typescript/node_modules/
 # Function cell route scaffolds are regenerated from the matrix.
 /site/src/content/docs/function-cells/
+/.sqlite-prepare-test-*/
