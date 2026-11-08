@@ -11,7 +11,7 @@ consumer, root_arg, loopback = sys.argv[1:]
 root = Path(root_arg)
 not_applicable = 0
 sys.path.insert(0, str(root / "scripts"))
-from test_control import read_line, request as fixture_request
+from test_control import read_line, request as fixture_request, soak
 sys.path.insert(0, str(root / "databases"))
 from testing import child_environment
 
@@ -69,6 +69,7 @@ def byte_offsets(value, text):
             byte_offsets(child, text)
 
 subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "zig", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "zig", consumer], env=env | {"THINKTHEN_LOOPBACK": loopback, "THINKTHEN_GATE_STRICT": os.environ.get("THINKTHEN_GATE_STRICT", "0")}, check=True)
+soak("zig", [sys.executable, str(root / "sdk/c/tests/stress.py"), "zig", consumer], env | {"THINKTHEN_LOOPBACK": loopback})
 directory = root / "conformance/typed"
 manifest = json.loads((directory / "manifest.json").read_text())
 seen = set()

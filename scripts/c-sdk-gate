@@ -54,6 +54,14 @@ cmake -S sdk/c/tests -B "$scratch/cmake-consumer" \
 cmake --build "$scratch/cmake-consumer" --parallel 2
 "$scratch/cmake-consumer/consumer"
 python3 scripts/stress-adapters.py --surface c ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py c "$scratch/conformance"
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+    soak_status=0
+    for backend in systemone openai; do
+        python3 scripts/stress-adapters.py --surface c --rounds 60 --backend "$backend" \
+            --evidence-path "$THINKTHEN_SOAK_FOLDER/c-$backend.jsonl" -- python3 sdk/c/tests/stress.py c "$scratch/conformance" || soak_status=1
+    done
+    [ "$soak_status" = 0 ]
+fi
 if [ -n "${THINKTHEN_C_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_C_ARTIFACT_DIR"
     cp "$scratch/package"/*.tar.gz "$THINKTHEN_C_ARTIFACT_DIR/"

@@ -226,7 +226,7 @@ with tempfile.TemporaryDirectory(prefix='gate-child-report-') as temporary:
     flood = ('#!' + sys.executable + '\n'
              + 'print("later-child-padding-" + "x" * (1024 * 1024 + 4096))\n')
     env = dict(BASE_ENV, PATH=str(tools) + ':/usr/bin:/bin', HOME=str(root),
-               THINKTHEN_GATE_STRICT='1')
+               THINKTHEN_GATE_STRICT='1', THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS='0')
     (root / 'rust-toolchain.toml').write_text('[toolchain]\nchannel = "fixture"\n')
     for entry, first, later, summary in (
         ('interface-source-gate', 'core-check', 'python-gate', 'Failed source gate stages:'),
@@ -244,6 +244,45 @@ with tempfile.TemporaryDirectory(prefix='gate-child-report-') as temporary:
         assert 'exit 37' in result.stdout, result.stdout[-4096:]
         (scripts / first).write_text('#!/bin/sh\nexit 0\n')
         (scripts / later).write_text('#!/bin/sh\nexit 0\n')
+    # A hung source stage fails within its limit, names itself, and later stages still run.
+    shutil.copy2(ROOT / 'gate-stage', scripts / 'gate-stage')
+    # The Python SDK stages run checkout files outside scripts/; pass them too.
+    for name in ('check-offline', 'check-release'):
+        stub = root / 'sdk/python' / name
+        stub.parent.mkdir(parents=True, exist_ok=True)
+        stub.write_text('#!/bin/sh\nexit 0\n')
+        stub.chmod(0o755)
+    (tools / 'python3').write_text('#!/bin/sh\ncase "$*" in *gate-stage*) exec "$GATE_REPORT_PYTHON" "$@" ;; esac\nexit 0\n')
+    block = root / 'block'
+    os.mkfifo(block)
+    (scripts / 'core-check').write_text('#!' + sys.executable + '\nimport os\nprint("hung-stage-running", flush=True)\n'
+                                        'os.open(os.environ["GATE_REPORT_BLOCK"], os.O_RDONLY)\n')
+    started = time.monotonic()
+    hung = subprocess.run([scripts / 'interface-source-gate'], cwd=root,
+                          env=dict(env, THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS='2', GATE_REPORT_BLOCK=str(block),
+                                   GATE_REPORT_PYTHON=sys.executable),
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120)
+    assert time.monotonic() - started < 60, 'the hung source stage outlived its limit'
+    assert hung.returncode == 1, hung.stdout[-4096:]
+    assert 'Timed out gate stage: core-check (limit 2 seconds)' in hung.stdout, hung.stdout[-4096:]
+    assert 'Failed source gate stage: core-check (exit 124;' in hung.stdout, hung.stdout[-4096:]
+    assert 'Passed source gate stage: secrets' in hung.stdout, hung.stdout[-4096:]
+    final = hung.stdout.split('Failed source gate stages:', 1)[1]
+    assert final.split('\n', 1)[0].split() == ['core-check'], final[-4096:]
+    assert 'hung-stage-running' in final, final[-4096:]
+    # Without an override every stage still runs under the default limit.
+    (scripts / 'core-check').write_text('#!/bin/sh\nexit 0\n')
+    calls = root / 'stage-calls'
+    (tools / 'python3').write_text('#!/bin/sh\ncase "$*" in *gate-stage*) echo "$2" >> "' + str(calls) + '"; '
+                                   'exec "$GATE_REPORT_PYTHON" "$@" ;; esac\nexit 0\n')
+    unset = {key: value for key, value in env.items() if key != 'THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS'}
+    bounded = subprocess.run([scripts / 'interface-source-gate'], cwd=root,
+                             env=dict(unset, GATE_REPORT_PYTHON=sys.executable),
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120)
+    assert bounded.returncode == 0, bounded.stdout[-4096:]
+    limits = set(calls.read_text().split())
+    assert limits == {'3600'}, limits
+    print('source gate: a hung stage fails within its limit and names itself; every stage has the default limit')
 
 # Prepared rehearsal must preserve shared binaries and reject cache conflicts.
 with tempfile.TemporaryDirectory(prefix='gate-prepared-') as temporary:

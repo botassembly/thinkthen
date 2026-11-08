@@ -66,4 +66,12 @@ uv pip install --offline --python "$scratch/venv/bin/python" 'pandas>=2.2' 'pola
 mypy --enable-incomplete-feature=TypeForm --strict --no-incremental --python-executable "$scratch/venv/bin/python" "$root/sdk/python/tests/typing_examples.py"
 "$scratch/venv/bin/python" "$root/scripts/python-guide-examples" "$scratch/venv/bin/python"
 "$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests" --ignore="$root/sdk/python/tests/test_readme.py" -q --tb=short
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+  soak_status=0
+  for backend in systemone openai; do
+    python3 "$root/scripts/stress-adapters.py" --surface python --rounds 60 --backend "$backend" \
+      --evidence-path "$THINKTHEN_SOAK_FOLDER/python-$backend.jsonl" -- "$scratch/venv/bin/python" "$root/sdk/python/tests/test_stress.py" || soak_status=1
+  done
+  [ "$soak_status" = 0 ]
+fi
 CHECKS

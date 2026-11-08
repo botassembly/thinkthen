@@ -290,13 +290,19 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
         checked = {('scripts/release_windows_sdks.py', 'environment'),
                    ('scripts/release_windows_sdks.py', 'runtime_environment')}
         unchecked, builders = [], 0
-        tracked = subprocess.check_output(['git', 'ls-files', 'scripts', 'sdlc/release/jobs'], cwd=ROOT, text=True)
+        # Every tracked Python file, so release job scripts are covered without
+        # this public test naming their private folder.
+        tracked = subprocess.check_output(['git', 'ls-files'], cwd=ROOT, text=True)
         for name in tracked.splitlines():
             path = ROOT / name
-            if name.endswith('-test') or not path.is_file():
+            if name.endswith('-test') or not path.is_file() or path.is_symlink():
                 continue
+            if not name.endswith('.py'):
+                with path.open('rb') as handle:
+                    if not handle.read(64).startswith(b'#!/usr/bin/env python3'):
+                        continue
             text = path.read_text(errors='replace')
-            if not (name.endswith('.py') or text.startswith('#!/usr/bin/env python3')) or not build.search(text):
+            if not build.search(text):
                 continue
             builders += 1
             lines = text.splitlines()

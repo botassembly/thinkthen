@@ -7,6 +7,11 @@ from pathlib import Path
 
 from testing import child_environment
 
+# A 100,000-record round takes about 34 s on a loaded builder, and a database consumer replies once
+# its statement ends. Statement replies get the 120 s per round that stress-adapters.py allows the
+# whole adapter; control-pipe reads keep test_control's 30 s.
+STATEMENT_SECONDS = 120
+
 
 def workload():
     return json.loads(Path(os.environ['THINKTHEN_STRESS_CASE']).read_text())

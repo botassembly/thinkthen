@@ -82,13 +82,19 @@ trap 'exit 143' TERM
 stage() {
     name=$1
     shift
+    started=$(date +%s)
     printf 'Source gate stage: %s\n' "$name"
+    # gate-stage fails a stage that runs past its limit with exit 124 and names it.
+    if [ "$stage_timeout" -ne 0 ]; then
+        set -- python3 scripts/gate-stage "$stage_timeout" "$name" "$@"
+    fi
     report_run "$report_scratch/running.log" "$@"
+    elapsed=$(( $(date +%s) - started ))
     if [ "$status" -eq 0 ]; then
-        printf 'Passed source gate stage: %s\n' "$name"
+        printf 'Passed source gate stage: %s (elapsed %s seconds)\n' "$name" "$elapsed"
     else
         report_save "$report_scratch/running.log"
-        printf 'Failed source gate stage: %s (exit %s)\n' "$name" "$status" >&2
+        printf 'Failed source gate stage: %s (exit %s; elapsed %s seconds)\n' "$name" "$status" "$elapsed" >&2
         failed="$failed $name"
     fi
 }

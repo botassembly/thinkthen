@@ -16,6 +16,13 @@ import tempfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def logged_cases(stderr):
+    """Each case's JSON line, without the plain memory-growth lines a reader sees."""
+    return [json.loads(line) for line in stderr.splitlines() if not line.startswith('memory growth ')]
+
+
 with tempfile.TemporaryDirectory(prefix='stress-dispatch-') as temporary:
     root = Path(temporary)
     (root / 'scripts').mkdir()
@@ -58,7 +65,7 @@ calls=case['concurrency']*case['rounds']
 requests=(0 if case['scenario']['name']=='refused' else ((case['records']+case['client']['batch']-1)//case['client']['batch'])*calls+sum(f.get('repeat',1) for f in case['scenario'].get('faults',[]) if f['kind']=='status'))
 if case['cancel']: requests=min(4,(case['records']+case['client']['batch']-1)//case['client']['batch'])
 Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') and not case['cancel'] else 0)))
-if os.environ.get('REPORTED_IDLE_SPLIT') and not case['cancel'] and case['scenario']['name'] in ('healthy','slow-replies'):
+if os.environ.get('REPORTED_IDLE_SPLIT') and not case['cancel'] and (case['scenario']['name'] in ('healthy','slow-replies') or (os.environ.get('IDLE_SPLIT_EVERYWHERE') and case['scenario']['name']!='refused')):
     requests += calls
     Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') else 0)))
     summaries=[dict(run=os.environ['THINKTHEN_INPUT_REPORT_RUN'],pid=os.getpid(),call=call,
@@ -78,7 +85,9 @@ calls=case['concurrency']*case['rounds']
 rows=0 if case['cancel'] else calls*case['records']
 print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeout_ms'],calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],read_ahead_records=(case.get('read_ahead_limit') or 0)+(1 if os.environ.get('BAD_READ_AHEAD') else 0),identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
 ''')
-    env = dict(os.environ, THINKTHEN_LOOPBACK=str(fixture), THINKTHEN_GATE_STRICT='0')
+    # The smoke cases stay smoke inside a full run; the full cases pass --full themselves.
+    env = {name: value for name, value in os.environ.items() if name != 'THINKTHEN_STRESS_FULL'}
+    env.update(THINKTHEN_LOOPBACK=str(fixture), THINKTHEN_GATE_STRICT='0')
     sys.path.insert(0, str(root / 'scripts'))
     try:
         runner = runpy.run_path(str(root / 'scripts/stress-adapters.py'))
@@ -128,6 +137,16 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
     unexplained = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
         env=dict(env, REPORTED_IDLE_SPLIT='1', BAD_REQUEST_COUNT='1'), capture_output=True, text=True)
     assert unexplained.returncode != 0 and 'exact backend requests' in unexplained.stderr, unexplained.stderr
+    # A loaded machine idle-flushes under retries and slow replies too; reports explain each split.
+    everywhere = dict(env, REPORTED_IDLE_SPLIT='1', IDLE_SPLIT_EVERYWHERE='1')
+    loaded = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+        env=everywhere, capture_output=True, text=True)
+    assert loaded.returncode == 0, loaded.stderr
+    split = {case['scenario'] for case in json.loads(loaded.stdout)['cases'] if case.get('idle_added_requests', 0) > 0}
+    assert {'rate-limit', 'slow'} <= split, split
+    loaded_wrong = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+        env=dict(everywhere, BAD_REQUEST_COUNT='1'), capture_output=True, text=True)
+    assert loaded_wrong.returncode != 0 and 'exact backend requests' in loaded_wrong.stderr, loaded_wrong.stderr
     for invalid_report, expected_error in (
             ('STALE_INPUT_REPORT', 'stale or incomplete'),
             ('INCOMPLETE_INPUT_REPORT', 'stale or incomplete'),
@@ -181,8 +200,10 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
         group = case['resources']['groups']['workload']
         assert len(group['round_samples']) == 8, group
         memory = group['growth']['metrics']['memory_bytes']
-        assert 'short_gate_floor_bytes' not in memory, memory
-        assert memory['floor_bytes_per_verified_record'] == 1, memory
+        # The full 20-round soak reports memory and keeps exact counts.
+        assert group['growth']['criterion'] == 'retained-round-growth-exact-counts-memory-report', group
+        assert memory['report_only'] is True and 'floor_bytes_per_verified_record' not in memory, memory
+        assert 'late_window_maxima' not in group['growth']['metrics']['descriptors'], group
         assert memory['verified_records_between_checkpoints'] == case['rows'] // case['rounds'] * 3, group
         for context in group['context']:
             assert set(context) == {'surface', 'backend', 'case'}, context
@@ -191,7 +212,12 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
             # Include the checkpoint envelope in this conservative size bound.
             assert len(json.dumps(dict(pid=999999999, required_pid=999999999,
                 backend_port='65535', group='workload', concurrency='1', context=context)).encode()) + 1 <= 1024, context
-    assert [json.loads(line) for line in completed.stderr.splitlines()] == long_report['cases']
+    lines = completed.stderr.splitlines()
+    assert logged_cases(completed.stderr) == long_report['cases']
+    # Each measured soak names its memory figure in plain words.
+    figures = [line for line in lines if line.startswith('memory growth fixture ')]
+    assert len(figures) == 3 and all(' bytes per record over ' in line for line in figures), figures
+    assert sum(line.endswith('; report only)') for line in figures) == 3, figures
     # Feature: the smoke caller explicitly selects memory reporting.
     sys.path.insert(0, str(root / 'scripts'))
     try:
@@ -264,7 +290,7 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
     group = failed_case['resources']['groups']['workload']
     assert group['growth']['passed'] is False, group
     assert group['observation_failures'][0]['process']['pid'] in group['required_live_pids'], group
-    assert [json.loads(line) for line in denied.stderr.splitlines()] == denied_report['cases']
+    assert logged_cases(denied.stderr) == denied_report['cases']
     # Feature: a proven process exit keeps the parent's resource verdict.
     adapter.write_text(original_adapter.replace('import json,os,sys', 'import json,os,sys,runpy').replace(
         'print(json.dumps(', "if os.environ.get('THINKTHEN_STRESS_CHECKPOINT'):\n    runpy.run_path(" +
@@ -278,7 +304,7 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
     # A completed exit need not expose an fd denial to this sample.
     assert all(event['disposition'] == 'process_exit' for event in exit_events), exited_report
     assert all(case['resources']['growth']['passed'] for case in exited_report['cases'] if 'resources' in case), exited_report
-    assert [json.loads(line) for line in exited.stderr.splitlines()] == exited_report['cases']
+    assert logged_cases(exited.stderr) == exited_report['cases']
     adapter.write_text(original_adapter)
     # Feature: terminal case reports survive a later validation or setup failure.
     table['scenarios'] = table['scenarios'][:2]
@@ -319,7 +345,7 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
             assert failed['cancelled'] and "'failed'" in failed['error'], failed
             assert report['calls'] == sum(case['calls'] for case in report['cases'][:-1]), report
             assert report['rows'] == sum(case['rows'] for case in report['cases'][:-1]), report
-        terminals = [json.loads(line) for line in result.stderr.splitlines()]
+        terminals = logged_cases(result.stderr)
         assert terminals == report['cases'], (terminals, report)
 print('sanitizer dispatch and terminal reporting: completed cases and failure identity retained')
 
@@ -346,3 +372,31 @@ sys.exit(27)
         assert 'consumer-startup-diagnostic' in result.stderr, result.stderr
         assert 'During handling of the above exception' not in result.stderr, result.stderr
 print('SQLite stress startup: child exits and signals retain their diagnostics')
+# Feature: a cancel case's first-request deadline grows with the records an
+# adapter may build first, and a missing request still fails.
+sys.path.insert(0, str(ROOT / 'scripts'))
+try:
+    runner = runpy.run_path(str(ROOT / 'scripts/stress-adapters.py'))
+    from test_control import arrived_or_exited, read_line
+    records = json.loads((ROOT / 'conformance/stress.json').read_text())['records']
+    assert runner['arrival_deadline'](records['smoke']) < 31, runner['arrival_deadline'](records['smoke'])
+    assert runner['arrival_deadline'](records['full']) == 130, runner['arrival_deadline'](records['full'])
+    assert runner['arrival_deadline'](records['full']) > runner['arrival_deadline'](records['full'] // 10)
+    silent_read, silent_write = os.pipe()
+    with os.fdopen(silent_read) as silent, os.fdopen(silent_write, 'w'):
+        class Silent:
+            def command(self, _text, timeout):
+                return read_line(silent, timeout=timeout)
+        waiting = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+        try:
+            arrived_or_exited(Silent(), waiting, timeout=0.2)
+        except RuntimeError as error:
+            assert 'deadline' in str(error), error
+        else:
+            raise AssertionError('a cancel case without a request was accepted')
+        finally:
+            waiting.kill()
+            waiting.wait()
+finally:
+    sys.path.pop(0)
+print('Stress cancel: the first-request deadline scales with records and still expires')

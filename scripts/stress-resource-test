@@ -20,30 +20,43 @@ ROOT = Path(__file__).resolve().parent
 
 
 def memory_floors():
-    """Feature: short checks report memory growth; soaks keep their record floor.
+    """Feature: short checks and full soaks report memory growth; other soaks keep their record floor.
 
-    Numeric boundaries use fixed samples so allocator noise cannot move a verdict.
+    Growth runs from the first late window's high to the last one's, over the
+    records completed after the first window. Numeric boundaries use fixed
+    samples so allocator noise cannot move a verdict.
     """
     from stress_resources import METRICS, growth
-    for short_gate, records, delta, passed in (
-        (True, 65, 397312, True),
-        (True, 65, 1048575, True),
-        (True, 65, 1048576, True),
-        (True, 65, 25 * 1024 * 1024, True),
-        (False, 100000, 899999, True),
-        (False, 100000, 900000, False),
-        (False, 65, 397312, False),
+    for mode, records, delta, passed in (
+        ('short', 65, 397312, True),
+        ('short', 65, 1048575, True),
+        ('short', 65, 1048576, True),
+        ('short', 65, 25 * 1024 * 1024, True),
+        ('report', 100000, 25 * 1024 * 1024, True),
+        ('judged', 100000, 799999, True),
+        ('judged', 100000, 800000, False),
+        ('judged', 65, 397312, False),
     ):
         samples = [dict.fromkeys(METRICS, 0) for _ in range(20)]
-        for index, row in enumerate(samples[10:]):
-            row['memory_bytes'] = delta * index // 9
-        options = dict(short_gate=True) if short_gate else {}
+        # Rounds 11-20 form windows of 2, 3, 2 and 3 rounds; each window
+        # holds one level, so the highs rise 0, 1/3, 2/3 and all of delta.
+        for row, level in zip(samples[10:], (0, 0, 1, 1, 1, 2, 2, 3, 3, 3)):
+            row['memory_bytes'] = delta * level // 3
+        # A low first sample in the first window no longer sets the start.
+        samples[10]['memory_bytes'] = -40 * 1024 * 1024
+        options = dict(short=dict(short_gate=True), report=dict(memory_report_only=True), judged={})[mode]
         report = growth(samples, [records] * 20, **options)
-        assert report['passed'] is passed, (short_gate, records, delta, report)
+        assert report['passed'] is passed, (mode, records, delta, report)
         memory = report['metrics']['memory_bytes']
+        assert memory['growth_measure'] == 'late-window-highs', memory
         assert memory['late_half_growth_bytes'] == delta, memory
-        assert memory['verified_records_between_checkpoints'] == 9 * records, memory
-        if short_gate:
+        assert memory['verified_records_between_checkpoints'] == 8 * records, memory
+        assert memory['bytes_per_verified_record'] == delta / (8 * records), memory
+        if mode == 'report':
+            assert report['criterion'] == 'retained-round-growth-exact-counts-memory-report', report
+            assert memory['report_only'] is True and memory['passed'] is True, memory
+            assert 'floor_bytes_per_verified_record' not in memory, memory
+        elif mode == 'short':
             assert report['criterion'] == 'retained-round-growth-short-gate-report', report
             assert memory['report_only'] is True, memory
             assert 'short_gate_floor_bytes' not in memory, memory
@@ -74,7 +87,8 @@ def count_growth():
             assert short['passed'] is passed, (key, late, short)
             assert short['metrics'][key]['late_window_maxima'] == peaks, short
             assert 'report_only' not in short['metrics'][key], short
-            for options in ({}, dict(memory_window=(11, 20))):
+            for options in ({}, dict(memory_window=(11, 20)), dict(memory_report_only=True),
+                            dict(memory_window=(11, 20), memory_report_only=True)):
                 soak = growth(samples, [65] * 20, **options)
                 assert soak['passed'] is soak_passed, (key, late, soak)
         # A leak on rounds N, 2N, 3N.
@@ -89,17 +103,26 @@ def count_growth():
             short = growth(samples, [65] * 20, short_gate=True)
             assert short['passed'] is passed, (key, pace, short)
             assert short['metrics'][key]['late_window_maxima'] == peaks, short
-    print('short counts: steps and plateaus pass; peaks that never fall and rise twice fail; soaks unchanged')
+    for options in (dict(memory_report_only=True, short_gate=True),):
+        try:
+            growth(samples, [65] * 20, **options)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'memory report mode accepted with {options}')
+    print('short counts: steps and plateaus pass; peaks that never fall and rise twice fail; soaks and full-soak reports exact')
 
 
 def extended_window():
-    """Feature: an explicit memory window uses its endpoints and record floor.
+    """Feature: an explicit memory window uses its window highs and record floor.
 
-    Numeric boundary tables avoid allocator noise; these are not real soak rounds.
+    Rounds 41-60 form four windows of five rounds, so growth counts the
+    records of rounds 46-60. Numeric boundary tables avoid allocator noise;
+    these are not real soak rounds.
     """
     from stress_resources import METRICS, growth
     counts = [100000] * 60
-    for delta, passed in ((1899999, True), (1900000, False)):
+    for delta, passed in ((1499999, True), (1500000, False)):
         samples = [dict.fromkeys(METRICS, 0) for _ in counts]
         # One final step deliberately lacks four strictly rising window maxima.
         samples[-1]['memory_bytes'] = delta
@@ -107,9 +130,9 @@ def extended_window():
         memory = report['metrics']['memory_bytes']
         assert report['passed'] is passed, report
         assert memory['measurement_start_round'] == 41 and memory['measurement_end_round'] == 60
-        assert memory['verified_records_between_checkpoints'] == 1900000, memory
+        assert memory['verified_records_between_checkpoints'] == 1500000, memory
         assert memory['late_half_growth_bytes'] == delta, memory
-        assert memory['bytes_per_verified_record'] == delta / 1900000, memory
+        assert memory['bytes_per_verified_record'] == delta / 1500000, memory
         assert growth(samples, counts)['passed'], 'default four-window criterion changed'
     for index, row in enumerate(samples):
         row['memory_bytes'] = min(index, 40) * 1000000
@@ -117,6 +140,33 @@ def extended_window():
     for row in samples[30:]:
         row['descriptors'] = 1
     assert not growth(samples, counts, memory_window=(41, 60))['metrics']['descriptors']['passed']
+    from stress_resources import extended_size, full_size
+    assert extended_size({}) == (60, (41, 60), None) and full_size({})
+    assert extended_size(dict(THINKTHEN_SOAK_ROUNDS='60')) == (60, (41, 60), None) and full_size(dict(THINKTHEN_SOAK_ROUNDS='60'))
+    smoke = dict(THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100')
+    assert extended_size(smoke) == (8, (5, 8), 100) and not full_size(smoke)
+    assert not full_size(dict(THINKTHEN_SOAK_RECORDS='100000'))
+    for bad in (dict(THINKTHEN_SOAK_ROUNDS='7'), dict(THINKTHEN_SOAK_ROUNDS='x'), dict(THINKTHEN_SOAK_RECORDS='0')):
+        try:
+            extended_size(bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'invalid soak size accepted: {bad}')
+    # A smoke-size soak reports memory over its window and keeps counts exact.
+    small = [dict.fromkeys(METRICS, 0) for _ in range(8)]
+    for number, row in enumerate(small, 1):
+        row['memory_bytes'] = number * 250 * 1024
+    judged = growth(small, [100] * 8, memory_window=(5, 8))
+    assert not judged['passed'], judged
+    reported = growth(small, [100] * 8, memory_window=(5, 8), memory_report_only=True)
+    memory = reported['metrics']['memory_bytes']
+    assert reported['passed'] and memory['report_only'] and memory['bytes_per_verified_record'] >= 1, reported
+    assert reported['criterion'] == 'retained-round-explicit-memory-window-memory-report', reported
+    assert (memory['measurement_start_round'], memory['measurement_end_round']) == (5, 8), memory
+    for row in small[4:]:
+        row['descriptors'] = 1
+    assert not growth(small, [100] * 8, memory_window=(5, 8), memory_report_only=True)['metrics']['descriptors']['passed']
     for window in ((0, 60), (60, 60), (41, 61), (True, 60)):
         try:
             growth(samples, counts, memory_window=window)
@@ -124,6 +174,56 @@ def extended_window():
             pass
         else:
             raise AssertionError(f'invalid explicit window accepted: {window}')
+
+
+def saved_samples():
+    """Feature: real soak samples replay as noise; the same samples with a small leak fail.
+
+    scripts/tests/stress-memory-samples.json holds completed-round samples
+    from the j35336 and j34878 20-round soaks and from the C# and PostgreSQL
+    60-round extended soaks of two candidates. A 20-round soak has too few
+    rounds to tell a 1-2 byte-per-record leak from allocator noise, so it
+    reports memory and keeps exact counts; the 60-round window judges memory.
+    """
+    from stress_resources import METRICS, growth
+    saved = json.loads((ROOT / 'tests/stress-memory-samples.json').read_text())
+    per_round = saved['records_per_round']
+    figures = []
+    for case in saved['cases']:
+        rounds = case['rounds']
+        samples = [dict(memory_bytes=kib * 1024) for kib in case['memory_kib']]
+        assert len(samples) == rounds, case['source']
+        for key in METRICS[1:]:
+            values = case[key] if isinstance(case[key], list) else [case[key]] * rounds
+            for row, value in zip(samples, values):
+                row[key] = value
+        counts = [per_round] * rounds
+        options = dict(memory_window=(41, 60)) if rounds == 60 else dict(memory_report_only=True)
+        report = growth(samples, counts, **options)
+        memory = report['metrics']['memory_bytes']
+        assert report['passed'], (case['source'], report)
+        assert all(report['metrics'][key]['passed'] for key in METRICS[1:]), case['source']
+        figures.append((case['source'], round(memory['bytes_per_verified_record'], 2)))
+        if rounds == 20:
+            # At 20 rounds memory is reported, not judged.
+            assert memory['report_only'] is True, memory
+            continue
+        assert memory['bytes_per_verified_record'] < 1, (case['source'], memory)
+        for leak in (1, 2):
+            leaking = [dict(row, memory_bytes=row['memory_bytes'] + leak * per_round * number)
+                       for number, row in enumerate(samples, 1)]
+            failed = growth(leaking, counts, **options)
+            assert not failed['passed'], (case['source'], leak, failed)
+            assert failed['metrics']['memory_bytes']['bytes_per_verified_record'] >= 1, failed
+    for leak in (1, 2):
+        # A pure leak with no noise sits on or above the floor under each judged criterion.
+        flat = [dict.fromkeys(METRICS, 0) for _ in range(60)]
+        for number, row in enumerate(flat, 1):
+            row['memory_bytes'] = leak * per_round * number
+        assert not growth(flat, [per_round] * 60, memory_window=(41, 60))['passed'], leak
+        assert not growth(flat[:20], [per_round] * 20)['passed'], leak
+        assert growth(flat[:20], [per_round] * 20, memory_report_only=True)['passed'], leak
+    print(json.dumps(dict(saved_samples=figures, synthetic_leaks='1 and 2 bytes per record fail')))
 
 
 def fixture(mode):
@@ -288,6 +388,12 @@ if __name__ == '__main__':
         teardown()
     elif sys.argv[1:] == ['zombies']:
         zombies()
+    elif sys.argv[1:] == ['verdicts']:
+        # The verdict tables need no /proc, so they also run off Linux.
+        memory_floors()
+        count_growth()
+        extended_window()
+        saved_samples()
     elif len(sys.argv) > 1:
         fixture(sys.argv[2])
     else:
@@ -296,6 +402,7 @@ if __name__ == '__main__':
         memory_floors()
         count_growth()
         extended_window()
+        saved_samples()
         zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--', sys.executable, __file__, 'zombies'], capture_output=True, text=True)
         zombie_report = json.loads(zombie_run.stdout.splitlines()[-1])

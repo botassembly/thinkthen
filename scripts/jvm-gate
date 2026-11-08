@@ -139,6 +139,15 @@ java -Xmx64m -XX:+ExitOnOutOfMemoryError --enable-native-access=ALL-UNNAMED -cp 
 java --enable-native-access=ALL-UNNAMED -Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1 -cp "$classpath" JavaOwnershipCases "$root/conformance"
 # A refused ABI fixture is the other engine: its public outcome differs from this tree's.
 "$jvm_python" "$root/scripts/jvm-isolation-test" "$native_input" "$THINKTHEN_NATIVE_FIXTURES/wrong-major.${jvm_library##*.}" "$jvm_platform" "$jvm_library"
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+  soak_status=0
+  for backend in systemone openai; do
+    "$jvm_python" "$root/scripts/stress-adapters.py" --surface java --rounds 60 --backend "$backend" \
+      --evidence-path "$THINKTHEN_SOAK_FOLDER/java-$backend.jsonl" -- "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" \
+      --enable-native-access=ALL-UNNAMED -cp "$classpath" StressCases || soak_status=1
+  done
+  [ "$soak_status" = 0 ]
+fi
 
 if [ -n "${THINKTHEN_JVM_OUT:-}" ]; then
   mkdir -p "$THINKTHEN_JVM_OUT/lib" "$THINKTHEN_JVM_OUT/maven" "$THINKTHEN_JVM_OUT/construction"

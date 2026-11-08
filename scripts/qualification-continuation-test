@@ -201,7 +201,8 @@ class QualificationContinuation(unittest.TestCase):
             (binary / 'uname').chmod(0o755)
             result = subprocess.run([scripts / 'gate'], cwd=root, capture_output=True, text=True,
                 env={'PATH': str(binary), 'HOME': directory, 'TEST_LOG': str(log),
-                     'PYTHONDONTWRITEBYTECODE': '1', 'PM_JOB_CORES': '1', 'CARGO_BUILD_JOBS': '1', 'RUST_TEST_THREADS': '1'})
+                     'PYTHONDONTWRITEBYTECODE': '1', 'PM_JOB_CORES': '1', 'CARGO_BUILD_JOBS': '1', 'RUST_TEST_THREADS': '1',
+                     'THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS': '0'})
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('Failed gate stages: tool-staticcheck release-staging-test rust-advisories', result.stderr)
             self.assertRegex(result.stderr, r'release-staging-test \(exit 7; elapsed [0-9]+ seconds\)')

@@ -8,12 +8,17 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'databases'))
 from testing import read_line
-from stress import StatementFailure, check_round, environment, report, settings, statement_failure, workload
+from stress import (STATEMENT_SECONDS, StatementFailure, check_round, environment, report, settings,
+                    statement_failure, workload)
+
+# A 100,000-record round takes about 34 s on a loaded builder, and the consumer replies once the
+# statement ends. Match the 120 s per round that stress-adapters.py allows the whole adapter.
+STATEMENT_SECONDS = 120
 
 
 class Host:
-    def __init__(self, case):
-        self.process = subprocess.Popen(sys.argv[1:], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+    def __init__(self, case, command=None):
+        self.process = subprocess.Popen(command or sys.argv[1:], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         text=True, env=environment(case))
 
     def send(self, command):
@@ -29,7 +34,7 @@ class Host:
         raise RuntimeError(f'SQLite consumer exited during a statement: returncode={code}{name}') from None
 
     def receive(self, case=None):
-        line = read_line(self.process.stdout)
+        line = read_line(self.process.stdout, timeout=STATEMENT_SECONDS)
         if not line:
             self.exited()
         result = json.loads(line)

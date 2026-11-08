@@ -6,12 +6,6 @@ failed=
 report_scope=gate
 report_label="gate stage"
 report_summary="Failed gate stages:"
-stage_timeout=${THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS:-}
-if [ -z "$stage_timeout" ]; then
-    # A local Mac: whole gate 1014s, SDK stage 615s, Rust tests 217s. Allow 45m per Mac stage.
-    case "$(uname -s)" in Darwin) stage_timeout=2700 ;; *) stage_timeout=0 ;; esac
-fi
-case "$stage_timeout" in *[!0-9]*|'') echo 'gate stage timeout must be whole seconds' >&2; exit 2 ;; esac
 diagnostics=${THINKTHEN_GATE_DIAGNOSTICS:-$PWD/target/gate-diagnostics}
 mkdir -p "$diagnostics"
 . scripts/gate-report

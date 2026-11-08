@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Feature: the hosted soak loop runs every gate and names each failure at the end."""
+from pathlib import Path
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+RUNNER = '#!/bin/sh\necho "ran $1"\ncase "$1" in *fail-*) exit 3 ;; esac\n'
+
+
+def run(*gates):
+    with tempfile.TemporaryDirectory(prefix='hosted-gates-test-') as folder:
+        runner = Path(folder) / 'runner'
+        runner.write_text(RUNNER)
+        runner.chmod(0o755)
+        return subprocess.run([str(ROOT / 'scripts/hosted-candidate-check'), '--run-gates', str(runner), *gates],
+                              cwd=ROOT, capture_output=True, text=True, timeout=300)
+
+
+def main():
+    result = run('fail-sqlite-gate', 'ok-gate', 'fail-postgres-gate')
+    assert result.returncode != 0, result
+    ran = [line for line in result.stdout.splitlines() if line.startswith('ran ')]
+    assert ran == ['ran scripts/fail-sqlite-gate', 'ran scripts/ok-gate', 'ran scripts/fail-postgres-gate'], ran
+    last = result.stderr.strip().splitlines()[-2:]
+    assert last == ['hosted-candidate-check: FAILED gate: fail-sqlite-gate',
+                    'hosted-candidate-check: FAILED gate: fail-postgres-gate'], result.stderr
+    passing = run('ok-gate', 'also-ok-gate')
+    assert passing.returncode == 0 and 'FAILED' not in passing.stderr, passing
+    print('hosted soak loop runs every gate and names each failure')
+
+
+if __name__ == '__main__':
+    main()

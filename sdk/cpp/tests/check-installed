@@ -152,6 +152,14 @@ HOME="$scratch/home" python3 sdk/cpp/tests/run.py "$scratch/application/bin/cons
     "$scratch/application/bin/consumer" "$root/conformance/typed/manifest.json"
 HOME="$scratch/home" python3 sdk/cpp/tests/network.py "$scratch/application/bin/network_consumer" "$loopback"
 THINKTHEN_LOOPBACK="$loopback" python3 scripts/stress-adapters.py --surface cpp ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py cpp "$scratch/application/bin/consumer"
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+    soak_status=0
+    for backend in systemone openai; do
+        THINKTHEN_LOOPBACK="$loopback" python3 scripts/stress-adapters.py --surface cpp --rounds 60 --backend "$backend" \
+            --evidence-path "$THINKTHEN_SOAK_FOLDER/cpp-$backend.jsonl" -- python3 sdk/c/tests/stress.py cpp "$scratch/application/bin/consumer" || soak_status=1
+    done
+    [ "$soak_status" = 0 ]
+fi
 # Warning contracts protect immutable modifiers and one-record calls.
 for expression in 'thinkthen::decide{"Ready?"}.field("/body");' 'thinkthen::decide{"Ready?"}.threshold(0.7);' 'thinkthen::client{}.decide(thinkthen::decide{"Ready?"}, "evidence");' '(void)thinkthen::client{}.decide(thinkthen::decide{"Ready?"}, std::vector<std::string>{"a", "b"});' 'thinkthen::cancel_handle{}.cancel();'; do
     printf '#include <thinkthen/thinkthen.hpp>\nint main() { %s }\n' "$expression" > "$scratch/negative.cpp"

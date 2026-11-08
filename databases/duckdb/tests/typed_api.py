@@ -58,10 +58,10 @@ class Host:
         self.process = subprocess.Popen([str(package / 'sql'), str(package / 'thinkthen.duckdb_extension')],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=environment)
 
-    def query(self, statement):
+    def query(self, statement, timeout=30):
         self.process.stdin.write(json.dumps(statement) + '\n')
         self.process.stdin.flush()
-        line = read_line(self.process.stdout)
+        line = read_line(self.process.stdout, timeout=timeout)
         assert line, statement
         return json.loads(line)
 

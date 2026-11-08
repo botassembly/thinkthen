@@ -8,6 +8,6 @@ path = os.environ.get('THINKTHEN_STRESS_CHECKPOINT')
 if path:
     with socket.socket(socket.AF_UNIX) as connection:
         connection.connect(path)
-        connection.sendall(json.dumps(dict(pid=os.getpid(), backend_port=os.environ.get('THINKTHEN_STRESS_BACKEND_PORT'), group=os.environ.get('THINKTHEN_STRESS_GROUP', 'workload'), required_pid=int(os.environ.get('THINKTHEN_STRESS_REQUIRED_PID', os.getppid())), concurrency=os.environ.get('THINKTHEN_STRESS_CONCURRENCY'), context=json.loads(os.environ.get('THINKTHEN_STRESS_CONTEXT', '{}')))).encode() + b'\n')
+        connection.sendall(json.dumps(dict(pid=os.getpid(), backend_port=os.environ.get('THINKTHEN_STRESS_BACKEND_PORT'), group=os.environ.get('THINKTHEN_STRESS_GROUP', 'workload'), required_pid=int(os.environ.get('THINKTHEN_STRESS_REQUIRED_PID', os.getppid())), concurrency=os.environ.get('THINKTHEN_STRESS_CONCURRENCY'), allocator_in_use_bytes=os.environ.get('THINKTHEN_STRESS_ALLOCATOR_IN_USE'), runtime_heap_bytes=os.environ.get('THINKTHEN_STRESS_RUNTIME_HEAP'), allocator_mapped_bytes=os.environ.get('THINKTHEN_STRESS_ALLOCATOR_MAPPED'), context=json.loads(os.environ.get('THINKTHEN_STRESS_CONTEXT', '{}')))).encode() + b'\n')
         if connection.makefile('rb').readline() != b'sampled\n':
             raise RuntimeError('resource checkpoint was not acknowledged')

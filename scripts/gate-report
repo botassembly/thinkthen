@@ -1,5 +1,13 @@
 # Shared bounded failure output for gate stages and nested SDK children.
 # Each caller owns its capture scratch; nested callers share failure snippets.
+# The time limit, in seconds, that scripts/gate-stage puts on every gate stage on
+# every platform. THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS overrides it; 0 turns it
+# off, as the reporting fixtures do. The default, one hour, is above any whole
+# gate measured: a local Mac gate took 1014 s (SDK stage 615 s), and whole M5
+# landing gates took 630 to 1690 s (j34507 to j35407). Linux stage times were not
+# logged before; each stage now prints its elapsed seconds for later tuning.
+stage_timeout=${THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS:-3600}
+case "$stage_timeout" in *[!0-9]*|'') echo 'gate stage timeout must be whole seconds' >&2; exit 2 ;; esac
 report_scratch=$(mktemp -d)
 if [ -z "${THINKTHEN_GATE_FAILURE_TAILS:-}" ]; then
     THINKTHEN_GATE_FAILURE_TAILS="$report_scratch/failures"

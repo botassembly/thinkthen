@@ -1,5 +1,6 @@
 """Linux ownership and distinct TCP connection accounting for offline stress runs."""
 import ctypes
+import json
 import os
 from pathlib import Path
 
@@ -7,9 +8,12 @@ METRICS = ('memory_bytes', 'descriptors', 'backend_connections', 'threads', 'pro
 CRITERION = 'retained-round-growth-per-record-floor'
 SHORT_GATE_CRITERION = 'retained-round-growth-short-gate-report'
 EXTENDED_CRITERION = 'retained-round-explicit-memory-window-per-record-floor'
+MEMORY_REPORT_CRITERION = 'retained-round-growth-exact-counts-memory-report'
+EXTENDED_REPORT_CRITERION = 'retained-round-explicit-memory-window-memory-report'
 MEMORY_BYTES_PER_RECORD_FLOOR = 1
 MEMORY_WINDOWS = 4
 MIN_ROUNDS = 2 * MEMORY_WINDOWS
+EXTENDED_ROUNDS = 60
 # Linux include/linux/sched.h: https://github.com/torvalds/linux/blob/v6.12/include/linux/sched.h
 PF_EXITING = 0x00000004
 
@@ -155,6 +159,30 @@ def sample(roots, backend_port=None, exclude=(), required_pid=None, details=None
     return result
 
 
+def extended_size(environ=None):
+    """Return the extended soak's rounds, judged window and record override.
+
+    THINKTHEN_SOAK_ROUNDS (default 60) and THINKTHEN_SOAK_RECORDS (default: the
+    table's full count) shrink the soak only to prove its wiring. The judged
+    window is the last third, and at least four rounds: 41 to 60 for 60 rounds,
+    5 to 8 for 8.
+    """
+    environ = os.environ if environ is None else environ
+    rounds, records = environ.get('THINKTHEN_SOAK_ROUNDS', str(EXTENDED_ROUNDS)), environ.get('THINKTHEN_SOAK_RECORDS')
+    if not rounds.isdecimal() or int(rounds) < MIN_ROUNDS or (records is not None and (not records.isdecimal() or int(records) < 1)):
+        raise ValueError(f'THINKTHEN_SOAK_ROUNDS must be at least {MIN_ROUNDS} and THINKTHEN_SOAK_RECORDS a positive count')
+    rounds = int(rounds)
+    start = min(rounds - rounds // 3 + 1, rounds - MEMORY_WINDOWS + 1)
+    return rounds, (start, rounds), None if records is None else int(records)
+
+
+def full_size(environ=None):
+    """Whether the extended soak runs at its release size, the only size a receipt may pass."""
+    environ = os.environ if environ is None else environ
+    return (environ.get('THINKTHEN_SOAK_ROUNDS', str(EXTENDED_ROUNDS)) == str(EXTENDED_ROUNDS)
+            and 'THINKTHEN_SOAK_RECORDS' not in environ)
+
+
 def memory_bounds(rounds, memory_window=None, *, short_gate=False):
     start, end = (rounds // 2 + 1, rounds) if memory_window is None else memory_window
     if (type(start) is not int or type(end) is not int or not 1 <= start < end <= rounds
@@ -163,26 +191,41 @@ def memory_bounds(rounds, memory_window=None, *, short_gate=False):
     return start, end
 
 
-def growth(samples, verified_records=None, *, short_gate=False, memory_window=None):
+def criterion(*, short_gate=False, memory_window=None, memory_report_only=False):
+    if memory_window is not None:
+        return EXTENDED_REPORT_CRITERION if memory_report_only else EXTENDED_CRITERION
+    return SHORT_GATE_CRITERION if short_gate else MEMORY_REPORT_CRITERION if memory_report_only else CRITERION
+
+
+def growth(samples, verified_records=None, *, short_gate=False, memory_window=None, memory_report_only=False):
     """Compare retained resources after equal completed workload rounds.
 
-    The first half is warmup. RSS fails only when the maxima of four ordered,
-    nonempty windows in the later half all strictly rise and endpoint growth
-    reaches MEMORY_BYTES_PER_RECORD_FLOOR per verified record between those
-    endpoints. Explicit short gate checks report memory without failing it; counts fail only
-    when their four late-window peaks never fall and rise at least twice.
+    The first half is warmup. The later half splits into four ordered,
+    nonempty windows. RSS growth is the last window's high minus the first
+    window's high, divided by the records completed after the first window.
+    Window highs, not single round samples, keep one low allocator sample
+    from inflating growth: saved C++ round samples alternated 41 and 62 MB.
+    RSS fails only when the four highs all strictly rise and growth reaches
+    MEMORY_BYTES_PER_RECORD_FLOOR per record. Explicit short gate checks
+    report memory without failing it; counts fail only when their four
+    late-window peaks never fall and rise at least twice. memory_report_only
+    reports memory the same way but keeps the exact count checks below; with
+    a memory_window it reports that window's figures, as a soak below
+    release size does, since its few small rounds measure allocator noise.
     Counts belong to synchronous completed rounds. A single retained RSS
     step can pass. Other resources still fail when their later-half minimum
     exceeds their warmup maximum, including a one-time retained resource leak.
 
-    An explicit inclusive memory_window instead compares its endpoints against
-    the record floor without requiring four rising maxima. Other resource
+    An explicit inclusive memory_window instead compares its window highs
+    against the record floor without requiring four rising maxima. Other resource
     checks retain their original half-run split.
 
     No process-exit sample participates. Finite RSS windows can miss growth
     hidden by allocator/page noise, growth outside the measured window, and
     reachable leaks. Passing does not prove the absence of leaks.
     """
+    if memory_report_only and short_gate:
+        raise ValueError('short gate checks already report memory')
     if len(samples) < MIN_ROUNDS:
         raise ValueError(f'growth verdict requires at least {MIN_ROUNDS} completed rounds')
     if any(value[key] is None for value in samples for key in METRICS):
@@ -211,25 +254,85 @@ def growth(samples, verified_records=None, *, short_gate=False, memory_window=No
         memory.update(measurement_start_round=start, measurement_end_round=end,
                       warmup_max=max(row['memory_bytes'] for row in samples[:start - 1]) if start > 1 else None,
                       retained_min=min(row['memory_bytes'] for row in later))
-    memory.update(**(dict(report_only=True) if short_gate else
+    reported = short_gate or memory_report_only
+    memory.update(**(dict(report_only=True) if reported else
                      dict(floor_bytes_per_verified_record=MEMORY_BYTES_PER_RECORD_FLOOR)))
-    memory.update(late_window_maxima=maxima,
-                  late_half_growth_bytes=later[-1]['memory_bytes'] - later[0]['memory_bytes'])
+    memory.update(late_window_maxima=maxima, growth_measure='late-window-highs',
+                  late_half_growth_bytes=maxima[-1] - maxima[0])
     counts_valid = (verified_records is not None and len(verified_records) == len(samples)
                     and all(type(count) is int and count > 0 for count in verified_records))
     if counts_valid:
-        # The first late checkpoint is the baseline, so its completed records
-        # precede the measured interval and must not dilute its growth.
-        records = sum(verified_records[start:end])
+        # The first window's high may fall on its last round, so only records
+        # completed after that window count against the growth.
+        records = sum(verified_records[start - 1 + len(windows[0]):end])
         floor = records * MEMORY_BYTES_PER_RECORD_FLOOR
         memory.update(verified_records_between_checkpoints=records,
                       bytes_per_verified_record=memory['late_half_growth_bytes'] / records,
-                      passed=short_gate or not ((memory_window is not None or
+                      passed=reported or not ((memory_window is not None or
                           all(before < after for before, after in zip(maxima, maxima[1:])))
                           and memory['late_half_growth_bytes'] >= floor))
     else:
         memory.update(passed=False, verdict='unverifiable', reason='missing or invalid verified record counts')
-    return dict(criterion=EXTENDED_CRITERION if memory_window is not None else SHORT_GATE_CRITERION if short_gate else CRITERION,
+    return dict(criterion=criterion(short_gate=short_gate, memory_window=memory_window,
+                                    memory_report_only=memory_report_only),
                 passed=all(c['passed'] for c in checks.values()),
                 warmup_rounds=split, measured_rounds=len(samples) - split, metrics=checks,
                 **({} if counts_valid else dict(verdict='unverifiable')))
+
+
+SOAK_WINDOW = (41, 60)
+SOAK_FIGURES = ('measurement_start_round', 'measurement_end_round', 'late_half_growth_bytes',
+                'verified_records_between_checkpoints', 'bytes_per_verified_record', 'floor_bytes_per_verified_record')
+
+
+def soak_attributions(root):
+    """Read the reviewed allocator-retention attributions; each names its public known-limits row."""
+    table = json.loads((Path(root) / 'conformance/soak-attributions.json').read_text())
+    entries = table['soaks']
+    for name, entry in entries.items():
+        if set(entry) != {'allocator', 'limits', 'row'} or not all(type(value) is str and value for value in entry.values()):
+            raise ValueError('invalid soak attribution: ' + name)
+        rows = [line for line in (Path(root) / entry['limits']).read_text().splitlines()
+                if line.startswith('| ' + entry['row'] + ' |')]
+        if len(rows) != 1 or 'attributed to ' + entry['allocator'] + ' allocator retention' not in rows[0]:
+            raise ValueError('soak attribution lacks its known-limits row: ' + name)
+    return entries
+
+
+def soak_verdict(rows, records, name, attributions, rounds=EXTENDED_ROUNDS, window=SOAK_WINDOW, *, report_only=False):
+    """Judge one soak over its judged window, rounds 41 to 60 at release size.
+
+    A soak passes on RSS. Only a listed soak may fail RSS, every other resource still
+    passing, and then only when three series pass the same floor over the same window:
+    the allocator's memory in use, the runtime's live object heap, and RSS less the
+    storage the allocator has mapped, so the growth must sit in storage the allocator
+    keeps. The listing alone passes nothing. Below release size, report_only reports
+    memory without judging it, as growth() does.
+    """
+    samples = [row for row in rows if row.get('completed_round') is not None]
+    if [row['completed_round'] for row in samples] != list(range(1, rounds + 1)):
+        raise ValueError(f'soak did not complete {rounds} rounds: ' + name)
+    counts = [records] * rounds
+    report = growth(samples, counts, memory_window=window, memory_report_only=report_only)
+    memory = report['metrics']['memory_bytes']
+    figures = {key: memory.get(key) for key in SOAK_FIGURES}
+    if report['passed']:
+        return dict(figures, verdict='passed')
+    attribution = attributions.get(name)
+    others = all(check['passed'] for key, check in report['metrics'].items() if key != 'memory_bytes')
+    if attribution is None or not others or report.get('verdict') == 'unverifiable':
+        raise ValueError('soak failed its growth criterion: ' + name)
+    for key, label in (('allocator_in_use_bytes', 'allocator memory in use'), ('runtime_heap_bytes', 'runtime heap'),
+                       ('allocator_mapped_bytes', 'allocator mapped storage'), ('memory_bytes', 'RSS')):
+        if any(type(row.get(key)) is not int for row in samples):
+            raise ValueError(f'attributed soak lacks {label} samples: ' + name)
+    outside = [dict(row, outside_allocator_bytes=row['memory_bytes'] - row['allocator_mapped_bytes']) for row in samples]
+    series = {}
+    for key, label in (('allocator_in_use_bytes', 'allocator memory in use'), ('runtime_heap_bytes', 'runtime heap'),
+                       ('outside_allocator_bytes', 'RSS outside allocator storage')):
+        series[key] = growth([dict(row, memory_bytes=row[key]) for row in outside],
+                             counts, memory_window=window)['metrics']['memory_bytes']
+        if not series[key]['passed']:
+            raise ValueError(f'attributed soak grew {label}: ' + name)
+    return dict(figures, verdict='attributed', allocator=attribution['allocator'], limits_row=attribution['row'],
+                **{key.removesuffix('_bytes'): {figure: series[key][figure] for figure in SOAK_FIGURES} for key in series})

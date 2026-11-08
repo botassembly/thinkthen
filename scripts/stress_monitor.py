@@ -8,7 +8,7 @@ import threading
 import time
 import traceback
 
-from stress_resources import AccessLost, CRITERION, SHORT_GATE_CRITERION, EXTENDED_CRITERION, growth, sample
+from stress_resources import AccessLost, criterion as growth_criterion, growth, sample
 
 
 class Monitor:
@@ -50,7 +50,7 @@ class Monitor:
         self.thread = threading.Thread(target=self.collect)
         self.thread.start()
 
-    def record(self, exclude=(), checkpoint=False, group="workload", required_pid=None, context=None):
+    def record(self, exclude=(), checkpoint=False, group="workload", required_pid=None, context=None, allocator_in_use=None, runtime_heap=None, allocator_mapped=None):
         details = {}
         self.sequence += 1
         observation = dict(sequence=self.sequence, elapsed_seconds=time.monotonic() - self.started,
@@ -99,6 +99,9 @@ class Monitor:
                 completed_round=len(self.groups[group]) if checkpoint else None,
                 group=group if checkpoint else None,
                 **(dict(process_samples=details, required_live_pid=required_pid, context=context) if checkpoint else {}),
+                **(dict(allocator_in_use_bytes=allocator_in_use) if allocator_in_use is not None else {}),
+                **(dict(runtime_heap_bytes=runtime_heap) if runtime_heap is not None else {}),
+                **(dict(allocator_mapped_bytes=allocator_mapped) if allocator_mapped is not None else {}),
                 **values)) + '\n')
             self.output.flush()
 
@@ -130,15 +133,27 @@ class Monitor:
                             raise ValueError('backend port changed during a soak')
                         self.ports[group] = port
                         self.backend_port = port
-                    self.record(exclude=[event['pid']], checkpoint=True, group=group, required_pid=event['required_pid'], context=event.get('context'))
+                    # A workload may report its own allocator's bytes in use, which RSS cannot separate from
+                    # free storage, the storage that allocator has mapped, and its runtime's live object heap.
+                    reported = {}
+                    for key in ('allocator_in_use_bytes', 'runtime_heap_bytes', 'allocator_mapped_bytes'):
+                        value = event.get(key)
+                        if value is not None:
+                            value = int(value)
+                            if value < 0:
+                                raise ValueError('invalid ' + key.replace('_', ' '))
+                        reported[key] = value
+                    self.record(exclude=[event['pid']], checkpoint=True, group=group, required_pid=event['required_pid'],
+                                context=event.get('context'), allocator_in_use=reported['allocator_in_use_bytes'],
+                                runtime_heap=reported['runtime_heap_bytes'], allocator_mapped=reported['allocator_mapped_bytes'])
                     connection.sendall(b'sampled\n')
-        except BaseException as error:
+        except BaseException as error:  # noqa: BLE001 - the sampler thread hands every failure to finish()
             self.error = error
         finally:
             self.server.close()
 
-    def finish(self, expected_rounds=None, expected_groups=None, verified_records=None, expected_context=None, *, short_gate=False, memory_window=None):
-        criterion = EXTENDED_CRITERION if memory_window is not None else SHORT_GATE_CRITERION if short_gate else CRITERION
+    def finish(self, expected_rounds=None, expected_groups=None, verified_records=None, expected_context=None, *, short_gate=False, memory_window=None, memory_report_only=False):
+        criterion = growth_criterion(short_gate=short_gate, memory_window=memory_window, memory_report_only=memory_report_only)
         self.stop.set()
         self.thread.join()
         self.server.close()
@@ -207,7 +222,7 @@ class Monitor:
                     peak={key: max(row[key] for row in rounds) for key in rounds[0]},
                     peak_scope='completed-round samples', backend_port=self.ports.get(group, self.backend_port),
                     process_samples=self.process_samples[group], context=self.contexts[group],
-                    concurrency=self.concurrencies.get(group), required_live_pids=self.required_pids[group], round_samples=rounds, growth=growth(rounds, counts, short_gate=short_gate, memory_window=memory_window))
+                    concurrency=self.concurrencies.get(group), required_live_pids=self.required_pids[group], round_samples=rounds, growth=growth(rounds, counts, short_gate=short_gate, memory_window=memory_window, memory_report_only=memory_report_only))
             report.update(groups=reports)
             if self.rounds:
                 report.update(first=self.rounds[0], last=self.rounds[-1])

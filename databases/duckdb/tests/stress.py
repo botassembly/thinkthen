@@ -8,7 +8,7 @@ import sys
 from typed_api import Host, literal, read_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from stress import check_round, environment, report, settings, statement_failure, workload
+from stress import STATEMENT_SECONDS, check_round, environment, report, settings, statement_failure, workload
 
 
 def statement(count, prefix='', basis=0):
@@ -35,12 +35,12 @@ def round_rows(host, case, round_index):
     prefixes = [f'round-{case["identifier_base"] + round_index}-call-{case["identifier_base"] + index}-' for index in range(case['concurrency'])]
     statements = [statement(case['records'], prefix, case['identifier_base']) for prefix in prefixes]
     if case['concurrency'] == 1:
-        results = [host.query(statements[0])]
+        results = [host.query(statements[0], timeout=STATEMENT_SECONDS)]
     else:
         assert case['concurrency'] == 2, 'DuckDB host owns two connections'
         host.process.stdin.write(json.dumps({'concurrent': statements}) + '\n')
         host.process.stdin.flush()
-        results = [json.loads(read_line(host.process.stdout)) for _ in range(2)]
+        results = [json.loads(read_line(host.process.stdout, timeout=STATEMENT_SECONDS)) for _ in range(2)]
     for prefix, result in zip(prefixes, results):
         yield prefix, statement_failure(case, result['error']) if 'error' in result else decode(result)
 

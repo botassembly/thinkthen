@@ -38,9 +38,15 @@ static void PrintRows(const vector<Identifier> &names, idx_t count, Read read, c
     std::free(text); yyjson_mut_doc_free(doc);
 }
 static void Print(QueryResult &result) {
-    PrintRows(result.GetNames(), result.HasError() ? 0 : result.RowCount(),
-              [&](idx_t column, idx_t row) { return result.Collection().GetValue(column, row); },
-              result.HasError() ? result.GetError() : "");
+    if (result.HasError()) {
+        PrintRows(result.GetNames(), 0, [](idx_t, idx_t) { return Value(); }, result.GetError());
+        return;
+    }
+    // ColumnDataCollection::GetValue rebuilds every row on each call, so one reply per cell is
+    // quadratic in its rows. Build the row collection once.
+    auto rows = result.Collection().GetRows();
+    PrintRows(result.GetNames(), result.RowCount(),
+              [&](idx_t column, idx_t row) { return rows.GetValue(column, row); });
 }
 int main(int argc, char **argv) {
     try {

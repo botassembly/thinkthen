@@ -189,4 +189,34 @@ fi
 grep 'backends(99)' "$scratch/enum-negative.log"
 mkdir -p "$CARGO_TARGET_DIR"
 go test -race -count=1 github.com/botassembly/thinkthen/sdk/go/thinkthen
-go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...
+# Go's default 10-minute test deadline is shorter than a full stress run, so size
+# it from the stress table: 1 ms per record in each case stress-adapters.py runs,
+# the slow-reply soak's delays in full mode, and 10 minutes for the other tests.
+go_timeout=$(python3 - "$root" <<'DEADLINE'
+import json, math, os, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+table = json.loads((root / 'conformance/stress.json').read_text())
+backends = json.loads((root / 'conformance/typed/manifest.json').read_text())['backends']
+full = bool(os.environ.get('THINKTHEN_STRESS_FULL'))
+records = table['records']['full' if full else 'smoke']
+# Each scenario once, the concurrent pair, the cancel case and the soak.
+rounds = len(table['scenarios']) + 2 + 1 + table['records']['soak_rounds']
+slow = table['slow_replies']
+requests = math.ceil(slow['records'] / table['client']['batch'])
+slow_seconds = table['records']['soak_rounds'] * requests * sum(fault['delay_ms'] for fault in slow['faults']) / 1000 if full else 0
+print(f"{math.ceil(600 + len(backends) * rounds * records / 1000 + slow_seconds)}s")
+DEADLINE
+)
+echo "Go stress test deadline: $go_timeout"
+go test -race -count=1 -timeout "$go_timeout" -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+    # Soak the plain test binary: the race detector would dominate its memory.
+    go test -c -o "$scratch/stress-consumer"
+    soak_status=0
+    for backend in systemone openai; do
+        python3 "$root/scripts/stress-adapters.py" --surface go --rounds 60 --backend "$backend" \
+            --evidence-path "$THINKTHEN_SOAK_FOLDER/go-$backend.jsonl" -- "$scratch/stress-consumer" -test.run='^TestSharedStress$' || soak_status=1
+    done
+    [ "$soak_status" = 0 ]
+fi

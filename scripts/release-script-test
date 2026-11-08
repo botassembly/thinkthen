@@ -725,6 +725,7 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
     def test_qualification_recipes(self):
         bounded([sys.executable, ROOT / "scripts/qualification-recipe-test"], check=True)
         bounded([sys.executable, ROOT / "scripts/release-windows-sdks-test"], check=True)
+        bounded([sys.executable, ROOT / "scripts/hosted-candidate-gates-test"], check=True)
         bounded([sys.executable, ROOT / "scripts/windows-cancel-test"], check=True)
         bounded([sys.executable, ROOT / "scripts/long-path-scratch-test"], check=True)
         bounded([sys.executable, ROOT / "scripts/qualification-continuation-test"], check=True)

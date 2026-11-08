@@ -62,6 +62,15 @@ node "$stage/consumer/release.mjs" construction/stub.json
 sed 's|"../index.js"|"thinkthen"|' sdk/typescript/tests/types.ts > "$stage/consumer/types.mts"
 sdk/typescript/node_modules/.bin/tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM,ESNext.Disposable "$stage/consumer/types.mts"
 THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" node --test sdk/typescript/tests/*.test.js
+if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
+    soak_status=0
+    for backend in systemone openai; do
+        THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" \
+            python3 scripts/stress-adapters.py --surface typescript --rounds 60 --backend "$backend" \
+            --evidence-path "$THINKTHEN_SOAK_FOLDER/typescript-$backend.jsonl" -- node sdk/typescript/tests/stress.test.js || soak_status=1
+    done
+    [ "$soak_status" = 0 ]
+fi
 if [ "${THINKTHEN_NODE_EXTRA_RUNTIMES:-0}" = 1 ]; then
     bun sdk/typescript/tests/runtime-smoke.mjs "$stage/consumer/node_modules/thinkthen/runtime.js"
     deno run --allow-env --allow-read --allow-ffi sdk/typescript/tests/runtime-smoke.mjs "$stage/consumer/node_modules/thinkthen/runtime.js"

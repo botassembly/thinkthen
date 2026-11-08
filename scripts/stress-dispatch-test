@@ -40,6 +40,7 @@ for fail in (False, True):
         ['installed-adapter', 'argument'], 'openai', 'healthy', 100000, 1, 60, False), calls
     assert options['resources'] is True and options['short_gate'] is False, options
     assert options['memory_window'] == (41, 60), options
+    assert options['memory_report_only'] is False, options
     assert str(options['evidence_path']) == '/unused/extended.jsonl', options
     report = json.loads(output.getvalue())
     assert report['full'] is True and len(report['cases']) == 1, report
@@ -47,6 +48,21 @@ for fail in (False, True):
     if fail:
         assert report['cases'][0]['cause'] == 'ValueError: inner reader failure', report
     assert json.loads(errors.getvalue()) == report['cases'][0], errors.getvalue()
+# Feature: the soak size settings shrink the same case and its judged window.
+calls = []
+
+
+def sized(command, table, wire, scenario, count, concurrency, rounds, cancel, **options):
+    calls.append((count, rounds, options['memory_window'], options['memory_report_only']))
+    options['result'].update(calls=rounds, rows=count * rounds, failed=0, backend=wire, scenario=scenario['name'])
+
+
+with patch.dict(os.environ, THINKTHEN_GATE_STRICT='0', THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100'), \
+        patch.dict(main.__globals__, run=sized), patch.object(sys, 'argv', base + ['--', 'installed-adapter']), \
+        patch.object(Path, 'exists', return_value=True), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+    assert main() == 0
+# A smoke soak reports memory; the release size above still judges it.
+assert calls == [(100, 8, (5, 8), True)], calls
 # Invalid selectors must fail before attempting any adapter.
 for flags in (
         ['--rounds', '59', '--backend', 'openai', '--evidence-path', 'unused'],

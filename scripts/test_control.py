@@ -1,7 +1,9 @@
 """Bounded reads for the local fixture's line-oriented control pipe, and its process."""
 import os
+from pathlib import Path
 import queue
 import subprocess
+import sys
 import threading
 
 
@@ -11,7 +13,7 @@ def read_line(stream, *, timeout=30):
     def receive():
         try:
             messages.put((stream.readline(), None))
-        except BaseException as error:
+        except BaseException as error:  # noqa: BLE001 - the reader thread hands every failure to its caller
             messages.put((None, error))
 
     worker = threading.Thread(target=receive, daemon=True)
@@ -109,7 +111,7 @@ def arrived_or_exited(fixture, process, arrivals=1, *, timeout=30):
     def arrival():
         try:
             events.put(('arrival', fixture.command('arrived' if arrivals == 1 else f'arrived {arrivals}', timeout)))
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - the arrival thread hands every failure to its caller
             events.put(('error', str(error)))
     threading.Thread(target=arrival, daemon=True).start()
     threading.Thread(target=lambda: events.put(('exit', process.wait(timeout=timeout + 90))), daemon=True).start()
@@ -119,3 +121,18 @@ def arrived_or_exited(fixture, process, arrivals=1, *, timeout=30):
         raise RuntimeError("adapter did not open a request before its deadline") from error
     if kind != 'arrival' or value != 'arrived':
         raise RuntimeError(f'adapter stopped before request arrival: {kind} {value}')
+
+
+def soak(surface, command, environment, **options):
+    """Run a surface's 60-round soak on both backends when the extended soak names a folder."""
+    folder = os.environ.get('THINKTHEN_SOAK_FOLDER')
+    if not folder:
+        return
+    runner = Path(__file__).with_name('stress-adapters.py')
+    failed = [backend for backend in ('systemone', 'openai') if subprocess.run(
+        [sys.executable, str(runner), '--surface', surface, '--rounds', '60', '--backend', backend,
+         '--evidence-path', str(Path(folder) / f'{surface}-{backend}.jsonl'), '--', *command],
+        env=dict(environment, **{name: os.environ[name] for name in ('THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS')
+                                 if name in os.environ}), **options).returncode]
+    if failed:
+        raise SystemExit(f'{surface} 60-round soak failed on: {", ".join(failed)}')

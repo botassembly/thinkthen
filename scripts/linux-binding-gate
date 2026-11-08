@@ -134,7 +134,12 @@ def swift():
         environment.update(THINKTHEN_LOOPBACK=loopback, THINKTHEN_SWIFT_PACKAGE=stage)
         environment['THINKTHEN_GATE_STRICT'] = os.environ.get('THINKTHEN_GATE_STRICT', '0')
         environment['THINKTHEN_STRESS_FULL'] = os.environ.get('THINKTHEN_STRESS_FULL', '')
-        swift_command(['scripts/swift-gate'], (Path(temporary), Path(loopback).parent), environment)
+        mounts = [Path(temporary), Path(loopback).parent]
+        if os.environ.get('THINKTHEN_SOAK_FOLDER'):
+            environment['THINKTHEN_SOAK_FOLDER'] = os.environ['THINKTHEN_SOAK_FOLDER']
+            environment.update({name: os.environ[name] for name in ('THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS') if name in os.environ})
+            mounts.append(Path(os.environ['THINKTHEN_SOAK_FOLDER']))
+        swift_command(['scripts/swift-gate'], tuple(mounts), environment)
 
 
 def abi_binding(arguments):

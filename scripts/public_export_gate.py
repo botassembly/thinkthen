@@ -12,15 +12,17 @@ import tomllib
 
 from release_go import home as go_home, version as go_version
 from native_producer import HOST_ASSETS, validate_receipt
-from stress_resources import growth
+from stress_resources import extended_size, full_size, soak_attributions, soak_verdict
 
 ROOT = Path(__file__).resolve().parent.parent
 NODE_VERSION = '22.22.3'
 ASSETS = set.union(*HOST_ASSETS.values())
-SOAKS = tuple(surface + '-' + backend for surface in ('ruby', 'csharp', 'sqlite', 'postgres')
-              for backend in ('systemone', 'openai'))
-SOAK_FIGURES = ('measurement_start_round', 'measurement_end_round', 'late_half_growth_bytes',
-                'verified_records_between_checkpoints', 'bytes_per_verified_record', 'floor_bytes_per_verified_record')
+# Three parts of the 60-round soaks, so each fits one Linux job slot and they can run
+# side by side.
+SOAK_SURFACES = {'soaks': ('ruby', 'csharp', 'sqlite', 'postgres'), 'soaks-2': ('python', 'typescript', 'c', 'cpp', 'go'),
+                 'soaks-3': ('java', 'r', 'swift', 'zig')}
+SOAKS = {mode: tuple(surface + '-' + backend for surface in surfaces for backend in ('systemone', 'openai'))
+         for mode, surfaces in SOAK_SURFACES.items()}
 
 
 def run(*args, **kwargs):
@@ -98,27 +100,27 @@ def verify(evidence, registration, assets):
     (evidence / 'prepared.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 
-def soak_figures(path, records):
+def soak_figures(path, records, attributions, rounds=60, window=(41, 60)):
     if not path.is_file():
         raise ValueError('soak evidence is missing: ' + path.name)
     rows = [json.loads(line) for line in path.read_text().splitlines()]
-    samples = [row for row in rows if row.get('completed_round') is not None]
-    if [row['completed_round'] for row in samples] != list(range(1, 61)):
-        raise ValueError('soak did not complete 60 rounds: ' + path.name)
-    report = growth(samples, [records] * 60, memory_window=(41, 60))
-    if not report['passed']:
-        raise ValueError('soak failed its growth criterion: ' + path.name)
-    memory = report['metrics']['memory_bytes']
-    return {key: memory[key] for key in SOAK_FIGURES}
+    return soak_verdict(rows, records, path.stem, attributions, rounds, window, report_only=not full_size())
 
 
-def soak_receipt(evidence, public, job):
-    """Refuse a run that skipped a soak, then record each soak's figures over rounds 41 to 60."""
+def soak_receipt(evidence, public, job, mode='soaks'):
+    """Refuse a run that skipped a soak of this half, then record each soak's figures over rounds 41 to 60."""
     table = json.loads((ROOT / 'conformance/stress.json').read_text())
     healthy = next(row for row in table['scenarios'] if row['name'] == 'healthy')
-    records = healthy.get('records', table['records']['full'])
-    soaks = {name: soak_figures(evidence / (name + '.jsonl'), records) for name in SOAKS}
-    record = dict(job=job, public=public, verdict='passed', soaks=soaks)
+    rounds, window, override = extended_size()
+    records = override or healthy.get('records', table['records']['full'])
+    attributions = soak_attributions(ROOT)
+    soaks = {name: soak_figures(evidence / (name + '.jsonl'), records, attributions, rounds, window) for name in SOAKS[mode]}
+    attributed = sorted(name for name, soak in soaks.items() if soak['verdict'] == 'attributed')
+    # A smaller soak proves only its wiring, and an attributed soak is not a pass, so the
+    # receipt reads passed only at release size with no soak attributed.
+    verdict = 'smoke' if not full_size() else 'attributed' if attributed else 'passed'
+    record = dict(job=job, public=public, verdict=verdict, attributed=attributed, soaks=soaks,
+                  **({} if full_size() else dict(soak_rounds=rounds, records_per_round=records)))
     (evidence / 'receipt.json').write_text(json.dumps(record, indent=2) + '\n')
 
 
@@ -164,12 +166,12 @@ def main():
         environment.update(TMPDIR=str(temporary_alias), THINKTHEN_PRIVATE_PATTERNS=str(scratch / 'patterns'))
         arguments = [str(inside_evidence), str(scratch / 'registration.json'), str(scratch / 'assets'),
                      str(cargo_home), swift, postgres, str(scratch / 'patterns')]
-        inside = {'day-one': '--inside-day-one', 'soaks': '--inside-soaks'}.get(mode, '--inside')
-        if mode == 'soaks':
+        inside = {'day-one': '--inside-day-one', 'soaks': '--inside-soaks', 'soaks-2': '--inside-soaks-2', 'soaks-3': '--inside-soaks-3'}.get(mode, '--inside')
+        if mode in SOAKS:
             environment['THINKTHEN_SOAK_FOLDER'] = str(inside_evidence)
         run('scripts/runtime-floor-build', 'scripts/public-export-gate', inside, *arguments, env=environment)
-        if mode == 'soaks':
-            soak_receipt(inside_evidence, output('git', 'rev-parse', 'HEAD'), os.environ['PM_JOB_ID'])
+        if mode in SOAKS:
+            soak_receipt(inside_evidence, output('git', 'rev-parse', 'HEAD'), os.environ['PM_JOB_ID'], mode)
         failed = False
     finally:
         for receipt in inside_evidence.iterdir():

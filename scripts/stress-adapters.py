@@ -33,7 +33,7 @@ import uuid
 
 from stress_monitor import Monitor
 from test_control import Capture, Fixture, arrived_or_exited
-from stress_resources import adopt_daemons, memory_bounds
+from stress_resources import MEMORY_BYTES_PER_RECORD_FLOOR, adopt_daemons, extended_size, full_size, memory_bounds, soak_attributions, soak_verdict
 
 
 def stop_adapter(process):
@@ -89,7 +89,25 @@ def input_reports(path, run, calls, records, batch, *, required=False):
     return reports, sum(report['idle_added_requests'] for report in reports)
 
 
-def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface, short_gate=False, memory_window=None, evidence_path=None):
+def arrival_deadline(count):
+    """Seconds a cancel case waits for its first request: 30, plus 1 per 1,000 records
+    an adapter may build first. R builds all 100,000 full-mode inputs before it sends."""
+    return 30 + count / 1000
+
+
+def memory_line(report):
+    """Name one soak's memory growth so a reader can see it without parsing JSON."""
+    memory = report['resources']['growth'].get('metrics', {}).get('memory_bytes')
+    figure = None if memory is None else memory.get('bytes_per_verified_record')
+    if figure is None:
+        return f"memory growth {report['surface']} {report['backend']} {report['case']}: unverifiable"
+    verdict = 'report only' if memory.get('report_only') else 'passed' if memory['passed'] else 'FAILED'
+    return (f"memory growth {report['surface']} {report['backend']} {report['case']}: "
+            f"{figure:.2f} bytes per record over {memory['verified_records_between_checkpoints']} records "
+            f"(floor {MEMORY_BYTES_PER_RECORD_FLOOR}; {verdict})")
+
+
+def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface, short_gate=False, memory_window=None, memory_report_only=False, evidence_path=None):
     if memory_window is not None and (not resources or short_gate or evidence_path is None):
         raise ValueError('explicit memory windows require full resource accounting and durable evidence')
     report = result if result is not None else {}
@@ -143,7 +161,7 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
             try:
                 if cancel:
                     arrivals = min(math.ceil(count / client["batch"]), limits["workers"])
-                    arrived_or_exited(fixture, process, arrivals)
+                    arrived_or_exited(fixture, process, arrivals, timeout=arrival_deadline(count))
                     report["held_arrivals"] = arrivals
                     before_cancel = int(fixture.command('count'))
                     cancelled_at = time.monotonic()
@@ -186,8 +204,10 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                     if packing:
                         report['input_packing'] = packing
                         report['idle_added_requests'] = idle_added
-                    if idle_added and scenario['name'] not in ('healthy', table['slow_replies']['name']):
-                        raise RuntimeError('idle request allowance requires a healthy workload')
+                    # A loaded machine can idle-flush in any scenario that sends requests. The exact
+                    # count below still holds every one, so only a reported split is allowed.
+                    if idle_added and scenario['name'] == 'refused':
+                        raise RuntimeError('idle request allowance requires a scenario that sends requests')
                     retries = sum(fault.get('repeat', 1) for fault in scenario.get('faults', [])
                                   if fault['kind'] == 'status' and fault.get('status') in (429, 503))
                     expected_requests = (0 if scenario['name'] == 'refused' else
@@ -212,9 +232,27 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                     report['resources'] = monitor.finish(rounds,
                         verified_records={'workload': [report['rows'] // rounds] * rounds},
                         expected_context={key: report[key] for key in ('surface', 'backend', 'case')},
-                        short_gate=short_gate, memory_window=memory_window)
+                        short_gate=short_gate, memory_window=memory_window, memory_report_only=memory_report_only)
                     monitor = None
-                    if not report['resources']['growth']['passed']:
+                    print(memory_line(report), file=sys.stderr, flush=True)
+                    name, verdict = surface + '-' + wire, report['resources']['growth']
+                    attributions = soak_attributions(Path(__file__).resolve().parent.parent) if memory_window else {}
+                    memory_only = 'verdict' not in verdict and all(
+                        check['passed'] for key, check in verdict.get('metrics', {'': {'passed': False}}).items() if key != 'memory_bytes')
+                    if not verdict['passed'] and memory_only and name in attributions and evidence_path is not None:
+                        # A reviewed allocator-retention soak passes only on its own in-use series.
+                        rows = [json.loads(line) for line in Path(evidence_path).read_text().splitlines()]
+                        attribution = soak_verdict(rows, report['rows'] // rounds, name, attributions, rounds, memory_window)
+                        if attribution['verdict'] != 'attributed':
+                            raise RuntimeError('soak evidence disagrees with its resource monitor')
+                        report['resources']['attribution'] = attribution
+                        in_use, heap, outside = (attribution[key]['bytes_per_verified_record']
+                                                 for key in ('allocator_in_use', 'runtime_heap', 'outside_allocator'))
+                        print(f'memory growth {surface} {wire}: attributed to {attribution["allocator"]} allocator retention, '
+                              f'{in_use:.2f} allocator bytes in use, {heap:.2f} runtime heap bytes and '
+                              f'{outside:.2f} RSS bytes outside allocator storage per record',
+                              file=sys.stderr, flush=True)
+                    elif not verdict['passed']:
                         raise RuntimeError('resource use is unverifiable' if
                             report['resources']['growth'].get('verdict') == 'unverifiable' else
                             'retained resources fail growth criterion')
@@ -247,7 +285,7 @@ def main():
     parser.add_argument('--surface', type=surface_label, required=True)
     parser.add_argument('--full', action='store_true', default=bool(os.environ.get('THINKTHEN_STRESS_FULL')))
     parser.add_argument('--sequential', action='store_true')
-    parser.add_argument('--rounds', type=int, choices=(60,), help='run only one extended healthy soak')
+    parser.add_argument('--rounds', type=int, choices=(60,), help='run only the extended healthy soak, sized by THINKTHEN_SOAK_ROUNDS and THINKTHEN_SOAK_RECORDS')
     parser.add_argument('--backend', choices=('systemone', 'openai'), help='backend wire for --rounds 60')
     parser.add_argument('--evidence-path', type=Path, help='new durable checkpoint JSONL file for --rounds 60')
     parser.add_argument('--sanitizer', choices=('address', 'thread'))
@@ -262,6 +300,12 @@ def main():
         args.full = True
     elif args.backend is not None or args.evidence_path is not None:
         parser.error('--backend and --evidence-path require --rounds 60')
+    window = soak_records = None
+    if args.rounds is not None:
+        try:
+            args.rounds, window, soak_records = extended_size()
+        except ValueError as error:
+            parser.error(str(error))
     if args.full and not Path('/proc/self/status').exists():
         parser.error('full resource accounting requires Linux /proc; run inside the Linux container')
     root = Path(__file__).resolve().parent.parent
@@ -269,7 +313,7 @@ def main():
     backends = json.loads((root / 'conformance/typed/manifest.json').read_text())['backends']
     if args.backend is not None:
         backends = [args.backend]
-    count = table['records']['full' if args.full else 'smoke']
+    count = soak_records or table['records']['full' if args.full else 'smoke']
     healthy = next(s for s in table['scenarios'] if s['name'] == 'healthy')
     slow_replies = table['slow_replies']
     slow_soak = args.full and not args.sanitizer and args.rounds is None
@@ -293,11 +337,17 @@ def main():
                     concurrency, rounds, cancel,
                     resources=not args.sanitizer and rounds == (args.rounds or table['records']['soak_rounds']) and Path('/proc/self/status').exists(),
                     short_gate=not args.full or scenario is slow_replies,
-                    memory_window=(41, 60) if args.rounds is not None else None,
+                    # 20 rounds cannot tell a 1-2 byte-per-record leak from
+                    # allocator noise, so this soak reports memory and the
+                    # 60-round extended soak judges it. Counts stay exact.
+                    memory_report_only=(args.full and args.rounds is None and scenario is not slow_replies)
+                        # Below release size the extended soak only proves its wiring.
+                        or (args.rounds is not None and not full_size()),
+                    memory_window=window,
                     evidence_path=args.evidence_path,
                     result=result, surface=args.surface)
                 totals = calls + result['calls'], rows + result['rows'], failed + result['failed']
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - every case failure is reported, and the suite stops after it
                 result['error'] = f'{type(error).__name__}: {error}'
                 if error.__cause__ is not None:
                     result['cause'] = f'{type(error.__cause__).__name__}: {error.__cause__}'
