@@ -258,6 +258,57 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
             text = (ROOT / '.github/workflows' / (name + '.yml')).read_text()
             self.assertEqual(set(re.findall(r"dotnet-version: '([^']+)'", text)), {version}, name)
 
+    def test_every_replay_dotnet_build_runs_without_build_servers(self):
+        off = replay['BUILD_SERVERS_OFF']
+        self.assertEqual(off, {'DOTNET_CLI_USE_MSBUILD_SERVER': '0', 'USESHAREDCOMPILATION': 'false',
+                               'MSBUILDDISABLENODEREUSE': '1'})
+        names = ' '.join('"$' + name + '"' for name in off)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            temporary, output = root / 'tmp', root / 'logs'
+            temporary.mkdir()
+            output.mkdir()
+            # A workflow that turns a server back on still runs with every server off.
+            steps = [{'id': 'seen', 'run': f'printf "%s %s %s" {names} > "$RUNNER_TEMP/seen"'}]
+            _, failures = replay['execute']({'jobs': {'windows-check': {'steps': steps,
+                'env': {'DOTNET_CLI_USE_MSBUILD_SERVER': '1'}}}}, 'abc', root, temporary, root / 'unused', {}, output, root)
+            self.assertEqual(failures, [])
+            self.assertEqual((temporary / 'seen').read_text(), ' '.join(off.values()))
+            # Consumer builds filter the inherited environment; the settings must survive.
+            import release_windows_sdks
+            scratch = root / 'sdks'
+            scratch.mkdir()
+            with patch.dict(os.environ, off), patch('release_windows_cache.prepare_cache'):
+                prepared = release_windows_sdks.environment(scratch)
+            runtime = release_windows_sdks.runtime_environment(scratch, prepared | {'SYSTEMROOT': str(root)})
+            for built in (prepared, runtime):
+                self.assertEqual({name: built.get(name) for name in off}, off)
+        # A dotnet build in a script that filters its environment anywhere else could
+        # drop the settings, so each such filter must be one checked above.
+        build = re.compile(r"""['"]dotnet['"],\s*['"](?:restore|build|run|publish|pack|test|msbuild|clean)['"]""")
+        narrowing = re.compile(r"""for \w+, \w+ in [\w.()\[\]'"]*\.items\(\)\s+if|\{\w+: os\.environ\[\w+\] for""")
+        checked = {('scripts/release_windows_sdks.py', 'environment'),
+                   ('scripts/release_windows_sdks.py', 'runtime_environment')}
+        unchecked, builders = [], 0
+        tracked = subprocess.check_output(['git', 'ls-files', 'scripts', 'sdlc/release/jobs'], cwd=ROOT, text=True)
+        for name in tracked.splitlines():
+            path = ROOT / name
+            if name.endswith('-test') or not path.is_file():
+                continue
+            text = path.read_text(errors='replace')
+            if not (name.endswith('.py') or text.startswith('#!/usr/bin/env python3')) or not build.search(text):
+                continue
+            builders += 1
+            lines = text.splitlines()
+            for number, line in enumerate(lines):
+                if narrowing.search(line):
+                    function = next((match.group(1) for match in (re.match(r'\s*def (\w+)', lines[index])
+                                     for index in range(number, -1, -1)) if match), '<module>')
+                    if (name, function) not in checked:
+                        unchecked.append(f'{name}:{number + 1} in {function}')
+        self.assertGreaterEqual(builders, 5, 'the dotnet build scan found too few scripts')
+        self.assertEqual(unchecked, [], 'dotnet builds may run with a narrowed environment that drops BUILD_SERVERS_OFF')
+
     def test_complete_candidate_survives_failed_windows_smoke(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

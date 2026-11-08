@@ -126,6 +126,13 @@ def preserve_artifact(step, workspace, destination):
     return result
 
 
+# A .NET build otherwise leaves the C# compiler server and MSBuild nodes running,
+# holding files in the replay's temporary folder when the end cleanup removes it.
+# Set once here, after the workflow's own env, so every step's dotnet sees them.
+BUILD_SERVERS_OFF = {'DOTNET_CLI_USE_MSBUILD_SERVER': '0', 'USESHAREDCOMPILATION': 'false',
+                     'MSBUILDDISABLENODEREUSE': '1'}
+
+
 def execute(source, revision, workspace, temporary, candidate, receipts, output, repository):
     job = source['jobs']['windows-check']
     environment = dict({key.upper(): value for key, value in os.environ.items()}, GITHUB_WORKSPACE=str(workspace), RUNNER_TEMP=str(temporary),
@@ -133,6 +140,7 @@ def execute(source, revision, workspace, temporary, candidate, receipts, output,
                        GITHUB_ACTIONS='true', CI='true', RUNNER_OS='Windows', GITHUB_SHA=revision)
     environment.update(source.get('env', {}))
     environment.update(job.get('env', {}))
+    environment.update(BUILD_SERVERS_OFF)
     environment['GITHUB_ENV'] = str(temporary / 'github-env')
     environment['GITHUB_OUTPUT'] = str(temporary / 'github-output')
     environment['GITHUB_PATH'] = str(temporary / 'github-path')

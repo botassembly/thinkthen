@@ -2,7 +2,9 @@ set -eu
 [ "${SITE_EXECUTE_ONLY:-}" != 1 ] || { echo "Use a prepared Zig executable" >&2; exit 2; }
 # Fetches the Zig package archive scripts/prepare-packages.sh staged, the way
 # `zig fetch --save=thinkthen URL` fetches the release archive, then builds and runs show.zig.
-packages=$(cd ../../../target/site-packages && pwd)
+# Zig resolves "$packages/.." by name, not through the target/site-packages
+# link, so use the package path the other Zig examples use and share their cache.
+packages=${SITE_PACKAGES:-$(cd ../../../target/site-packages && pwd)}
 zig=$THINKTHEN_BUILD_TOOLS/zig/0.17.0/zig
 export ZIG_GLOBAL_CACHE_DIR="$packages/../site-zig-cache"
 work=${2:-$packages/../site-zig-example}

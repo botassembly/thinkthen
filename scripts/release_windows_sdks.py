@@ -63,7 +63,9 @@ def environment(scratch):
             'PROGRAMFILES(X86)', 'PROGRAMDATA', 'INCLUDE', 'LIB', 'LIBPATH',
             'VCINSTALLDIR', 'VCTOOLSINSTALLDIR', 'WINDOWSSDKDIR', 'WINDOWSSDKVERSION',
             'UCRTVERSION', 'UCRTCONTENTROOT', 'SDKROOT', 'SWIFT_DEVELOPER_DIR', 'CC', 'CXX',
-            'DOTNET_ROOT', 'DOTNET_ROOT_X64', 'THINKTHEN_LOOPBACK'}
+            'DOTNET_ROOT', 'DOTNET_ROOT_X64', 'THINKTHEN_LOOPBACK',
+            # The replay turns .NET build servers off; keep that for every consumer build.
+            'DOTNET_CLI_USE_MSBUILD_SERVER', 'USESHAREDCOMPILATION', 'MSBUILDDISABLENODEREUSE'}
     env = {key: value for key, value in os.environ.items() if key.upper() in keep}
     for name, folder in [('HOME', 'home'), ('USERPROFILE', 'home'), ('APPDATA', 'roaming'),
                          ('LOCALAPPDATA', 'local'), ('TEMP', 'tmp'), ('TMP', 'tmp')]:

@@ -215,7 +215,8 @@ def python_cleanup_status():
                     with patch.object(subprocess, 'run', cleanup):
                         try:
                             exec(program, {'copy': copy, 'run': cleanup, 'subprocess': subprocess, 'sys': sys, 'container': 'fixture'})
-                        except Exception as error:
+                        # Any other exception escapes and fails the test with its own traceback.
+                        except (CopyFailure, subprocess.CalledProcessError) as error:
                             assert expected is not None and isinstance(error, expected), (copy_fails, cleanup_fails, error)
                         else:
                             assert expected is None, (copy_fails, cleanup_fails)
