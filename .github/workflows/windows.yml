@@ -3,6 +3,11 @@ name: Linux release validation (diagnostic branch)
 on:
   workflow_dispatch:
     inputs:
+      batch:
+        description: Select independent unfinished work without repeating earlier jobs
+        type: choice
+        default: initial
+        options: [initial, sdks, rust, remaining]
       smoke:
         description: Run eight rounds of 100 records to check wiring; never release evidence
         type: boolean
@@ -20,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [packing, c-systemone, c-openai]
+        task: ${{ fromJSON(inputs.batch == 'initial' && '["packing","c-systemone","c-openai"]' || inputs.batch == 'sdks' && '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai"]' || inputs.batch == 'rust' && '["rust-systemone","rust-openai"]' || '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai","rust-systemone","rust-openai"]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 160
     steps:
@@ -44,14 +49,14 @@ jobs:
             ~/.cargo/git
             ~/.local/share/thinkthen-build-tools
             target
-          key: release-validation-linux-x86_64-${{ matrix.task }}-${{ hashFiles('source/rust-toolchain.toml', 'source/Cargo.lock', 'source/Cargo.toml', 'source/crates/**', 'source/sdk/**', 'source/scripts/release-downloads.json', 'source/scripts/release-tools.json', 'source/scripts/release_rust.py') }}
+          key: release-validation-linux-x86_64-${{ matrix.task }}-${{ hashFiles('source/rust-toolchain.toml', 'source/Cargo.lock', 'source/Cargo.toml', 'source/crates/**', 'source/sdk/**', 'source/conformance/stress.json', 'source/scripts/release-downloads.json', 'source/scripts/release-tools.json', 'source/scripts/release_rust.py') }}
       - name: Prepare only the pinned Rust toolchain
         working-directory: source
         run: |
           python3 -c 'import sys; sys.path.insert(0, "scripts"); from release_rust import prepare; prepare()'
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Download the actual final Linux platform archive
-        if: matrix.task != 'packing'
+        if: matrix.task != 'packing' && !startsWith(matrix.task, 'rust-')
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           artifact-ids: '13712172091'
@@ -59,7 +64,7 @@ jobs:
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/platform
           merge-multiple: true
-      - name: Run focused source checks or one complete C backend soak
+      - name: Preflight and run the selected source check or complete backend soak
         env:
           VALIDATION_TASK: ${{ matrix.task }}
           VALIDATION_SMOKE: ${{ inputs.smoke }}

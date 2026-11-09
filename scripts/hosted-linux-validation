@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check frozen Linux source or one final installed C backend, without publishing."""
+"""Check frozen Linux source or one final installed SDK backend, without publishing."""
 import argparse
 import hashlib
 import json
@@ -13,7 +13,14 @@ import time
 
 ARCHIVE_SHA = '1d1ad293b3dff7e7e90e816ee82c53b4d42d83db729516e85cf3782022bd68c0'
 LIBRARY_SHA = '83b2090b21b68aa17cc41eb0b0d8fc96086ffb384a0657c7d45738c939ab059b'
-CONSUMER_SHA = '1e2bd934abea51cb2f8c8663f93013dcd7f9a34b67548bee379e63d3a2568852'
+RAW_LIBRARY_SHA = '9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435'
+CONSUMERS = {
+    'c': ('checks/c-consumer', '1e2bd934abea51cb2f8c8663f93013dcd7f9a34b67548bee379e63d3a2568852'),
+    'cpp': ('checks/cpp-consumer', '2b1a69c353b98e3e3d24fd81e580c828be6bbda223f5fb829300436ae1b225ad'),
+    'go': ('checks/go-consumer', '16fc612785ee3ba8d57d78a7a5f59e6e3aa7f8b7ea95466b1f5423b4a495693b'),
+    'swift': ('checks/swift/Consumer', '6d9c68c342df2c96a3d4cd85bc382fe10b987d29159a59ed34690a02469f5bc6'),
+    'zig': ('checks/zig/consumer', 'db7c4aa923fc57fa82b325e1bc3392508a66a7a9bff4e79b39d7e30771631d45'),
+}
 
 
 def digest(path):
@@ -34,29 +41,44 @@ def run(command, source, output, name, env=None):
         result.check_returncode()
 
 
-def stage(archive, output):
+def stage(archive, output, family):
     if digest(archive) != ARCHIVE_SHA:
         raise ValueError('final platform archive hash differs')
-    candidate = Path(tempfile.mkdtemp(prefix='linux-validation-installed-'))
+    candidate = Path(tempfile.mkdtemp(prefix='linux-validation-installed-')).resolve()
     prefix = '0.2.0/linux-x86_64/'
+    consumer_name, consumer_sha = CONSUMERS[family]
+    names = [consumer_name, 'build.json']
+    if family in ('c', 'cpp'):
+        names.append('c/thinkthen-c-0.2.0-linux-x86_64.tar.gz')
+    if family == 'zig':
+        names.append('zig/thinkthen-zig-0.2.0-linux-x86_64.tar.gz')
     with tarfile.open(archive) as package:
-        for name in ('checks/c-consumer', 'build.json', 'c/thinkthen-c-0.2.0-linux-x86_64.tar.gz'):
+        if family == 'swift':
+            names += [m.name.removeprefix(prefix) for m in package.getmembers() if m.isfile()
+                      and m.name.startswith((prefix + 'checks/swift/ThinkThen_ThinkThen.resources/',
+                                             prefix + 'prerequisites/swift-runtime/'))]
+        for name in names:
             member = package.getmember(prefix + name)
             destination = candidate / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(package.extractfile(member).read())
     (output / 'original-platform-build.json').write_bytes((candidate / 'build.json').read_bytes())
-    with tarfile.open(candidate / 'c/thinkthen-c-0.2.0-linux-x86_64.tar.gz') as package:
-        package.extractall(candidate / 'c', filter='data')
-    consumer = candidate / 'checks/c-consumer'
+    if family in ('c', 'cpp'):
+        with tarfile.open(candidate / 'c/thinkthen-c-0.2.0-linux-x86_64.tar.gz') as package:
+            package.extractall(candidate / 'c', filter='data')
+    if family == 'zig':
+        with tarfile.open(candidate / 'zig/thinkthen-zig-0.2.0-linux-x86_64.tar.gz') as package:
+            (candidate / 'checks/zig/libthinkthen_ffi.so').write_bytes(
+                package.extractfile('thinkthen/native/linux-x64/libthinkthen_ffi.so').read())
+    consumer = candidate / consumer_name
     consumer.chmod(0o755)
-    library = candidate / 'c/lib/libthinkthen.so.0.2'
-    if digest(consumer) != CONSUMER_SHA or digest(library) != LIBRARY_SHA:
-        raise ValueError('actual final C consumer or library hash differs')
-    return consumer, library
+    library_sha = LIBRARY_SHA if family in ('c', 'cpp') else RAW_LIBRARY_SHA
+    if digest(consumer) != consumer_sha:
+        raise ValueError('actual final SDK consumer hash differs')
+    return candidate, consumer, library_sha
 
 
-def mapped_runtime(parent, consumer, library, output):
+def mapped_runtime(parent, consumer, library_sha, output):
     """Retain the actual consumer's loaded library and runtime, before it exits."""
     deadline = time.monotonic() + 60
     while parent.poll() is None and time.monotonic() < deadline:
@@ -71,21 +93,68 @@ def mapped_runtime(parent, consumer, library, output):
                 continue
             paths = {Path(row.split(None, 5)[5]) for row in maps.splitlines()
                      if len(row.split(None, 5)) == 6 and row.split(None, 5)[5].startswith('/')}
-            if library not in paths:
+            native = [path for path in paths if ('libthinkthen' in path.name or path.name == 'library')
+                      and path.is_file() and digest(path) == library_sha]
+            if not native:
                 continue
-            (output / 'consumer.maps').write_text(maps)
             hashes = {str(path): digest(path) for path in sorted(paths) if path.is_file()}
-            if hashes[str(library)] != LIBRARY_SHA or digest(consumer) != CONSUMER_SHA:
-                raise ValueError('loaded final C identity differs')
+            (output / 'consumer.maps').write_text(maps)
             (output / 'loaded-sha256.json').write_text(json.dumps(dict(pid=int(child), files=hashes), indent=2) + '\n')
-            return
+            return native[0]
         time.sleep(0.02)
-    raise RuntimeError('actual final C consumer/library mapping was not captured')
+    raise RuntimeError('actual final SDK consumer/library mapping was not captured')
+
+
+def native_workload(source, output, family, backend, consumer, library_sha, env):
+    adapter = ([str(consumer), '-test.run=^TestSharedStress$'] if family == 'go' else
+               [sys.executable, 'sdk/c/tests/stress.py', family, str(consumer)])
+    command = [sys.executable, 'scripts/stress-adapters.py', '--surface', family, '--full', '--rounds', '60',
+               '--backend', backend, '--evidence-path', str(output / f'{family}-{backend}.jsonl'), '--', *adapter]
+    consumer_sha = digest(consumer)
+    with (output / 'soak.log').open('w') as log:
+        with subprocess.Popen(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
+            try:
+                library = mapped_runtime(process, consumer, library_sha, output)
+            except (RuntimeError, ValueError, OSError):
+                process.terminate()
+                raise
+            status = process.wait()
+    (output / 'soak-exit-code.txt').write_text(str(status) + '\n')
+    if digest(consumer) != consumer_sha or digest(library) != library_sha:
+        raise ValueError('final SDK bytes changed during the workload')
+    return status
+
+
+def rust_workload(source, output, backend, env):
+    # This is the existing source-library entry point, including its embedded fixture.
+    run([sys.executable, 'scripts/stress-sample.py', '--extended', '--groups', f'rust/{backend}',
+         '--output', str(output / f'rust-{backend}.jsonl'), '--',
+         'cargo', 'test', '--locked', '-p', 'thinkthen', '--test', 'stress', f'rust_extended_soak_{backend}',
+         '--', '--ignored', '--exact', '--test-threads=1'], source, output, 'soak', env=env)
+    return 0
+
+
+def rust_inputs(source, output, compiler_env, identity):
+    run(['cargo', 'test', '--locked', '-p', 'thinkthen', '--test', 'stress', '--no-run', '--message-format=json'],
+        source, output, 'rust-build', env=compiler_env)
+    artifacts = [json.loads(line) for line in (output / 'rust-build.log').read_text().splitlines()
+                 if line.startswith('{')]
+    binary, = [Path(row['executable']) for row in artifacts if row.get('reason') == 'compiler-artifact'
+               and row['target']['name'] == 'stress' and row.get('executable')]
+    fixtures = [*source.glob('crates/loopback/src/*.rs'),
+                *source.glob('crates/thinkthen/test-support/server/**/*.rs'), source / 'conformance/stress.json']
+    identity.update(claim='source-based Rust library evidence; not an installed-crate execution',
+                    test_binary=str(binary), test_binary_sha256=digest(binary),
+                    fixture_and_config_sha256={str(path.relative_to(source)): digest(path) for path in sorted(fixtures)},
+                    compiler_environment={key: compiler_env[key] for key in
+                        ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER',
+                         'CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER')})
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('task', choices=('packing', 'c-systemone', 'c-openai'))
+    parser.add_argument('task', choices=['packing', *[f'{family}-{backend}' for family in (*CONSUMERS, 'rust')
+                                                    for backend in ('systemone', 'openai')]])
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--archive', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
@@ -111,37 +180,49 @@ def main():
             source, output, 'cli-packing-reports', env=compiler_env)
         run([sys.executable, 'scripts/stress-runner-test'], source, output, 'stress-runner-test')
         return 0
-    consumer, library = stage(args.archive.resolve(), output)
+    family, backend = args.task.split('-')
+    env = dict(compiler_env)
+    for name in ('LD_LIBRARY_PATH', 'LD_PRELOAD', 'THINKTHEN_LIBRARY', 'THINKTHEN_NATIVE_LIBRARY',
+                 'THINKTHEN_FLOOR_BUILD', 'THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS'):
+        env.pop(name, None)
+    env.update(PYTHONDONTWRITEBYTECODE='1')
+    if family == 'rust':
+        rust_inputs(source, output, compiler_env, identity)
+        env['THINKTHEN_SOAK_ROUNDS'] = '60'
+        workload = lambda folder, settings: rust_workload(source, folder, backend, settings)
+    else:
+        candidate, consumer, library_sha = stage(args.archive.resolve(), output, family)
+        identity.update(archive_sha256=ARCHIVE_SHA, consumer_sha256=digest(consumer), library_sha256=library_sha)
+        if family == 'swift':
+            runtime = candidate / 'prerequisites/swift-runtime/linux'
+            env['LD_LIBRARY_PATH'] = str(runtime)
+            identity['packaged_runtime_sha256'] = {path.name: digest(path) for path in sorted(runtime.iterdir())}
+        if family == 'go':
+            cache = candidate / 'runtime-cache'
+            cache.mkdir(mode=0o700)
+            env['XDG_CACHE_HOME'] = str(cache)
+        run(['ldd', str(consumer)], source, output, 'consumer-loader', env=env)
+        workload = lambda folder, settings: native_workload(source, folder, family, backend,
+                                                           consumer, library_sha, settings)
     run(['cargo', 'build', '--locked', '-p', 'loopback', '--bin', 'loopback'],
         source, output, 'loopback-build', env=compiler_env)
     target = Path(os.environ.get('CARGO_TARGET_DIR', source / 'target')).resolve()
     loopback = target / 'debug/loopback'
-    identity.update(archive_sha256=ARCHIVE_SHA, consumer_sha256=digest(consumer), library_sha256=digest(library),
-                    loopback_sha256=digest(loopback), fixture_source_revision=revision(source))
+    identity.update(loopback_sha256=digest(loopback), external_loopback_used=family != 'rust',
+                    fixture_source_revision=revision(source))
     (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
-    run(['ldd', str(consumer)], source, output, 'consumer-loader')
-    env = dict(os.environ)
-    for name in ('LD_LIBRARY_PATH', 'LD_PRELOAD', 'THINKTHEN_LIBRARY', 'THINKTHEN_NATIVE_LIBRARY',
-                 'THINKTHEN_FLOOR_BUILD', 'THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS'):
-        env.pop(name, None)
-    env.update(THINKTHEN_LOOPBACK=str(loopback), PYTHONDONTWRITEBYTECODE='1')
+    env['THINKTHEN_LOOPBACK'] = str(loopback)
     if args.size == 'true':
         env.update(THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100')
-    backend = args.task.removeprefix('c-')
-    command = [sys.executable, 'scripts/stress-adapters.py', '--surface', 'c', '--full', '--rounds', '60',
-               '--backend', backend, '--evidence-path', str(output / f'c-{backend}.jsonl'), '--',
-               sys.executable, 'sdk/c/tests/stress.py', 'c', str(consumer)]
-    with (output / 'soak.log').open('w') as log:
-        with subprocess.Popen(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
-            try:
-                mapped_runtime(process, consumer, library, output)
-            except (RuntimeError, ValueError, OSError):
-                process.terminate()
-                raise
-            status = process.wait()
-    (output / 'soak-exit-code.txt').write_text(str(status) + '\n')
-    if digest(consumer) != CONSUMER_SHA or digest(library) != LIBRARY_SHA:
-        raise ValueError('final C bytes changed during the workload')
+    elif family != 'c':
+        preflight = output / 'preflight'
+        preflight.mkdir()
+        status = workload(preflight, dict(env, THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100'))
+        if status:
+            return status
+    status = workload(output, env)
+    if family == 'rust' and digest(Path(identity['test_binary'])) != identity['test_binary_sha256']:
+        raise ValueError('Rust test binary changed during the workload')
     print(f'{args.task} {identity["size"]} exit={status}; evidence={output}', flush=True)
     return status
 
