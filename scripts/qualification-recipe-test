@@ -51,7 +51,10 @@ class QualificationRecipes(unittest.TestCase):
                 archive = name + '_1.0.zip'
                 selected[archive] = ('fixture', 'fixture')
                 (tools / 'windows' / archive).write_bytes(b'pinned binary fixture')
-            destination = root / 'rehearsal'
+            # Exercise canonicalization even when the host's TMPDIR has no alias.
+            path_entry = root / 'path-entry'
+            path_entry.mkdir()
+            destination = path_entry / '..' / 'rehearsal'
             contrib = destination / 'repository/bin/windows/contrib/4.6'
             installs = []
             def invoke(*arguments, **options):
@@ -62,7 +65,7 @@ class QualificationRecipes(unittest.TestCase):
                         (Path(arguments[4]) / 'PACKAGES').write_text('binary index fixture')
                     elif 'install.packages(' in expression:
                         library, repository, *names = arguments[4:]
-                        self.assertEqual(repository, (destination / 'repository').as_uri())
+                        self.assertEqual(repository, (destination / 'repository').resolve().as_uri())
                         self.assertTrue((contrib / 'PACKAGES').is_file())
                         self.assertFalse((destination / 'repository/src/contrib').exists())
                         self.assertEqual(list(Path(library).iterdir()), [])
