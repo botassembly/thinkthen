@@ -19,9 +19,13 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def workflow(name):
-    return json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+    document = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
         'puts JSON.generate(YAML.safe_load_file(ARGV[0], aliases: true))',
         ROOT / '.github/workflows' / name], text=True))
+    # Psych's YAML 1.1 loader reads GitHub's unquoted on key as boolean true.
+    if 'true' in document:
+        document['on'] = document.pop('true')
+    return document
 
 
 

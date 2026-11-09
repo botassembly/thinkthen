@@ -9,6 +9,7 @@ import csv
 import faulthandler
 import io
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -480,6 +481,7 @@ def main():
                 except Exception as error:
                     failures.append(name)
                     print('Windows CLI: ' + name + ': FAIL: ' + str(error), flush=True)
+                    logging.exception('Windows CLI case %s failed', name)
                 finally:
                     timer.cancel()
         if failures:
