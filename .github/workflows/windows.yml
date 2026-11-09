@@ -91,9 +91,10 @@ jobs:
       - name: Run the selected native CLI diagnostic
         id: cli
         if: always() && inputs.surface == 'cli'
+        shell: bash
         env:
           CLI_CASE: ${{ inputs.cli_case }}
-        run: python scripts/windows-cli-proof "$env:RUNNER_TEMP/windows-native-proof" --case "$env:CLI_CASE"
+        run: python scripts/windows-cli-proof "$RUNNER_TEMP/windows-native-proof" --case "$CLI_CASE"
       - name: Preserve native CLI diagnostic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -281,6 +281,9 @@ class QualificationContinuation(unittest.TestCase):
             self.assertEqual(steps[name]['if'], "always() && inputs.surface == 'all'")
         self.assertIn("inputs.surface == 'cli' && 'cli' || 'native'", steps['native']['env']['NATIVE_PHASE'])
         self.assertEqual(steps['cli']['if'], "always() && inputs.surface == 'cli'")
+        final_shell = workflow('native-qualification.yml')['jobs']['windows-check']['defaults']['run']['shell']
+        self.assertEqual(steps['cli']['shell'], final_shell)
+        self.assertIn('"$RUNNER_TEMP/windows-native-proof" --case "$CLI_CASE"', steps['cli']['run'])
         upload, = [step for step in document['jobs']['windows']['steps'] if 'actions/upload-artifact@' in step.get('uses', '')]
         self.assertEqual(upload['if'], 'always()')
         self.assertIn('/cli/identity.json', upload['with']['path'])
