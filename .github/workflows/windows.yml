@@ -7,7 +7,7 @@ on:
         description: Select independent unfinished work without repeating earlier jobs
         type: choice
         default: initial
-        options: [initial, sdks, rust, remaining]
+        options: [initial, sdks, rust, remaining, ordinary-full]
       smoke:
         description: Run eight rounds of 100 records to check wiring; never release evidence
         type: boolean
@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: ${{ fromJSON(inputs.batch == 'initial' && '["packing","c-systemone","c-openai"]' || inputs.batch == 'sdks' && '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai"]' || inputs.batch == 'rust' && '["rust-systemone","rust-openai"]' || '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai","rust-systemone","rust-openai"]') }}
+        task: ${{ fromJSON(inputs.batch == 'initial' && '["packing","c-systemone","c-openai"]' || inputs.batch == 'sdks' && '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai"]' || inputs.batch == 'rust' && '["rust-systemone","rust-openai"]' || inputs.batch == 'ordinary-full' && '["c-full","cpp-full","go-full","swift-full","zig-full"]' || '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai","rust-systemone","rust-openai"]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 160
     steps:

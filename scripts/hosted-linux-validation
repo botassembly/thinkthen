@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check frozen Linux source or one final installed SDK backend, without publishing."""
 import argparse
+from contextlib import ExitStack
 import hashlib
 import json
 import os
@@ -108,18 +109,26 @@ def mapped_runtime(parent, consumer, library_sha, output):
 def native_workload(source, output, family, backend, consumer, library_sha, env):
     adapter = ([str(consumer), '-test.run=^TestSharedStress$'] if family == 'go' else
                [sys.executable, 'sdk/c/tests/stress.py', family, str(consumer)])
-    command = [sys.executable, 'scripts/stress-adapters.py', '--surface', family, '--full', '--rounds', '60',
-               '--backend', backend, '--evidence-path', str(output / f'{family}-{backend}.jsonl'), '--', *adapter]
+    command = [sys.executable, 'scripts/stress-adapters.py', '--surface', family, '--full']
+    ordinary = backend == 'full'
+    if not ordinary:
+        command += ['--rounds', '60', '--backend', backend,
+                    '--evidence-path', str(output / f'{family}-{backend}.jsonl')]
+    command += ['--', *adapter]
+    label = 'full-stress' if ordinary else 'soak'
     consumer_sha = digest(consumer)
-    with (output / 'soak.log').open('w') as log:
-        with subprocess.Popen(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
+    with ExitStack() as logs:
+        stdout = logs.enter_context((output / (label + '.log')).open('w'))
+        stderr = (logs.enter_context((output / (label + '-stderr.log')).open('w')) if ordinary
+                  else subprocess.STDOUT)
+        with subprocess.Popen(command, cwd=source, env=env, stdout=stdout, stderr=stderr) as process:
             try:
                 library = mapped_runtime(process, consumer, library_sha, output)
             except (RuntimeError, ValueError, OSError):
                 process.terminate()
                 raise
             status = process.wait()
-    (output / 'soak-exit-code.txt').write_text(str(status) + '\n')
+    (output / (label + '-exit-code.txt')).write_text(str(status) + '\n')
     if digest(consumer) != consumer_sha or digest(library) != library_sha:
         raise ValueError('final SDK bytes changed during the workload')
     return status
@@ -153,7 +162,8 @@ def rust_inputs(source, output, compiler_env, identity):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('task', choices=['packing', *[f'{family}-{backend}' for family in (*CONSUMERS, 'rust')
+    parser.add_argument('task', choices=['packing', *[f'{family}-full' for family in CONSUMERS],
+                                       *[f'{family}-{backend}' for family in (*CONSUMERS, 'rust')
                                                     for backend in ('systemone', 'openai')]])
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--archive', type=Path, required=True)
@@ -181,6 +191,13 @@ def main():
         run([sys.executable, 'scripts/stress-runner-test'], source, output, 'stress-runner-test')
         return 0
     family, backend = args.task.split('-')
+    if backend == 'full':
+        identity.update(claim=('ordinary full-stress wiring preflight only' if args.size == 'true' else
+                              'ordinary full stress slice on both backends; not a full source-gate result'),
+                        resource_scope=('8-round wiring check' if args.size == 'true' else
+                                        '20-round resource/count checks; no 60-round memory verdict'),
+                        mapping_scope='first captured consumer process; each full-stress case starts its own process',
+                        stress_config_sha256=digest(source / 'conformance/stress.json'))
     env = dict(compiler_env)
     for name in ('LD_LIBRARY_PATH', 'LD_PRELOAD', 'THINKTHEN_LIBRARY', 'THINKTHEN_NATIVE_LIBRARY',
                  'THINKTHEN_FLOOR_BUILD', 'THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS'):
@@ -214,10 +231,14 @@ def main():
     env['THINKTHEN_LOOPBACK'] = str(loopback)
     if args.size == 'true':
         env.update(THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100')
-    elif family != 'c':
+        if backend == 'full':
+            return native_workload(source, output, family, 'systemone', consumer, library_sha, env)
+    elif family != 'c' or backend == 'full':
         preflight = output / 'preflight'
         preflight.mkdir()
-        status = workload(preflight, dict(env, THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100'))
+        smoke_env = dict(env, THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100')
+        status = (native_workload(source, preflight, family, 'systemone', consumer, library_sha, smoke_env)
+                  if backend == 'full' else workload(preflight, smoke_env))
         if status:
             return status
     status = workload(output, env)
