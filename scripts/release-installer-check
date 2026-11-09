@@ -30,4 +30,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-real-installer-') as temporar
             packed.extractall(scratch, filter='data')
     binary = scratch / ('thinkthen.exe' if windows else 'thinkthen')
     helper = 'windows-cli-check' if args.cli else 'installer-test'
-    run(sys.executable, ROOT / 'scripts' / helper, '--binary', binary)
+    arguments = ['--binary', binary]
+    if windows and args.cli:
+        arguments.extend(('--diagnostics', ROOT / 'target/windows-cli-diagnostics'))
+    run(sys.executable, ROOT / 'scripts' / helper, *arguments)

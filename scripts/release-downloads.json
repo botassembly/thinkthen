@@ -85,6 +85,7 @@
   "https://static.rust-lang.org/dist/2026-04-16/llvm-tools-1.95.0-x86_64-unknown-linux-gnu.tar.xz": "sha256:037d534bb21bf1d833bb9ef6e2304878ecc5cc04176b6674a90a73fa7a4ac0b1",
   "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-aarch64-apple-darwin.tar.xz": "sha256:9b30089b0f767cb91b2190ffec55a9beeb2a21a1405d8da0f664d7e09d08e6d8",
   "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-aarch64-unknown-linux-gnu.tar.xz": "sha256:3a21b271b1ff973b94d69b25e7a39992f9fbcae1ab6d9475844a23e6ad3908ac",
+  "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-x86_64-pc-windows-gnu.tar.xz": "sha256:f57e045016a04130125fb43295d95f9ad2bebc296150eadb031dbf5167ad12bd",
   "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-x86_64-pc-windows-msvc.tar.xz": "sha256:7c659bdc88646e7e1befa370881bd311be87b26f006933a28b40dcab2f7cc832",
   "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-x86_64-unknown-linux-gnu.tar.xz": "sha256:047ea7098803d3500fa1072e9cee5392697e21525559e4458128a2bf874aa382",
   "https://static.rust-lang.org/dist/2026-04-16/rustc-1.95.0-aarch64-apple-darwin.tar.xz": "sha256:149e85a285b6eba58eb6c8bdf7deb1b93763890598e62cb635a712e3a8454f04",

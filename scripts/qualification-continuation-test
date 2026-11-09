@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import runpy
 from pathlib import Path
 import shutil
 import subprocess
@@ -18,9 +19,13 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def workflow(name):
-    return json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+    document = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
         'puts JSON.generate(YAML.safe_load_file(ARGV[0], aliases: true))',
         ROOT / '.github/workflows' / name], text=True))
+    # Psych's YAML 1.1 loader reads GitHub's unquoted on key as boolean true.
+    if 'true' in document:
+        document['on'] = document.pop('true')
+    return document
 
 
 
@@ -260,6 +265,53 @@ class QualificationContinuation(unittest.TestCase):
         draft = next(step for step in prepare['jobs']['draft']['steps'] if step.get('name') == 'Create a draft for review')
         self.assertEqual(draft['env']['DRY_RUN'], '${{ inputs.dry_run }}')
         self.assertIn('--dry-run', draft['run'])
+
+    def test_cli_mode_skips_unrelated_windows_surfaces_and_keeps_failure_evidence(self):
+        document = workflow('windows.yml')
+        inputs = document['on']['workflow_dispatch']['inputs']
+        self.assertIn('cli', inputs['surface']['options'])
+        self.assertEqual(inputs['cli_case']['default'], 'forced-exit')
+        self.assertEqual(inputs['cli_case']['options'], ['forced-exit', 'all'])
+        steps = {step.get('id'): step for step in document['jobs']['windows']['steps']}
+        for name in ('setup-go', 'setup-java', 'go', 'jvm', 'elevated'):
+            self.assertEqual(steps[name]['if'], "always() && (inputs.surface == 'all' || inputs.surface == 'cache')")
+        for name in ('setup-dotnet', 'csharp'):
+            self.assertEqual(steps[name]['if'], "always() && (inputs.surface == 'all' || inputs.surface == 'csharp')")
+        for name in ('setup-node', 'setup-ruby', 'spreadsheets', 'clippy'):
+            self.assertEqual(steps[name]['if'], "always() && inputs.surface == 'all'")
+        self.assertIn("inputs.surface == 'cli' && 'cli' || 'native'", steps['native']['env']['NATIVE_PHASE'])
+        self.assertEqual(steps['cli']['if'], "always() && inputs.surface == 'cli'")
+        final_shell = workflow('native-qualification.yml')['jobs']['windows-check']['defaults']['run']['shell']
+        self.assertEqual(steps['cli']['shell'], final_shell)
+        self.assertIn('"$RUNNER_TEMP/windows-native-proof" --case "$CLI_CASE"', steps['cli']['run'])
+        upload, = [step for step in document['jobs']['windows']['steps'] if 'actions/upload-artifact@' in step.get('uses', '')]
+        self.assertEqual(upload['if'], 'always()')
+        self.assertIn('/cli/identity.json', upload['with']['path'])
+        self.assertIn('/cli-proof/', upload['with']['path'])
+
+    def test_cli_proof_preserves_child_failure_logs_and_binary_identity(self):
+        action = runpy.run_path(str(ROOT / 'scripts/windows-cli-proof'))['proof']
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts = root / 'scripts'
+            scripts.mkdir()
+            (scripts / 'windows-cli-check').write_text('import json,sys; print(json.dumps(sys.argv[1:])); print("fixture failed",file=sys.stderr); sys.exit(7)')
+            folder = root / 'build'
+            (folder / 'cli').mkdir(parents=True)
+            (folder / 'cli/thinkthen.exe').write_bytes(b'fixture native binary')
+            (folder / 'cli/identity.json').write_text('{"source":"fixture"}')
+            action.__globals__['ROOT'] = root
+            for case in ('forced-exit', 'all'):
+                self.assertEqual(action(folder, case), 7)
+                evidence = folder / 'cli-proof'
+                result = json.loads((evidence / 'result.json').read_text())
+                self.assertEqual(result, dict(case=case, exit=7, binary_sha256=hashlib.sha256(b'fixture native binary').hexdigest()))
+                self.assertEqual((evidence / 'identity.json').read_text(), '{"source":"fixture"}')
+                arguments = json.loads((evidence / 'stdout.log').read_text())
+                self.assertEqual(arguments[:2], ['--binary', str(folder / 'cli/thinkthen.exe')])
+                self.assertEqual(arguments[2:4], ['--diagnostics', str(evidence)])
+                self.assertEqual(arguments[4:], ['--case', 'forced-exit'] if case == 'forced-exit' else [])
+                self.assertEqual((evidence / 'stderr.log').read_text().strip(), 'fixture failed')
 
     def test_windows_checker_selects_the_same_pinned_host_runtimes(self):
         reference = workflow('windows.yml')['jobs']['windows']['steps']

@@ -9,6 +9,7 @@ import csv
 import faulthandler
 import io
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -304,7 +305,7 @@ def stream(binary, folder, environment):
             child.wait()
 
 
-def forced_exit(binary, folder, environment):
+def forced_exit(binary, folder, environment, *, diagnostics=None):
     """A first interrupt asks and a second forces: exit 130 with every owned process gone."""
     held = 'import signal,threading;signal.signal(signal.SIGBREAK,signal.SIG_IGN);threading.Event().wait()'
     # The console interrupt reaches these steps too. Ignoring it leaves only the command to stop them.
@@ -331,7 +332,12 @@ def forced_exit(binary, folder, environment):
         assert notice == b'thinkthen: cancelling; press Ctrl-C again to exit', notice
         assert child.poll() is None, 'the first interrupt ended the command'
         child.send_signal(signal.CTRL_BREAK_EVENT)
-        assert child.wait(timeout=30) == 130, child.returncode
+        try:
+            assert child.wait(timeout=30) == 130, child.returncode
+        except subprocess.TimeoutExpired:
+            if diagnostics is not None:
+                forced_exit_snapshot(child.pid, pids, diagnostics)
+            raise
         for pid in pids:
             stopped(pid)
         assert {p.name for p in folder.iterdir()} == {'run.json', 'payload.jsonl'}
@@ -340,6 +346,22 @@ def forced_exit(binary, folder, environment):
             child.kill()
             child.wait()
         reap(pids)
+
+
+
+def forced_exit_snapshot(pid, owned, folder):
+    """Capture only this fixture's processes before failure cleanup kills them."""
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / 'forced-exit-pids.json').write_text(json.dumps(dict(cli=pid, owned=owned)) + '\n')
+    script = "Get-Process -Id " + ','.join(map(str, [pid, *owned])) + " -ErrorAction SilentlyContinue | ForEach-Object { @{pid=$_.Id; name=$_.ProcessName; threads=@($_.Threads | ForEach-Object { @{id=$_.Id; state=[string]$_.ThreadState; wait=$(if($_.ThreadState -eq 'Wait'){[string]$_.WaitReason}else{$null})} })} } | ConvertTo-Json -Depth 5"
+    try:
+        snapshot = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script],
+                                  capture_output=True, timeout=15)
+        (folder / 'forced-exit-processes.json').write_bytes(snapshot.stdout)
+        (folder / 'forced-exit-snapshot.stderr').write_bytes(snapshot.stderr)
+    except (OSError, subprocess.SubprocessError) as error:
+        (folder / 'forced-exit-snapshot.stderr').write_text(str(error) + '\n')
+    faulthandler.dump_traceback(file=sys.stderr)
 
 
 def interrupt(binary, folder, environment, *, creationflags=None,
@@ -417,6 +439,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'powershell-default', 'ctrl-break', 'ctrl-c', 'stream', 'forced-exit'))
+    parser.add_argument('--diagnostics', type=Path, help='retain forced-exit process state before failure cleanup')
     parser.add_argument('--powershell', default='powershell.exe', help='PowerShell executable for the Unicode case')
     parser.add_argument('--code-page', type=int, help='Select a console code page for an explicitly labelled probe')
     args = parser.parse_args()
@@ -448,7 +471,9 @@ def main():
                 environment.update(HOME=str(folder), USERPROFILE=str(folder), TMP=str(folder), TEMP=str(folder), PYTHONUTF8='1')
                 timer = watchdog(name)
                 try:
-                    if name == 'powershell-unicode':
+                    if name == 'forced-exit':
+                        forced_exit(binary, folder, environment, diagnostics=args.diagnostics)
+                    elif name == 'powershell-unicode':
                         powershell(binary, folder, environment, shell=args.powershell, console=console)
                     else:
                         case(binary, folder, environment)
@@ -456,6 +481,7 @@ def main():
                 except Exception as error:
                     failures.append(name)
                     print('Windows CLI: ' + name + ': FAIL: ' + str(error), flush=True)
+                    logging.exception('Windows CLI case %s failed', name)
                 finally:
                     timer.cancel()
         if failures:

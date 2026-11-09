@@ -14,6 +14,7 @@ import tempfile
 import textwrap
 from types import SimpleNamespace
 import unittest
+import zipfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +22,65 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 
 
 class QualificationRecipes(unittest.TestCase):
+    def test_installed_cli_forwards_the_existing_uploaded_diagnostic_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            package = root / 'candidate/0.2.0/windows-x86_64'
+            package.mkdir(parents=True)
+            with zipfile.ZipFile(package / 'thinkthen-0.2.0-windows-x86_64.zip', 'w') as archive:
+                archive.writestr('thinkthen.exe', b'fixture')
+            calls = []
+            workflow = SimpleNamespace(ROOT=root, version=lambda: '0.2.0', validate=lambda *args: None,
+                                       run=lambda *args: calls.append(args))
+            with patch.dict(sys.modules, release_workflow=workflow), patch.object(sys, 'argv',
+                    ['release-installer-check', 'windows-x86_64', str(root / 'candidate'), 'fixture-sha', '--cli']):
+                runpy.run_path(str(ROOT / 'scripts/release-installer-check'))
+            self.assertEqual(len(calls), 1)
+            command = calls[0]
+            self.assertEqual(command[:3], (sys.executable, root / 'scripts/windows-cli-check', '--binary'))
+            self.assertEqual(command[4:], ('--diagnostics', root / 'target/windows-cli-diagnostics'))
+
+    def test_cold_windows_gnu_preparation_resolves_pinned_archives_before_install(self):
+        import tomllib
+        from release_downloads import sources
+        prepare = runpy.run_path(str(ROOT / 'scripts/release_rust.py'))['prepare']
+        config = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']
+        channel, host, target = config['channel'], 'x86_64-pc-windows-msvc', 'x86_64-pc-windows-gnu'
+        prefix = 'https://static.rust-lang.org/dist/2026-04-16/'
+        packages = ('cargo', 'rustc', 'rust-std', 'clippy-preview', 'rustfmt-preview', 'llvm-tools-preview')
+        manifest = ''.join('[pkg.' + name + '.target.' + selected + ']\nxz_url="' + prefix
+                           + name.removesuffix('-preview') + '-' + channel + '-' + selected + '.tar.xz"\n'
+                           for name in packages for selected in ([host, target] if name == 'rust-std' else [host]))
+        requested, calls = {}, []
+        with tempfile.TemporaryDirectory(prefix='cold-windows-gnu-') as directory:
+            root = Path(directory)
+            shutil.copy2(ROOT / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
+            def fetch(url, path):
+                # Keep the real pin-selection boundary; replace only archive transport.
+                requested[url] = sources(url)[0]
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(manifest.encode() if url.endswith('.toml') else b'fixture archive transport')
+                return path
+            def execute(*arguments, **options):
+                calls.append(arguments)
+                if arguments[1:3] == ('toolchain', 'list'):
+                    return subprocess.CompletedProcess(arguments, 0, stdout='')
+                if arguments[1:3] == ('toolchain', 'install'):
+                    self.assertEqual(arguments[-2:], ('--target', target))
+                    mirror = root / 'tools/rust-dist/dist/2026-04-16'
+                    self.assertEqual(len(list(mirror.glob('*.xz'))), 7)
+                    return subprocess.CompletedProcess(arguments, 0)
+                self.assertEqual(arguments[1:3], ('component', 'list'))
+                components = ['cargo-' + host, 'rustc-' + host, 'rust-std-' + host]
+                components += [name.removesuffix('-preview') + '-' + host for name in config['components']]
+                return subprocess.CompletedProcess(arguments, 0, stdout='\n'.join([*components, 'rust-std-' + target]))
+            with patch.dict(prepare.__globals__, ROOT=root, TOOLS=root / 'tools', fetch=fetch, run=execute,
+                            platform=SimpleNamespace(system=lambda: 'Windows')):
+                prepare(target)
+            archive = prefix + 'rust-std-' + channel + '-' + target + '.tar.xz'
+            self.assertEqual(requested[archive], 'sha256:f57e045016a04130125fb43295d95f9ad2bebc296150eadb031dbf5167ad12bd')
+            self.assertEqual(sum(args[1:3] == ('toolchain', 'install') for args in calls), 1)
+
     def test_rust_preparation_repairs_only_the_unhealthy_pin_and_keeps_query_errors(self):
         import json
         import tomllib
