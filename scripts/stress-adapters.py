@@ -60,11 +60,25 @@ def identifier_bounds(table, count, concurrency, rounds):
     return basis
 
 
+def packing_evidence(path):
+    """Retain only a bounded report excerpt before its temporary file disappears."""
+    try:
+        with path.open('rb') as stream:
+            size = os.fstat(stream.fileno()).st_size
+            excerpt = stream.read(256)
+        return f'input packing report size={size}, truncated={size > len(excerpt)}, excerpt={excerpt!r}'
+    except OSError as error:
+        return f'input packing report evidence unavailable: {type(error).__name__}'
+
+
 def input_reports(path, run, calls, records, batch, *, required=False):
     """Only complete engine reports from this invocation explain idle splits."""
-    if path.stat().st_size > calls * 1024:
-        raise RuntimeError('input packing reports exceeded their call bound')
-    reports = [json.loads(line) for line in path.read_text().splitlines()]
+    try:
+        if path.stat().st_size > calls * 1024:
+            raise RuntimeError('input packing reports exceeded their call bound')
+        reports = [json.loads(line) for line in path.read_text().splitlines()]
+    except (json.JSONDecodeError, UnicodeError, OSError, RuntimeError) as error:
+        raise RuntimeError(f'{error}; {packing_evidence(path)}') from error
     if not reports:
         if required:
             raise RuntimeError('engine omitted required input packing reports')

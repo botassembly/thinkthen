@@ -1,10 +1,8 @@
 //! Optional private packing diagnostics; no records or credentials are retained.
 use std::io::Write;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, PoisonError};
 
 static NEXT_CALL: AtomicU64 = AtomicU64::new(0);
-static WRITER: Mutex<()> = Mutex::new(());
 
 pub(super) struct InputReport {
     destination: Option<(std::ffi::OsString, String)>,
@@ -61,9 +59,14 @@ impl InputReport {
             "packed_requests": self.packed_requests, "idle_flushes": self.idle_flushes,
             "idle_added_requests": idle_added_requests,
         });
-        let _guard = WRITER.lock().unwrap_or_else(PoisonError::into_inner);
         let written = (|| -> std::io::Result<()> {
-            let mut file = std::fs::OpenOptions::new().append(true).open(path)?;
+            // PostgreSQL sessions and other callers can write from different
+            // processes. Windows locking also requires read access on append handles.
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .append(true)
+                .open(path)?;
+            file.lock()?;
             serde_json::to_writer(&mut file, &report)?;
             file.write_all(b"\n")
         })();

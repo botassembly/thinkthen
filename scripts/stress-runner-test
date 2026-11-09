@@ -80,13 +80,17 @@ if os.environ.get('REPORTED_IDLE_SPLIT') and not case['cancel'] and (case['scena
     if os.environ.get('MISSING_INPUT_REPORT') and len(summaries)>1: summaries.pop()
     if os.environ.get('DUPLICATE_INPUT_REPORT') and len(summaries)>1: summaries[-1]=summaries[0]
     Path(os.environ['THINKTHEN_INPUT_REPORT']).write_text(''.join(json.dumps(item)+'\\n' for item in summaries))
+if os.environ.get('MALFORMED_INPUT_REPORT'):
+    content=b'{"private-packing-fixture":broken}\\n'
+    if os.environ.get('OVERSIZED_INPUT_REPORT'): content += b'x' * 1048576 + b'UNRETAINED-END'
+    Path(os.environ['THINKTHEN_INPUT_REPORT']).write_bytes(content)
 if case['cancel']:
     for _ in range(requests):
         with socket.create_connection(('127.0.0.1',int(case['client']['url'].split(':')[2].split('/')[0]))): pass
     assert sys.stdin.readline().strip()=='cancel'
 calls=case['concurrency']*case['rounds']
 rows=0 if case['cancel'] else calls*case['records']
-print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeout_ms'],calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],read_ahead_records=(case.get('read_ahead_limit') or 0)+(1 if os.environ.get('BAD_READ_AHEAD') else 0),identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
+print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeout_ms'],calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],input_report_temp_path=os.environ['THINKTHEN_INPUT_REPORT'],read_ahead_records=(case.get('read_ahead_limit') or 0)+(1 if os.environ.get('BAD_READ_AHEAD') else 0),identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
 ''')
     # The smoke cases stay smoke inside a full run; the full cases pass --full themselves.
     env = {name: value for name, value in os.environ.items() if name != 'THINKTHEN_STRESS_FULL'}
@@ -98,6 +102,22 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
             bounded = runner['run']([sys.executable, str(adapter)], table, 'systemone',
                 table['scenarios'][0], 1, cancel=True, surface='python')
         assert bounded['read_ahead_records'] == bounded['read_ahead_limit'], bounded
+        for oversized in (False, True):
+            result = {}
+            with patch.dict(os.environ, dict(env, MALFORMED_INPUT_REPORT='1',
+                                            OVERSIZED_INPUT_REPORT='1' if oversized else '')):
+                try:
+                    runner['run']([sys.executable, str(adapter)], table, 'systemone',
+                        table['scenarios'][0], 1, surface='python', result=result)
+                except RuntimeError as error:
+                    message = str(error)
+                    assert 'private-packing-fixture' in message and 'input packing report size=' in message, message
+                    assert f'truncated={oversized}' in message and len(message) < 1500, message
+                    assert 'UNRETAINED-END' not in message, message
+                    assert ('exceeded their call bound' if oversized else 'Expecting value') in message, message
+                else:
+                    raise AssertionError('malformed report accepted')
+            assert not Path(result['input_report_temp_path']).exists(), result
         with patch.dict(os.environ, dict(env, BAD_READ_AHEAD='1')):
             try:
                 runner['run']([sys.executable, str(adapter)], table, 'systemone',
