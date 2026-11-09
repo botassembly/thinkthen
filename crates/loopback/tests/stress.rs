@@ -222,3 +222,53 @@ fn held_process_waits_for_the_whole_paid_frontier() {
     control.flush().unwrap();
     assert!(child.wait().unwrap().success());
 }
+#[test]
+fn primed_fixture_holds_first_replies_until_all_are_in_flight() {
+    let fixture = StressFixture::primed("healthy", 3).unwrap();
+    let mut peers: Vec<_> = (0..3).map(|_| connect(&fixture)).collect();
+    for peer in &mut peers[..2] {
+        peer.write_all(REQUEST).unwrap();
+    }
+    peers[0]
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .unwrap();
+    let early = peers[0].read(&mut [0]);
+    assert!(
+        early.is_err_and(|error| matches!(
+            error.kind(),
+            std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+        )),
+        "a primed reply was sent before every priming request arrived"
+    );
+    assert_eq!(fixture.stats()["prime"]["reached"], serde_json::Value::Null);
+    peers[0]
+        .set_read_timeout(Some(Duration::from_secs(15)))
+        .unwrap();
+    peers[2].write_all(REQUEST).unwrap();
+    let mut readers: Vec<_> = peers
+        .iter()
+        .map(|peer| BufReader::new(peer.try_clone().unwrap()))
+        .collect();
+    for reader in &mut readers {
+        assert!(read_reply(reader).starts_with("HTTP/1.1 200"));
+    }
+    assert_eq!(
+        fixture.stats()["prime"],
+        serde_json::json!({"requests": 3, "joined": 3, "reached": true})
+    );
+    // Later requests use the kept connections without another priming barrier.
+    peers[0].write_all(REQUEST).unwrap();
+    assert!(read_reply(&mut readers[0]).starts_with("HTTP/1.1 200"));
+    assert_eq!(fixture.stats()["connections"], 3);
+}
+#[test]
+fn primed_fixture_reports_a_shortfall_instead_of_hanging() {
+    let fixture = StressFixture::primed("healthy", 2).unwrap();
+    let mut peer = connect(&fixture);
+    peer.write_all(REQUEST).unwrap();
+    assert!(read_reply(&mut BufReader::new(peer)).starts_with("HTTP/1.1 200"));
+    assert_eq!(
+        fixture.stats()["prime"],
+        serde_json::json!({"requests": 2, "joined": 1, "reached": false})
+    );
+}

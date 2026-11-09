@@ -18,7 +18,7 @@ fn healthy(table: &Value) -> &Value {
         .unwrap()
 }
 fn server(fixture: &StressFixture) -> &crate::loopback::Loopback {
-    let StressFixture::Server(server) = fixture else {
+    let StressFixture::Server(server, _) = fixture else {
         panic!("healthy server required")
     };
     server

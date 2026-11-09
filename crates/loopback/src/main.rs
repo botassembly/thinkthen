@@ -25,16 +25,22 @@ impl Fixture {
     fn open() -> Result<Self, Box<dyn std::error::Error>> {
         let mut args = std::env::args().skip(1);
         let first = args.next().ok_or(
-            "usage: loopback CASE.json | --stress NAME | --held headers|body|refusal-body | --unavailable",
+            "usage: loopback CASE.json | --stress NAME [--prime REQUESTS] | --held headers|body|refusal-body | --unavailable",
         )?;
         match first.as_str() {
-            "--stress" => Ok(Self::Stress(StressFixture::open(
-                &args.next().ok_or("expected stress scenario name")?,
-            )?)),
+            "--stress" => {
+                let name = args.next().ok_or("expected stress scenario name")?;
+                let prime = match (args.next().as_deref(), args.next()) {
+                    (None, None) => 0,
+                    (Some("--prime"), Some(count)) => count.parse()?,
+                    _ => return Err("expected --stress NAME [--prime REQUESTS]".into()),
+                };
+                Ok(Self::Stress(StressFixture::primed(&name, prime)?))
+            }
             "--first-response" => {
                 let marker = args.next().ok_or("expected first response marker")?;
                 let server = StressFixture::open("healthy")?;
-                let StressFixture::Server(answering) = &server else {
+                let StressFixture::Server(answering, _) = &server else {
                     return Err("expected an answering fixture".into());
                 };
                 let (arrived, closed) =
@@ -85,6 +91,12 @@ impl Fixture {
             (Self::Stress(server) | Self::First { server, .. }, "stats") => {
                 Ok(server.stats().to_string())
             }
+            (Self::Stress(server), "primed") => server
+                .stats()
+                .get("prime")
+                .and_then(|prime| prime.get("reached"))
+                .map(ToString::to_string)
+                .ok_or_else(|| "stress statistics omitted pool priming status".into()),
             (Self::Stress(server) | Self::First { server, .. }, "count") => server
                 .stats()
                 .get("requests")

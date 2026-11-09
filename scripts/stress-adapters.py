@@ -118,14 +118,21 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
         start, end = memory_bounds(rounds, memory_window, short_gate=short_gate)
         report['memory_window'] = dict(start_round=start, end_round=end)
     read_ahead_limit = None
-    limits = json.loads(subprocess.check_output([os.environ['THINKTHEN_LOOPBACK'], '--limits'], text=True, timeout=30)) if cancel else None
+    limits = json.loads(subprocess.check_output([os.environ['THINKTHEN_LOOPBACK'], '--limits'], text=True, timeout=30)) if cancel or resources else None
     if cancel and surface in {'python', 'typescript', 'ruby'}:
         read_ahead_limit = table['client']['batch'] * limits['read_ahead_window'] + 1
         count = max(count, read_ahead_limit + table['client']['batch'])
         report['records'] = count
         report['read_ahead_limit'] = read_ahead_limit
     basis = identifier_bounds(table, count, concurrency, rounds)
-    fixture = Fixture(['--held', 'body'] if cancel else ['--stress', scenario['name']])
+    # A measured soak holds its first replies until every request a round can
+    # have in flight is open, so the engine's connection pool fills in round 1
+    # and a later round cannot show its first use of a pooled connection as growth.
+    prime = min(math.ceil(count / table['client']['batch']), limits['workers']) if resources and not cancel else 0
+    if prime:
+        report['primed_requests'] = prime
+    fixture = Fixture(['--held', 'body'] if cancel else
+                      ['--stress', scenario['name'], *(['--prime', str(prime)] if prime else [])])
     process = None
     monitor = None
     evidence = None
@@ -199,6 +206,8 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                         raise RuntimeError(f'requests continued after cancel: {before_cancel} -> {requests}')
                 else:
                     requests = int(fixture.command('count'))
+                    if prime and fixture.command('primed') != 'true':
+                        raise RuntimeError(f'connection pool priming did not hold {prime} requests in flight together')
                     packing, idle_added = input_reports(packing_path, packing_run,
                         expected_calls, count, client['batch'], required=surface in {'java', 'kotlin', 'postgres', 'duckdb', 'sqlite'})
                     if packing:

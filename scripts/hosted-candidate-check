@@ -81,9 +81,15 @@ if [ "${1:-}" = --loader-checks-inside ] || [ "${1:-}" = --day-one-sdk-checks-in
     if [ "$1" = --extended-soaks-inside ]; then gates="ruby-gate csharp-gate sqlite-gate postgres-gate"; fi
     if [ "$1" = --extended-soaks-2-inside ]; then gates="python-gate typescript-gate c-sdk-gate cpp-sdk-gate go-gate"; fi
     if [ "$1" = --extended-soaks-3-inside ]; then gates="jvm-gate r-gate swift-gate zig-sdk-gate"; fi
+    status=0
     # shellcheck disable=SC2086 # gate names are fixed words
-    run_gates scripts/linux-binding-gate $gates
-    exit
+    run_gates scripts/linux-binding-gate $gates || status=1
+    # 0677: the Rust library's 60-round soak, on both backends, joins the third part, which
+    # already has the smoke size that proves its wiring.
+    if [ "$1" = --extended-soaks-3-inside ]; then
+        scripts/stress --extended "$THINKTHEN_SOAK_FOLDER" || { echo 'hosted-candidate-check: FAILED soak: rust' >&2; status=1; }
+    fi
+    exit "$status"
 fi
 if [ "${1:-}" = --installer-checks ]; then
     shift

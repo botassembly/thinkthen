@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Sample an owned Linux workload, including daemonized servers and Docker workers.
 
-Usage: stress-sample.py [--output JSONL] [--rounds N] [--backend-port PORT] -- COMMAND
+Usage: stress-sample.py [--output JSONL] [--rounds N | --extended] [--memory-report-only] [--backend-port PORT] -- COMMAND
 --rounds requires N synchronous completed-round calls to scripts/stress-checkpoint.
-A failing growth verdict fails the command. Docker run receives an owned cidfile;
+--memory-report-only reports memory without judging it, as every 20-round soak does
+(2026-11-08 amendment); counts still fail. --extended takes the rounds and judged window
+of the extended soak from THINKTHEN_SOAK_ROUNDS and THINKTHEN_SOAK_RECORDS, and only
+reports memory below release size. A failing growth verdict fails the command. Docker run receives an owned cidfile;
 other container launch forms must run the sampler inside the container.
 """
 import argparse
@@ -19,7 +22,7 @@ import tempfile
 
 from build_targets import container_labels
 from stress_monitor import Monitor
-from stress_resources import MIN_ROUNDS, adopt_daemons
+from stress_resources import MIN_ROUNDS, adopt_daemons, extended_size, full_size
 
 
 def main():
@@ -28,6 +31,8 @@ def main():
     parser.add_argument('--rounds', type=int)
     parser.add_argument('--backend-port', type=int)
     parser.add_argument('--groups', help='comma-separated required surface/backend checkpoint groups')
+    parser.add_argument('--memory-report-only', action='store_true', help='report memory without judging it; counts still fail')
+    parser.add_argument('--extended', action='store_true', help='judge memory over the extended soak window')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     options = parser.parse_args()
     command = options.command[1:] if options.command[:1] == ['--'] else options.command
@@ -35,6 +40,12 @@ def main():
         parser.error('a command and Linux /proc are required')
     if options.rounds is not None and options.rounds < MIN_ROUNDS:
         parser.error(f'--rounds must be at least {MIN_ROUNDS}')
+    memory_window, memory_report_only = None, options.memory_report_only
+    if options.extended:
+        if options.rounds is not None or options.memory_report_only:
+            parser.error('--extended sets its own rounds and memory verdict')
+        options.rounds, memory_window, _ = extended_size()
+        memory_report_only = not full_size()
     adopt_daemons()
     with tempfile.TemporaryDirectory(prefix='stress-container-') as temporary:
         cidfile = Path(temporary) / 'id'
@@ -70,7 +81,8 @@ def main():
             THINKTHEN_STRESS_CHECKPOINT=monitor.path,
             THINKTHEN_STRESS_CHECKPOINT_COMMAND='exec ' + shlex.join([sys.executable, str(Path(__file__).with_name('stress-checkpoint'))])), start_new_session=True)
             status = process.wait()
-            report = monitor.finish(options.rounds, options.groups.split(',') if options.groups else None)
+            report = monitor.finish(options.rounds, options.groups.split(',') if options.groups else None,
+                                    memory_window=memory_window, memory_report_only=memory_report_only)
             if container and not accounted_container:
                 raise RuntimeError('container ended without an owned worker sample')
         except BaseException:

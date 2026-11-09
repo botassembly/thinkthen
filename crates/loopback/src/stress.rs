@@ -3,7 +3,12 @@ use super::{Loopback, Reply, UnavailableBackend, lock};
 use serde_json::{Value, json};
 use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::Duration;
+
+/// The longest a priming request waits for the others. A shortfall is
+/// reported in the statistics, never hidden, so the harness can fail it.
+const PRIME_WAIT: Duration = Duration::from_secs(5);
 
 /// The shared workload sizes, client settings, reply rules and fault scenarios.
 /// # Errors
@@ -15,7 +20,7 @@ pub fn stress_table() -> serde_json::Result<Value> {
 #[derive(Debug)]
 pub enum StressFixture {
     /// Answer requests using the shared fault sequence and reply rules.
-    Server(Loopback),
+    Server(Loopback, Arc<Prime>),
     /// Refuse connections without a port reservation race.
     Refused(UnavailableBackend),
 }
@@ -26,6 +31,14 @@ impl StressFixture {
     /// # Errors
     /// Returns invalid scenario or socket setup errors.
     pub fn open(name: &str) -> io::Result<Self> {
+        Self::primed(name, 0)
+    }
+    /// Open a scenario whose first `requests` replies wait until that many
+    /// requests are in flight, so the client opens all its connections in the
+    /// first round. Every later request is answered as `open` answers it.
+    /// # Errors
+    /// Returns invalid scenario or socket setup errors.
+    pub fn primed(name: &str, requests: usize) -> io::Result<Self> {
         let table = stress_table().map_err(io::Error::other)?;
         let scenario = table
             .get("scenarios")
@@ -58,8 +71,16 @@ impl StressFixture {
             .cloned()
             .unwrap_or_default();
         let attempt = AtomicUsize::new(0);
+        let prime = Arc::new(Prime {
+            requests,
+            ..Prime::default()
+        });
+        let gate = Arc::clone(&prime);
         let server = Loopback::start(move |request| {
             let mut index = attempt.fetch_add(1, Ordering::Relaxed);
+            if index < gate.requests {
+                gate.join();
+            }
             for fault in &faults {
                 let repeat = fault.get("repeat").and_then(Value::as_u64).unwrap_or(1) as usize;
                 if index >= repeat {
@@ -74,13 +95,13 @@ impl StressFixture {
         if !ends_reply {
             server.keep_alive();
         }
-        Ok(Self::Server(server))
+        Ok(Self::Server(server, prime))
     }
     /// The backend base URL, valid until the fixture is dropped.
     #[must_use]
     pub fn base(&self) -> &str {
         match self {
-            Self::Server(server) => server.base(),
+            Self::Server(server, _) => server.base(),
             Self::Refused(server) => server.base(),
         }
     }
@@ -88,7 +109,7 @@ impl StressFixture {
     #[must_use]
     pub fn stats(&self) -> Value {
         match self {
-            Self::Server(server) => {
+            Self::Server(server, prime) => {
                 let state = lock(&server.state);
                 let sizes: Vec<_> = state
                     .seen
@@ -104,12 +125,44 @@ impl StressFixture {
                     .collect();
                 json!({"requests":state.requests,"connections":state.connections,
                     "active_connections":server.owner.active(),"recorded_requests":state.seen.len(),
-                    "request_sizes": sizes})
+                    "request_sizes": sizes,"prime":prime.stats()})
             }
             Self::Refused(_) => {
                 json!({"requests":0,"connections":0,"active_connections":0,"recorded_requests":0})
             }
         }
+    }
+}
+/// Holds the first requests until enough are in flight together.
+#[derive(Debug, Default)]
+pub struct Prime {
+    requests: usize,
+    /// How many requests joined, and whether all of them were in flight at once.
+    state: Mutex<(usize, Option<bool>)>,
+    ready: Condvar,
+}
+impl Prime {
+    fn join(&self) {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state.0 += 1;
+        if state.0 == self.requests {
+            state.1.get_or_insert(true);
+        } else {
+            let (mut waited, timeout) = self
+                .ready
+                .wait_timeout_while(state, PRIME_WAIT, |state| state.1.is_none())
+                .unwrap_or_else(PoisonError::into_inner);
+            if timeout.timed_out() {
+                waited.1.get_or_insert(false);
+            }
+            state = waited;
+        }
+        drop(state);
+        self.ready.notify_all();
+    }
+    fn stats(&self) -> Value {
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        json!({"requests": self.requests, "joined": state.0, "reached": state.1})
     }
 }
 fn fault_reply(fault: &Value, mut reply: Reply) -> Reply {

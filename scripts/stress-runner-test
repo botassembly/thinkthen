@@ -35,13 +35,15 @@ with tempfile.TemporaryDirectory(prefix='stress-dispatch-') as temporary:
     shutil.copy2(ROOT / 'conformance/typed/manifest.json', root / 'conformance/typed/manifest.json')
     fixture = root / 'fixture'
     fixture.write_text('''#!/usr/bin/env python3
-import socket,sys,json
+import socket,sys
+import json,os
 if sys.argv[1:]==["--limits"]:
     print(json.dumps(dict(workers=4,read_ahead_window=16)))
     sys.exit(0)
 from pathlib import Path
 paid=Path(__file__).with_name("paid")
 paid.unlink(missing_ok=True)
+with Path(__file__).with_name("fixture-arguments").open("a") as log: log.write(json.dumps(sys.argv[1:])+"\\n")
 with socket.socket() as listener:
     listener.bind(('127.0.0.1',0))
     listener.listen()
@@ -54,6 +56,7 @@ with socket.socket() as listener:
                 connection,_=listener.accept()
                 connection.close()
             event='arrived'
+        if event=='primed': event='false' if os.environ.get('SHORT_PRIME') else 'true'
         print(paid.read_text() if event=='count' else event,flush=True)
 ''')
     fixture.chmod(0o755)
@@ -169,6 +172,8 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
         'print(json.dumps(', "if os.environ.get('THINKTHEN_STRESS_CHECKPOINT'):\n    for _ in range(case['rounds']):\n        subprocess.run(os.environ['THINKTHEN_STRESS_CHECKPOINT_COMMAND'],shell=True,check=True)\nprint(json.dumps("))
     long_argument = 'classpath-entry-' * 300
     long_command = [sys.executable, str(adapter), long_argument]
+    arguments = root / 'fixture-arguments'
+    arguments.unlink(missing_ok=True)
     completed = subprocess.run([*command, '--', *long_command], env=env,
                                capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr[-1000:]
@@ -176,6 +181,21 @@ print(json.dumps(dict(attempt_timeout_ms=case['client']['retry']['attempt_timeou
     assert len(long_report['cases']) == 21, long_report
     assert all(case['command'] == shlex.join(long_command) for case in long_report['cases']), long_report
     assert long_report['resource_growth'] == 'completed-round verdicts', long_report
+    # Feature: each measured soak fills the connection pool in round 1. Its first
+    # replies wait until every request one round can have in flight is open: two
+    # records make one batch, and the slow soak's 500 make 16, capped at 4 workers.
+    primed = [(case['scenario'], case.get('primed_requests')) for case in long_report['cases']]
+    assert sorted(item for item in primed if item[1]) == [
+        ('healthy', 1), ('healthy', 1), ('slow-replies', 4)], primed
+    assert all('primed_requests' not in case for case in long_report['cases'] if 'resources' not in case), primed
+    started = [json.loads(line) for line in arguments.read_text().splitlines()]
+    assert started.count(['--stress', 'healthy', '--prime', '1']) == 2, started
+    assert started.count(['--stress', 'slow-replies', '--prime', '4']) == 1, started
+    assert ['--stress', 'healthy'] in started, started
+    short_prime = subprocess.run([*command, '--', *long_command], env=dict(env, SHORT_PRIME='1'),
+                                 capture_output=True, text=True)
+    assert short_prime.returncode != 0, short_prime.stderr[-1000:]
+    assert 'connection pool priming did not hold 1 requests in flight together' in short_prime.stderr, short_prime.stderr[-1000:]
     # Feature: --full adds one slow-reply soak with short-check verdicts.
     slow = [case for case in long_report['cases'] if case['scenario'] == 'slow-replies']
     assert len(slow) == 1, long_report

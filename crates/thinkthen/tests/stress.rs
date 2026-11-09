@@ -322,6 +322,31 @@ fn loopback_stress_full_volume_and_soak() {
     cases(true);
 }
 
+/// The Rust library's 60-round soak on one backend, run by `scripts/stress --extended`, which
+/// sets THINKTHEN_SOAK_ROUNDS. THINKTHEN_SOAK_RECORDS shrinks it only to prove its wiring.
+fn rust_extended_soak(backend: &str) {
+    let table = stress_table().unwrap();
+    let rounds = std::env::var("THINKTHEN_SOAK_ROUNDS")
+        .expect("scripts/stress --extended sets THINKTHEN_SOAK_ROUNDS")
+        .parse()
+        .unwrap();
+    let count = std::env::var("THINKTHEN_SOAK_RECORDS").map_or_else(
+        |_| table["records"]["full"].as_u64().unwrap() as usize,
+        |value| value.parse().unwrap(),
+    );
+    rust_call(&table, &table["scenarios"][0], backend, count, rounds);
+}
+#[test]
+#[ignore = "extended soak release job"]
+fn rust_extended_soak_systemone() {
+    rust_extended_soak("systemone");
+}
+#[test]
+#[ignore = "extended soak release job"]
+fn rust_extended_soak_openai() {
+    rust_extended_soak("openai");
+}
+
 #[cfg(feature = "command")]
 #[test]
 fn command_soak_samples_one_live_stream() {

@@ -20,7 +20,7 @@ ASSETS = set.union(*HOST_ASSETS.values())
 # Three parts of the 60-round soaks, so each fits one Linux job slot and they can run
 # side by side.
 SOAK_SURFACES = {'soaks': ('ruby', 'csharp', 'sqlite', 'postgres'), 'soaks-2': ('python', 'typescript', 'c', 'cpp', 'go'),
-                 'soaks-3': ('java', 'r', 'swift', 'zig')}
+                 'soaks-3': ('java', 'r', 'swift', 'zig', 'rust')}
 SOAKS = {mode: tuple(surface + '-' + backend for surface in surfaces for backend in ('systemone', 'openai'))
          for mode, surfaces in SOAK_SURFACES.items()}
 

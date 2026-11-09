@@ -182,8 +182,10 @@ class Export(unittest.TestCase):
         # Feature: the two soak halves cover each surface once.
         halves = entry['SOAKS']
         self.assertEqual(set(halves), {'soaks', 'soaks-2', 'soaks-3'})
+        # 0677: the Rust library's 60-round soak joins the third part on both backends.
         self.assertEqual(halves['soaks-3'], ('java-systemone', 'java-openai', 'r-systemone', 'r-openai',
-                                             'swift-systemone', 'swift-openai', 'zig-systemone', 'zig-openai'))
+                                             'swift-systemone', 'swift-openai', 'zig-systemone', 'zig-openai',
+                                             'rust-systemone', 'rust-openai'))
         named = [name for part in halves.values() for name in part]
         self.assertEqual(len(named), len(set(named)))
         self.assertEqual(halves['soaks-2'], ('python-systemone', 'python-openai', 'typescript-systemone', 'typescript-openai',

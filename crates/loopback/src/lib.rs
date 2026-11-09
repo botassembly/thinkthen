@@ -4,4 +4,4 @@ mod server;
 pub use server::*;
 use server::{case, lock};
 mod stress;
-pub use stress::{StressFixture, stress_table};
+pub use stress::{Prime, StressFixture, stress_table};

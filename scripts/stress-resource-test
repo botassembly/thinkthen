@@ -113,6 +113,30 @@ def count_growth():
     print('short counts: steps and plateaus pass; peaks that never fall and rise twice fail; soaks and full-soak reports exact')
 
 
+def primed_pool():
+    """Feature: a primed pool removes the late first use of a pooled connection, not real growth.
+
+    The R OpenAI smoke soak first used its fourth pooled connection in round 5,
+    after warm-up: one connection, one stub thread and three descriptors. Once
+    the harness fills the pool in round 1, the same counts are flat. A connection
+    opened after the primed round is still growth.
+    """
+    from stress_resources import METRICS, growth
+
+    def soak(series):
+        samples = [dict.fromkeys(METRICS, 0) for _ in range(8)]
+        for row, (connections, threads, descriptors) in zip(samples, series):
+            row.update(backend_connections=connections, threads=threads, descriptors=descriptors)
+        report = growth(samples, [100] * 8, memory_window=(5, 8), memory_report_only=True)
+        return {key: report['metrics'][key]['passed'] for key in ('backend_connections', 'threads', 'descriptors')}
+
+    late_step = [(3, 7, 17)] * 4 + [(4, 8, 20)] * 4
+    assert soak(late_step) == dict.fromkeys(('backend_connections', 'threads', 'descriptors'), False)
+    assert all(soak([(4, 8, 20)] * 8).values())
+    assert soak([(4, 8, 20)] * 4 + [(5, 9, 23)] * 4) == dict.fromkeys(('backend_connections', 'threads', 'descriptors'), False)
+    print('primed pool: a full first-round pool passes; a late pool step or a later connection fails')
+
+
 def extended_window():
     """Feature: an explicit memory window uses its window highs and record floor.
 
@@ -262,7 +286,7 @@ def fixture(mode):
                 os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps(dict(verified_records=(round_index + 1) * 32768))
             if round_index == 0 or (mode == 'step' and round_index == 4):
                 allocations.append(bytearray(8 * 1024 * 1024))
-            if mode in ('leak', 'below-floor', 'variable-counts'):
+            if mode in ('leak', 'below-floor', 'variable-counts', 'memory-leak'):
                 allocation = mmap.mmap(-1, 16 * 1024)
                 allocation[:] = b'\0' * len(allocation)
                 allocations.append(allocation)
@@ -294,15 +318,15 @@ def fixture(mode):
         listener.close()
 
 
-def check(mode):
+def check(mode, *flags, environment=None):
     with tempfile.TemporaryDirectory(prefix='stress-verdict-test-'):
-        command = [sys.executable, str(ROOT / 'stress-sample.py'), '--rounds', '8', '--',
+        command = [sys.executable, str(ROOT / 'stress-sample.py'), *(flags or ('--rounds', '8')), '--',
                    sys.executable, __file__, 'fixture', mode]
-        run = subprocess.run(command, capture_output=True, text=True)
+        run = subprocess.run(command, capture_output=True, text=True, env=environment)
         if run.returncode not in (0, 1):
             raise AssertionError(run.stderr)
         report = json.loads(run.stdout.splitlines()[-1])
-        fails = mode in ('leak', 'connection-step', 'missing-counts', 'invalid-counts')
+        fails = mode in ('leak', 'connection-step', 'missing-counts', 'invalid-counts') or (mode == 'memory-leak' and not flags)
         assert run.returncode == int(fails), (mode, run.stderr, report)
         assert report['growth']['passed'] is not fails, report
         if mode in ('missing-counts', 'invalid-counts'):
@@ -310,8 +334,9 @@ def check(mode):
             assert report['growth']['metrics']['memory_bytes']['verdict'] == 'unverifiable', report
             assert all(report['growth']['metrics'][key]['passed'] for key in ('descriptors', 'backend_connections', 'threads', 'processes')), report
         if mode == 'leak':
+            # Report-only memory still fails every count.
             assert all(not report['growth']['metrics'][key]['passed']
-                       for key in ('memory_bytes', 'descriptors', 'backend_connections')), report
+                       for key in ('descriptors', 'backend_connections', *(() if flags else ('memory_bytes',)))), report
         if mode == 'connection-step':
             assert report['growth']['metrics']['memory_bytes']['passed'], report
             assert all(not report['growth']['metrics'][key]['passed']
@@ -392,6 +417,7 @@ if __name__ == '__main__':
         # The verdict tables need no /proc, so they also run off Linux.
         memory_floors()
         count_growth()
+        primed_pool()
         extended_window()
         saved_samples()
     elif len(sys.argv) > 1:
@@ -401,6 +427,7 @@ if __name__ == '__main__':
         subprocess.run([sys.executable, ROOT / 'stress-resource-lifetime-test'], check=True)
         memory_floors()
         count_growth()
+        primed_pool()
         extended_window()
         saved_samples()
         zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
@@ -471,6 +498,21 @@ if __name__ == '__main__':
         assert leaking['growth']['metrics']['memory_bytes']['bytes_per_verified_record'] >= 1, leaking
         stepped = check('step')
         connection_step = check('connection-step')
+        # Feature: a 20-round Rust soak reports memory and judges counts (0677). A memory leak of
+        # 2 bytes per record fails the plain criterion, passes report-only, and counts still fail.
+        memory_leak = check('memory-leak')
+        assert not memory_leak['growth']['metrics']['memory_bytes']['passed'], memory_leak
+        reported = check('memory-leak', '--rounds', '8', '--memory-report-only')
+        assert reported['growth']['metrics']['memory_bytes']['bytes_per_verified_record'] >= 1, reported
+        assert reported['growth']['metrics']['memory_bytes'].get('report_only'), reported
+        check('leak', '--rounds', '8', '--memory-report-only')
+        # The Rust 60-round soak below release size reports memory over its last window.
+        smoke = check('memory-leak', '--extended', environment=dict(os.environ, THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100'))
+        metric = smoke['growth']['metrics']['memory_bytes']
+        assert (metric['measurement_start_round'], metric['measurement_end_round']) == (5, 8) and metric.get('report_only'), smoke
+        refused = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'), '--extended', '--rounds', '8', '--', 'true'],
+                                 capture_output=True, text=True)
+        assert refused.returncode == 2 and '--extended sets its own rounds' in refused.stderr, refused.stderr
         missing = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--groups', 'missing', '--', sys.executable, __file__, 'fixture', 'healthy'],
             capture_output=True, text=True)
