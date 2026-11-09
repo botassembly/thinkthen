@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Check frozen Linux source or one final installed C backend, without publishing."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+
+ARCHIVE_SHA = '1d1ad293b3dff7e7e90e816ee82c53b4d42d83db729516e85cf3782022bd68c0'
+LIBRARY_SHA = '83b2090b21b68aa17cc41eb0b0d8fc96086ffb384a0657c7d45738c939ab059b'
+CONSUMER_SHA = '1e2bd934abea51cb2f8c8663f93013dcd7f9a34b67548bee379e63d3a2568852'
+
+
+def digest(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def revision(root):
+    return subprocess.check_output(['git', '-C', root, 'rev-parse', 'HEAD'], text=True).strip()
+
+
+def run(command, source, output, name, env=None):
+    with (output / (name + '.log')).open('w') as log:
+        result = subprocess.run(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT)
+    (output / (name + '-exit-code.txt')).write_text(str(result.returncode) + '\n')
+    if result.returncode:
+        print((output / (name + '.log')).read_text()[-16384:], file=sys.stderr)
+        result.check_returncode()
+
+
+def stage(archive, output):
+    if digest(archive) != ARCHIVE_SHA:
+        raise ValueError('final platform archive hash differs')
+    candidate = Path(tempfile.mkdtemp(prefix='linux-validation-installed-'))
+    prefix = '0.2.0/linux-x86_64/'
+    with tarfile.open(archive) as package:
+        for name in ('checks/c-consumer', 'build.json', 'c/thinkthen-c-0.2.0-linux-x86_64.tar.gz'):
+            member = package.getmember(prefix + name)
+            destination = candidate / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(package.extractfile(member).read())
+    (output / 'original-platform-build.json').write_bytes((candidate / 'build.json').read_bytes())
+    with tarfile.open(candidate / 'c/thinkthen-c-0.2.0-linux-x86_64.tar.gz') as package:
+        package.extractall(candidate / 'c', filter='data')
+    consumer = candidate / 'checks/c-consumer'
+    consumer.chmod(0o755)
+    library = candidate / 'c/lib/libthinkthen.so.0.2'
+    if digest(consumer) != CONSUMER_SHA or digest(library) != LIBRARY_SHA:
+        raise ValueError('actual final C consumer or library hash differs')
+    return consumer, library
+
+
+def mapped_runtime(parent, consumer, library, output):
+    """Retain the actual consumer's loaded library and runtime, before it exits."""
+    deadline = time.monotonic() + 60
+    while parent.poll() is None and time.monotonic() < deadline:
+        children = Path(f'/proc/{parent.pid}/task/{parent.pid}/children').read_text().split()
+        for child in children:
+            proc = Path('/proc') / child
+            try:
+                if (proc / 'exe').resolve() != consumer:
+                    continue
+                maps = (proc / 'maps').read_text()
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+            paths = {Path(row.split(None, 5)[5]) for row in maps.splitlines()
+                     if len(row.split(None, 5)) == 6 and row.split(None, 5)[5].startswith('/')}
+            if library not in paths:
+                continue
+            (output / 'consumer.maps').write_text(maps)
+            hashes = {str(path): digest(path) for path in sorted(paths) if path.is_file()}
+            if hashes[str(library)] != LIBRARY_SHA or digest(consumer) != CONSUMER_SHA:
+                raise ValueError('loaded final C identity differs')
+            (output / 'loaded-sha256.json').write_text(json.dumps(dict(pid=int(child), files=hashes), indent=2) + '\n')
+            return
+        time.sleep(0.02)
+    raise RuntimeError('actual final C consumer/library mapping was not captured')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('task', choices=('packing', 'c-systemone', 'c-openai'))
+    parser.add_argument('--source', type=Path, required=True)
+    parser.add_argument('--archive', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--size', choices=('true', 'false'), default='false', help='true is wiring smoke only')
+    args = parser.parse_args()
+    source, output = args.source.resolve(), args.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    compiler_env = dict(os.environ, RUSTFLAGS='', CARGO_ENCODED_RUSTFLAGS='',
+                        RUSTC_WRAPPER='', RUSTC_WORKSPACE_WRAPPER='',
+                        CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER='cc')
+    identity = dict(source_revision=revision(source), harness_revision=revision(Path(__file__).resolve().parents[1]),
+                    task=args.task, size='smoke' if args.size == 'true' else 'full',
+                    environment='actual Ubuntu host; no local floor-image equivalence is claimed')
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    run(['uname', '-a'], source, output, 'kernel')
+    run(['getconf', 'GNU_LIBC_VERSION'], source, output, 'glibc')
+    run(['rustc', '-Vv'], source, output, 'rustc')
+    run(['cargo', '--version'], source, output, 'cargo')
+    run(['cc', '--version'], source, output, 'cc')
+    run([sys.executable, '--version'], source, output, 'python')
+    if args.task == 'packing':
+        run(['cargo', 'test', '--locked', '-p', 'thinkthen', '--test', 'cli_packing_reports', '--no-fail-fast'],
+            source, output, 'cli-packing-reports', env=compiler_env)
+        run([sys.executable, 'scripts/stress-runner-test'], source, output, 'stress-runner-test')
+        return 0
+    consumer, library = stage(args.archive.resolve(), output)
+    run(['cargo', 'build', '--locked', '-p', 'loopback', '--bin', 'loopback'],
+        source, output, 'loopback-build', env=compiler_env)
+    target = Path(os.environ.get('CARGO_TARGET_DIR', source / 'target')).resolve()
+    loopback = target / 'debug/loopback'
+    identity.update(archive_sha256=ARCHIVE_SHA, consumer_sha256=digest(consumer), library_sha256=digest(library),
+                    loopback_sha256=digest(loopback), fixture_source_revision=revision(source))
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    run(['ldd', str(consumer)], source, output, 'consumer-loader')
+    env = dict(os.environ)
+    for name in ('LD_LIBRARY_PATH', 'LD_PRELOAD', 'THINKTHEN_LIBRARY', 'THINKTHEN_NATIVE_LIBRARY',
+                 'THINKTHEN_FLOOR_BUILD', 'THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS'):
+        env.pop(name, None)
+    env.update(THINKTHEN_LOOPBACK=str(loopback), PYTHONDONTWRITEBYTECODE='1')
+    if args.size == 'true':
+        env.update(THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100')
+    backend = args.task.removeprefix('c-')
+    command = [sys.executable, 'scripts/stress-adapters.py', '--surface', 'c', '--full', '--rounds', '60',
+               '--backend', backend, '--evidence-path', str(output / f'c-{backend}.jsonl'), '--',
+               sys.executable, 'sdk/c/tests/stress.py', 'c', str(consumer)]
+    with (output / 'soak.log').open('w') as log:
+        with subprocess.Popen(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
+            try:
+                mapped_runtime(process, consumer, library, output)
+            except (RuntimeError, ValueError, OSError):
+                process.terminate()
+                raise
+            status = process.wait()
+    (output / 'soak-exit-code.txt').write_text(str(status) + '\n')
+    if digest(consumer) != CONSUMER_SHA or digest(library) != LIBRARY_SHA:
+        raise ValueError('final C bytes changed during the workload')
+    print(f'{args.task} {identity["size"]} exit={status}; evidence={output}', flush=True)
+    return status
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
