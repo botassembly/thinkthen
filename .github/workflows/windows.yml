@@ -7,9 +7,9 @@ on:
         description: Select independent unfinished work without repeating earlier jobs
         type: choice
         default: initial
-        options: [initial, sdks, rust, remaining, ordinary-full]
+        options: [initial, sdks, rust, remaining, ordinary-full, source-sdks]
       smoke:
-        description: Run eight rounds of 100 records to check wiring; never release evidence
+        description: Run bounded wiring or preparation checks only; never full qualification evidence
         type: boolean
         default: false
 
@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: ${{ fromJSON(inputs.batch == 'initial' && '["packing","c-systemone","c-openai"]' || inputs.batch == 'sdks' && '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai"]' || inputs.batch == 'rust' && '["rust-systemone","rust-openai"]' || inputs.batch == 'ordinary-full' && '["c-full","cpp-full","go-full","swift-full","zig-full"]' || '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai","rust-systemone","rust-openai"]') }}
+        task: ${{ fromJSON(inputs.batch == 'initial' && '["packing","c-systemone","c-openai"]' || inputs.batch == 'sdks' && '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai"]' || inputs.batch == 'rust' && '["rust-systemone","rust-openai"]' || inputs.batch == 'ordinary-full' && '["c-full","cpp-full","go-full","swift-full","zig-full"]' || inputs.batch == 'source-sdks' && '["source-ruby","source-jvm","source-csharp"]' || '["cpp-systemone","cpp-openai","go-systemone","go-openai","swift-systemone","swift-openai","zig-systemone","zig-openai","rust-systemone","rust-openai"]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 160
     steps:
@@ -43,6 +43,7 @@ jobs:
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with: {python-version: '3.13'}
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        if: ${{ !startsWith(matrix.task, 'source-') }}
         with:
           path: |
             ~/.cargo/registry
@@ -50,13 +51,25 @@ jobs:
             ~/.local/share/thinkthen-build-tools
             target
           key: release-validation-linux-x86_64-${{ matrix.task }}-${{ hashFiles('source/rust-toolchain.toml', 'source/Cargo.lock', 'source/Cargo.toml', 'source/crates/**', 'source/sdk/**', 'source/conformance/stress.json', 'source/scripts/release-downloads.json', 'source/scripts/release-tools.json', 'source/scripts/release_rust.py') }}
+      - name: Restore existing public release tools for source gates
+        if: startsWith(matrix.task, 'source-')
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/uv
+            ~/.local/share/uv
+            ~/.local/share/thinkthen-build-tools
+          key: source-sdk-tools-${{ hashFiles('source/scripts/release-downloads.json', 'source/scripts/release-tools.json') }}
+          restore-keys: release-tools-linux-x86_64-pins-${{ hashFiles('source/scripts/release-downloads.json', 'source/scripts/release-tools.json', 'source/scripts/release-windows-prepare') }}-
       - name: Prepare only the pinned Rust toolchain
         working-directory: source
         run: |
           python3 -c 'import sys; sys.path.insert(0, "scripts"); from release_rust import prepare; prepare()'
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Download the actual final Linux platform archive
-        if: matrix.task != 'packing' && !startsWith(matrix.task, 'rust-')
+        if: matrix.task != 'packing' && !startsWith(matrix.task, 'rust-') && !startsWith(matrix.task, 'source-')
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           artifact-ids: '13712172091'
@@ -64,15 +77,41 @@ jobs:
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/platform
           merge-multiple: true
+      - name: Download the genuine source-487 Linux producer pair
+        if: startsWith(matrix.task, 'source-')
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: '13711304355'
+          run-id: '42698274553'
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/source-inputs/linux
+          merge-multiple: true
+      - name: Download the separately identified Mac SDK package
+        if: matrix.task == 'source-jvm' || matrix.task == 'source-csharp'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: '13712945922'
+          run-id: '42698274553'
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/source-inputs/mac
+          merge-multiple: true
       - name: Preflight and run the selected source check or complete backend soak
         env:
           VALIDATION_TASK: ${{ matrix.task }}
           VALIDATION_SMOKE: ${{ inputs.smoke }}
         run: |
           status=0
-          python3 harness/scripts/hosted-linux-validation "$VALIDATION_TASK" \
+          script="$GITHUB_WORKSPACE/harness/scripts/hosted-linux-validation"
+          selected_inputs=(--archive "$RUNNER_TEMP/platform/thinkthen-0.2.0-linux-x86_64-packages.tar.gz")
+          if [[ "$VALIDATION_TASK" == source-* ]]; then
+            script="$GITHUB_WORKSPACE/harness/scripts/hosted-source-sdk"
+            selected_inputs=(--inputs "$RUNNER_TEMP/source-inputs")
+            cd "$GITHUB_WORKSPACE/source"
+            . scripts/native-tools-env
+          fi
+          python3 "$script" "$VALIDATION_TASK" \
             --source "$GITHUB_WORKSPACE/source" \
-            --archive "$RUNNER_TEMP/platform/thinkthen-0.2.0-linux-x86_64-packages.tar.gz" \
+            "${selected_inputs[@]}" \
             --output "$RUNNER_TEMP/evidence" \
             --size "$VALIDATION_SMOKE" || status=$?
           mkdir -p "$RUNNER_TEMP/evidence"

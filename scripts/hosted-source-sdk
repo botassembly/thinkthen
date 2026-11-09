@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Prepare one unchanged source SDK gate on Ubuntu without a floor container."""
+import argparse
+import io
+import json
+import os
+from pathlib import Path
+import runpy
+import shlex
+import shutil
+import subprocess
+import sys
+import tarfile
+import zipfile
+
+SOURCE = '4874fbb0768fb16389508cd0019a4e8a091c888a'
+MAC_ARCHIVE_SHA = '930d7c48f5700840cd4f4576f3cabf5a649454aaeef1dcb1edba8ded957fc0a3'
+MAC_LIBRARY_SHA = '7721552b17396ffcae8d96f8fad7ee86b56f636c1e172bab543b2bbfe8644cba'
+HELPERS = runpy.run_path(str(Path(__file__).with_name('hosted-linux-validation')))
+digest, revision, run = (HELPERS[name] for name in ('digest', 'revision', 'run'))
+
+
+def mac_library(archive, cache, output):
+    if digest(archive) != MAC_ARCHIVE_SHA:
+        raise ValueError('Mac platform archive differs from the verified source-487 artifact')
+    with tarfile.open(archive) as package:
+        build = package.extractfile('0.2.0/macos-arm64/build.json').read()
+        if json.loads(build)['revision'] != SOURCE:
+            raise ValueError('Mac platform source differs')
+        (output / 'mac-platform-build.json').write_bytes(build)
+        data = package.extractfile('0.2.0/macos-arm64/csharp/Botassembly.ThinkThen.0.2.0.nupkg').read()
+    with zipfile.ZipFile(io.BytesIO(data)) as package:
+        data = package.read('runtimes/osx-arm64/native/libthinkthen_ffi.dylib')
+    target = cache / 'osx-arm64/libthinkthen_ffi.dylib'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists() and target.read_bytes() != data:
+        raise ValueError('Mac SDK asset conflicts with the native cache')
+    target.write_bytes(data)
+    if digest(target) != MAC_LIBRARY_SHA:
+        raise ValueError('Mac SDK asset hash differs')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('task', choices=('source-ruby', 'source-jvm', 'source-csharp'))
+    parser.add_argument('--source', type=Path, required=True)
+    parser.add_argument('--inputs', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--size', choices=('true', 'false'), required=True, help='true stops after preparation and native preflight')
+    args = parser.parse_args()
+    source, output = args.source.resolve(), args.output.resolve()
+    if revision(source) != SOURCE:
+        raise ValueError('source gate requires the frozen public source')
+    output.mkdir(parents=True, exist_ok=False)
+    identity = dict(source_revision=SOURCE, harness_revision=revision(Path(__file__).resolve().parents[1]),
+                    task=args.task, preflight_only=args.size == 'true',
+                    actual_execution='Ubuntu host; no producer floor container is executed')
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    family = args.task.removeprefix('source-')
+    inputs = args.inputs.resolve()
+    pair = json.loads((inputs / 'linux/pair.json').read_text())
+    env = dict(os.environ, THINKTHEN_FLOOR_IMAGE=pair['floor_image'])
+    for name in ('THINKTHEN_SOAK_FOLDER', 'THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS',
+                 'THINKTHEN_LIBRARY', 'LLVM_PROFILE_FILE', 'THINKTHEN_FLOOR_BUILD'):
+        env.pop(name, None)
+    run([sys.executable, '-c', 'import sys; sys.path.insert(0,"scripts"); from release_host_tools import host_tools; host_tools()'],
+        source, output, 'host-tools', env=env)
+    run(['scripts/native-pair', 'import', str(inputs / 'linux/pair.json'), str(inputs / 'linux/assets')],
+        source, output, 'native-pair-import', env=env)
+    cache = Path(subprocess.check_output(['scripts/native-prepare', '--path'], cwd=source, env=env, text=True).strip())
+    if family != 'ruby':
+        mac_library(inputs / 'mac/thinkthen-0.2.0-macos-arm64-packages.tar.gz', cache, output)
+        sys.path.insert(0, str(source / 'scripts'))
+        from native_platform import publish_jvm_aliases
+        publish_jvm_aliases(cache)
+    else:
+        run([sys.executable, '-c', '''import sys
+sys.path.insert(0, "scripts")
+from release_workflow_prepare import sdk_tools
+from release_prepare_common import TOOLS
+from native_platform import current
+sdk_tools()
+gems = list((TOOLS / "ruby/packages").glob("ffi-*-" + current()["ruby"] + "*.gem"))
+if len(gems) != 1 or not gems[0].is_file():
+    raise ValueError("Ruby gate requires exactly one prepared platform ffi gem")
+print(gems[0])
+'''], source, output, 'ruby-runtime-prepare', env=env)
+    run(['scripts/' + {'ruby': 'ruby-dev-prepare', 'jvm': 'jvm-prepare', 'csharp': 'csharp-prepare'}[family]],
+        source, output, 'sdk-prepare', env=env)
+    run(['scripts/native-abi-assets', 'prepare'], source, output, 'abi-prepare', env=env)
+    exports = subprocess.check_output(['scripts/native-abi-assets', 'env'], cwd=source, env=env, text=True)
+    for line in exports.splitlines():
+        if line.startswith(('THINKTHEN_NATIVE_FIXTURES=', 'THINKTHEN_MALFORMED_ROW_FIXTURES=')):
+            key, value = line.split('=', 1)
+            env[key], = shlex.split(value)
+    engine = cache / 'linux-x64/libthinkthen_ffi.so'
+    consumer = output / 'preflight-consumer'
+    run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', str(source / 'crates/thinkthen-ffi/include'),
+         str(source / 'crates/thinkthen-ffi/tests/abi-consumer.c'), '-o', str(consumer), '-ldl'],
+        source, output, 'preflight-build', env=env)
+    run([str(consumer), str(engine)], source, output, 'preflight', env=env)
+    if (output / 'preflight.log').read_text().strip() != 'accepted':
+        raise ValueError('existing ABI consumer did not accept the imported Linux engine')
+    env.update(THINKTHEN_CSHARP_NATIVE_ASSETS=str(cache), THINKTHEN_JVM_NATIVE_ASSETS=str(cache / 'jvm'),
+               THINKTHEN_GATE_STRICT='1', THINKTHEN_STRESS_FULL='1')
+    shutil.copy2(inputs / 'linux/pair.json', output / 'linux-producer-pair.json')
+    identity.update(producer_floor_identity=pair['floor_image'], native_cache_key=cache.name,
+                    linux_native_sha256=digest(engine), preflight_consumer_sha256=digest(consumer),
+                    mac_archive_sha256=MAC_ARCHIVE_SHA if family != 'ruby' else None,
+                    mac_sdk_native_sha256=MAC_LIBRARY_SHA if family != 'ruby' else None,
+                    fixture_identity_sha256={name: digest(Path(env[name]) / 'identity.json') for name in
+                        ('THINKTHEN_NATIVE_FIXTURES', 'THINKTHEN_MALFORMED_ROW_FIXTURES')})
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    for label, command in [('kernel', ['uname', '-a']), ('glibc', ['getconf', 'GNU_LIBC_VERSION']),
+                           ('rust', ['rustc', '-Vv']), ('cc', ['cc', '--version'])]:
+        run(command, source, output, label, env=env)
+    runtime = {'ruby': ['ruby', '--version'], 'jvm': ['java', '-version'], 'csharp': ['dotnet', '--info']}[family]
+    run(runtime, source, output, 'sdk-runtime', env=env)
+    executable = Path(shutil.which(runtime[0], path=env['PATH'])).resolve()
+    identity.update(runtime_executable=str(executable), runtime_executable_sha256=digest(executable))
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    if args.size == 'true':
+        return 0
+    run(['scripts/' + family + '-gate'], source, output, 'full-source-gate', env=env)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
