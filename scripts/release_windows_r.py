@@ -282,7 +282,7 @@ def universe(folder):
     repository = (folder / 'repository').as_uri()
     rscript = r / 'bin/x64/Rscript.exe'
     index = 'tools::write_PACKAGES(commandArgs(TRUE), type="win.binary")'
-    install = 'a <- commandArgs(TRUE); install.packages(a[-(1:2)], lib=a[[1]], repos=a[[2]])'
+    install = 'a <- commandArgs(TRUE); install.packages(a[-(1:2)], lib=a[[1]], repos=a[[2]], type="win.binary")'
     build_library, library = folder / 'build-library', folder / 'library'
     build_library.mkdir()
     library.mkdir()

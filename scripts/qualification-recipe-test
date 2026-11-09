@@ -40,6 +40,50 @@ class QualificationRecipes(unittest.TestCase):
             self.assertEqual(command[:3], (sys.executable, root / 'scripts/windows-cli-check', '--binary'))
             self.assertEqual(command[4:], ('--diagnostics', root / 'target/windows-cli-diagnostics'))
 
+    def test_windows_universe_uses_binary_repository_for_both_clean_installs(self):
+        action = runpy.run_path(str(ROOT / 'scripts/release_windows_r.py'))['universe']
+        with tempfile.TemporaryDirectory(prefix='windows-r-repository-') as directory:
+            root = Path(directory)
+            tools = root / 'tools'
+            (tools / 'windows').mkdir(parents=True)
+            selected = {'R-4.6.1-win.exe': ('fixture', 'fixture')}
+            for name in ('jsonlite', 'vctrs', 'rlang', 'cli', 'tibble', 'withr'):
+                archive = name + '_1.0.zip'
+                selected[archive] = ('fixture', 'fixture')
+                (tools / 'windows' / archive).write_bytes(b'pinned binary fixture')
+            destination = root / 'rehearsal'
+            contrib = destination / 'repository/bin/windows/contrib/4.6'
+            installs = []
+            def invoke(*arguments, **options):
+                if len(arguments) > 3 and arguments[2] == '-e':
+                    expression = arguments[3]
+                    if expression.startswith('tools::write_PACKAGES'):
+                        self.assertIn('type="win.binary"', expression)
+                        (Path(arguments[4]) / 'PACKAGES').write_text('binary index fixture')
+                    elif 'install.packages(' in expression:
+                        library, repository, *names = arguments[4:]
+                        self.assertEqual(repository, (destination / 'repository').as_uri())
+                        self.assertTrue((contrib / 'PACKAGES').is_file())
+                        self.assertFalse((destination / 'repository/src/contrib').exists())
+                        self.assertEqual(list(Path(library).iterdir()), [])
+                        if 'type="win.binary"' not in expression:
+                            raise FileNotFoundError(destination / 'repository/src/contrib/PACKAGES')
+                        for name in names:
+                            self.assertTrue(list(contrib.glob(name + '_*.zip')), name)
+                        installs.append((Path(library).name, names))
+                        (Path(library) / 'installed').write_text('binary packages')
+                elif Path(arguments[0]).name == 'R.exe':
+                    (Path(options['cwd']) / 'thinkthen_0.2.0.zip').write_bytes(b'built binary fixture')
+                return subprocess.CompletedProcess(arguments, 0)
+            with patch.dict(action.__globals__, TOOLS=tools, inputs=lambda: selected, run=invoke,
+                            fetch=lambda url, path, digest: path,
+                            environment=lambda r: dict(PATH='', RUSTFLAGS='static'),
+                            os=SimpleNamespace(name='nt', pathsep=os.pathsep)), patch('release_rust.prepare'):
+                action(destination)
+            self.assertEqual([name for name, _ in installs], ['build-library', 'library'])
+            self.assertEqual(installs[0][1], ['jsonlite', 'vctrs', 'rlang', 'cli', 'tibble', 'withr'])
+            self.assertEqual(installs[1][1], ['thinkthen'])
+
     def test_cold_windows_gnu_preparation_resolves_pinned_archives_before_install(self):
         import tomllib
         from release_downloads import sources
