@@ -18,6 +18,7 @@ NUGET = 'ad275a6b3e46b2087f8574662d23c08ac7a38b944a9787d435dc0bb53e07f833'
 MANAGED = '19dff531e39a9b2b61facdba1082a194686ff9ea6a9fe5e0f66a3b9cb16c9d6d'
 NATIVE = '9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435'
 CORELIB = 'dbe82a7a9a38f468d8dafb7890a3301f904c420718a8a985a302aa182c1268bc'
+CLRJIT = 'fd4e672a34b28fb38d2b5f43d7c50d8b1892aebca97d41cfaccc1c8be3ee40e9'
 CORECLR = '843b66a2b33a570537c779283b27f7c1f3ff5394e5a72436bf181c885d4cdfff'
 
 
@@ -77,8 +78,7 @@ def main():
     run([str(sdk / 'dotnet'), 'build', str(consumer / 'Consumer.csproj'), '--disable-build-servers', '--configfile', str(config), '-o', str(work / 'bin')], output / 'build.log', env)
     events = [f'syscalls:sys_{phase}_{name}' for name in ('mprotect', 'mmap', 'mremap', 'brk', 'munmap') for phase in ('enter', 'exit')]
     for event in events:
-        if not Path('/sys/kernel/tracing/events', *event.split(':'), 'id').is_file():
-            raise RuntimeError('required syscall tracepoint unavailable: ' + event)
+        subprocess.run(['sudo', '-n', 'test', '-r', str(Path('/sys/kernel/tracing/events', *event.split(':'), 'id'))], check=True)
     waiter = 'import json,subprocess,sys;from pathlib import Path;p=subprocess.Popen(sys.argv[2:]);r=p.wait();Path(sys.argv[1]).write_text(json.dumps({"pid":p.pid,"exit_code":r}));sys.exit(r)'
     command = ['sudo', '-n', 'env', '-i', *[f'{k}={v}' for k, v in env.items()], '/usr/bin/prlimit', '--fsize=134217728:134217728', '--', '/usr/bin/perf', 'record', '-o', str(output / 'perf.data'), '--clockid', 'mono', '-c', '1', '--call-graph', 'dwarf,8192', '--user-callchains', '-m', '256', '--max-size', '128M', '-e', ','.join(events), '--', '/usr/bin/python3', '-c', waiter, str(output / 'target-exit.json'), str(sdk / 'dotnet'), str(work / 'bin/Consumer.dll'), '--soak-diagnostic-bootstrap']
     save(output / 'command.json', command)
@@ -86,7 +86,7 @@ def main():
     run(command, output / 'record.log')
     run(['sudo', '-n', 'chown', f'{os.getuid()}:{os.getgid()}', str(output / 'perf.data')], output / 'artifact-owner.log')
     run(['sudo', '-n', '/usr/bin/perf', 'buildid-list', '-i', str(output / 'perf.data')], output / 'buildids.txt')
-    run(['sudo', '-n', '/usr/bin/perf', 'script', '-i', str(output / 'perf.data'), '--ns', '--show-task-events', '--show-mmap-events', '--show-lost-events', '-F', 'comm,pid,tid,time,event,trace'], output / 'perf-script.txt')
+    run(['sudo', '-n', '/usr/bin/perf', 'script', '-i', str(output / 'perf.data'), '--ns', '--show-task-events', '--show-mmap-events', '--show-lost-events', '-F', 'comm,pid,tid,time,event,trace,ip,sym,dso,symoff'], output / 'perf-script.txt')
     identity = json.loads((output / 'loaded-identity.json').read_text())
     exit_info = json.loads((output / 'target-exit.json').read_text())
     if exit_info != dict(pid=identity['pid'], exit_code=0) or identity['managed_sha256'] != MANAGED or identity['native_sha256'] != NATIVE or identity['runtime_version'] != '10.0.14' or identity['corelib_sha256'] != CORELIB:
@@ -107,7 +107,9 @@ def main():
                 current = dict(pid=int(pid), tid=int(tid), time=stamp, syscall=name, raw=raw, frames=[]); pending[key] = current
             elif key in pending:
                 entry = pending.pop(key); ret = re.search(r'\bret:\s*(0x[0-9a-fA-F]+|-?\d+)', raw)
-                if ret and 0 <= int(ret.group(1), 16 if ret.group(1).startswith('0x') else 10) < 2**63 and entry['frames']: pairs.append(entry)
+                value = int(ret.group(1), 16 if ret.group(1).startswith('0x') else 10) if ret else -1
+                success = value == 0 if name in ('mprotect', 'munmap') else name in ('mmap', 'mremap') and 0 <= value < 2**63
+                if success and entry['frames']: pairs.append(dict(entry, return_value=value, exit_time=stamp, exit_raw=raw))
         elif current is not None and re.match(r'^\s+[0-9a-fA-F]+\s', line) and any(n in line for n in ('libcoreclr.so', 'libclrjit.so', 'libthinkthen_ffi.so')):
             current['frames'].append(line.strip())
     save(output / 'caller-candidates.json', pairs)
@@ -117,6 +119,8 @@ def main():
         if len(fields) == 6 and fields[5].startswith('/') and Path(fields[5]).is_file(): modules[fields[5]] = sha(fields[5])
     if [v for p, v in modules.items() if Path(p).name == 'libcoreclr.so'] != [CORECLR]:
         raise RuntimeError('actual mapped CoreCLR differs')
+    if any(Path(p).name == 'libclrjit.so' and v != CLRJIT for p, v in modules.items()):
+        raise RuntimeError('actual mapped CLRJIT differs')
     save(output / 'mapped-sha256.json', modules)
     (output / 'modules').mkdir()
     for name, digest in modules.items():
