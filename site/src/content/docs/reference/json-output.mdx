@@ -81,4 +81,4 @@ filter adds two fields on the command line. `item` holds the text or JSON line i
 
 ## Interpreting probability
 
-Probabilities are the backend's estimates, not measured accuracy guarantees. For decide and filter, probability estimates yes, including when the answer is no. For choose and find, it estimates the winning outcome; find's none outcome must meet the same threshold as a line. Below the threshold the result is unsure, not none. Measure accuracy and coverage against labeled cases from your own task before relying on a threshold. A model can rank examples well without its probabilities matching observed frequencies.
+Probabilities are the model's estimates, not measured accuracy guarantees. For decide and filter, probability estimates yes, including when the answer is no. For choose and find, it estimates the winning outcome; find's none outcome must meet the same threshold as a line. Below the threshold the result is unsure, not none. Measure accuracy and coverage against labeled cases from your own task before relying on a threshold. A model can rank examples well without its probabilities matching observed frequencies.

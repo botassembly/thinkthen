@@ -1,10 +1,41 @@
 # Resource observations
 
-Read these limits before installing or making paid calls. The resource observations below come from the pre-release qualification campaign. They do not prove that any surface is free of leaks. Later observations cover only their measured intervals. The earlier PostgreSQL System One descriptor failure remains a historical failure.
+The measurements on this page are historical observations, not final qualification for a release. The observations retained here leave long-running memory growth unresolved for C#, Java and TypeScript. Earlier PASS rows below do not clear later failures, establish a safe memory bound or prove that any surface is free of leaks. Consult the release body for results tied to the exact released packages and runtimes.
 
-The extended Java and TypeScript observations used Linux x86_64 with glibc 2.28 and a local backend stub, without forced collection. Each completed 60 rounds of 100,000 records. Their figures measure the change in RSS across owned processes from the completed-round 41 checkpoint to the round 60 checkpoint, over 1,900,000 subsequent verified records. Both intervals met the extended-soak floor of less than 1 byte per verified record and are recorded as finite-window warm-up or allocator retention. Their storage owners and behavior after round 60 remain unproven.
+## Current criterion and unresolved results
 
-The resource soaks ran on Linux only. Memory over long runs on Windows and macOS is unmeasured.
+The current memory check runs 60 rounds of 100,000 records against local backend stubs. It compares the highest resident memory (RSS) in rounds 41–45 with the highest in rounds 56–60, dividing the difference by the 1,500,000 verified records after the first five-round window. Growth at or above 1 byte per verified record fails, whether or not the intervening window highs all rise. Twenty-round memory reports and reduced-record controls do not replace this check.
+
+The older point-to-point observations below instead compare completed checkpoints 41 and 60 over 1,900,000 subsequent verified records. Those figures retain their original calculation and verdict; substituting either denominator would misrepresent the measurements.
+
+The following completed cases used Linux x86_64 with glibc 2.28. Each returned 6,000,000 correct rows with zero failed rows and 187,500 workload requests. Descriptor, connection, thread and process checks passed. These are completed-case results, not a claim that every enclosing qualification run completed successfully. Rates are rounded to nine decimal places.
+
+| Public source | Surface / client path | Late RSS growth, bytes | Bytes per verified record | Current memory criterion |
+| --- | --- | ---: | ---: | --- |
+| `2ff27384b4d94e03cf7060aa3dd0e94a9729fcac` | C# / System One | 155,648 | 0.103765333 | Below floor in this case |
+| Same source | C# / OpenAI | 1,523,712 | 1.015808000 | Failed |
+| Same source | Java / System One | 3,346,432 | 2.230954667 | Failed |
+| Same source | Java / OpenAI | 2,572,288 | 1.714858667 | Failed |
+| Same source | TypeScript / System One | 1,572,864 | 1.048576000 | Failed |
+| Same source | TypeScript / OpenAI | 1,245,184 | 0.830122667 | Below floor in this case |
+| `4874fbb0768fb16389508cd0019a4e8a091c888a` | C# / OpenAI, first full diagnostic | 3,239,936 | 2.159957333 | Failed |
+| Same source | C# / OpenAI, second full diagnostic | 3,358,720 | 2.239146667 | Failed |
+
+For source `2ff27384…`, Java directly logged Temurin 22.0.2+9; TypeScript selected Node.js 22.22.3 from its pinned execution receipt. The C# build receipt records .NET SDK 10.0.403, but does not establish the exact loaded runtime. These source-built consumers have no retained per-process loaded-binary attestation: original Java classes/JARs, the Node addon and C# managed consumer are not identified by surviving loaded-file hashes. The registered native library hash alone does not establish those identities, and is not the Node addon's hash.
+
+The two C# diagnostics at source `4874fbb0…` used installed package archive SHA256 `1d1ad293b3dff7e7e90e816ee82c53b4d42d83db729516e85cf3782022bd68c0`, .NET 10.0.14 and SDK 10.0.403. Their verified loaded managed and native members have SHA256 `19dff531e39a9b2b61facdba1082a194686ff9ea6a9fe5e0f66a3b9cb16c9d6d` and `9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435`. There is no equivalent full Java or TypeScript 60-round result for those packages in these retained records. Their short controls do not fill that gap.
+
+The C# diagnostics confirm real resident-memory growth, but do not identify the allocating caller, establish a plateau or show a safe upper bound. The rates above describe measured intervals; they do not establish a per-record allocation mechanism or predict unlimited linear growth. No common cause across C#, Java and TypeScript, safe operating duration or effective workaround has been demonstrated. Correct rows and passing resource counts do not certify bounded memory in continuously running clients.
+
+These observations do not qualify later packages or changes to usage, allowance, recovery and response-store lifetimes. Release-specific results belong in the release body with their own source, package, native member, consumer, fixture and runtime identities. No final-release result is supplied here.
+
+These long-running resource observations cover Linux only. They provide no measurement of long-running memory on Windows or macOS.
+
+## Earlier observations under their original calculation
+
+The table and campaign summary below preserve earlier observations and their historical verdicts. Their source and loaded-binary identities were not recorded on this page, so runtime labels and PASS rows cannot establish equivalence to either source above or to the final release. The earlier PostgreSQL System One descriptor failure remains a historical failure.
+
+The extended Java and TypeScript observations used Linux x86_64 with glibc 2.28 and a local backend stub, without forced collection. Each completed 60 rounds of 100,000 records. Their figures measure the change in RSS across owned processes from the completed-round 41 checkpoint to the round 60 checkpoint, over 1,900,000 subsequent verified records. Both intervals met the then-used extended-soak floor of less than 1 byte per verified record and were recorded as finite-window warm-up or allocator retention. Their storage owners and behavior after round 60 remain unproven.
 
 An Excel workbook's whole shared-string table loads into memory, and that table may hold up to 512 MiB. One record of plain text, lines, CSV, TSV or JSON Lines input, or one Excel row, may hold up to 64 MiB.
 

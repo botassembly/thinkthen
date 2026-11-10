@@ -15,6 +15,26 @@ run_gates() {
     for gate in $failed; do printf 'hosted-candidate-check: FAILED gate: %s\n' "$gate" >&2; done
     return 1
 }
+if [ "${1:-}" = --recorded-floor-checks ]; then
+    shift
+    actionlint sdlc/release/hosted-validation/windows.yml
+    ruff check --select F401,F841,ERA,BLE,E722,S110 sdlc/release/hosted-validation/recorded-floor sdlc/release/hosted-validation/recorded-floor-test sdlc/release/hosted-validation/hosted-linux-validation sdlc/release/hosted-validation/installed-preflight
+    python3 sdlc/release/hosted-validation/carrier-test
+    python3 sdlc/release/hosted-validation/recorded-floor-test
+    if [ "$#" -gt 0 ]; then
+        exec python3 sdlc/release/hosted-validation/installed-preflight "$@" --recorded-floor
+    fi
+    exit
+fi
+if [ "${1:-}" = --hosted-installed ]; then
+    shift
+    ruff check --select F401,F841,ERA,BLE,E722,S110 sdlc/release/hosted-validation/hosted-linux-validation sdlc/release/hosted-validation/carrier-test sdlc/release/hosted-validation/installed-preflight
+    python3 sdlc/release/hosted-validation/carrier-test
+    if [ "$#" -gt 0 ]; then
+        exec python3 sdlc/release/hosted-validation/installed-preflight "$@"
+    fi
+    exit
+fi
 if [ "${1:-}" = --run-gates ]; then
     shift
     run_gates "$@"

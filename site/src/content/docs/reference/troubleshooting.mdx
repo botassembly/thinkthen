@@ -280,11 +280,11 @@ You see `thinkthen: local.toolbox: shell steps require --allow-shell: …`, foll
 
 You see `thinkthen: cancelling; press Ctrl-C again to exit`, and the exit code is 130.
 
-**Code:** `local.cancelled`. **Cause:** you pressed Ctrl-C, or another program interrupted the run. A second Ctrl-C exits at once. Emitted stream rows remain wherever your caller saved them; incomplete or unreceived answers may be lost, and cancellation does not refund sent requests.
+**Code:** `local.cancelled`. **Cause:** you pressed Ctrl-C, or another program interrupted the run. A second Ctrl-C exits at once. Emitted stream answers remain wherever your caller saved them; incomplete or unreceived answers may be lost, and cancellation does not refund sent requests.
 
-For named table operations, use the recovery path reported by the command: `thinkthen recover FILE > completed.jsonl` exports retained completed rows offline. For enriched JSONL or table input on stdin, select a persistent path with `--recovery FILE`; `--no-recovery` disables retention. Export reports missing positions and incomplete operations separately on stderr. It does not continue the job, recover unreceived answers, or supply unfinished rank scores. Keep recovery artifacts private because they retain input and answers.
+For named table operations, use the recovery path reported by the command: `thinkthen recover FILE > completed.jsonl` exports retained completed answers offline. For enriched JSONL or table input on stdin, select a persistent path with `--recovery FILE`; `--no-recovery` disables retention. Export reports missing positions and incomplete operations separately on stderr. It does not continue the job, recover unreceived answers, or supply unfinished rank scores. Keep recovery artifacts private because they retain input and answers.
 
-A plain rerun can send requests again, including work already paid for. Automatic resume is unavailable. Preserve emitted rows and recovery exports, or run independently saved chunks so you can select only unfinished work. SQL uses its own transactions: commit each saved key-range chunk separately; file recovery does not checkpoint a database statement.
+A plain rerun can send requests again, including work already paid for. Automatic resume is unavailable. Preserve emitted answers and recovery exports, or run independently saved chunks so you can select only unfinished work. SQL uses its own transactions: commit each saved key-range chunk separately; file recovery does not checkpoint a database statement.
 
 ### It ends with exit code 141
 
@@ -370,6 +370,6 @@ An `id` that isn't a string or a whole number fails the same way, with the same 
 
 ## An interrupted file operation left completed answers
 
-Named table operations retain a private recovery artifact until their completed output is published. An interruption or local error names it. Run `thinkthen recover FILE > completed.jsonl` to export completed typed rows offline. The JSON summary on stderr identifies missing original positions and incomplete operations; it is separate from the answer output.
+Named table operations retain a private recovery artifact until their completed output is published. An interruption or local error names it. Run `thinkthen recover FILE > completed.jsonl` to export completed answers with their types and status offline. The JSON summary on stderr identifies missing original positions and incomplete operations; it is separate from the answer output.
 
 For enriched JSONL or table input on stdin, select a persistent destination explicitly with `--recovery FILE`. `--no-recovery` disables retention. Export is not automatic resume: a plain rerun sends requests again. Unreceived answers and unfinished rank scores cannot be exported. Keep recovery files private because they retain source and answer metadata.

@@ -59,9 +59,9 @@ Output:
 Not sure. Ask a person.
 ```
 
-## Next
+## When to make a client
 
-The [Python SDK page](https://thinkthen.dev/sdks/python/) shows all ten functions, with pandas and Polars, async calls with `thinkthen.aio`, and when to make a client of your own. The [Python guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/python/thinkthen/__init__.py) cover every option.
+Make a client when you need your own settings, request allowance or usage totals, or want to close it yourself. Ordinary calls can use the module functions shown above.
 
 ### Inspect client usage
 
@@ -77,7 +77,7 @@ assert snapshot.attempts == 0
 
 `client.usage` (also on `AsyncClient`) is an immutable cumulative snapshot for that explicit client, available after close. Input and output tokens each carry a reported sum and a count of finished attempts whose usage is unknown. Active attempts and calls remain separate. This is not a price or invoice total; use a separate client for isolated accounting.
 
-## Request allowance
+### Set a request allowance
 
 ```python
 from thinkthen import Client
@@ -92,3 +92,7 @@ The optional allowance belongs to this explicit client and counts actual remote 
 `Client(response_store=tt.ResponseStore(path, "record", namespace, model_generation))` explicitly enables local recording; use `"cache"` for eligible reuse or `"replay"` for offline playback without credentials. `AsyncClient` accepts the same option. Optional `max_bytes`, `max_entries`, `max_age` (seconds), and `busy_timeout_ms` use engine defaults when omitted. `client.settings.response_store` returns admitted values. Usage snapshots include `cache_hits` and `replay_hits`.
 
 Storage is disabled unless configured. Local recordings retain question and record text; use a private local path and a nonsecret namespace/model-generation label. The shared engine owns limits, identity and concurrency policy. Replay misses fail locally rather than making a model call.
+
+## Next
+
+The [Python SDK page](https://thinkthen.dev/sdks/python/) shows all ten functions, with pandas and Polars, async calls with `thinkthen.aio`, and when to make a client of your own. The [Python guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/python/thinkthen/__init__.py) cover every option.

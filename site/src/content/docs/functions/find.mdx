@@ -36,7 +36,7 @@ Nothing: the text says who Morgan works for, and asks for nothing.
 
 <Example id="find-why" />
 
-`probability` is the backend's estimate that this line answers the question. 0.77 reaches the bar of 0.5, so find prints the line. [JSON output](/reference/json-output/) lists every field, including where the line starts and ends.
+`probability` is the model's estimate that this line answers the question. 0.77 reaches the bar of 0.5, so find prints the line. [JSON output](/reference/json-output/) lists every field, including where the line starts and ends.
 
 </details>
 
@@ -86,7 +86,7 @@ Each cell can hold several lines, inside quotes.
 
 ## Migrating a 0.1 candidate list
 
-In 0.1, find selected a record from the whole input. In 0.2, each record is a separate document and find selects a line inside it. Put one complete candidate set in one document and keep a map from Unicode-scalar spans to original candidate IDs. Duplicate text needs that map; text equality alone cannot identify the winner. Blank or multiline candidates need a single-line encoding rather than a plain newline join. The [command guide's migration example](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/bash.md#migrating-candidate-set-find-calls) shows the document, offsets and ID map.
+In 0.1, find selected one input from the whole collection. In 0.2, each input is a separate document and find selects a line inside it. Put one complete candidate set in one document and keep a map from Unicode-scalar spans to original candidate IDs. Duplicate text needs that map; text equality alone cannot identify the winner. Blank or multiline candidates need a single-line encoding rather than a plain newline join. The [command guide's migration example](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/bash.md#migrating-candidate-set-find-calls) shows the document, offsets and ID map.
 
 None is always available in 0.2 and must reach the same bar as a selected line. This presentation change needs fresh evaluation on your labeled cases; an old threshold or quality result does not establish the same behavior.
 
