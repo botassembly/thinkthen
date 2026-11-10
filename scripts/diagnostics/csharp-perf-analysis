@@ -30,14 +30,19 @@ with tarfile.open(platform) as t:
     package = t.extractfile(member).read()
 assert hashlib.sha256(package).hexdigest() == 'ad275a6b3e46b2087f8574662d23c08ac7a38b944a9787d435dc0bb53e07f833'
 with zipfile.ZipFile(io.BytesIO(package)) as z:
+    managed, = [n for n in z.namelist() if n.endswith('/ThinkThen.dll')]
+    managed_bytes = z.read(managed)
+    assert hashlib.sha256(managed_bytes).hexdigest() == '19dff531e39a9b2b61facdba1082a194686ff9ea6a9fe5e0f66a3b9cb16c9d6d'
+    (original / 'bin').mkdir(parents=True, exist_ok=True); (original / 'bin/ThinkThen.dll').write_bytes(managed_bytes)
     native = original / 'bin/runtimes/linux-x64/native/libthinkthen_ffi.so'; native.parent.mkdir(parents=True)
     native.write_bytes(z.read('runtimes/linux-x64/native/libthinkthen_ffi.so'))
 assert sha(native) == '9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435'
 for name, digest in [('libcoreclr.so','843b66a2b33a570537c779283b27f7c1f3ff5394e5a72436bf181c885d4cdfff'), ('libclrjit.so','fd4e672a34b28fb38d2b5f43d7c50d8b1892aebca97d41cfaccc1c8be3ee40e9')]:
     assert sha(sdk / 'shared/Microsoft.NETCore.App/10.0.14' / name) == digest
-modules, missing = [], []
+modules, missing, excluded = [], [], []
 for line in (output / 'buildids.txt').read_text().splitlines():
     buildid, path = line.split(maxsplit=1)
+    if path == '[kernel.kallsyms]': excluded.append(dict(path=path, reason='kernel symbols excluded; capture requested user-only callchains')); continue
     if not path.startswith('/'): missing.append(dict(path=path, reason='non-file module')); continue
     destination = symfs / path.lstrip('/')
     candidate = destination if destination.is_file() else Path(path)
@@ -49,7 +54,7 @@ for line in (output / 'buildids.txt').read_text().splitlines():
     if candidate != destination:
         destination.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(candidate, destination)
     modules.append(dict(path=path, buildid=buildid, sha256=sha(destination)))
-save('modules.json', modules); save('missing.json', missing)
+save('modules.json', modules); save('missing.json', missing); save('excluded.json', excluded)
 if missing: raise RuntimeError('missing/mismatched ELF: stop before unwind; no substituted modules')
 run([str(perf), 'script', '-i', str(data), '--symfs', str(symfs), '--ns', '--show-task-events', '--show-mmap-events', '--show-lost-events', '-F', 'comm,pid,tid,time,event,trace,ip,sym,dso,symoff'], 'perf-script.txt')
 save('result.json', dict(scope='decoder completed; manual caller/loss/exit review required', raw_sha256=sha(data), module_count=len(modules)))
