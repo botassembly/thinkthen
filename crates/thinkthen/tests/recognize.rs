@@ -103,7 +103,8 @@ fn names_keep_offsets_kinds_and_cuts() {
         .unwrap();
         let question = Recognize::new(kinds.clone()).unwrap();
         let mut rows = Vec::new();
-        engine(&server)
+        let runner = engine(&server);
+        runner
             .rows(&question, [Record::text(text)])
             .unwrap()
             .map(|row| row.unwrap())
@@ -126,6 +127,10 @@ fn names_keep_offsets_kinds_and_cuts() {
         );
         let second = tags.iter().any(|(_, p)| p[3] > 0.5) || text == "New York" || text == "x";
         assert_eq!(server.count(), 1 + usize::from(second));
+        let usage = runner.settled_usage();
+        assert_eq!(usage.attempts, server.count() as u64);
+        assert_eq!(usage.input_tokens.unknown_attempts, server.count() as u64);
+        assert_eq!(usage.active_calls, 0);
     }
 }
 

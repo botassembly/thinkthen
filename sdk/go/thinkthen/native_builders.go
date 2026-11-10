@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"os"
 	"time"
+	"unicode/utf8"
 )
 
 func nativeError() C.thinkthen_error {
@@ -27,15 +28,27 @@ func newNative(cfg Config) (nativeClient, error) {
 	}
 	var settings *C.thinkthen_settings
 	e := nativeError()
-	if backend, present := os.LookupEnv("THINKTHEN_BACKEND"); cfg.Backend == 0 && present {
-		data, _ := json.Marshal(map[string]string{"backend": backend})
-		if err := nativeResult(C.tt_settings_from_json(bytesPointer(data), C.size_t(len(data)), &settings, &e), &e); err != nil {
-			return nativeClient{}, err
+	fields := map[string]any{}
+	if store := cfg.ResponseStore; store != nil {
+		for _, text := range []string{store.Path, string(store.Mode), store.Namespace, store.ModelGeneration} {
+			if !utf8.ValidString(text) {
+				return nativeClient{}, conversionError(true)
+			}
 		}
-	} else {
-		if err := nativeResult(C.tt_settings_new(&settings, &e), &e); err != nil {
-			return nativeClient{}, err
-		}
+		fields["response_store"] = store
+	}
+	backend, present := os.LookupEnv("THINKTHEN_BACKEND")
+	if cfg.Backend == 0 && present {
+		fields["backend"] = backend
+	}
+	data, err := json.Marshal(fields)
+	if err != nil {
+		return nativeClient{}, conversionError(true)
+	}
+	if err := nativeResult(C.tt_settings_from_json(bytesPointer(data), C.size_t(len(data)), &settings, &e), &e); err != nil {
+		return nativeClient{}, err
+	}
+	if cfg.Backend != 0 || !present {
 		if err := nativeResult(C.tt_settings_set_backend(settings, C.uint32_t(normalizedBackend(cfg.Backend)), &e), &e); err != nil {
 			C.tt_settings_free(settings)
 			return nativeClient{}, err
@@ -68,6 +81,11 @@ func newNative(cfg Config) (nativeClient, error) {
 			return nativeClient{}, &Error{code: CodeUsageBatch, message: "Batch must be positive, or zero for the engine default"}
 		}
 		if err := nativeResult(C.tt_settings_set_batch(settings, C.uint64_t(cfg.Batch), &e), &e); err != nil {
+			return nativeClient{}, err
+		}
+	}
+	if cfg.MaxRequests != nil {
+		if err := nativeResult(C.tt_settings_set_max_requests(settings, C.uint64_t(*cfg.MaxRequests), &e), &e); err != nil {
 			return nativeClient{}, err
 		}
 	}

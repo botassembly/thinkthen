@@ -185,7 +185,20 @@ class PackageText(unittest.TestCase):
         scratch = self.scratch
         current = scratch / 'nuget'
         current.mkdir()
-        nuget({'linux-x86_64': self.native}, current, scratch, {'linux-x86_64': self.notices})
+        import release_registry
+        producer_run = release_registry.run
+        compiler_environments = []
+
+        def compiler_without_servers(*command, **options):
+            if command[:2] == ('dotnet', 'pack'):
+                self.assertEqual(options['env']['DOTNET_CLI_USE_MSBUILD_SERVER'], '0')
+                self.assertEqual(options['env']['UseSharedCompilation'], 'false')
+                compiler_environments.append(True)
+            return producer_run(*command, **options)
+
+        with patch.object(release_registry, 'run', side_effect=compiler_without_servers):
+            nuget({'linux-x86_64': self.native}, current, scratch, {'linux-x86_64': self.notices})
+        self.assertEqual(compiler_environments, [True])
         package, = current.glob('*.nupkg')
         stale = scratch / 'stale-feed'
         stale.mkdir()

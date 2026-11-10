@@ -6,7 +6,11 @@ internal static partial class Program
 {
     private static async Task OptionCases(string directory)
     {
-        await using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
+        var capped = new ThinkThenOptions { Backend = Backend.Stub, MaxRequests = ulong.MaxValue };
+        var capJson = JsonSerializer.Serialize(capped, JsonOptions);
+        Check(JsonNode.Parse(capJson)!["max_requests"]!.GetValue<ulong>() == ulong.MaxValue, "request allowance lost precision");
+        Check(JsonSerializer.Deserialize<ThinkThenOptions>(capJson, JsonOptions)!.MaxRequests == ulong.MaxValue, "request allowance decode lost precision");
+        await using var client = new ThinkThenClient(new() { Backend = Backend.Stub, MaxRequests = 0 });
         const string toolboxJson = """
             {
               "route":{"function":"choose","question":"Which team?","choices":["billing","shipping"]},

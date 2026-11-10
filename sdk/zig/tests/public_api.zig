@@ -641,3 +641,27 @@ test "rank streaming does not retain every host record" {
     try testing.expectEqualStrings(&expected, winner.item.text[0..8]);
     try testing.expect(try ranks.next(null) == null);
 }
+
+test "usage is an independent value after client deinit" {
+    var client = try tt.Client.init(.{ .backend = .stub }, null);
+    const snapshot = try client.usage(testing.allocator, null);
+    client.deinit();
+    try testing.expectEqual(@as(u64, 0), snapshot.attempts);
+    try testing.expectEqual(@as(u64, 0), snapshot.active_calls);
+    try testing.expectEqual(@as(?u64, 0), snapshot.input_tokens.reported);
+    try testing.expectEqual(@as(u64, 0), snapshot.output_tokens.unknown_attempts);
+}
+
+test "request allowance serialization preserves explicit zero" {
+    const encoded = try std.json.Stringify.valueAlloc(testing.allocator, tt.Settings{ .backend = .stub, .max_requests = 0 }, .{ .emit_null_optional_fields = false });
+    defer testing.allocator.free(encoded);
+    try testing.expect(std.mem.indexOf(u8, encoded, "\"max_requests\":0") != null);
+}
+
+test "response storage settings preserve modes, exact bounds and absence" {
+    const store: tt.ResponseStore = .{ .path = "unused-private-store", .mode = .replay, .namespace = "tests", .model_generation = "v1", .max_entries = std.math.maxInt(u64) };
+    const encoded = try std.json.Stringify.valueAlloc(testing.allocator, store, .{});
+    defer testing.allocator.free(encoded);
+    try testing.expect(std.mem.indexOf(u8, encoded, "\"max_entries\":18446744073709551615") != null);
+    try testing.expect(std.mem.indexOf(u8, encoded, "max_bytes") == null);
+}

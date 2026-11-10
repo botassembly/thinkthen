@@ -13,6 +13,21 @@ func checkPublicInterface() throws {
     Settings().backend.rawValue
       == (ProcessInfo.processInfo.environment["THINKTHEN_BACKEND"] ?? "systemone"))
   precondition(Settings(backend: .openAI).backend == .openAI)
+  let cap = Settings(backend: .stub, maxRequests: UInt64.max)
+  let capBytes = try JSONEncoder().encode(cap)
+  precondition(
+    String(decoding: capBytes, as: UTF8.self).contains("\"max_requests\":18446744073709551615"))
+  let decodedCap = try JSONDecoder().decode(Settings.self, from: capBytes)
+  precondition(decodedCap.maxRequests == UInt64.max)
+  let store = ResponseStore(
+    path: "unused-private-store", mode: .replay, namespace: "tests",
+    modelGeneration: "v1", maxEntries: UInt64.max)
+  let storeBytes = try JSONEncoder().encode(Settings(backend: .stub, responseStore: store))
+  let storeJSON = String(decoding: storeBytes, as: UTF8.self)
+  precondition(storeJSON.contains("\"max_entries\":18446744073709551615"))
+  precondition(!storeJSON.contains("max_bytes"))
+  let decodedStore = try JSONDecoder().decode(Settings.self, from: storeBytes)
+  precondition(decodedStore.responseStore == store)
   let retry =
     try JSONSerialization.jsonObject(with: JSONEncoder().encode(Retry())) as? [String: Any]
   precondition(retry?.isEmpty == true)
@@ -137,6 +152,13 @@ func checkTextSequenceLaziness(_ client: Client) {
 }
 
 func checkRankOriginalKinds(_ client: Client) async throws {
+  let usage: Usage = try {
+    let temporary = try Client(backend: .stub)
+    return try temporary.usage()
+  }()
+  precondition(usage.attempts == 0 && usage.activeCalls == 0)
+  precondition(usage.cacheHits == 0 && usage.replayHits == 0)
+  precondition(usage.inputTokens.reported == 0 && usage.outputTokens.unknownAttempts == 0)
   let records: [Record] = [.json(.null), .missing]
   let results = try await client.rank("Urgent?", levels: ["low", "high"], records: records)
     .collect()

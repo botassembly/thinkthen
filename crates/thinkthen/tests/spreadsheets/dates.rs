@@ -243,6 +243,12 @@ fn malformed_number_format_sections_fail_before_publication() {
             .replace('<', "&lt;")
             .replace('"', "&quot;");
         replace_member(&input, "xl/styles.xml", format!(r#"<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts><numFmt numFmtId="164" formatCode="{code}"/></numFmts><cellXfs><xf numFmtId="0"/><xf numFmtId="164"/></cellXfs></styleSheet>"#).as_bytes());
+        change_sheet(&input, |sheet| {
+            sheet.replace(
+                "<c r=\"A2\" t=\"inlineStr\"><is><t>alpha</t></is></c>",
+                "<c r=\"A2\" s=\"1\"><v>45292</v></c>",
+            )
+        });
         let before = fs::read(&input).unwrap();
         let result = support::command()
             .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
@@ -262,5 +268,124 @@ fn malformed_number_format_sections_fail_before_publication() {
                 .join(format!("format-{index}.thinkthen.xlsx"))
                 .exists()
         );
+    }
+}
+
+#[test]
+fn custom_number_formats_are_admitted_only_for_needed_numeric_cells() {
+    use crate::loopback::{KEY, Loopback};
+    use serde_json::json;
+    use std::sync::{Arc, Mutex};
+
+    for case in [
+        "unused",
+        "text",
+        "boolean",
+        "unselected",
+        "other-sheet",
+        "numeric",
+        "header",
+    ] {
+        let directory = TempDir::new().unwrap();
+        let mut baseline = None;
+        for malformed in [false, true] {
+            let input = directory.path().join(format!("{case}-{malformed}.xlsx"));
+            workbook(&input);
+            let code = if malformed { "&quot;unclosed" } else { "0" };
+            let styles = format!(
+                r#"<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts><numFmt numFmtId="164" formatCode="{code}"/></numFmts><cellXfs><xf numFmtId="0"/><xf numFmtId="164"/></cellXfs></styleSheet>"#
+            );
+            replace_member(&input, "xl/styles.xml", styles.as_bytes());
+            change_sheet(&input, |sheet| {
+                let sheet = if case == "unselected" {
+                    sheet
+                } else {
+                    sheet.replace("r=\"B2\" s=\"1\"", "r=\"B2\" s=\"0\"")
+                };
+                match case {
+                    "text" => sheet.replace(
+                        "r=\"A2\" t=\"inlineStr\"",
+                        "r=\"A2\" s=\"1\" t=\"inlineStr\"",
+                    ),
+                    "boolean" => sheet.replace(
+                        "<c r=\"A2\" t=\"inlineStr\"><is><t>alpha</t></is></c>",
+                        "<c r=\"A2\" s=\"1\" t=\"b\"><v>1</v></c>",
+                    ),
+                    "numeric" => sheet.replace(
+                        "<c r=\"A2\" t=\"inlineStr\"><is><t>alpha</t></is></c>",
+                        "<c r=\"A2\" s=\"1\"><v>45292</v></c>",
+                    ),
+                    "header" => sheet.replace(
+                        "<c r=\"A1\" t=\"inlineStr\"><is><t>Body</t></is></c>",
+                        "<c r=\"A1\" s=\"1\"><v>45292</v></c>",
+                    ),
+                    _ => sheet,
+                }
+            });
+            if case == "other-sheet" {
+                replace_member(&input, "xl/worksheets/sheet2.xml", br#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Other</t></is></c></row><row r="2"><c r="A2" s="1"><v>45292</v></c></row></sheetData></worksheet>"#);
+            }
+            let original = fs::read(&input).unwrap();
+            let captured = Arc::new(Mutex::new(Vec::new()));
+            let seen = captured.clone();
+            let server = Loopback::answering(move |question| {
+                seen.lock()
+                    .unwrap()
+                    .push(question["instructions"].as_str().unwrap().to_owned());
+                json!({"type":"noul","noul":0.9})
+            })
+            .unwrap();
+            let result = support::command()
+                .args(["decide", "Ready?", "--url", server.base()])
+                .arg(&input)
+                .args([
+                    "--sheet",
+                    "Intake",
+                    "--column",
+                    if case == "header" { "45292" } else { "Body" },
+                    "--into",
+                    "ready",
+                ])
+                .env("THINKTHEN_API_KEY", KEY)
+                .output()
+                .unwrap();
+            let output = input.with_extension("thinkthen.xlsx");
+            if malformed && matches!(case, "numeric" | "header") {
+                assert_eq!(result.status.code(), Some(2), "{case}: {result:?}");
+                assert!(
+                    String::from_utf8_lossy(&result.stderr).contains("number format"),
+                    "{case}: {result:?}"
+                );
+                assert!(
+                    captured.lock().unwrap().is_empty(),
+                    "{case}: paid work before refusal"
+                );
+                assert!(!output.exists(), "{case}");
+            } else {
+                assert!(result.status.success(), "{case}: {malformed}: {result:?}");
+                let asked = captured.lock().unwrap().clone();
+                assert_eq!(asked.len(), 1, "{case}: {asked:?}");
+                if malformed {
+                    assert_eq!(Some(&asked), baseline.as_ref(), "{case}");
+                } else {
+                    baseline = Some(asked);
+                }
+                let sheet = String::from_utf8(member(&output, "xl/worksheets/sheet1.xml")).unwrap();
+                assert_eq!(sheet.matches("<row ").count(), 2, "{case}");
+                assert!(
+                    sheet.contains("<c r=\"C2\" t=\"b\"><v>1</v></c>"),
+                    "{case}: {sheet}"
+                );
+                assert_eq!(
+                    member(&input, "xl/styles.xml"),
+                    member(&output, "xl/styles.xml")
+                );
+                assert_eq!(
+                    member(&input, "xl/worksheets/sheet2.xml"),
+                    member(&output, "xl/worksheets/sheet2.xml")
+                );
+            }
+            assert_eq!(fs::read(&input).unwrap(), original, "{case}");
+        }
     }
 }

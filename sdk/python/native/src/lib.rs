@@ -228,6 +228,19 @@ impl NativeEngine {
             .map_err(|_| error(thinkthen::native::internal_error()))
     }
 
+    #[getter]
+    fn usage(&self) -> PyResult<String> {
+        serde_json::to_string(&self.client.usage())
+            .map_err(|_| error(thinkthen::native::internal_error()))
+    }
+
+    fn usage_settled(&self, py: Python<'_>) -> PyResult<String> {
+        py.detach(|| {
+            serde_json::to_string(&self.client.settled_usage())
+                .map_err(|_| error(thinkthen::native::internal_error()))
+        })
+    }
+
     #[pyo3(signature = (request_json, source, cancel, keep_originals, question=None))]
     fn start(
         &self,

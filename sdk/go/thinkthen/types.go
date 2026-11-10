@@ -23,8 +23,36 @@ type Config struct {
 	APIKey Key `json:"-"`
 	// Batch sets records per request; zero uses the engine default.
 	Batch int
+	// MaxRequests limits all sends by this client; nil is unlimited and pointer-to-zero forbids sends.
+	MaxRequests *uint64
 	// Retry overrides the engine retry settings when non-nil.
 	Retry *Retry
+	// ResponseStore explicitly enables private local cache, record or replay storage.
+	ResponseStore *ResponseStoreConfig
+}
+
+// ResponseMode selects local response storage behavior.
+type ResponseMode string
+
+const (
+	// ResponseCache reuses eligible local answers and stores misses.
+	ResponseCache ResponseMode = "cache"
+	// ResponseRecord records immutable live exchanges.
+	ResponseRecord ResponseMode = "record"
+	// ResponseReplay reads recordings without credentials or network.
+	ResponseReplay ResponseMode = "replay"
+)
+
+// ResponseStoreConfig is admitted by the shared engine. Nil bounds use engine defaults.
+type ResponseStoreConfig struct {
+	Path            string       `json:"path"`
+	Mode            ResponseMode `json:"mode"`
+	Namespace       string       `json:"namespace"`
+	ModelGeneration string       `json:"model_generation"`
+	MaxBytes        *uint64      `json:"max_bytes,omitempty"`
+	MaxEntries      *uint64      `json:"max_entries,omitempty"`
+	MaxAge          *uint64      `json:"max_age,omitempty"`
+	BusyTimeoutMS   *uint64      `json:"busy_timeout_ms,omitempty"`
 }
 
 // Retry sets the retry budget and timeouts; durations must be whole milliseconds.

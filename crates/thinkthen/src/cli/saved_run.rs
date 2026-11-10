@@ -53,6 +53,7 @@ pub(super) fn run(
     mut input: Input,
     output: &Output,
     cancel: &Cancel,
+    account: &crate::usage::Account,
 ) -> Result<u8, Error> {
     let entry = load(&target.directory, &target.toolbox, target.entry.as_deref())?
         .map_requests(|request| super::invocation::overrides(request, args))?;
@@ -90,7 +91,7 @@ pub(super) fn run(
             "a mixed-step run",
         ));
     }
-    let engine = options::client(args)?;
+    let engine = options::client(args, account)?;
     if let Some(request) = entry.request() {
         let request = request.clone();
         return if input.table() {

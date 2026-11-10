@@ -39,6 +39,8 @@ def metrics(tp, fp, fn, count):
 
 def measure(binary, adapter, directory, url):
     totals = {}
+    outcomes = {}
+    failures = False
     for line in (directory / "cases.jsonl").read_text().splitlines():
         case = json.loads(line)
         function = case["function"]
@@ -47,15 +49,37 @@ def measure(binary, adapter, directory, url):
             command.extend(["--url", url])
         result = subprocess.run(command, input=case["text"], text=True,
                                 capture_output=True, check=False)
-        if result.returncode not in (0, 1, 3):
-            raise ValueError(f'{case["id"]}: command exited {result.returncode}: {result.stderr.strip()}')
-        rows = [json.loads(row) for row in result.stdout.splitlines()]
-        if len(rows) != 1 or rows[0].get("status") not in ("answered", "unsure"):
-            raise ValueError(f'{case["id"]}: expected one successful result row')
-        answer = rows[0].get("answer")
-        predicted = Counter({match_key(function, item, case["text"])
-                             for item in identity(function, answer)}) if answer is not None else Counter()
+        outcome = outcomes.setdefault(function, Counter())
+        outcome["cases"] += 1
+        try:
+            rows = [json.loads(row) for row in result.stdout.splitlines()]
+            if (len(rows) != 1 or not isinstance(rows[0], dict)
+                    or rows[0].get("status") not in ("answered", "unsure", "failed")):
+                raise ValueError("expected one typed result row")
+            row = rows[0]
+            status = row["status"]
+            codes = (4, 6) if status == "failed" else (0, 1, 3)
+            if result.returncode not in codes:
+                raise ValueError(f"command exited {result.returncode} for {status} row")
+            answer = row.get("answer")
+            predicted = Counter({match_key(function, item, case["text"])
+                                 for item in identity(function, answer)}) if answer is not None else Counter()
+            if status == "answered" and "answer" not in row:
+                raise ValueError("answered row is missing its answer")
+        except (ValueError, KeyError, TypeError) as error:
+            print(f'{case["id"]}: {error}', file=sys.stderr)
+            outcome["harness_failures"] += 1
+            failures = True
+            status, answer, predicted = "harness_failure", None, Counter()
         expected = Counter({match_key(function, item, case["text"]) for item in case["expected"]})
+        if status in ("answered", "unsure", "failed"):
+            outcome[status] += 1
+        if status == "failed":
+            failures = True
+        if status == "answered":
+            outcome["correct"] += predicted == expected
+            if function == "find" and answer is None:
+                outcome["successful_none" if not expected else "false_none"] += 1
         scopes = [(function, predicted, expected)]
         if function == "recognize":
             for kind in case["args"][1::2]:
@@ -75,11 +99,19 @@ def measure(binary, adapter, directory, url):
     for function, score in sorted(scores.items()):
         print(f"{function}\t{adapter}\t{score['cases']}\t{score['tp']}\t{score['fp']}\t{score['fn']}"
               f"\t{score['precision']:.6f}\t{score['recall']:.6f}\t{score['f1']:.6f}")
+    for function, counts in outcomes.items():
+        scores[function]["outcomes"] = {name: counts[name] for name in (
+            "cases", "answered", "correct", "successful_none", "false_none",
+            "unsure", "failed", "harness_failures")}
+        scores[function]["outcomes"]["answered_accuracy"] = (
+            counts["correct"] / counts["answered"] if counts["answered"] else None)
+        print(json.dumps({"function": function, "outcomes": scores[function]["outcomes"]}, sort_keys=True))
     print("\nRecorded comparison (public sets may occur in model training):")
     for row in json.loads((directory / "comparison.json").read_text()):
         row["measured_backend"] = adapter
         row["measured"] = scores.get(row.get("scope", row["function"]))
         print(json.dumps(row, ensure_ascii=False, sort_keys=True))
+    return failures
 
 
 def main():
@@ -91,11 +123,11 @@ def main():
                         help="directory containing cases.jsonl and comparison.json")
     args = parser.parse_args()
     try:
-        measure(str(Path(args.binary).resolve()), args.adapter, args.data, args.url)
+        failed = measure(str(Path(args.binary).resolve()), args.adapter, args.data, args.url)
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(f"quality: {error}", file=sys.stderr)
         return 1
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

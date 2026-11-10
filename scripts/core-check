@@ -14,10 +14,10 @@ root = Path(__file__).resolve().parent.parent
 workspace = tomllib.loads((root / 'Cargo.toml').read_text())['workspace']
 
 # The thinkthen crate restates the workspace lint table with unsafe_code denied
-# rather than forbidden, so that files/mod.rs alone can allow the Windows
+# rather than forbidden, so that access/mod.rs alone can allow the Windows
 # access-list module. Deny accepts any allow, so this guard holds the rest of
 # the crate, its tests included, to the workspace rule.
-UNSAFE_HOME = 'src/files/mod.rs'
+UNSAFE_HOME = 'src/access/mod.rs'
 ALLOWANCE = re.compile(r'\b(?:allow|expect|warn)\s*\([^)]*\bunsafe_code\b')
 
 
@@ -75,4 +75,4 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-core-') as temporary:
     subprocess.run(['cargo', 'clippy', '--offline', '--manifest-path', str(stage / 'Cargo.toml'),
                     '--all-features', '--', '-D', 'warnings', '-F', 'unsafe_code'], check=True,
                    env=dict(os.environ, CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(root / 'target'))))
-print('core: isolated pure module compiles with I/O and dynamic JSON bans; only files/mod.rs allows unsafe code')
+print('core: isolated pure module compiles with I/O and dynamic JSON bans; only access/mod.rs allows unsafe code')

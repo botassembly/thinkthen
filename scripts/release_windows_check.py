@@ -12,15 +12,6 @@ import tempfile
 import zipfile
 
 
-def wine_executable():
-    supplied = os.environ.get('THINKTHEN_WINE')
-    candidates = [supplied] if supplied else [shutil.which('wine'), shutil.which('wine64'),
-                    '/usr/lib/x86_64-linux-gnu/wine/wine', '/usr/lib/wine/wine64']
-    for candidate in candidates:
-        if candidate and Path(candidate).is_file(): return candidate
-    raise RuntimeError('Prepare Wine before running Windows tools or the offline Wine smoke')
-
-
 def pe(data, *, dll):
     """Require a complete x86-64 PE32+ image of the requested kind."""
     production_native(data, "Windows PE image")
@@ -58,10 +49,15 @@ def inventory(folder):
         assert {p for p in archive.namelist() if 'THIRD-PARTY-NOTICES' not in p.split('/')} == {'thinkthen.exe', 'thinkthen.1', 'README.md', 'LICENSE'}
         pe(archive.read('thinkthen.exe'), dll=False)
         assert b'.TH' in archive.read('thinkthen.1')
+    with zipfile.ZipFile(folder / packages['c']) as archive:
+        pe(archive.read('bin/thinkthen_ffi.dll'), dll=True)
+    pe((folder / 'checks/c-consumer.exe').read_bytes(), dll=False)
     return build
 
 
 def smoke(folder, *, core_only=False):
+    if os.name != 'nt':
+        raise RuntimeError('Windows execution qualification requires native Windows')
     folder = Path(folder).resolve()
     build = inventory(folder)
     with tempfile.TemporaryDirectory(prefix='thinkthen-windows-check-') as temporary:
@@ -70,27 +66,11 @@ def smoke(folder, *, core_only=False):
             with zipfile.ZipFile(folder / build['packages'][name]) as archive:
                 archive.extractall(scratch / name)
         shutil.copy2(folder / 'checks/c-consumer.exe', scratch / 'c/bin/c-consumer.exe')
-        pe((scratch / 'c/bin/thinkthen_ffi.dll').read_bytes(), dll=True)
-        prefix = scratch / 'wine'
         env = {key: value for key, value in os.environ.items() if key in ('PATH', 'HOME', 'LANG', 'SYSTEMROOT', 'TEMP', 'TMP')}
-        env.update(WINEPREFIX=str(prefix), WINEDEBUG='-all', WINEDLLOVERRIDES='mscoree,mshtml=')
-        if os.name == 'nt':
-            from release_windows_sdks import runtime_environment
-            env = runtime_environment(scratch, env)
-        runner = [] if os.name == 'nt' else [wine_executable()]
-        if runner:
-            runtime = scratch / 'runtime'
-            runtime.mkdir(mode=0o700)
-            env['XDG_RUNTIME_DIR'] = str(runtime)
-            prepared = subprocess.run([*runner, 'wineboot', '-u'], stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE, env=env, cwd=scratch, timeout=120)
-            preparation = {'returncode': prepared.returncode,
-                           'stdout': prepared.stdout.decode(errors='replace'),
-                           'stderr': prepared.stderr.decode(errors='replace')}
-            print('Wine prefix preparation: ' + json.dumps(preparation), flush=True)
-            assert prepared.returncode == 0, preparation
+        from release_windows_sdks import runtime_environment
+        env = runtime_environment(scratch, env)
         def run(binary, *args, payload=None, code=0, stderr_empty=False):
-            result = subprocess.run([*runner, str(binary), *args], input=payload, stdout=subprocess.PIPE,
+            result = subprocess.run([str(binary), *args], input=payload, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, env=env, cwd=scratch, timeout=120)
             assert result.returncode == code and (not stderr_empty or not result.stderr), {
                 'binary': str(binary), 'sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
@@ -120,6 +100,6 @@ def smoke(folder, *, core_only=False):
                      payload=encode_records([record]))
         assert json.loads(output) == expected
     print('Windows candidate: checked inventory; installed CLI and C ABI shared stub cases pass')
-    if os.name == 'nt' and not core_only:
+    if not core_only:
         from release_windows_sdks import full
         full(folder, build)

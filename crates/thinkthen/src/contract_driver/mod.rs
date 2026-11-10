@@ -2,6 +2,7 @@
 #[cfg(any(feature = "native", feature = "command"))]
 pub(crate) mod driver;
 mod execute;
+pub(crate) use execute::identity;
 mod filtered;
 #[cfg(feature = "native")]
 pub mod native;
@@ -433,8 +434,10 @@ impl Engine {
         let output = Queue::new(2, &self.cancel);
         let send = output.clone();
         let engine = self.clone();
+        let activity = self.account.open_call()?;
         std::thread::Builder::new()
             .spawn(move || {
+                let _activity = activity;
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     execute::drive(
                         &engine,

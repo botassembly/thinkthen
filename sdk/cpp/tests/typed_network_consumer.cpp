@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -36,7 +37,16 @@ static tt::settings settings(const char* wire, const char* url) {
  * It sends the provider's ordinary reply shape, never a prebuilt public row.
  */
 static void typed_wire_projection(const tt::settings& config) {
-    tt::client owner(config);
+    auto capped_config = config;
+    capped_config.max_requests = 0;
+    tt::client capped(capped_config);
+    try { (void)capped.decide(tt::decide{"Ready?"}, "evidence"); assert(false); }
+    catch (const tt::error& failure) { assert(std::string(thinkthen_code_name(failure.code().value())) == "local.request-limit"); }
+    auto recorded_config = config;
+    const auto folder = std::filesystem::temp_directory_path() / ("thinkthen-cpp-store-" +
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    recorded_config.response_store = tt::response_store{folder.string(), tt::response_mode::record, "projection", "model-v1", {}, {}, {}, {}};
+    tt::client owner(recorded_config);
     const auto row = owner.choose(tt::choose{"Which team?", {"billing", "shipping"}},
                                   tt::text{"refund please"});
     constexpr double expected_probability = 0.7000000000000001;
@@ -47,6 +57,25 @@ static void typed_wire_projection(const tt::settings& config) {
     const auto detail = row.detail();
     assert(detail && detail->labels.size() == 2);
     assert(detail->labels.at("billing") == expected_probability);
+    const auto used = owner.usage();
+    assert(used.attempts == 1 && used.responses == 1 && used.request_body_bytes > 0);
+    auto reused_config = recorded_config;
+    reused_config.response_store->mode = tt::response_mode::cache;
+    reused_config.max_requests = 0;
+    const auto cached_usage = [&] {
+        tt::client cached(reused_config);
+        assert(cached.choose(tt::choose{"Which team?", {"billing", "shipping"}}, "refund please").value() == "billing");
+        return cached.usage();
+    }();
+    assert(cached_usage.cache_hits == 1 && cached_usage.replay_hits == 0 && cached_usage.attempts == 0);
+    reused_config.response_store->mode = tt::response_mode::replay;
+    reused_config.api_key = {};
+    const auto replayed_usage = [&] {
+        tt::client replayed(reused_config);
+        assert(replayed.choose(tt::choose{"Which team?", {"billing", "shipping"}}, "refund please").value() == "billing");
+        return replayed.usage();
+    }();
+    assert(replayed_usage.replay_hits == 1 && replayed_usage.cache_hits == 0 && replayed_usage.attempts == 0);
 }
 
 /* Feature: exhausted record attempts remain rows and terminate normally. */

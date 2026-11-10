@@ -31,12 +31,20 @@ pub(super) fn command() -> Command {
         ("url", "Override the chosen backend address"),
         ("batch", "Texts per request [THINKTHEN_BATCH]"),
         (
+            "max-requests",
+            "Maximum send attempts for this invocation [THINKTHEN_MAX_REQUESTS]",
+        ),
+        (
             "from",
             "Input framing [THINKTHEN_FROM; default: inferred from FILE]",
         ),
         (
             "field",
             "Field pointer; repeat for an object keyed by final names [THINKTHEN_FIELD]",
+        ),
+        (
+            "recovery",
+            "Retain completed table or enriched JSONL answers at FILE",
         ),
         ("format", "Output format [THINKTHEN_FORMAT; default: text]"),
         ("color", "Diagnostic color [THINKTHEN_COLOR; NO_COLOR]"),
@@ -53,7 +61,42 @@ pub(super) fn command() -> Command {
         };
         command = command.arg(arg);
     }
+    for (name, help) in [
+        (
+            "response-store",
+            "Private local response directory; retention is off unless selected",
+        ),
+        (
+            "response-mode",
+            "Explicit response policy: cache, record or replay",
+        ),
+        (
+            "response-namespace",
+            "Caller-owned nonsecret response namespace",
+        ),
+        (
+            "model-generation",
+            "Explicit model-generation label for response identity",
+        ),
+        (
+            "response-max-bytes",
+            "Maximum logical retained response payload bytes",
+        ),
+        ("response-max-entries", "Maximum eligible stored asks"),
+        (
+            "response-max-age",
+            "Maximum live-cache age in whole seconds",
+        ),
+    ] {
+        command = command.arg(option(name, help).global(true));
+    }
     for (name, short, help) in [
+        (
+            "usage",
+            None,
+            "Report observed request and token usage on stderr",
+        ),
+        ("no-recovery", None, "Do not retain completed file answers"),
         ("json", None, "Write typed JSON Lines [THINKTHEN_JSON]"),
         (
             "quiet",
@@ -79,6 +122,9 @@ pub(super) fn command() -> Command {
     }
     command
         .subcommand(data_command("run"))
+        .subcommand(super::audit::command())
+        .subcommand(super::diff::command())
+        .subcommand(super::recover::command())
         .subcommand(
             Command::new("completions")
                 .about("Generate shell completions without a backend")

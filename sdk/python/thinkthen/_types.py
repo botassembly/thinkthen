@@ -37,6 +37,40 @@ _Item_co = TypeVar("_Item_co", covariant=True, default=Any)
 A_co = TypeVar("A_co", covariant=True)
 
 
+@dataclass(frozen=True)
+class TokenUsage:
+    """Reported tokens and finished attempts whose usage is unknown."""
+
+    reported: int | None
+    unknown_attempts: int
+
+
+@dataclass(frozen=True)
+class Usage:
+    """An immutable cumulative snapshot for one explicit client lifetime."""
+
+    attempts: int
+    responses: int
+    status_retries: int
+    connection_retries: int
+    request_body_bytes: int
+    active_attempts: int
+    active_calls: int
+    cache_hits: int
+    replay_hits: int
+    input_tokens: TokenUsage
+    output_tokens: TokenUsage
+
+    @classmethod
+    def _from_json(cls, value: str) -> Usage:
+        import json
+
+        raw = json.loads(value)
+        raw["input_tokens"] = TokenUsage(**raw["input_tokens"])
+        raw["output_tokens"] = TokenUsage(**raw["output_tokens"])
+        return cls(**raw)
+
+
 class Backend(StringEnum):
     SYSTEMONE = "systemone"
     OPENAI = "openai"
@@ -93,12 +127,28 @@ class RetryPolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class ResponseStore:
+    """Explicit local response storage; shared engine settings own admission."""
+
+    path: str
+    mode: Literal["cache", "record", "replay"]
+    namespace: str
+    model_generation: str
+    max_bytes: int | None = None
+    max_entries: int | None = None
+    max_age: int | None = None
+    busy_timeout_ms: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ClientSettings:
     backend: Backend
     model: str
     url: str | None
     batch: int
     retry: RetryPolicy
+    max_requests: int | None = None
+    response_store: ResponseStore | None = None
 
 
 class ThinkThenError(Exception):
@@ -641,6 +691,7 @@ __all__ = [
     "RelationDetail",
     "RelationName",
     "RelationRule",
+    "ResponseStore",
     "RetryPolicy",
     "RowError",
     "ScoreOutcome",

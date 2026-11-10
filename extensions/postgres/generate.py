@@ -9,8 +9,11 @@ registry = json.loads(Path(sys.argv[1]).read_text())
 path = Path(sys.argv[2])
 upgrades = [Path(name) for name in sys.argv[3:]]
 sql = path.read_text()
-for token, key in [('STATUSES', 'statuses'), ('CODES', 'codes')]:
-    sql = sql.replace('@' + token + '@', ', '.join("'" + row['name'] + "'" for row in registry[key]))
+for native_type, key in [('status', 'statuses'), ('error_code', 'codes')]:
+    labels = ', '.join("'" + row['name'] + "'" for row in registry[key])
+    sql, count = re.subn(r'(CREATE TYPE thinkthen\.' + native_type + r' AS ENUM \()[^;]*(\);)',
+                         lambda match: match[1] + labels + match[2], sql)
+    assert count == 1, native_type
 values = [row['value'] for row in registry['codes']]
 assert len(values) == len(set(values)) and all(0 < value < 36**3 for value in values)
 # Host transport arguments stay local; question arguments come from the schema.

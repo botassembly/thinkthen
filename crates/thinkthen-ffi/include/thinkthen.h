@@ -75,11 +75,11 @@
 /** The patch part of THINKTHEN_VERSION. */
 #define THINKTHEN_VERSION_PATCH 0u
 /** The binary interface this header needs: THINKTHEN_ABI_MAJOR in the high 16 bits, THINKTHEN_ABI_MINOR in the low 16. Pass it to thinkthen_abi_compatible with thinkthen_abi_version(). */
-#define THINKTHEN_ABI_VERSION 131074u
+#define THINKTHEN_ABI_VERSION 131077u
 /** The binary interface's major version; a library with another major is incompatible. */
 #define THINKTHEN_ABI_MAJOR 2u
 /** The binary interface's minor version; a library with this minor or a later one is compatible. */
-#define THINKTHEN_ABI_MINOR 2u
+#define THINKTHEN_ABI_MINOR 5u
 /** The code name a binding reports when the loaded library's binary interface is incompatible. */
 #define THINKTHEN_ABI_ERROR_CODE "usage.abi"
 /** The message a binding reports when the loaded library's binary interface is incompatible. */
@@ -162,6 +162,22 @@ typedef enum thinkthen_code {
   THINKTHEN_CODE_LOCAL_IO = 4002,
   /** local.toolbox: A toolbox could not be read. */
   THINKTHEN_CODE_LOCAL_TOOLBOX = 4003,
+  /** local.accounting: Client accounting exceeded its supported range before another request could be sent. */
+  THINKTHEN_CODE_LOCAL_ACCOUNTING = 4004,
+  /** local.request-limit: The client request allowance is exhausted; no further request was sent. */
+  THINKTHEN_CODE_LOCAL_REQUEST_LIMIT = 4005,
+  /** local.response-store:  */
+  THINKTHEN_CODE_LOCAL_RESPONSE_STORE = 4006,
+  /** local.store-corrupt:  */
+  THINKTHEN_CODE_LOCAL_STORE_CORRUPT = 4007,
+  /** local.store-format:  */
+  THINKTHEN_CODE_LOCAL_STORE_FORMAT = 4008,
+  /** local.store-answer:  */
+  THINKTHEN_CODE_LOCAL_STORE_ANSWER = 4009,
+  /** local.replay-miss:  */
+  THINKTHEN_CODE_LOCAL_REPLAY_MISS = 4010,
+  /** local.store-quota:  */
+  THINKTHEN_CODE_LOCAL_STORE_QUOTA = 4011,
   /** internal.bug: A bug in this library; please report it. */
   THINKTHEN_CODE_INTERNAL_BUG = 5001,
 } thinkthen_code;
@@ -271,6 +287,21 @@ typedef enum thinkthen_offset {
  * Kept for compatibility. Failures return the negative of a thinkthen_code, never this value.
  */
 #define THINKTHEN_ERROR -1
+
+/**
+ * Reuse eligible answers; save valid misses within configured bounds.
+ */
+#define THINKTHEN_RESPONSE_CACHE 0
+
+/**
+ * Append immutable live exchanges without evicting recordings.
+ */
+#define THINKTHEN_RESPONSE_RECORD 1
+
+/**
+ * Read a fixed recording snapshot without credentials or network.
+ */
+#define THINKTHEN_RESPONSE_REPLAY 2
 
 /**
  * A call's wake source, from thinkthen_call_events; it may outlive the call. Free it with
@@ -519,6 +550,135 @@ typedef struct thinkthen_record_view {
    */
   size_t len;
 } thinkthen_record_view;
+
+/**
+ * Borrowed typed store configuration. Set struct_size to sizeof(thinkthen_response_store_config).
+ * Optional numeric pointers are NULL for the shared defaults; pointed zero is invalid.
+ */
+typedef struct thinkthen_response_store_config {
+  /**
+   * The initialized size of this configuration.
+   */
+  uint32_t struct_size;
+  /**
+   * Private local directory, copied before return.
+   */
+  struct thinkthen_text path;
+  /**
+   * One THINKTHEN_RESPONSE_* mode.
+   */
+  uint32_t mode;
+  /**
+   * Caller-owned nonsecret namespace, copied before return.
+   */
+  struct thinkthen_text namespace_name;
+  /**
+   * Explicit nonsecret model-generation label, copied before return.
+   */
+  struct thinkthen_text model_generation;
+  /**
+   * Optional logical retained payload bound in bytes.
+   */
+  const uint64_t *max_bytes;
+  /**
+   * Optional distinct eligible ask bound.
+   */
+  const uint64_t *max_entries;
+  /**
+   * Optional live-cache age in whole seconds; recordings do not expire.
+   */
+  const uint64_t *max_age;
+  /**
+   * Optional SQLite busy timeout in whole milliseconds.
+   */
+  const uint64_t *busy_timeout_ms;
+} thinkthen_response_store_config;
+
+/**
+ * Observed tokens; an unknown reported total denotes arithmetic overflow.
+ */
+typedef struct thinkthen_token_usage {
+  /**
+   * Known token subtotal, meaningful only when reported_known is true.
+   */
+  uint64_t reported;
+  /**
+   * Finished attempts lacking a reported count for this dimension.
+   */
+  uint64_t unknown_attempts;
+  /**
+   * Whether the subtotal fits in reported; missing attempts are counted separately.
+   */
+  bool reported_known;
+} thinkthen_token_usage;
+
+/**
+ * Independently copied cumulative usage. Initialize struct_size before a getter.
+ */
+typedef struct thinkthen_usage {
+  /**
+   * Set to sizeof(thinkthen_usage).
+   */
+  uint32_t struct_size;
+  /**
+   * Actual send attempts.
+   */
+  uint64_t attempts;
+  /**
+   * Fully received bounded response bodies.
+   */
+  uint64_t responses;
+  /**
+   * Attempts retrying an HTTP status.
+   */
+  uint64_t status_retries;
+  /**
+   * Attempts retrying a connection.
+   */
+  uint64_t connection_retries;
+  /**
+   * Encoded request bytes including retries.
+   */
+  uint64_t request_body_bytes;
+  /**
+   * Engine calls that have not settled, including paused input.
+   */
+  uint64_t active_calls;
+  /**
+   * Transport attempts that have not finished.
+   */
+  uint64_t active_attempts;
+  /**
+   * Observed input tokens.
+   */
+  struct thinkthen_token_usage input_tokens;
+  /**
+   * Observed output tokens.
+   */
+  struct thinkthen_token_usage output_tokens;
+} thinkthen_usage;
+
+/**
+ * Full copied usage including local hit metrics. The embedded usage layout stays unchanged.
+ */
+typedef struct thinkthen_usage_v2 {
+  /**
+   * Initialize to sizeof(thinkthen_usage_v2).
+   */
+  uint32_t struct_size;
+  /**
+   * Original counters; the getter also fills this nested struct_size.
+   */
+  struct thinkthen_usage usage;
+  /**
+   * Eligible cached asks reused, not rows.
+   */
+  uint64_t cache_hits;
+  /**
+   * Recorded asks replayed, not rows.
+   */
+  uint64_t replay_hits;
+} thinkthen_usage_v2;
 
 /**
  * A recognized name, as thinkthen_value_name_at writes it; its texts borrow from the value.
@@ -1174,6 +1334,17 @@ int32_t thinkthen_settings_from_json(const char *data,
                                      struct thinkthen_error *error);
 
 /**
+ * Set the lifetime HTTP-attempt allowance. Zero prevents all remote sends.
+ * Existing clients are unaffected; clones of a newly opened client share its allowance.
+ * Pointers and threads:
+ * settings is live and exclusively borrowed. error is NULL or initialized.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_settings_set_max_requests(struct thinkthen_settings *settings,
+                                            uint64_t max_requests,
+                                            struct thinkthen_error *error);
+
+/**
  * Make an empty toolbox of named questions.
  *
  * Returns THINKTHEN_OK with *out set. The caller owns *out and frees it with
@@ -1738,7 +1909,8 @@ THINKTHEN_API const char *thinkthen_code_family(int32_t value);
  * Open a client from settings, or from the environment when settings is NULL.
  *
  * With NULL settings, THINKTHEN_BACKEND picks the backend and the backend's own variables give
- * the key and URL. The client copies the settings, so they may be freed at once. Returns
+ * the key and URL. THINKTHEN_MAX_REQUESTS supplies the client allowance only on this
+ * explicitly from-environment path. The client copies the settings, so they may be freed at once. Returns
  * THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
  * -THINKTHEN_CODE_USAGE_BACKEND for an unknown THINKTHEN_BACKEND,
  * -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a key and none is set, or another
@@ -1795,6 +1967,36 @@ int32_t thinkthen_client_open_json(const char *settings,
                                    size_t len,
                                    struct thinkthen_client **out,
                                    struct thinkthen_error *error);
+
+/**
+ * Copy cumulative client usage into an independently owned JSON buffer.
+ *
+ * The snapshot remains valid after the client is freed. Active attempts are
+ * unresolved; this is client-wide accounting, not SQL statement accounting.
+ * Free the returned bytes with thinkthen_buffer_free.
+ * Pointers and threads:
+ * client is live, out is writable and empty, and error is NULL or initialized.
+ * No thread may free client until this function returns.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_usage(const struct thinkthen_client *client,
+                               struct thinkthen_buffer *out,
+                               struct thinkthen_error *error);
+
+/**
+ * Wait for owned calls to settle and copy final cumulative client usage.
+ *
+ * First stop admitting calls and cancel/free every owned unfinished call.
+ * Unlike thinkthen_client_usage, this waits for their engine workers to end.
+ * The returned JSON has the same independently owned format.
+ * Pointers and threads:
+ * client is live; no thread opens new calls or frees it during this function.
+ * out is writable and empty, and error is NULL or initialized.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_usage_settled(const struct thinkthen_client *client,
+                                       struct thinkthen_buffer *out,
+                                       struct thinkthen_error *error);
 
 /**
  * Free a client.
@@ -2128,6 +2330,19 @@ int32_t thinkthen_row_original(const struct thinkthen_row *row,
                                struct thinkthen_error *error);
 
 /**
+ * Copy an opt-in response-store configuration into settings. NULL disables storage.
+ * No store is opened and no credential is read until client construction.
+ * Pointers and threads:
+ * settings is live and exclusively borrowed. config is NULL or initialized with
+ * its full struct_size; text and optional scalar pointers remain readable until
+ * return. error is NULL or initialized. Callers may release all inputs on return.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_settings_set_response_store(struct thinkthen_settings *settings,
+                                              const struct thinkthen_response_store_config *config,
+                                              struct thinkthen_error *error);
+
+/**
  * Answer one question about one record and write its whole row to *out.
  *
  * Returns THINKTHEN_OK when the record is answered, THINKTHEN_UNSURE when the model is not
@@ -2153,6 +2368,51 @@ int32_t thinkthen_run_one(const struct thinkthen_client *client,
                           thinkthen_record_kind kind,
                           struct thinkthen_row *out,
                           struct thinkthen_error *error);
+
+/**
+ * Copy client usage into a sized typed output, with no allocation or waiting.
+ * Pointers and threads:
+ * client is live and cannot be freed concurrently. out is writable, initialized
+ * with struct_size = sizeof(thinkthen_usage). error is NULL or initialized.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_usage_values(const struct thinkthen_client *client,
+                                      struct thinkthen_usage *out,
+                                      struct thinkthen_error *error);
+
+/**
+ * Wait for owned calls to settle and copy usage into a sized typed output.
+ * First stop admitting calls and cancel/free owned unfinished calls.
+ * Pointers and threads:
+ * client is live; no thread opens new calls or frees it during this function.
+ * out is writable with struct_size = sizeof(thinkthen_usage); error is NULL or initialized.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_usage_values_settled(const struct thinkthen_client *client,
+                                              struct thinkthen_usage *out,
+                                              struct thinkthen_error *error);
+
+/**
+ * Copy all usage and store metrics from one atomic account snapshot without waiting.
+ * Pointers and threads:
+ * client is live; out is writable with its top-level struct_size initialized;
+ * error is NULL or initialized. No thread frees client until return.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_usage_v2_values(const struct thinkthen_client *client,
+                                         struct thinkthen_usage_v2 *out,
+                                         struct thinkthen_error *error);
+
+/**
+ * Wait for owned calls to settle, then copy all usage and store metrics atomically.
+ * Pointers and threads:
+ * Stop admission and cancel/free unfinished owned calls first. client remains live,
+ * out is writable with top-level struct_size initialized; error is NULL or initialized.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_usage_v2_values_settled(const struct thinkthen_client *client,
+                                                 struct thinkthen_usage_v2 *out,
+                                                 struct thinkthen_error *error);
 
 /**
  * Write a choose value's choice to *out.

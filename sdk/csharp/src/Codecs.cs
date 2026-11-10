@@ -82,6 +82,7 @@ public sealed class BackendConverter : JsonConverter<Backend>
 }
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(JsonElement))]
+[JsonSerializable(typeof(Usage))]
 internal partial class ContractJson : JsonSerializerContext { }
 
 internal static class Codecs

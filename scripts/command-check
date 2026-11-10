@@ -21,6 +21,7 @@ PY
         preserve_generated() {
             generated_status=$?
             set +e
+            git add --intent-to-add -- licenses/crates
             git diff --binary > "$generated_output/generated.patch"
             git rev-parse HEAD > "$generated_output/source.txt"
             python3 - "$generated_output" "$generated_status" <<'PY'
@@ -41,6 +42,8 @@ PY
         cargo fmt --all
         cargo run --quiet --locked -p thinkthen --example schema
         cargo run --quiet --locked -p thinkthen-ffi --example headers
+        python3 sdk/python/relation_type.py
+        python3 sdk/python/check_contract.py
         cp construction/options.json "$generated_output/construction-options-input.json"
         cp construction/stub.json "$generated_output/construction-stub-input.json"
         cargo run --quiet --locked -p thinkthen --example construction

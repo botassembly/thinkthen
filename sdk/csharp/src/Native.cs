@@ -146,6 +146,12 @@ internal static partial class Native
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_client_free")]
     internal static partial void ClientFree(nint client);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_client_usage")]
+    internal static partial int ClientUsage(ClientHandle client, out Buffer output, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_client_usage_settled")]
+    internal static partial int ClientUsageSettled(ClientHandle client, out Buffer output, ref NativeError error);
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_call_open_question")]
     internal static partial int Open(ClientHandle client, QuestionHandle question, nint name, uint offsets, out nint call, ref NativeError error);

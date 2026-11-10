@@ -69,3 +69,35 @@ Not sure (0.7): ask a person.
 ## Next
 
 The [C# SDK page](https://thinkthen.dev/sdks/csharp/) shows all ten functions. The [C# guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/csharp.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/csharp/API.md) cover every option.
+
+### Inspect client usage
+
+```csharp
+using System;
+using ThinkThen;
+
+await using var client = new ThinkThenClient(new());
+await client.DecideAsync("Ready?", "A message");
+await client.DisposeAsync();
+Usage snapshot = client.Usage;
+Console.WriteLine(snapshot.Attempts);
+```
+
+`Usage` is an immutable cumulative snapshot for the explicit client and remains available after disposal. Input and output token totals preserve unknown usage; active attempts and calls remain separate. Use a separate client for isolated accounting. These counters are not a price or invoice total.
+
+## Request allowance
+
+```csharp
+using ThinkThen;
+
+await using var client = new ThinkThenClient(new() { MaxRequests = 100 });
+await client.DecideAsync("Ready?", "A message");
+```
+
+The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
+
+### Local response storage
+
+`ThinkThenOptions.ResponseStore = new ResponseStoreOptions(path, ResponseStoreMode.Record, namespaceName, modelGeneration)` explicitly enables local recording; `Cache` reuses eligible answers and `Replay` works without credentials. Optional `MaxBytes`, `MaxEntries`, `MaxAge` (seconds), and `BusyTimeoutMs` use engine defaults when null. `client.Usage.CacheHits` and `ReplayHits` report local reuse.
+
+Storage is disabled unless configured. Local recordings retain question and record text; use a private local path and a nonsecret namespace/model-generation label. The shared engine owns limits, identity and concurrency policy. Replay misses fail locally rather than making a model call.

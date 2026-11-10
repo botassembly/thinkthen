@@ -473,3 +473,66 @@ A record/backend failure returns a failed row in a stream. A C single call retur
 C cancels with `thinkthen_call_cancel`; C++ streams expose a cancel handle with `request_cancel()`. Close C++ streams on early exit and free C calls with `thinkthen_call_free`. Free questions, settings, clients and typed snapshots with their matching functions. No borrowed projection may outlive its owner.
 
 Make questions unambiguous: define the field criterion, distinguish absence from explicit negatives and use distinct choices.
+
+## Observe client usage
+
+C callers can copy typed accounting without allocating or parsing JSON:
+
+```c
+#include <thinkthen.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void) {
+    thinkthen_settings *settings = NULL;
+    thinkthen_client *client = NULL;
+    thinkthen_error error = THINKTHEN_ERROR_INIT;
+    bool ready = false;
+    int status = thinkthen_settings_new(&settings, &error);
+    if (status == THINKTHEN_OK)
+        status = thinkthen_settings_set_max_requests(settings, 100, &error);
+    if (status == THINKTHEN_OK)
+        status = thinkthen_client_open(settings, &client, &error);
+    thinkthen_settings_free(settings);
+    if (status == THINKTHEN_OK)
+        status = thinkthen_decide(client, "Ready?", "Ready to send.",
+                                  THINKTHEN_NUL_TERMINATED, &ready, &error);
+    thinkthen_usage usage = {0};
+    usage.struct_size = sizeof usage;
+    if (status == THINKTHEN_OK)
+        status = thinkthen_client_usage_values(client, &usage, &error);
+    thinkthen_client_free(client);
+    if (status == THINKTHEN_OK) {
+        printf("ready=%s attempts=%" PRIu64 "\n",
+               ready ? "true" : "false", usage.attempts);
+        if (usage.input_tokens.reported_known)
+            printf("reported input tokens=%" PRIu64 " unknown attempts=%"
+                   PRIu64 "\n", usage.input_tokens.reported,
+                   usage.input_tokens.unknown_attempts);
+    } else {
+        fprintf(stderr, "%s: ", thinkthen_code_name(error.code));
+        fwrite(error.message.data, 1, error.message.len, stderr);
+        fputc('\n', stderr);
+    }
+    thinkthen_error_free(&error);
+    return status == THINKTHEN_OK ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+```
+
+The copied struct needs no cleanup and remains valid after `thinkthen_client_free`. Its `active_calls` includes paused calls that can send later; `active_attempts` includes sends in progress. Freeing the client preserves existing independent calls, so an early snapshot is not their eventual final total. After stopping admission and cancelling/freeing owned unfinished calls, `thinkthen_client_usage_values_settled` waits for their workers before copying usage. Never use that waiting function while an independent call still needs input from the waiting thread.
+
+C++ callers use `auto usage = client.usage();`, an immutable typed copy with optional token subtotals. The JSON alternatives, `thinkthen_client_usage` and `thinkthen_client_usage_settled`, return independently owned buffers freed with `thinkthen_buffer_free`.
+
+The C settings builder's `thinkthen_settings_set_max_requests(settings, n, &error)` configures the allowance for newly opened clients; it does not change an existing client. Zero prevents remote sends and unset is unlimited. C++ supplies the same optional `max_requests` field in client settings. All calls and clones share their client's allowance, including retries. Exhaustion is the terminal `local.request-limit` error; read the stream to its terminal outcome rather than interpreting a shortened stream as success.
+
+## Explicit response storage
+
+The shared optional `response_store` configuration names a private local directory, a mode (`cache`, `record`, or `replay`), a nonsecret namespace and an explicit model-generation label. No storage is enabled implicitly, and SQL does not admit this setting. Replay requires an existing recording but no provider credential; a miss is terminal and sends nothing.
+
+C callers initialize `thinkthen_response_store_config.struct_size`, fill the counted `path`, `namespace_name` and `model_generation` text views, and choose `THINKTHEN_RESPONSE_CACHE`, `THINKTHEN_RESPONSE_RECORD`, or `THINKTHEN_RESPONSE_REPLAY`. Optional `max_bytes`, `max_entries`, `max_age` and `busy_timeout_ms` pointers are NULL for the shared defaults, or point to positive integers. `max_age` counts whole seconds. `thinkthen_settings_set_response_store` copies everything before return; NULL configuration disables storage. Client construction opens the store and applies the shared access policy.
+
+The original `thinkthen_usage` and `thinkthen_token_usage` layouts and getters are unchanged. For full metrics, initialize the top-level size of `thinkthen_usage_v2` and call `thinkthen_client_usage_v2_values`. Its nested `usage` holds the original counters, with its size filled by the library; `cache_hits` and `replay_hits` count materialized asks. All fields come from one atomic account snapshot. The `_settled` variant retains the existing requirement to stop admission and cancel/free owned unfinished calls before waiting. Copied values outlive the client. C++ exposes these typed values without requiring a JSON parser.
+
+The directory retains source and response text without encryption. Use a local filesystem, keep access private, and change the generation label when you need new model sampling. A response store is independent of completed-row recovery and does not promise a refund or exactly-once billing.

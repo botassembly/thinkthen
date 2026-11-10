@@ -10,6 +10,17 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 pub(super) fn validate(input: &Input, args: &ArgMatches, json: bool) -> Result<(), Error> {
+    if !input.table()
+        && options::explicit(args, "into").is_none()
+        && (options::explicit(args, "recovery").is_some()
+            || options::explicit(args, "no-recovery").is_some())
+    {
+        return Err(usage(
+            "recovery",
+            "a table or JSONL enrichment operation",
+            "ordinary stream",
+        ));
+    }
     if input.table() {
         if json {
             return Err(usage(
@@ -176,6 +187,7 @@ pub(super) fn run(
     } else {
         FileOutput::NewFile(output.or(output_path.clone()))
     };
+    let recovery = recovery(args, stdin)?;
     let result = FileJob::new(
         input_path,
         format,
@@ -186,11 +198,46 @@ pub(super) fn run(
     )
     .and_then(|job| {
         job.details(details)
+            .recovery(recovery)
             .execute_for_command(request, engine, cancel)
     });
+    let (result, journal) = match result {
+        Ok(mut receipt) => {
+            let journal = receipt.recovery.take();
+            (Ok(receipt), journal)
+        }
+        Err(error) => (Err(error), None),
+    };
+    let completed_output = result
+        .as_ref()
+        .ok()
+        .and_then(|receipt| receipt.output.clone());
     let code = render(result, stdout, cancel, quiet);
     drop(source_guard);
-    code
+    if let Some(mut journal) = journal {
+        if code.is_err() && stdout {
+            drop(paths);
+            if let Some(output_guard) = output_guard {
+                output_guard
+                    .keep()
+                    .map_err(|error| journal.retained_error(super::local(&error.to_string())))?;
+            }
+        }
+        journal
+            .close(code.is_ok(), completed_output)
+            .map_err(|error| journal.retained_error(super::local(&error.to_string())))?;
+        match code {
+            Ok(code) => {
+                journal
+                    .discard()
+                    .map_err(|error| super::local(&error.to_string()))?;
+                Ok(code)
+            }
+            Err(error) => Err(journal.retained_error(error)),
+        }
+    } else {
+        code
+    }
 }
 
 fn render(
@@ -275,4 +322,18 @@ pub(super) fn report_counts(unsure: u64, failed: u64, quiet: bool) {
             "thinkthen: {unsure} rows not sure, {failed} rows failed"
         );
     }
+}
+
+/// Resolve only explicit retention choices; stdin has no implicit persistent path.
+pub(super) fn recovery(args: &ArgMatches, stdin: bool) -> Result<crate::files::Recovery, Error> {
+    let path = explicit(args, "recovery").map(PathBuf::from);
+    let disabled = options::boolean("no-recovery", explicit(args, "no-recovery"))?.unwrap_or(false);
+    if disabled && path.is_some() {
+        return Err(usage("recovery", "a path or --no-recovery", "both"));
+    }
+    Ok(match path {
+        Some(path) => crate::files::Recovery::Path(path),
+        None if disabled || stdin => crate::files::Recovery::Disabled,
+        None => crate::files::Recovery::Default,
+    })
 }

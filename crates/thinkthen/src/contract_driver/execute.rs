@@ -100,7 +100,7 @@ pub(super) fn drive(
 fn stub_identity(question: &Question) -> Result<String, Error> {
     identity(&question.without_field(), None)
 }
-fn identity(question: &Question, name: Option<&str>) -> Result<String, Error> {
+pub(crate) fn identity(question: &Question, name: Option<&str>) -> Result<String, Error> {
     use sha2::{Digest, Sha256};
     serde_json::to_vec(&(name, question))
         .map(|bytes| format!("{:x}", Sha256::digest(bytes)))

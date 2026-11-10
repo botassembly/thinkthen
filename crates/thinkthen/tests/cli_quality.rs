@@ -201,3 +201,63 @@ fn scores_real_answers_with_misses_extras_and_selected_backend() {
     }
     std::fs::remove_dir_all(temporary).unwrap();
 }
+
+#[test]
+fn distinguishes_none_unsure_failed_and_harness_failures_with_equal_item_f1() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let temporary =
+        std::env::temp_dir().join(format!("thinkthen-quality-outcomes-{}", std::process::id()));
+    std::fs::create_dir_all(&temporary).unwrap();
+    let cases = [
+        json!({"id":"none","function":"find","args":["Which?","--threshold","0.3"],"text":"A\nB","expected":[]}),
+        json!({"id":"unsure","function":"find","args":["Which?","--threshold","0.9"],"text":"A\nB","expected":[]}),
+        json!({"id":"false-none","function":"find","args":["Which?","--threshold","0.3"],"text":"A\nB","expected":[[0,1]]}),
+        json!({"id":"failed","function":"find","args":["Which?"],"text":"FAIL","expected":[]}),
+        json!({"id":"harness","function":"find","args":["Which?","--unknown"],"text":"A\nB","expected":[]}),
+    ];
+    std::fs::write(
+        temporary.join("cases.jsonl"),
+        cases
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
+    .unwrap();
+    std::fs::write(
+        temporary.join("comparison.json"),
+        r#"[{"function":"find"}]"#,
+    )
+    .unwrap();
+    let server = Loopback::answering(|request| {
+        if request.to_string().contains("FAIL") {
+            json!({"type":"noul","noul":0.9})
+        } else {
+            json!({"type":"choice","probabilities":{"u1":0.33,"u2":0.33,"none":0.34}})
+        }
+    })
+    .unwrap();
+    let output = Command::new("python3")
+        .env_clear()
+        .arg(root.join("scripts/quality"))
+        .arg(env!("CARGO_BIN_EXE_thinkthen"))
+        .arg("systemone")
+        .args(["--url", server.base(), "--data"])
+        .arg(&temporary)
+        .env("THINKTHEN_API_KEY", KEY)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let comparison: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(comparison["measured"]["f1"], 0.0);
+    assert_eq!(
+        comparison["measured"]["outcomes"],
+        json!({
+            "cases":5,"answered":2,"correct":1,"successful_none":1,"false_none":1,
+            "unsure":1,"failed":1,"harness_failures":1,"answered_accuracy":0.5
+        })
+    );
+    assert_eq!(server.count(), 4);
+    std::fs::remove_dir_all(temporary).unwrap();
+}

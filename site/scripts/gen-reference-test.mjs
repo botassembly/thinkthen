@@ -29,7 +29,7 @@ const folder = () => Object.fromEntries(fs.readdirSync(out, { recursive: true, w
   .map((p) => [path.relative(out, p), fs.readFileSync(p, 'utf8')]));
 
 try {
-  for (const input of ['schemas', 'scripts/release_install.py', 'docs/resource-observations.md', 'crates/thinkthen/src']) {
+  for (const input of ['schemas', 'docs/resource-observations.md', 'crates/thinkthen/src']) {
     fs.cpSync(path.join(repo, input), path.join(root, input), { recursive: true });
   }
   fs.cpSync(path.resolve('.'), site, { recursive: true, filter: (p) => !LINKED.includes(path.relative(path.resolve('.'), p)) && path.basename(p) !== 'dist' });
@@ -54,11 +54,22 @@ try {
   // An address nothing else claims still gets its generated page, and --check still compares it.
   const redirects = JSON.parse(fs.readFileSync(redirectsFile, 'utf8'));
   delete redirects['/reference/rows/'];
+  delete redirects['/reference/release-limits/'];
   fs.writeFileSync(redirectsFile, JSON.stringify(redirects));
+  // Generated limits follow the authored release table, including later edits.
+  const releaseFile = path.join(out, 'release-notes.mdx');
+  const release = fs.readFileSync(releaseFile, 'utf8');
+  const limit = '| Fixture limit | A changed release fact. | A changed remedy. |';
+  fs.writeFileSync(releaseFile, release.replace('| --- | --- | --- |', '| --- | --- | --- |\n' + limit));
   reports(/rows\.md: differs from the build/);
   passes();
   assert.match(folder()['rows.md'], /Written by scripts\/gen-reference\.mjs/);
+  assert.ok(folder()['release-limits.md'].includes(limit));
   passes('--check');
+  fs.writeFileSync(releaseFile, release.replace('## Known limits', '## Missing limits'));
+  reports(/release-notes\.mdx: cannot find known-limits table/);
+  fs.writeFileSync(releaseFile, release);
+  passes();
   fs.appendFileSync(path.join(out, 'rows.md'), '\nEdited by hand.\n');
   reports(/rows\.md: differs from the build/);
   console.log('gen-reference: hand-written pages kept; stale and out-of-date pages reported');

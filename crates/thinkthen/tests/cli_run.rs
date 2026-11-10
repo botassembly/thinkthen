@@ -506,3 +506,39 @@ fn question_toolboxes_share_sdk_admission_before_lookup_or_execution() {
         assert_eq!(support::reported(&rejected), "usage.question", "{text}");
     }
 }
+
+#[test]
+fn saved_function_steps_share_one_invocation_usage_summary() {
+    let fixture = Fixture::new();
+    fixture.write("steps.json", &json!({"run":[question(),question()]}));
+    let output = fixture.run(&["steps.json", "--usage"], "\"evidence 5\"\n");
+    assert_eq!(rows(&output).len(), 1);
+    let summary: Value = String::from_utf8_lossy(&output.stderr)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .find(|record| record["kind"] == "thinkthen.usage/1")
+        .unwrap();
+    assert_eq!(summary["status"], "completed");
+    assert_eq!(summary["usage"]["attempts"], 2);
+    assert_eq!(summary["usage"]["active_calls"], 0);
+    assert_eq!(summary["usage"]["input_tokens"]["unknown_attempts"], 2);
+}
+
+#[test]
+fn saved_function_steps_share_the_request_allowance() {
+    let fixture = Fixture::new();
+    fixture.write("steps.json", &json!({"run":[question(),question()]}));
+    let output = fixture.run(
+        &["steps.json", "--usage", "--max-requests", "1"],
+        "\"evidence 5\"\n",
+    );
+    assert_eq!(output.status.code(), Some(5));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("local.request-limit"));
+    let summary: Value = String::from_utf8_lossy(&output.stderr)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .find(|record| record["kind"] == "thinkthen.usage/1")
+        .unwrap();
+    assert_eq!(summary["usage"]["attempts"], 1);
+    assert_eq!(summary["status"], "failed");
+}

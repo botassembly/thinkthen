@@ -140,7 +140,10 @@ impl Output {
     }
 }
 
-pub(super) fn client(matches: &ArgMatches) -> Result<Engine, Error> {
+pub(super) fn client(
+    matches: &ArgMatches,
+    account: &crate::usage::Account,
+) -> Result<Engine, Error> {
     let mut settings = Map::new();
     for key in ["backend", "model", "batch"] {
         if let Some(text) = value(matches, key) {
@@ -157,7 +160,13 @@ pub(super) fn client(matches: &ArgMatches) -> Result<Engine, Error> {
     if let Some(url) = explicit(matches, "url") {
         settings.insert("url".into(), url.into());
     }
-    Settings::from_json(&Value::Object(settings).to_string())?.engine(|key| std::env::var(key).ok())
+    if let Some(store) = response_store(matches)? {
+        settings.insert("response_store".into(), store);
+    }
+    let mut engine = Settings::from_json(&Value::Object(settings).to_string())?
+        .engine(|key| std::env::var(key).ok())?;
+    engine.account = account.clone();
+    Ok(engine)
 }
 
 /// Select diagnostic styling before Clap renders syntax errors or help.
@@ -209,4 +218,50 @@ pub(super) fn parse_choice<T: clap::ValueEnum>(field: &str, text: &str) -> Resul
             &names.iter().map(String::as_str).collect::<Vec<_>>(),
         )
     })
+}
+
+/// Admit the invocation allowance once, before backend setup.
+pub(super) fn request_limit(matches: &ArgMatches) -> Result<Option<u64>, Error> {
+    Ok(Settings::default()
+        .environment_request_limit(value(matches, "max-requests"))?
+        .request_limit())
+}
+
+/// Retention requires explicit command options; no environment enables it.
+fn response_store(matches: &ArgMatches) -> Result<Option<Value>, Error> {
+    let required = [
+        ("response-store", "path"),
+        ("response-mode", "mode"),
+        ("response-namespace", "namespace"),
+        ("model-generation", "model_generation"),
+    ];
+    let bounds = [
+        ("response-max-bytes", "max_bytes"),
+        ("response-max-entries", "max_entries"),
+        ("response-max-age", "max_age"),
+    ];
+    if !required
+        .iter()
+        .chain(bounds.iter())
+        .any(|(flag, _)| explicit(matches, flag).is_some())
+    {
+        return Ok(None);
+    }
+    let mut store = Map::new();
+    for (flag, key) in required {
+        let value = explicit(matches, flag).ok_or_else(|| {
+            usage(
+                "response-store",
+                "directory, mode, namespace and model-generation together",
+                "incomplete response-store options",
+            )
+        })?;
+        store.insert(key.into(), Value::String(value));
+    }
+    for (flag, key) in bounds {
+        if let Some(value) = explicit(matches, flag) {
+            store.insert(key.into(), number(flag, &value)?);
+        }
+    }
+    Ok(Some(Value::Object(store)))
 }

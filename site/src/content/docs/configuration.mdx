@@ -8,7 +8,9 @@ verified: 2026-11-03
 ---
 import Example from '../../components/Example.astro';
 
-ThinkThen sends each question and its text to a model service, which answers it and bills your account. You choose the service, the model and the key with options on each command or with `THINKTHEN_` environment variables.
+By default, ThinkThen sends each question and its text to a model service, which answers it and bills your account. You choose the service, the model and the key with options on each command or with `THINKTHEN_` environment variables.
+
+Explicit response storage can retain questions, selected text and answers locally, and strict replay uses an existing recording without a key or network request. File operations have separate recovery artifacts for completed answers. [Where record text goes](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/service.md#local-response-storage-and-recovery) explains their defaults, contents and cleanup.
 
 | What you have | What to set |
 |---|---|
@@ -93,7 +95,7 @@ The `source` in `--json` names the backend and model, so the check above shows t
 
 `THINKTHEN_MODEL` applies only to commands. In an SDK, set the model on your client; without an explicit model setting, it uses the chosen backend's default model.
 
-Keys come only from these variables. Keep them in your shell or a secret manager, never in a script or a toolbox file. If the key is missing or blank, ThinkThen stops with `usage.key-missing` and exit code 2 before it sends anything; [Troubleshooting](/reference/troubleshooting/) lists that error and the others.
+Command keys come only from these variables. Keep them in your shell or a secret manager, never in a script or a toolbox file. For a live backend call, a missing or blank key stops ThinkThen with `usage.key-missing` and exit code 2 before it sends anything; strict replay needs no key. [Troubleshooting](/reference/troubleshooting/) lists that error and the others.
 
 A bar you tuned on one model belongs to that model. If you change the model, check your bars again on your own messages.
 

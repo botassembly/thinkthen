@@ -1,6 +1,7 @@
 """Count paid requests through PostgreSQL joins and its materializing LIMIT."""
 import json
 from pathlib import Path
+import re
 import tempfile
 import uuid
 
@@ -30,6 +31,28 @@ def verify(options, server, query, set_settings, child_environment):
                 set_settings(database, {'backend': 'openai', 'batch': 32, 'retry': {'max_retries': 0}})
                 assert query(database, statement) == [(value,)], statement
                 assert int(command(loopback, 'count')) == requests, statement
+    # Run the guide's literal save-and-join example, including its typed id cast.
+    guide = Path(__file__).resolve().parents[3] / 'docs/surfaces/postgresql.md'
+    examples = [block for block in re.findall(r'```sql\n(.*?)\n```', guide.read_text(), re.S)
+                if block.startswith('CREATE TABLE refund_answers AS')]
+    assert len(examples) == 1, examples
+    save, join, *_ = examples[0].split(';')
+    with fixture(options.loopback, '--stress', 'healthy') as (loopback, url):
+        environment = dict(child_environment(), THINKTHEN_TEST_LOOPBACK_URL=url,
+                           THINKTHEN_API_KEY='loopback-test-key', OPENAI_API_KEY='loopback-test-key')
+        with server(environment) as database:
+            query(database, "SET thinkthen.allowed_backends='openai:*'")
+            set_settings(database, {'backend': 'openai', 'batch': 32, 'retry': {'max_retries': 0}})
+            query(database, 'CREATE TABLE messages(msg_id integer PRIMARY KEY, body text)')
+            query(database, "INSERT INTO messages VALUES (1,'Refund please'),(2,'Parcel?'),(3,'Thanks'),(4,'Outside range')")
+            query(database, save)
+            requests = int(command(loopback, 'count'))
+            assert requests == 1, requests
+            assert query(database, 'SELECT pg_typeof(msg_id)::text FROM refund_answers LIMIT 1') == [('integer',)]
+            for _ in range(2):
+                rows = query(database, join)
+                assert [row[0] for row in rows] == [1, 2, 3], rows
+                assert int(command(loopback, 'count')) == requests, rows
     # A host pause splits one pack; the backend's engine reports that split as idle.
     for pause, requests, idle in ((0, 4, 0), (129, 5, 1)):
         statement = PAUSED.format(pause=pause)

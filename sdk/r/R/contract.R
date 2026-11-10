@@ -1,9 +1,9 @@
 # Generated native requirement. Do not edit.
-.tt_abi_version <- 131074L
+.tt_abi_version <- 131077L
 .tt_abi_version_export <- "wrap__r_abi_version"
 .tt_abi_code <- "usage.abi"
 .tt_abi_message <- "the native ABI is incompatible"
-.tt_abi_exports <- c("wrap__r_abi_version", "wrap__r_admit", "wrap__r_cancel_release", "wrap__r_client", "wrap__r_client_close", "wrap__r_close", "wrap__r_id_integer", "wrap__r_id_string", "wrap__r_open_finite", "wrap__r_poll", "wrap__r_prepare_record", "wrap__r_question", "wrap__r_question_conversion_error", "wrap__r_settings_conversion_error")
+.tt_abi_exports <- c("wrap__r_abi_version", "wrap__r_admit", "wrap__r_cancel_release", "wrap__r_client", "wrap__r_client_close", "wrap__r_client_usage", "wrap__r_close", "wrap__r_id_integer", "wrap__r_id_string", "wrap__r_open_finite", "wrap__r_poll", "wrap__r_prepare_record", "wrap__r_question", "wrap__r_question_conversion_error", "wrap__r_settings_conversion_error")
 .tt_function_names <- c(
     "1" = "decide",
     "2" = "choose",
@@ -78,5 +78,13 @@
     "4001" = "local.cancelled",
     "4002" = "local.io",
     "4003" = "local.toolbox",
+    "4004" = "local.accounting",
+    "4005" = "local.request-limit",
+    "4006" = "local.response-store",
+    "4007" = "local.store-corrupt",
+    "4008" = "local.store-format",
+    "4009" = "local.store-answer",
+    "4010" = "local.replay-miss",
+    "4011" = "local.store-quota",
     "5001" = "internal.bug"
 )

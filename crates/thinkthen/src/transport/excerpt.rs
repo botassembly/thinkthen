@@ -6,12 +6,13 @@ const CAPTURE_BYTES: u64 = 16 * 1024;
 const EXCERPT_CHARACTERS: usize = 200;
 const MASK: &str = "[redacted]";
 
-pub(super) fn capture(body: &mut ureq::Body) -> Vec<u8> {
+pub(super) fn capture(body: &mut ureq::Body) -> (Vec<u8>, bool) {
     let mut bytes = Vec::new();
     // Keep a readable prefix even if a peer closes early. Body errors must not
     // replace the HTTP status, and take() never waits for the rest of a large body.
-    let _read = body.as_reader().take(CAPTURE_BYTES).read_to_end(&mut bytes);
-    bytes
+    let read = body.as_reader().take(CAPTURE_BYTES).read_to_end(&mut bytes);
+    let complete = read.is_ok() && (bytes.len() as u64) < CAPTURE_BYTES;
+    (bytes, complete)
 }
 
 pub(super) fn clean(body: &[u8], key: &str) -> String {

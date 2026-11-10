@@ -7,7 +7,7 @@ import json
 import logging
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import fields
-from threading import RLock
+from threading import Event, RLock
 from typing import Any, Literal, TypeVar, cast, overload
 from weakref import WeakSet
 
@@ -52,11 +52,13 @@ from ._types import (
     Record,
     RelateRow,
     RelationRule,
+    ResponseStore,
     RetryPolicy,
     ScoreRow,
     Strings,
     TagRow,
     Threshold,
+    Usage,
     _Label,
 )
 
@@ -85,7 +87,9 @@ class Client:
         model: str | None = None,
         api_key: str | None = None,
         batch: int | None = None,
+        max_requests: int | None = None,
         retry: RetryPolicy | None = None,
+        response_store: ResponseStore | None = None,
     ) -> None:
         """Open a client.
 
@@ -97,6 +101,7 @@ class Client:
             "model": model,
             "api_key": api_key,
             "batch": batch,
+            "max_requests": max_requests,
         }
         if backend is not None:
             # Omitted, the shared settings read THINKTHEN_BACKEND as the command does.
@@ -121,10 +126,20 @@ class Client:
                         binding(_native.reject_settings_conversion)
                     policy[name + "_ms"] = _milliseconds(value)
             values["retry"] = policy
+        if response_store is not None:
+            if not isinstance(response_store, ResponseStore):
+                binding(_native.reject_settings_conversion)
+            values["response_store"] = {
+                field.name: getattr(response_store, field.name)
+                for field in fields(response_store)
+                if getattr(response_store, field.name) is not None
+            }
         settings = encode(values, _native.reject_settings_conversion)
         self._native: _native.NativeEngine | None = binding(
             lambda: _native.NativeEngine(settings)
         )
+        self._closed = Event()
+        self._final_usage: Usage | None = None
         self._lock = RLock()
         self._active: WeakSet[RowStream[Any]] = WeakSet()
 
@@ -146,7 +161,22 @@ class Client:
                 retry["initial_backoff_ms"] / 1000,
                 retry["attempt_timeout_ms"] / 1000,
             ),
+            value.get("max_requests"),
+            ResponseStore(**value["response_store"])
+            if value.get("response_store") is not None
+            else None,
         )
+
+    @property
+    def usage(self) -> Usage:
+        """Cumulative usage; a copied snapshot remains valid after close."""
+        with self._lock:
+            if self._final_usage is not None:
+                return self._final_usage
+            engine = self._native
+            if engine is None:
+                binding(_native.reject_closed_client)
+            return Usage._from_json(binding(lambda: engine.usage))
 
     def __repr__(self) -> str:
         return f"Client(closed={self._native is None})"
@@ -156,12 +186,23 @@ class Client:
 
     def close(self) -> None:
         with self._lock:
+            engine = self._native
             active = list(self._active)
             self._native = None
-        for stream in active:
-            stream.cancel()
-        for stream in active:
-            stream.close()
+        if engine is None:
+            self._closed.wait()
+            return
+        try:
+            for stream in active:
+                stream.cancel()
+            for stream in active:
+                stream.close()
+            snapshot = Usage._from_json(binding(engine.usage_settled))
+            with self._lock:
+                self._final_usage = snapshot
+        finally:
+            del engine
+            self._closed.set()
 
     def __enter__(self) -> Client:  # noqa: PYI034 - standard library on Python 3.10.
         return self

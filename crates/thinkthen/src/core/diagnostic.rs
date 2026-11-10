@@ -196,6 +196,7 @@ fields!(
     batch,
     retry,
     max_retries,
+    max_requests,
     initial_backoff_ms,
     attempt_timeout_ms,
     top,

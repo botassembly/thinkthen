@@ -51,6 +51,13 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             "unsure\n",
             3,
         ),
+        (
+            json!({"u1":0.4,"none":0.6}),
+            "answer",
+            vec!["--threshold", "0.9", "--check"],
+            "unsure\n",
+            3,
+        ),
     ] {
         let server =
             Loopback::answering(move |_| json!({"type":"choice","probabilities":probabilities}))

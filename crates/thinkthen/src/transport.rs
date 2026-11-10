@@ -92,6 +92,10 @@ impl Refused {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the send boundary receives shared accounting alongside transport policy and cancellation"
+)]
 pub(crate) fn post(
     agent: &Agent,
     backend: &crate::backend::Remote,
@@ -100,7 +104,16 @@ pub(crate) fn post(
     body: &[u8],
     policy: RetryPolicy,
     cancel: &Cancel,
+    account: &crate::usage::Account,
+    response_limit: Option<u64>,
 ) -> Result<Vec<u8>, Refused> {
+    let key = backend.key.as_ref().ok_or_else(|| Refused {
+        error: Error::new(
+            ErrorKind::KeyMissing,
+            "live transport requires an admitted credential",
+        ),
+        too_large: false,
+    })?;
     let uri = crate::backend::validate_url(url).map_err(|error| Refused {
         error,
         too_large: false,
@@ -131,6 +144,7 @@ pub(crate) fn post(
     let mut connection_retried = false;
     let mut fresh = None;
     let mut delay = policy.initial_backoff;
+    let mut reason = crate::usage::Reason::Initial;
     loop {
         if cancel.is_cancelled() {
             return Err(Refused::cancelled());
@@ -143,9 +157,13 @@ pub(crate) fn post(
         } else {
             request
         };
+        let mut attempt = account.begin(body.len(), reason).map_err(|error| Refused {
+            error,
+            too_large: false,
+        })?;
         let sent = request
             .header("content-type", "application/json")
-            .header("authorization", &format!("Bearer {}", backend.key.as_str()))
+            .header("authorization", &format!("Bearer {}", key.as_str()))
             .send(body);
         if cancel.is_cancelled() {
             return Err(Refused::cancelled());
@@ -155,6 +173,7 @@ pub(crate) fn post(
             Err(error) => {
                 if !connection_retried && (before_send(&error) || response::stale(&error)) {
                     connection_retried = true;
+                    reason = crate::usage::Reason::Connection;
                     fresh = Some(connect_agent(agent.inner.config().clone()));
                     continue;
                 }
@@ -163,15 +182,33 @@ pub(crate) fn post(
         };
         let status = response.status().as_u16();
         if (200..300).contains(&status) {
-            let body = response.body_mut().read_to_vec();
+            let body = match response_limit {
+                Some(limit) => response.body_mut().with_config().limit(limit).read_to_vec(),
+                None => response.body_mut().read_to_vec(),
+            };
+            if let Ok(bytes) = &body {
+                attempt.response(bytes, true);
+            }
             return if cancel.is_cancelled() {
                 Err(Refused::cancelled())
             } else {
-                body.map_err(|error| Refused::transport(error, name))
+                body.map_err(|error| {
+                    if response_limit.is_some() && matches!(error, ureq::Error::BodyExceedsLimit(_))
+                    {
+                        Refused {
+                            error: crate::response_store::error(crate::Code::LocalStoreQuota),
+                            too_large: false,
+                        }
+                    } else {
+                        Refused::transport(error, name)
+                    }
+                })
             };
         }
-        let body = excerpt::capture(response.body_mut());
-        let excerpt = excerpt::clean(&body, backend.key.as_str());
+        let (body, complete) = excerpt::capture(response.body_mut());
+        attempt.response(&body, complete);
+        drop(attempt);
+        let excerpt = excerpt::clean(&body, key.as_str());
         let mut message = format!("the backend answered status {status}");
         if !excerpt.is_empty() {
             message.push_str(": ");
@@ -198,6 +235,7 @@ pub(crate) fn post(
             return Err(Refused::cancelled());
         }
         retries += 1;
+        reason = crate::usage::Reason::Status;
         delay = delay.saturating_mul(2);
     }
 }

@@ -69,6 +69,7 @@ final class Native: Sendable {
   private let settingsFree: PointerAction, questionFree: PointerAction
   private let admitToolbox: Admit, admitDefinitions: Admit
   private let exportToolbox: ExportJSON, exportDefinitions: ExportJSON
+  private let clientUsage: ExportJSON
   private let toolboxFree: PointerAction, bufferFree: FreeBuffer
   private let sendMissing: ConversionErrorCall
   let events: RetainEvents, eventVersion: EventVersion, eventWait: EventWait
@@ -163,6 +164,7 @@ final class Native: Sendable {
     eventWake = try symbol("thinkthen_events_wake", PointerAction.self)
     eventFree = try symbol("thinkthen_events_free", PointerAction.self)
     nextRow = try symbol("thinkthen_call_next", Next.self)
+    clientUsage = try symbol("thinkthen_client_usage", ExportJSON.self)
     clientFree = try symbol("thinkthen_client_free", PointerAction.self)
     cancel = try symbol("thinkthen_call_cancel", PointerAction.self)
     free = try symbol("thinkthen_call_free", PointerAction.self)
@@ -224,6 +226,13 @@ final class Native: Sendable {
       throw ThinkThenError.contract(message: "Native client returned no owner")
     }
     return pointer
+  }
+  func usage(_ client: OpaquePointer) throws -> Usage {
+    var output = thinkthen_buffer()
+    defer { bufferFree(&output) }
+    var error = emptyError()
+    try check(clientUsage(client, &output, &error), &error)
+    return try JSONDecoder().decode(Usage.self, from: copy(output))
   }
   func toolboxJSON(_ bytes: Data, loading: Bool) throws -> Data {
     let toolbox = try admit(bytes, using: loading ? admitToolbox : admitDefinitions)

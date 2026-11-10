@@ -140,6 +140,9 @@
 extern crate self as thinkthen;
 /// The engine package version, shared with its command and bindings.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+mod access;
+/// Offline evaluation of saved typed answers against caller labels.
+pub mod analysis;
 mod backend;
 mod batch;
 mod contract_driver;
@@ -147,10 +150,12 @@ mod contract_request;
 mod core;
 mod descriptions;
 mod engine;
+mod response_store;
 mod retry;
 mod settings;
 mod traits;
 mod transport;
+mod usage;
 pub(crate) use backend::BackendTable;
 pub use backend::Key;
 pub use batch::Batch;
@@ -176,10 +181,12 @@ pub use questions::{
     Recognize, Relate, RelationRule, Score, SimpleQuestion, Tag, Toolbox,
 };
 pub use records::{Record, RecordId};
+pub use response_store::{ResponseMode, ResponseStore};
 pub use results::*;
 pub use retry::Cancel;
 pub(crate) use retry::RetryPolicy;
 pub use settings::{BackendName, Retry, Settings};
+pub use usage::{TokenUsage, Usage};
 #[cfg(feature = "command")]
 #[path = "cli/main.rs"]
 mod command;

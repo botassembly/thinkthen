@@ -37,13 +37,17 @@ The extension contains the engine. It reads `THINKTHEN_API_KEY` from the DuckDB 
 
 ## Handle not sure and failures
 
-Save the answers in a table once, then read them as often as you like. Running a ThinkThen query again asks again and is billed again.
+Save the answers in a table once, then read them as often as you like. A plain rerun can send questions again and incur new charges.
 
 ```sql
 CREATE TABLE refund_answers AS
 SELECT msg_id, answer AS is_refund, status, error_code, error_message
 FROM thinkthen_decide((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
                       'Does the customer request a refund?', record := 'body');
+
+SELECT m.msg_id, m.body, a.is_refund, a.status
+FROM refund_answers a JOIN messages m ON a.msg_id = m.msg_id
+ORDER BY m.msg_id;
 
 SELECT msg_id FROM refund_answers WHERE is_refund IS TRUE;                      -- yes
 SELECT msg_id FROM refund_answers WHERE is_refund IS FALSE;                     -- no
@@ -306,8 +310,12 @@ DuckDB's own `memory_limit` and `temp_directory` settings govern the memory and 
 
 ## Control cost and cancel
 
-- One ThinkThen call runs once per query and batches every record in it. Running the query again sends every question again.
-- Save results with `CREATE TABLE ... AS SELECT`, then inspect, join and export the table. `COPY refund_answers TO 'answers.csv' (HEADER)` writes a CSV.
-- An outer `LIMIT` can wait for other requests and pay for rows it never returns. Put `LIMIT` inside the input query to bound the work.
-- Ctrl-C, or your client's interrupt, stops the query and leaves the connection ready for the next one. The query's answers are discarded, and the backend still bills requests it completed. Split large jobs into several saved queries.
-- While a request is out, DuckDB can hold one more 2,048-row input vector in memory.
+A function invocation owns one engine call over its supplied input. A statement can invoke a function more than once, especially when its arguments depend on an outer row. A plain rerun can send questions again; reading a saved result table does not.
+
+Choose the input before invoking ThinkThen: put `WHERE`, a deterministic `ORDER BY` on a stable unique key, and any input `LIMIT` inside the supplied source. An output `LIMIT` does not bound paid requests. A CTE is not a durable saved result, and batch size controls packing rather than total work. Retries and dependent questions can make several requests for the same input records. SQL does not admit `max_requests`, inherit `THINKTHEN_MAX_REQUESTS`, or report a statement-wide usage total.
+
+The `refund_answers` example above saves answers in a real table before joining them to application data. For a large job, snapshot the source or keep it unchanged, select a fixed range of unique keys for each chunk, save its answers, and commit that chunk before starting the next. Commit the answer rows and a completed-range marker in the same transaction. Restart only ranges that did not commit; do not treat gaps from a failed range as completed work. A single `CREATE TABLE ... AS SELECT` is one statement, not a checkpoint after each row. Cancelling it can discard all of that statement's results even when requests were paid for. Earlier separately committed chunks remain available.
+
+DuckDB can reuse an uncorrelated invocation's rows on the inner side of a join; repeating output rows does not by itself prove repeated requests. Save answers before joining when you need reuse across statements.
+
+Ctrl-C, or your client's interrupt, stops the query and leaves the connection ready for the next one. Cancellation does not refund already sent requests. While a request is out, DuckDB can hold one more 2,048-row input vector in memory. `COPY refund_answers TO 'answers.csv' (HEADER)` exports the saved table.

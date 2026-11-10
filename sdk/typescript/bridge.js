@@ -8,7 +8,7 @@ import { libcRefusal } from "./libc.js";
 /** @typedef {(data: string, text: boolean, invalid?: boolean, idKind?: string, idValue?: string, missing?: boolean) => void} Reply */
 /** @typedef {(error: Error | null, kind: string, data: string, reply: Reply) => void} Callback */
 /** @typedef {{cancel(): void, close(): void, reference(): void, unreference(): void}} Operation */
-/** @typedef {{start(request: string, callback: Callback): Operation, startFinite(request: string, callback: Callback): Operation, close(): void}} NativeClient */
+/** @typedef {{usage(): string, settledUsage(): string, beginClose(): void, start(request: string, callback: Callback): Operation, startFinite(request: string, callback: Callback): Operation, close(): void}} NativeClient */
 /** @typedef {{Client: new (settings: string) => NativeClient, parseToolbox(json: string): string, serializeToolbox(json: string): string, rejectRecordKind(): never, rejectCancellation(): never, rejectSettingsConversion(): never, rejectQuestionConversion(): never}} Native */
 export const RULE_FIELDS = Object.freeze({ name: "relation", phrase: "reads", symmetric: "either" });
 export class ThinkThenError extends Error {

@@ -187,6 +187,9 @@ from ._types import (
     RelationRule as RelationRule,
 )
 from ._types import (
+    ResponseStore as ResponseStore,
+)
+from ._types import (
     RetryPolicy as RetryPolicy,
 )
 from ._types import (
@@ -225,7 +228,13 @@ from ._types import (
 from ._types import (
     Threshold as Threshold,
 )
+from ._types import (
+    TokenUsage as TokenUsage,
+)
 from ._types import Unsure as Unsure
+from ._types import (
+    Usage as Usage,
+)
 from ._types import (
     UsageError as UsageError,
 )
@@ -854,6 +863,7 @@ __all__ = [
     "RelationDetail",
     "RelationName",
     "RelationRule",
+    "ResponseStore",
     "RetryPolicy",
     "RowError",
     "RowStream",
@@ -870,8 +880,10 @@ __all__ = [
     "TagRow",
     "ThinkThenError",
     "Threshold",
+    "TokenUsage",
     "Toolbox",
     "Unsure",
+    "Usage",
     "UsageError",
     "annotate",
     "annotate_stream",

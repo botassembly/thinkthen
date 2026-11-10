@@ -214,6 +214,8 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       }
       let code = String(decoding: try encoded(failure.code), as: UTF8.self)
       precondition(code.contains("backend."))
+      let used = try client.usage()
+      precondition(used.attempts > 0 && used.requestBodyBytes > 0)
       return
     }
     // An engine that will not load fails the process. It is not a case result.

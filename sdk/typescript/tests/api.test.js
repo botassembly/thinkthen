@@ -327,3 +327,27 @@ test("symmetric relation rules retain the native direction flag", async () => {
     assert.equal(text.slice(row.answer[0].source.start,row.answer[0].source.end),row.answer[0].source.text);
   } finally {await client.close();await server.close();}
 });
+
+// Feature: the public spelling reaches shared allowance admission without precision loss.
+test("maxRequests settings preserve zero and reject unsupported host precision", async () => {
+  const client = new sdk.ThinkThen({backend:"stub",maxRequests:0});
+  try { assert.equal((await client.decide("Ready?", "alpha").row()).status,"answered"); }
+  finally { await client.close(); }
+  assert.throws(()=>new sdk.ThinkThen({backend:"stub",maxRequests:-1}), error=>error.code === "usage.settings");
+  assert.throws(()=>new sdk.ThinkThen({backend:"stub",maxRequests:Number.MAX_SAFE_INTEGER+1}), error=>error.code === "usage.settings");
+});
+
+
+test("maxRequests representable invalid values retain the engine diagnostic", () => {
+  for (const value of [0.5, true, "1", -1]) {
+    assert.throws(() => new sdk.ThinkThen({backend:"stub",maxRequests:value}), error =>
+      error.code === "usage.settings" && error.message.includes("max_requests"));
+  }
+});
+
+
+test("maxRequests rejects nonfinite host values before JSON can erase them", () => {
+  for (const value of [NaN, Infinity, -Infinity]) {
+    assert.throws(() => new sdk.ThinkThen({backend:"stub",maxRequests:value}), {code:"usage.settings"});
+  }
+});

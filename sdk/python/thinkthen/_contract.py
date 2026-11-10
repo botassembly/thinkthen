@@ -1,9 +1,9 @@
 """Generated native requirement. Do not edit."""
-ABI_VERSION = 131074
+ABI_VERSION = 131077
 ABI_VERSION_EXPORT = "ABI_VERSION"
 ABI_CODE = "usage.abi"
 ABI_MESSAGE = "the native ABI is incompatible"
-ABI_EXPORTS = ["ABI_VERSION","ERROR_CODES","Error","NativeCancel","NativeCancel.cancel","NativeCancel.child","NativeEngine","NativeEngine.settings","NativeEngine.start","NativeEngine.start_finite","NativeQuestion","NativeQuestion.definition","NativeQuestion.function","NativeStream","NativeStream.cancel","NativeStream.close","NativeStream.receive","NativeToolbox","NativeToolbox.definition","NativeToolbox.from_json","NativeToolbox.question","NativeToolbox.to_json","reject_cancelled","reject_closed_client","reject_question_conversion","reject_settings_conversion","seconds_to_millis"]
+ABI_EXPORTS = ["ABI_VERSION","ERROR_CODES","Error","NativeCancel","NativeCancel.cancel","NativeCancel.child","NativeEngine","NativeEngine.settings","NativeEngine.start","NativeEngine.start_finite","NativeEngine.usage","NativeEngine.usage_settled","NativeQuestion","NativeQuestion.definition","NativeQuestion.function","NativeStream","NativeStream.cancel","NativeStream.close","NativeStream.receive","NativeToolbox","NativeToolbox.definition","NativeToolbox.from_json","NativeToolbox.question","NativeToolbox.to_json","reject_cancelled","reject_closed_client","reject_question_conversion","reject_settings_conversion","seconds_to_millis"]
 FUNCTION_NAMES: dict[int, str] = {
     1: "decide",
     2: "choose",
@@ -78,5 +78,13 @@ CODE_NAMES: dict[int, str] = {
     4001: "local.cancelled",
     4002: "local.io",
     4003: "local.toolbox",
+    4004: "local.accounting",
+    4005: "local.request-limit",
+    4006: "local.response-store",
+    4007: "local.store-corrupt",
+    4008: "local.store-format",
+    4009: "local.store-answer",
+    4010: "local.replay-miss",
+    4011: "local.store-quota",
     5001: "internal.bug",
 }

@@ -58,15 +58,47 @@ pub const Settings = struct {
     api_key: ?ApiKey = null,
     /// Records per backend request.
     batch: ?u32 = null,
+    /// Client send allowance; null is unlimited and zero forbids sends.
+    max_requests: ?u64 = null,
+    /// Explicit local storage; null retains no responses.
+    response_store: ?ResponseStore = null,
     /// Retry limits.
     retry: ?Retry = null,
     /// Write as JSON, for `std.json.Stringify`.
     pub fn jsonStringify(self: Settings, writer: anytype) !void {
-        try writer.write(.{ .backend = self.backend, .model = self.model, .url = self.url, .batch = self.batch, .retry = self.retry });
+        try writer.write(.{ .backend = self.backend, .model = self.model, .url = self.url, .batch = self.batch, .max_requests = self.max_requests, .response_store = self.response_store, .retry = self.retry });
     }
     /// Print `[redacted]` in place of the key.
     pub fn format(_: Settings, writer: *std.Io.Writer) std.Io.Writer.Error!void {
         try writer.writeAll("Settings(api_key=[redacted])");
+    }
+};
+/// Local response-store execution mode.
+pub const ResponseMode = enum { cache, record, replay };
+/// Explicit private storage of input/output text; null limits use engine defaults.
+pub const ResponseStore = struct {
+    path: []const u8,
+    mode: ResponseMode,
+    namespace: []const u8,
+    model_generation: []const u8,
+    max_bytes: ?u64 = null,
+    max_entries: ?u64 = null,
+    max_age: ?u64 = null,
+    busy_timeout_ms: ?u64 = null,
+    /// Omit unspecified limits so the engine supplies its shared defaults.
+    pub fn jsonStringify(self: ResponseStore, writer: anytype) !void {
+        try writer.beginObject();
+        inline for (.{ "path", "mode", "namespace", "model_generation" }) |name| {
+            try writer.objectField(name);
+            try writer.write(@field(self, name));
+        }
+        inline for (.{ "max_bytes", "max_entries", "max_age", "busy_timeout_ms" }) |name| {
+            if (@field(self, name)) |value| {
+                try writer.objectField(name);
+                try writer.write(value);
+            }
+        }
+        try writer.endObject();
     }
 };
 /// One record: text, a JSON value, or a missing record, which fails as `record.missing`.

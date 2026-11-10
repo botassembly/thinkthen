@@ -90,6 +90,14 @@ mod definition {
         LocalCancelled = 4001, "local.cancelled", Local, false;
         LocalIo = 4002, "local.io", Local, false;
         LocalToolbox = 4003, "local.toolbox", Local, false;
+        LocalAccounting = 4004, "local.accounting", Local, false;
+        LocalRequestLimit = 4005, "local.request-limit", Local, false;
+        LocalResponseStore = 4006, "local.response-store", Local, false;
+        LocalStoreCorrupt = 4007, "local.store-corrupt", Local, false;
+        LocalStoreFormat = 4008, "local.store-format", Local, false;
+        LocalStoreAnswer = 4009, "local.store-answer", Local, false;
+        LocalReplayMiss = 4010, "local.replay-miss", Local, false;
+        LocalStoreQuota = 4011, "local.store-quota", Local, false;
         InternalBug = 5001, "internal.bug", Internal, false;
     }
 }

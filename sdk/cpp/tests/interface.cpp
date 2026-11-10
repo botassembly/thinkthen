@@ -11,6 +11,15 @@ static_assert(std::is_same_v<decltype(std::declval<tt::client>().filter_each(tt:
 int main() {
     tt::settings config; config.backend = tt::backend::stub;
     tt::client client{config};
+    const auto snapshot = [&config] { tt::client temporary{config}; return temporary.usage(); }();
+    assert(snapshot.attempts == 0 && snapshot.active_calls == 0);
+    assert(snapshot.cache_hits == 0 && snapshot.replay_hits == 0);
+    auto store_config = config;
+    store_config.response_store = tt::response_store{"unused-private-store", tt::response_mode::replay, "tests", "v1", {}, {}, {}, {}};
+    try { tt::client rejected{store_config}; assert(false); }
+    catch (const tt::error& error) { assert(std::string(thinkthen_code_name(error.code().value())) == "usage.settings"); }
+    assert(snapshot.input_tokens.reported == 0 && snapshot.output_tokens.unknown_attempts == 0);
+    assert(client.usage().responses == 0);
     const auto question = tt::decide{"Ready?"}.threshold(tt::threshold::band(0.2, 0.8)).yes_means("ready").no_means("not ready");
     bool saw_no = false, saw_unsure = false;
     for (int i = 0; i < 300 && !(saw_no && saw_unsure); ++i) {

@@ -11,11 +11,13 @@ scratch=$(mktemp -d)
 trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
 trap 'exit 1' HUP INT TERM
 python sdk/python/relation_type.py
-ruff check sdk/python --exclude _codes.py --exclude _contract.py
-ruff format --check sdk/python --exclude _codes.py --exclude _contract.py
-mypy --enable-incomplete-feature=TypeForm --strict --no-incremental sdk/python/thinkthen/*.py sdk/python/tests
-python scripts/python-docs-check-test
-python scripts/python-docs-check
+python_checks=0
+ruff check sdk/python --exclude _codes.py --exclude _contract.py || python_checks=1
+ruff format --check sdk/python --exclude _codes.py --exclude _contract.py || python_checks=1
+mypy --enable-incomplete-feature=TypeForm --strict --no-incremental sdk/python/thinkthen/*.py sdk/python/tests || python_checks=1
+python scripts/python-docs-check-test || python_checks=1
+python scripts/python-docs-check || python_checks=1
+[ "$python_checks" = 0 ]
 cargo build -p loopback --bin loopback --locked
 mkdir "$scratch/wheels"
 (cd sdk/python && python -c 'import build_backend, sys; build_backend.build_wheel(sys.argv[1], {"build-args": "--locked --profile dev"})' "$scratch/wheels")

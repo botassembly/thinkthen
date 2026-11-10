@@ -184,7 +184,7 @@ pub(crate) fn admit(
     })?;
     let part =
         part.ok_or_else(|| invalid("worksheet relationship is missing; save a clean .xlsx copy"))?;
-    let styles = super::xlsx_dates::Styles::read(
+    let mut styles = super::xlsx_dates::Styles::read(
         &mut zip,
         names.contains("xl/styles.xml"),
         date1904,
@@ -351,8 +351,14 @@ pub(crate) fn admit(
                 b"row" if row_number == 1 => {
                     let mut positions = BTreeMap::new();
                     for (column, cell) in &row {
-                        let header =
-                            value(Some(cell), &shared, &styles, false, row_number, &chosen.0)?;
+                        let header = value(
+                            Some(cell),
+                            &shared,
+                            &mut styles,
+                            false,
+                            row_number,
+                            &chosen.0,
+                        )?;
                         if !header.is_empty() {
                             positions.insert(header.clone(), *column);
                             sheet.headers.push(header);
@@ -376,7 +382,16 @@ pub(crate) fn admit(
                     }
                     let values = selected_positions
                         .iter()
-                        .map(|c| value(row.get(c), &shared, &styles, true, row_number, &chosen.0))
+                        .map(|c| {
+                            value(
+                                row.get(c),
+                                &shared,
+                                &mut styles,
+                                true,
+                                row_number,
+                                &chosen.0,
+                            )
+                        })
                         .collect::<Result<Vec<_>, _>>()?;
                     row_sink(row_number, values)?;
                 }
@@ -414,7 +429,7 @@ fn start_cell(e: &BytesStart<'_>, row: usize) -> Result<Cell, FileError> {
 fn value(
     cell: Option<&Cell>,
     shared: &[String],
-    styles: &super::xlsx_dates::Styles,
+    styles: &mut super::xlsx_dates::Styles,
     selected: bool,
     row: usize,
     sheet: &str,
@@ -1235,7 +1250,11 @@ fn escape_unit(value: &str) -> Option<u16> {
     if !value.starts_with("_x") || value.as_bytes().get(6).copied() != Some(b'_') {
         return None;
     }
-    u16::from_str_radix(value.get(2..6)?, 16).ok()
+    let digits = value.get(2..6)?;
+    if !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    u16::from_str_radix(digits, 16).ok()
 }
 
 fn dimension(

@@ -99,13 +99,17 @@ FROM thinkthen.decide('SELECT msg_id AS id, body AS record FROM messages WHERE m
 
 ## Handle not sure and failures
 
-Save the answers in a table once, then read them as often as you like. Running a ThinkThen query again asks again and is billed again.
+Save the answers in a table once, then read them as often as you like. A plain rerun can send questions again and incur new charges.
 
 ```sql
 CREATE TABLE refund_answers AS
 SELECT (id)::integer AS msg_id, answer AS is_refund, status, error_code, error_message
 FROM thinkthen.decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3',
                       'Does the customer request a refund?');
+
+SELECT m.msg_id, m.body, a.is_refund, a.status
+FROM refund_answers a JOIN messages m ON a.msg_id = m.msg_id
+ORDER BY m.msg_id;
 
 SELECT msg_id FROM refund_answers WHERE is_refund IS TRUE;                      -- yes
 SELECT msg_id FROM refund_answers WHERE is_refund IS FALSE;                     -- no
@@ -359,9 +363,15 @@ The two time settings take PostgreSQL units, as `'2min'` or `'500ms'`, and a bar
 
 ## Control cost and cancel
 
-- One query makes one batched call for every record of its source query. Running the query again sends every question again.
-- Save results with `CREATE TABLE ... AS SELECT`, then inspect, join and export the table. In `psql`, `\copy refund_answers TO 'answers.csv' WITH (FORMAT csv, HEADER true)` writes a CSV on the client, with `jsonb` columns as JSON text.
-- Cancelling the query, or `statement_timeout`, stops it with SQLSTATE 57014, and the session stays usable. The query's answers are discarded, and the backend still bills requests it completed. Split large jobs into several saved queries.
+A function invocation owns one engine call over its supplied input. A statement can invoke a function more than once, especially when its arguments depend on an outer row. A plain rerun can send questions again; reading a saved result table does not.
+
+Choose the input before invoking ThinkThen: put `WHERE`, a deterministic `ORDER BY` on a stable unique key, and any input `LIMIT` inside the supplied source. An output `LIMIT` does not bound paid requests. A CTE is not a durable saved result, and batch size controls packing rather than total work. Retries and dependent questions can make several requests for the same input records. SQL does not admit `max_requests`, inherit `THINKTHEN_MAX_REQUESTS`, or report a statement-wide usage total.
+
+The `refund_answers` example above saves answers in a real table before joining them to application data. For a large job, snapshot the source or keep it unchanged, select a fixed range of unique keys for each chunk, save its answers, and commit that chunk before starting the next. Commit the answer rows and a completed-range marker in the same transaction. Restart only ranges that did not commit; do not treat gaps from a failed range as completed work. A single `CREATE TABLE ... AS SELECT` is one statement, not a checkpoint after each row. Cancelling it can discard all of that statement's results even when requests were paid for. Earlier separately committed chunks remain available.
+
+An uncorrelated invocation can supply rows repeatedly to a join without repeating requests; a correlated `LATERAL` invocation performs work for each outer argument set. PostgreSQL materializes a function's input before returning its rows: 65 input rows at batch 32 still send three requests under an outer `LIMIT 1`. Put the intended input limit inside `source_sql`.
+
+Cancelling the query, or `statement_timeout`, stops it with SQLSTATE 57014 and leaves the session usable. Neither bounds the number of paid requests or commits completed answers. In `psql`, `\copy refund_answers TO 'answers.csv' WITH (FORMAT csv, HEADER true)` exports the saved table on the client, with `jsonb` columns as JSON text.
 
 ## Reference
 

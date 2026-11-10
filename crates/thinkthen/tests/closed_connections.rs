@@ -42,5 +42,25 @@ fn closed_pooled_connections_resend_once_only_before_reply_bytes() {
         let received = peer.finish().unwrap();
         assert_eq!(row["status"], expected, "{at:?}");
         assert_eq!(received, requests, "{at:?}");
+        let usage = engine.settled_usage();
+        assert_eq!(usage.attempts, received as u64, "{at:?}");
+        assert_eq!(
+            usage.connection_retries,
+            u64::from(matches!(at, CloseAt::Reused)),
+            "{at:?}"
+        );
+        assert_eq!(
+            usage.responses,
+            match at {
+                CloseAt::Reused => 2,
+                CloseAt::Fresh => 0,
+                _ => 1,
+            },
+            "{at:?}"
+        );
+        assert_eq!(usage.input_tokens.reported, Some(0));
+        assert_eq!(usage.input_tokens.unknown_attempts, received as u64);
+        assert_eq!(usage.output_tokens.unknown_attempts, received as u64);
+        assert_eq!(usage.active_calls, 0);
     }
 }

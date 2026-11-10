@@ -162,3 +162,136 @@ fn empty_text_is_usage_and_never_calls_the_backend() {
         assert_eq!(server.count(), 0);
     }
 }
+
+#[test]
+fn usage_summary_is_separate_from_answers_and_quiet_suppresses_it() {
+    let server = Loopback::start(|_| Reply::json(200, &json!({"answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":19,"output_tokens":0}}))).unwrap();
+    let output = run(
+        &server,
+        &["decide", "Is it relevant?", "--usage"],
+        Some(KEY),
+    );
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert_eq!(text(&output.stdout), "true\n");
+    let summary: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
+    assert_eq!(summary["kind"], "thinkthen.usage/1");
+    assert_eq!(summary["status"], "completed");
+    assert_eq!(summary["usage"]["input_tokens"]["reported"], 19);
+    assert_eq!(summary["usage"]["active_calls"], 0);
+    let quiet = run(
+        &server,
+        &["decide", "Is it relevant?", "--usage", "--quiet"],
+        Some(KEY),
+    );
+    assert!(quiet.status.success());
+    assert!(quiet.stdout.is_empty());
+    assert!(quiet.stderr.is_empty());
+}
+
+#[test]
+fn usage_reports_backend_failure_and_invalid_usage_sends_nothing() {
+    let server = Loopback::start(|_| {
+        Reply::json(401, &json!({"usage":{"input_tokens":3,"output_tokens":0}}))
+    })
+    .unwrap();
+    let output = run(&server, &["decide", "Relevant?", "--usage"], Some(KEY));
+    assert_eq!(output.status.code(), Some(4));
+    let summary: serde_json::Value = text(&output.stderr)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .find(|record| record["kind"] == "thinkthen.usage/1")
+        .unwrap();
+    assert_eq!(summary["status"], "failed");
+    assert_eq!(summary["usage"]["input_tokens"]["reported"], 3);
+    let invalid = run(
+        &server,
+        &["decide", "Relevant?", "--usage=maybe"],
+        Some(KEY),
+    );
+    assert_eq!(invalid.status.code(), Some(2));
+    assert_eq!(server.count(), 1);
+}
+
+#[test]
+#[cfg(unix)]
+fn first_interrupt_reports_settled_usage_before_exit() {
+    use std::sync::{Mutex, mpsc};
+    let (arrived, observed) = mpsc::channel();
+    let (release, blocked) = mpsc::channel();
+    let blocked = Mutex::new(blocked);
+    let server = Loopback::start(move |_| {
+        arrived.send(()).unwrap();
+        blocked.lock().unwrap().recv().unwrap();
+        Reply::json(200, &json!({}))
+    })
+    .unwrap();
+    let mut child = support::command()
+        .args(["decide", "Relevant?", "--usage"])
+        .env("THINKTHEN_API_KEY", KEY)
+        .env("THINKTHEN_BASE_URL", server.base())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"evidence").unwrap();
+    observed.recv().unwrap();
+    assert!(
+        std::process::Command::new("kill")
+            .args(["-INT", &child.id().to_string()])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let output = child.wait_with_output().unwrap();
+    release.send(()).unwrap();
+    assert_eq!(output.status.code(), Some(130));
+    let summary: serde_json::Value = text(&output.stderr)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .find(|record| record["kind"] == "thinkthen.usage/1")
+        .unwrap();
+    assert_eq!(summary["status"], "cancelled");
+    assert_eq!(summary["usage"]["attempts"], 1);
+    assert_eq!(summary["usage"]["active_calls"], 0);
+    assert_eq!(summary["usage"]["active_attempts"], 0);
+    assert_eq!(summary["usage"]["input_tokens"]["unknown_attempts"], 1);
+}
+
+#[test]
+fn request_allowance_has_explicit_precedence_and_keeps_usage_on_exhaustion() {
+    let server = Loopback::noul(0.9).unwrap();
+    for (flag, code, attempts) in [(None, 5, 0), (Some("1"), 0, 1)] {
+        let mut command = support::command();
+        command
+            .args(["decide", "Relevant?", "--usage"])
+            .env("THINKTHEN_API_KEY", KEY)
+            .env("THINKTHEN_BASE_URL", server.base())
+            .env("THINKTHEN_MAX_REQUESTS", "0")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        if let Some(flag) = flag {
+            command.args(["--max-requests", flag]);
+        }
+        let mut child = command.spawn().unwrap();
+        child.stdin.take().unwrap().write_all(b"evidence").unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert_eq!(output.status.code(), Some(code), "{}", text(&output.stderr));
+        let summary: serde_json::Value = text(&output.stderr)
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+            .find(|record| record["kind"] == "thinkthen.usage/1")
+            .unwrap();
+        assert_eq!(summary["usage"]["attempts"], attempts);
+        assert_eq!(
+            summary["status"],
+            if code == 0 { "completed" } else { "failed" }
+        );
+        if code == 5 {
+            assert!(text(&output.stderr).contains("local.request-limit"));
+            assert!(output.stdout.is_empty());
+        }
+    }
+    assert_eq!(server.count(), 1);
+}

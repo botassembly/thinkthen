@@ -158,16 +158,16 @@ impl super::Function for Find {
                 .collect::<BTreeMap<_, _>>(),
         );
         let (winner, p) = crate::core::ask::argmax(probabilities);
+        if question.threshold.verdict(p) != Verdict::Yes {
+            return Outcome::Unsure {
+                p,
+                detail: Some(detail),
+            };
+        }
         if probabilities.last().is_some_and(|none| *none == p) {
             return Outcome::Answered {
                 answer: Answer::Found(None),
                 p: Some(p),
-                detail: Some(detail),
-            };
-        }
-        if question.threshold.verdict(p) != Verdict::Yes {
-            return Outcome::Unsure {
-                p,
                 detail: Some(detail),
             };
         }

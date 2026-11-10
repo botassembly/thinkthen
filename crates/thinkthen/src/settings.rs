@@ -103,7 +103,9 @@ pub struct Settings {
     url: Option<String>,
     api_key: Option<Key>,
     batch: Option<Batch>,
+    max_requests: Option<u64>,
     retry: Retry,
+    response_store: Option<crate::ResponseStore>,
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -133,6 +135,11 @@ struct Input {
     #[serde(default)]
     #[serde(deserialize_with = "crate::core::diagnostic::retry")]
     retry: Retry,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "crate::core::diagnostic::max_requests")]
+    max_requests: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    response_store: Option<crate::ResponseStore>,
 }
 impl Settings {
     /// Copy only the explicit key from another snapshot without exposing bytes.
@@ -148,6 +155,8 @@ impl Settings {
         url: Option<&str>,
         batch: Batch,
         retry: Retry,
+        max_requests: Option<u64>,
+        response_store: Option<crate::ResponseStore>,
     ) -> Self {
         Self {
             backend: Some(backend),
@@ -155,7 +164,9 @@ impl Settings {
             url: url.map(str::to_owned),
             api_key: None,
             batch: Some(batch),
+            max_requests,
             retry,
+            response_store,
         }
     }
     /// Admit canonical settings without resolving environment variables.
@@ -224,6 +235,41 @@ impl Settings {
         self.batch = Some(batch);
         self
     }
+    /// Bound actual send attempts over the resulting client's lifetime.
+    /// None is unlimited; zero prevents every remote send. Clones share the allowance.
+    #[must_use]
+    pub fn max_requests(mut self, max_requests: Option<u64>) -> Self {
+        self.max_requests = max_requests;
+        self
+    }
+    /// The configured client-lifetime request allowance, not a remaining balance.
+    #[must_use]
+    pub const fn request_limit(&self) -> Option<u64> {
+        self.max_requests
+    }
+    /// Admit a command or explicit from-environment construction's allowance.
+    pub(crate) fn environment_request_limit(mut self, text: Option<String>) -> Result<Self, Error> {
+        if self.max_requests.is_none() {
+            self.max_requests = text
+                .map(|text| {
+                    text.parse::<u64>().map_err(|_| {
+                        settings_error(crate::core::diagnostic::requirement(
+                            "max_requests",
+                            "an unsigned integer",
+                            "an invalid request allowance (contents redacted)",
+                        ))
+                    })
+                })
+                .transpose()?;
+        }
+        Ok(self)
+    }
+    /// Explicitly enable local retention, or disable it with `None`.
+    #[must_use]
+    pub fn response_store(mut self, store: Option<crate::ResponseStore>) -> Self {
+        self.response_store = store;
+        self
+    }
     /// Select a validated retry policy.
     #[must_use]
     pub fn retry(mut self, retry: Retry) -> Self {
@@ -254,21 +300,35 @@ impl Settings {
     /// Returns the shared backend, URL, credential, batch or policy error.
     pub fn engine(&self, variable: impl Fn(&str) -> Option<String>) -> Result<Engine, Error> {
         let selected = self.resolve_backend(&variable)?;
-        let backend = BackendTable::default().resolve_direct(
+        let table = BackendTable::default();
+        let mut backend = table.resolve_route(
             selected.as_str(),
             self.url.as_deref(),
             self.model.as_deref(),
-            self.api_key.as_ref(),
             &variable,
         )?;
+        let store = self
+            .response_store
+            .as_ref()
+            .map(|config| {
+                crate::response_store::validate_route(&backend)?;
+                crate::response_store::Store::open(config.clone()).map(std::sync::Arc::new)
+            })
+            .transpose()?;
+        if !store.as_ref().is_some_and(|store| store.replay()) {
+            table.authorize(&mut backend, self.api_key.as_ref(), &variable)?;
+        }
         let batch = match self.batch {
             Some(batch) => batch,
             None if selected == BackendName::Stub => Batch::default(),
             None => Batch::resolve(None, variable)?,
         };
-        Ok(Engine::new(backend)
+        let mut engine = Engine::new(backend)
             .batch(batch)
-            .retry_policy(self.retry.policy()?))
+            .retry_policy(self.retry.policy()?);
+        engine.account = crate::usage::Account::new(self.max_requests);
+        engine.store = store;
+        Ok(engine)
     }
 }
 impl TryFrom<Input> for Settings {
@@ -299,6 +359,8 @@ impl TryFrom<Input> for Settings {
                 })
                 .transpose()?,
             retry: value.retry,
+            max_requests: value.max_requests,
+            response_store: value.response_store,
         })
     }
 }
@@ -313,6 +375,8 @@ impl From<Settings> for Input {
                 .batch
                 .map(|batch| serde_json::Number::from(batch.get().get())),
             retry: value.retry,
+            max_requests: value.max_requests,
+            response_store: value.response_store,
         }
     }
 }

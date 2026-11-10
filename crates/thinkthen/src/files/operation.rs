@@ -1,7 +1,7 @@
 //! One admitted operation owns its snapshot, stream and publication.
 
+use crate::access::AccessList;
 use crate::contract_driver::driver::{Driver, Event};
-use crate::files::access_list::AccessList;
 use crate::files::admission::{check_cancel, copy};
 use crate::files::{
     FileError, FileFormat, FileJob, FileOutput, FileReceipt, NAMED_FAILURES,
@@ -12,6 +12,7 @@ use crate::records::Record;
 use crate::{Cancel, Code, Engine, Error, ErrorKind, OffsetUnit, Question, Request};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
+use std::cell::Cell as SavedPath;
 use std::collections::BTreeSet;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -28,6 +29,52 @@ impl FileJob {
         request: &Request,
         client: &Engine,
         cancel: &Cancel,
+    ) -> Result<FileReceipt, FileError> {
+        let mut journal = None;
+        let completed_output = SavedPath::new(None);
+        let result =
+            self.execute_retained(request, client, cancel, &mut journal, &completed_output);
+        if let Some(mut journal) = journal {
+            let complete = result
+                .as_ref()
+                .is_ok_and(|receipt| receipt.output.is_some());
+            if complete {
+                return result.map(|mut receipt| {
+                    receipt.recovery = Some(journal);
+                    receipt
+                });
+            } else {
+                journal.close(false, completed_output.take())?;
+                let instruction = journal.instruction();
+                if cancel.is_cancelled() {
+                    let _ = writeln!(std::io::stderr().lock(), "thinkthen: {instruction}");
+                }
+                return match result {
+                    Err(FileError::Engine(error)) => {
+                        Err(FileError::Engine(journal.retained_error(error)))
+                    }
+                    Err(FileError::Invalid(code, message)) => Err(FileError::Invalid(
+                        code,
+                        format!("{message}; {instruction}"),
+                    )),
+                    Err(error) => Err(local(format!("{error}; {instruction}"))),
+                    Ok(receipt) => {
+                        let _ = writeln!(std::io::stderr().lock(), "thinkthen: {instruction}");
+                        Ok(receipt)
+                    }
+                };
+            }
+        }
+        result
+    }
+
+    fn execute_retained(
+        &self,
+        request: &Request,
+        client: &Engine,
+        cancel: &Cancel,
+        journal: &mut Option<super::recovery::Journal>,
+        completed_output: &SavedPath<Option<PathBuf>>,
     ) -> Result<FileReceipt, FileError> {
         if !request.records().is_empty() {
             return Err(invalid(
@@ -206,6 +253,43 @@ impl FileJob {
             ));
         }
         check_cancel(cancel)?;
+        if !matches!(self.recovery, super::Recovery::Disabled) {
+            let recovery_parent = match &self.recovery {
+                super::Recovery::Path(path) => path
+                    .parent()
+                    .filter(|path| !path.as_os_str().is_empty())
+                    .unwrap_or_else(|| Path::new(".")),
+                _ => parent,
+            };
+            let retained = tempfile::NamedTempFile::new_in(recovery_parent).map_err(local)?;
+            if let Some(access) =
+                AccessList::read(&File::open(&self.input).map_err(local)?).map_err(local)?
+            {
+                access.apply(retained.path()).map_err(local)?;
+            }
+            let path = match &self.recovery {
+                super::Recovery::Path(path) => path.clone(),
+                _ => output.with_file_name(format!(
+                    ".recovery-{}",
+                    retained
+                        .path()
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                )),
+            };
+            let settings = super::recovery::settings(client)?;
+            let metadata = serde_json::json!({"source": self.input, "source_sha256": digest.iter().map(|byte| format!("{byte:02x}")).collect::<String>(), "request": request, "settings": settings, "columns": self.columns, "sheet": self.sheet, "format": match self.format { FileFormat::Csv => "csv", FileFormat::Tsv => "tsv", FileFormat::Xlsx => "xlsx" }, "answer_columns": names, "details": self.details, "output": output, "offset_unit": crate::OffsetUnit::CodePoints});
+            let mut retained =
+                super::recovery::Journal::create(retained, path, metadata, records.count as u64)?;
+            for position in 1..=records.count {
+                retained.append(&super::recovery::Frame::Occurrence {
+                    position: position as u64,
+                    source: serde_json::json!({"row": records.source_row(position)?}),
+                })?;
+            }
+            *journal = Some(retained);
+        }
         let mut answers = spool::Answers::new()?;
         let mut inputs = records.reader()?;
         let mut call = Driver::open_finite(
@@ -226,6 +310,14 @@ impl FileJob {
                     None => call.end_input(),
                 },
                 Event::Row(row) => {
+                    let value = serde_json::to_value(&row).map_err(local)?;
+                    if let Some(journal) = journal {
+                        journal.append(&super::recovery::Frame::Row {
+                            position: row.position(),
+                            row: value.clone(),
+                        })?;
+                    }
+
                     if rows == 0
                         && !(filter && matches!(self.output, FileOutput::InPlace))
                         && let Some(error) = row.failure()
@@ -239,7 +331,6 @@ impl FileJob {
                     answered += u64::from(row.status() != crate::Status::Failed);
                     unsure += u64::from(row.status() == crate::Status::Unsure);
                     let mut failure = row.failure().cloned();
-                    let value = serde_json::to_value(&row).map_err(local)?;
                     let mut cells = Vec::new();
                     if annotation {
                         for name in &names {
@@ -274,6 +365,7 @@ impl FileJob {
         let mut receipt = FileReceipt {
             output: None,
             backup: None,
+            recovery: None,
             failures,
             answered,
             unsure,
@@ -304,6 +396,7 @@ impl FileJob {
         }
         // From here on the output is finished, so a file error must not lose it.
         let keeper = Keeper {
+            completed_output,
             cancel,
             output: &output,
             unchanged: if matches!(self.output, FileOutput::InPlace) {
@@ -318,13 +411,17 @@ impl FileJob {
         if let Err(error) = flushed {
             return Err(keeper.keep(UNPROVEN, error, temporary));
         }
-        check_cancel(cancel)?;
+        if let Err(error) = check_cancel(cancel) {
+            return Err(keeper.keep(COMPLETED, error, temporary));
+        }
         let backup = if matches!(self.output, FileOutput::InPlace) {
             let mut backup = match self.backup(snapshot.path(), access.as_ref(), cancel) {
                 Ok(backup) => backup,
                 Err(error) => return Err(keeper.keep(COMPLETED, error, temporary)),
             };
-            check_cancel(cancel)?;
+            if let Err(error) = check_cancel(cancel) {
+                return Err(keeper.keep(COMPLETED, error, temporary));
+            }
             if let Err(error) = temporary.as_file().set_permissions(permissions.clone()) {
                 return Err(keeper.keep(COMPLETED, error, temporary));
             }
@@ -337,7 +434,9 @@ impl FileJob {
                     Err(local("input changed during the operation"))
                 }
             });
-            check_cancel(cancel)?;
+            if let Err(error) = check_cancel(cancel) {
+                return Err(keeper.keep(COMPLETED, error, temporary));
+            }
             if let Err(error) = conflict {
                 return Err(keeper.keep(COMPLETED, error, temporary));
             }
@@ -360,12 +459,26 @@ impl FileJob {
                 }
                 Err(error) => return Err(error),
             };
+            completed_output.set(Some(output.clone()));
             finish_swap(&file, unlocked.then_some(permissions), parent, &backup.path)?;
             Some(backup.path.clone())
         } else {
-            temporary
+            let published = temporary
                 .persist_noclobber(&output)
                 .map_err(|error| keeper.keep(COMPLETED, error.error, error.file))?;
+            completed_output.set(Some(output.clone()));
+            published.sync_all().map_err(|error| {
+                local(format!(
+                    "output was published at {}, but final file sync failed: {error}",
+                    output.display()
+                ))
+            })?;
+            sync_directory(parent).map_err(|error| {
+                local(format!(
+                    "output was published at {}, but final directory sync failed: {error}",
+                    output.display()
+                ))
+            })?;
             None
         };
         receipt.output = Some(output);
@@ -631,6 +744,7 @@ fn finish_swap(
 
 /// A failed publication must not delete finished, possibly paid-for output.
 struct Keeper<'a> {
+    completed_output: &'a SavedPath<Option<PathBuf>>,
     cancel: &'a Cancel,
     output: &'a Path,
     unchanged: &'static str,
@@ -645,17 +759,25 @@ impl Keeper<'_> {
         reason: impl std::fmt::Display,
         temporary: NamedTempFile,
     ) -> FileError {
-        if let Err(cancelled) = check_cancel(self.cancel) {
-            return cancelled;
+        let cancelled = check_cancel(self.cancel).err();
+        let kept = keep_completed(temporary, self.output, label, self.completed_output);
+        let message = format!("{reason}; {}; {kept}", self.unchanged);
+        if cancelled.is_some() {
+            FileError::Engine(Error::from_contract(Code::LocalCancelled, message))
+        } else {
+            local(message)
         }
-        let kept = keep_completed(temporary, self.output, label);
-        local(format!("{reason}; {}; {kept}", self.unchanged))
     }
 }
 
 /// Move the temporary to a sibling of `output`, where it already sits, and say
 /// where it went.
-fn keep_completed(mut temporary: NamedTempFile, output: &Path, label: &str) -> String {
+fn keep_completed(
+    mut temporary: NamedTempFile,
+    output: &Path,
+    label: &str,
+    completed_output: &SavedPath<Option<PathBuf>>,
+) -> String {
     for number in 1usize.. {
         let suffix = if number == 1 {
             "thinkthen".to_owned()
@@ -664,10 +786,11 @@ fn keep_completed(mut temporary: NamedTempFile, output: &Path, label: &str) -> S
         };
         let path = match sibling(output, &suffix) {
             Ok(path) => path,
-            Err(error) => return keep_temporary(temporary, label, error),
+            Err(error) => return keep_temporary(temporary, label, error, completed_output),
         };
         match temporary.persist_noclobber(&path) {
             Ok(file) => {
+                completed_output.set(Some(path.clone()));
                 let flushed = file.sync_all().map_err(local).and_then(|()| {
                     sync_directory(
                         path.parent()
@@ -686,20 +809,34 @@ fn keep_completed(mut temporary: NamedTempFile, output: &Path, label: &str) -> S
             Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
                 temporary = error.file;
             }
-            Err(error) => return keep_temporary(error.file, label, error.error),
+            Err(error) => return keep_temporary(error.file, label, error.error, completed_output),
         }
     }
-    keep_temporary(temporary, label, "no unused kept name remains")
+    keep_temporary(
+        temporary,
+        label,
+        "no unused kept name remains",
+        completed_output,
+    )
 }
 
 /// No sibling name worked, so the temporary stays under its own name.
-fn keep_temporary(temporary: NamedTempFile, label: &str, reason: impl std::fmt::Display) -> String {
+fn keep_temporary(
+    temporary: NamedTempFile,
+    label: &str,
+    reason: impl std::fmt::Display,
+    completed_output: &SavedPath<Option<PathBuf>>,
+) -> String {
     match temporary.keep() {
         // On Unix keep succeeds even when the file has gone, so look for it.
-        Ok((_, path)) if matches!(path.try_exists(), Ok(true)) => format!(
-            "{label} kept under its temporary name {} ({reason})",
-            path.display()
-        ),
+        Ok((_, path)) if matches!(path.try_exists(), Ok(true)) => {
+            let message = format!(
+                "{label} kept under its temporary name {} ({reason})",
+                path.display()
+            );
+            completed_output.set(Some(path));
+            message
+        }
         Ok(_) => format!("{label} could not be kept: {reason}; its temporary file is gone"),
         Err(error) => format!("{label} could not be kept: {reason}; {error}"),
     }

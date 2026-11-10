@@ -173,6 +173,12 @@ fn meaning(code: thinkthen::Code) -> &'static str {
         "local.cancelled" => "The call was cancelled.",
         "local.io" => "A local file could not be read or written.",
         "local.toolbox" => "A toolbox could not be read.",
+        "local.request-limit" => {
+            "The client request allowance is exhausted; no further request was sent."
+        }
+        "local.accounting" => {
+            "Client accounting exceeded its supported range before another request could be sent."
+        }
         "internal.bug" => "A bug in this library; please report it.",
         _ => "",
     }

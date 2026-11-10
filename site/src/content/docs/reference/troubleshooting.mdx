@@ -250,6 +250,14 @@ You see `thinkthen: backend.reply: … the backend's reply is not a System One r
 
 ## When a file or a run fails
 
+<span id="local-request-limit"></span>
+
+### It reached the request allowance
+
+**Code:** `local.request-limit`, exit code 5. **Cause:** the invocation used its `--max-requests` allowance, or the value from `THINKTHEN_MAX_REQUESTS`. The explicit option takes precedence. The count includes actual HTTP attempts for retries, split requests and saved function steps. Zero prevents remote sends; unset is unlimited. Already reserved attempts may finish.
+
+**Fix:** keep completed output and recovery exports, inspect `--usage` accounting, and choose the unfinished work for a later invocation. A plain rerun can pay for completed work again. The allowance is a request count, not a dollar guarantee or a limit on shell subprocesses. SQL does not support it; bound SQL input and commit saved chunks separately.
+
 <span id="local-io"></span>
 
 ### It can't open or write a file
@@ -272,7 +280,11 @@ You see `thinkthen: local.toolbox: shell steps require --allow-shell: …`, foll
 
 You see `thinkthen: cancelling; press Ctrl-C again to exit`, and the exit code is 130.
 
-**Code:** `local.cancelled`. **Cause:** you pressed Ctrl-C, or another program interrupted the run. Answers to questions already sent can be lost, and the service still charges for them. **Fix:** nothing is wrong. Run the command again to finish. A second Ctrl-C exits at once.
+**Code:** `local.cancelled`. **Cause:** you pressed Ctrl-C, or another program interrupted the run. A second Ctrl-C exits at once. Emitted stream rows remain wherever your caller saved them; incomplete or unreceived answers may be lost, and cancellation does not refund sent requests.
+
+For named table operations, use the recovery path reported by the command: `thinkthen recover FILE > completed.jsonl` exports retained completed rows offline. For enriched JSONL or table input on stdin, select a persistent path with `--recovery FILE`; `--no-recovery` disables retention. Export reports missing positions and incomplete operations separately on stderr. It does not continue the job, recover unreceived answers, or supply unfinished rank scores. Keep recovery artifacts private because they retain input and answers.
+
+A plain rerun can send requests again, including work already paid for. Automatic resume is unavailable. Preserve emitted rows and recovery exports, or run independently saved chunks so you can select only unfinished work. SQL uses its own transactions: commit each saved key-range chunk separately; file recovery does not checkpoint a database statement.
 
 ### It ends with exit code 141
 
@@ -294,7 +306,7 @@ The command never returns these. An SDK or a database extension returns them wit
 
 ### The SDK can't read its settings
 
-**Code:** `usage.settings`. **Cause:** the settings aren't valid JSON, name a setting that doesn't exist, or give a retry time that isn't a whole number of milliseconds above 0. A database session also refuses `url`, `api_key` and `key_source`, because a database reads the address and key from the server's environment. **Fix:** pass only the settings your SDK page lists. In a database, set the address and key in the server's environment.
+**Code:** `usage.settings`. **Cause:** the settings aren't valid JSON, name a setting that doesn't exist, or give a retry time that isn't a whole number of milliseconds above 0. A database session also refuses `url`, `api_key` and `key_source`, because a database reads the address and key from the server's environment. It refuses `max_requests` because SQL has no client-lifetime allowance. **Fix:** pass only the settings your SDK page lists. In a database, set the address and key in the server's environment.
 
 <span id="usage-sql-policy"></span>
 
@@ -355,3 +367,9 @@ An `id` that isn't a string or a whole number fails the same way, with the same 
 ## Next
 
 [Exit codes](/command-line/exit-codes/) shows how a script tells these errors apart.
+
+## An interrupted file operation left completed answers
+
+Named table operations retain a private recovery artifact until their completed output is published. An interruption or local error names it. Run `thinkthen recover FILE > completed.jsonl` to export completed typed rows offline. The JSON summary on stderr identifies missing original positions and incomplete operations; it is separate from the answer output.
+
+For enriched JSONL or table input on stdin, select a persistent destination explicitly with `--recovery FILE`. `--no-recovery` disables retention. Export is not automatic resume: a plain rerun sends requests again. Unreceived answers and unfinished rank scores cannot be exported. Keep recovery files private because they retain source and answer metadata.

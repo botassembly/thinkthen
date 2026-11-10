@@ -8,8 +8,17 @@ import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.milliseconds
 
 fun main() = runBlocking {
+    ThinkThen { backend = Backend.STUB; maxRequests = ULong.MAX_VALUE }.use { client ->
+        check(client.settings.saved().contains("\"max_requests\":18446744073709551615"))
+    }
+    val store = ResponseStore("unused-private-store", ResponseMode.REPLAY, "tests", "model-v1", maxBytes = ULong.MAX_VALUE)
+    try {
+        ThinkThen { backend = Backend.STUB; responseStore = store }.close()
+        error("store settings disappeared before shared admission")
+    } catch (failure: ThinkThenException) { check(failure.code.wireName == "usage.settings") }
     engineSettingsErrors()
     detailStrings()
+    usageOwnership()
 }
 
 // Feature: host durations reach engine settings admission without Kotlin validation.
@@ -40,4 +49,16 @@ private suspend fun detailStrings() {
         val row = client.choose("Which?", "alpha", listOf("yes", "no")) as Row.Answered
         check(row.detail.toString() == "LabelDetail(labels=${row.detail!!.labels})")
     }
+}
+
+// Feature: immutable usage snapshots survive client close without native ownership.
+private suspend fun usageOwnership() {
+    val client = ThinkThen { backend = Backend.STUB }
+    client.decide("Ready?", "alpha")
+    val before = client.usage
+    check(before.attempts == 0uL && before.inputTokens.reported == 0uL)
+    client.close()
+    client.close()
+    check(client.usage == before)
+    check(client.usage.activeCalls == 0uL)
 }

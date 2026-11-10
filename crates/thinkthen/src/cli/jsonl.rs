@@ -4,9 +4,11 @@ use super::execute::Completion;
 use super::input::{self, Input};
 use super::options::{self, Output, usage};
 use crate::contract_driver::driver::{Driver, Event};
+use crate::files::recovery::{Frame, Journal};
 use crate::{Cancel, Engine, Error, Record, Request};
 use clap::ArgMatches;
 use serde_json::{Value, value::RawValue};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
@@ -18,6 +20,7 @@ pub(super) fn run(
     request: &Request,
     output: &Output,
     cancel: &Cancel,
+    account: &crate::usage::Account,
 ) -> Result<u8, Error> {
     let name = options::explicit(args, "into").unwrap_or_default();
     if name.is_empty() || output.check {
@@ -28,37 +31,94 @@ pub(super) fn run(
         ));
     }
     let selection = input.selection.clone();
-    let (mut records, count, origins) = admit(input, &name, cancel)?;
-    let engine = options::client(args)?;
+    let (mut records, mut sources, count, origins) = admit(input, &name, cancel)?;
+    let engine = options::client(args, account)?;
     let mut answers = Store::new()?;
     let mut completion = Completion::default();
-    evaluate(
-        &mut records,
-        &mut answers,
-        (count, &selection, &origins),
-        request,
-        &engine,
-        &mut completion,
-        cancel,
-    )?;
-    if !output.quiet {
-        publish(
+    let mut journal = if let crate::files::Recovery::Path(path) =
+        super::table::recovery(args, true)?
+    {
+        let mut hash = Sha256::new();
+        for position in 1..=count {
+            let bytes = records.get(position)?;
+            hash.update((bytes.len() as u64).to_le_bytes());
+            hash.update(bytes);
+        }
+        let parent = path
+            .parent()
+            .filter(|path| !path.as_os_str().is_empty())
+            .unwrap_or(std::path::Path::new("."));
+        let retained = tempfile::NamedTempFile::new_in(parent)
+            .map_err(|error| super::local(&error.to_string()))?;
+        let settings = crate::files::recovery::settings(&engine).map_err(recovery_error)?;
+        let manifest = serde_json::json!({"input_representation":"admitted-jsonl-length-framed-v1", "source_sha256":format!("{:x}", hash.finalize()), "request":request,"settings":settings,"selected_fields":selection,"into":name,"format":"jsonl","offset_unit":crate::OffsetUnit::CodePoints});
+        let mut retained =
+            Journal::create(retained, path, manifest, count).map_err(recovery_error)?;
+        for position in 1..=count {
+            let source = serde_json::from_slice(&sources.get(position)?)
+                .map_err(|error| super::local(&error.to_string()))?;
+            retained
+                .append(&Frame::Occurrence { position, source })
+                .map_err(recovery_error)?;
+        }
+        Some(retained)
+    } else {
+        None
+    };
+    let result: Result<u8, Error> = (|| {
+        evaluate(
             &mut records,
             &mut answers,
-            count,
-            &name,
-            matches!(request.question(), crate::Question::Filter(_)),
-            cancel,
+            (count, &selection, &origins),
+            request,
+            &engine,
+            &mut completion,
+            (cancel, &mut journal),
         )?;
+        if !output.quiet {
+            publish(
+                &mut records,
+                &mut answers,
+                count,
+                &name,
+                matches!(request.question(), crate::Question::Filter(_)),
+                cancel,
+            )?;
+        }
+        if matches!(request.question(), crate::Question::Filter(_)) {
+            completion.summarize(output.quiet);
+        }
+        Ok(completion.code(false))
+    })();
+    if let Some(mut journal) = journal {
+        journal
+            .close(result.is_ok(), None)
+            .map_err(recovery_error)?;
+        if cancel.is_cancelled() {
+            let _ = writeln!(io::stderr().lock(), "thinkthen: {}", journal.instruction());
+        }
+        match result {
+            Ok(code) => {
+                journal.discard().map_err(recovery_error)?;
+                Ok(code)
+            }
+            Err(error) => Err(journal.retained_error(error)),
+        }
+    } else {
+        result
     }
-    if matches!(request.question(), crate::Question::Filter(_)) {
-        completion.summarize(output.quiet);
-    }
-    Ok(completion.code(false))
+}
+
+fn recovery_error(error: crate::files::FileError) -> Error {
+    super::local(&error.to_string())
 }
 
 type Source = (String, u64, Box<dyn BufRead + Send>);
-fn admit(input: Input, name: &str, cancel: &Cancel) -> Result<(Store, u64, input::Origins), Error> {
+fn admit(
+    input: Input,
+    name: &str,
+    cancel: &Cancel,
+) -> Result<(Store, Store, u64, input::Origins), Error> {
     let mut sources = input.sources.into_iter();
     let mut current: Option<Source> = None;
     let receiver = input::spawn(
@@ -91,6 +151,7 @@ fn admit(input: Input, name: &str, cancel: &Cancel) -> Result<(Store, u64, input
         cancel.clone(),
     )?;
     let mut records = Store::new()?;
+    let mut source_positions = Store::new()?;
     let mut count = 0;
     let mut origins = input::Origins::default();
     while let Some((path, line, bytes)) = input::receive(&receiver, cancel)? {
@@ -112,9 +173,14 @@ fn admit(input: Input, name: &str, cancel: &Cancel) -> Result<(Store, u64, input
         }
         count += 1;
         records.put(count, body)?;
+        source_positions.put(
+            count,
+            &serde_json::to_vec(&serde_json::json!({"path":path,"line":line}))
+                .map_err(|error| super::local(&error.to_string()))?,
+        )?;
         origins.record(count, path);
     }
-    Ok((records, count, origins))
+    Ok((records, source_positions, count, origins))
 }
 
 fn evaluate(
@@ -124,8 +190,9 @@ fn evaluate(
     request: &Request,
     engine: &Engine,
     completion: &mut Completion,
-    cancel: &Cancel,
+    retention: (&Cancel, &mut Option<Journal>),
 ) -> Result<(), Error> {
+    let (cancel, journal) = retention;
     let (count, selection, origins) = input;
     let mut next = 1;
     let mut call = Driver::open_finite(
@@ -147,6 +214,17 @@ fn evaluate(
             }
             Event::NeedsInput => call.end_input(),
             Event::Row(row) => {
+                let row_value = serde_json::to_value(&row)
+                    .map_err(|_| super::local("answer could not be encoded"))?;
+                if let Some(journal) = journal {
+                    journal
+                        .append(&Frame::Row {
+                            position: row.position(),
+                            row: row_value.clone(),
+                        })
+                        .map_err(recovery_error)?;
+                }
+
                 if completion.rows() == 0
                     && let Some(error) = row.failure()
                     && error.code() == crate::Code::BackendTransport
@@ -155,8 +233,6 @@ fn evaluate(
                 }
                 completion.row(&row);
                 super::execute::report_failure(&row, origins.at(row.position()));
-                let row_value = serde_json::to_value(&row)
-                    .map_err(|_| super::local("answer could not be encoded"))?;
                 let value = answer(&row_value);
                 let bytes = serde_json::to_vec(&value)
                     .map_err(|_| super::local("answer could not be encoded"))?;

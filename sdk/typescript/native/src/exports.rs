@@ -115,6 +115,7 @@ impl Operation {
 #[derive(Debug)]
 pub struct Client {
     client: Option<thinkthen::Engine>,
+    closing: bool,
 }
 
 #[napi]
@@ -127,7 +128,36 @@ impl Client {
             .map_err(host_error)?;
         Ok(Self {
             client: Some(client),
+            closing: false,
         })
+    }
+
+    /// Stop admission before JavaScript drains its owned operations.
+    #[napi]
+    pub fn begin_close(&mut self) {
+        self.closing = true;
+    }
+
+    /// Copy cumulative usage with decimal strings preserving every u64 bit.
+    #[napi]
+    pub fn usage(&self) -> napi::Result<String> {
+        let usage = self
+            .client
+            .as_ref()
+            .ok_or_else(|| host_error(thinkthen::native::closed_client_error()))?
+            .usage();
+        usage_json(usage)
+    }
+
+    /// Copy settled usage after all owned operations have been cancelled.
+    #[napi]
+    pub fn settled_usage(&self) -> napi::Result<String> {
+        let usage = self
+            .client
+            .as_ref()
+            .ok_or_else(|| host_error(thinkthen::native::closed_client_error()))?
+            .settled_usage();
+        usage_json(usage)
     }
 
     /// Release client settings and connections after active operations finish.
@@ -152,9 +182,29 @@ impl Client {
 impl Client {
     fn engine(&self) -> napi::Result<thinkthen::Engine> {
         self.client
-            .clone()
+            .as_ref()
+            .filter(|_| !self.closing)
+            .cloned()
             .ok_or_else(|| host_error(thinkthen::native::closed_client_error()))
     }
+}
+
+fn usage_json(usage: thinkthen::Usage) -> napi::Result<String> {
+    fn decimal(value: serde_json::Value) -> serde_json::Value {
+        match value {
+            serde_json::Value::Number(value) => serde_json::Value::String(value.to_string()),
+            serde_json::Value::Object(fields) => serde_json::Value::Object(
+                fields
+                    .into_iter()
+                    .map(|(key, value)| (key, decimal(value)))
+                    .collect(),
+            ),
+            value => value,
+        }
+    }
+    serde_json::to_value(usage)
+        .map(|value| decimal(value).to_string())
+        .map_err(|_| host_error(thinkthen::native::internal_error()))
 }
 
 fn start(

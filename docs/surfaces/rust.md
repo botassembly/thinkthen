@@ -283,3 +283,24 @@ fn engine_for(key: &str) -> Result<Engine, Box<dyn std::error::Error>> {
 ## Reference
 
 The [Rust API reference](https://docs.rs/thinkthen/0.2.0/thinkthen/) lists every type and method. The [Rust page on thinkthen.dev](https://thinkthen.dev/languages/rust/) shows each function's call beside the other languages.
+
+## Observe client usage
+
+`engine.usage()` copies cumulative accounting for that engine and its clones. Create a separate engine when you need an isolated run total; subtracting snapshots from overlapping calls does not give per-call usage.
+
+```rust
+let usage = engine.usage();
+println!("{} requests, {:?} reported input tokens", usage.attempts, usage.input_tokens.reported);
+```
+
+`active_calls` includes paused calls that may send later; `active_attempts` counts sends still in progress. Each token dimension separates its reported subtotal from finished attempts with unknown usage. Unknown usage is not zero, and a subtotal is not an invoice. An absent reported subtotal means arithmetic overflow. Stub execution sends no requests and reports known zero usage.
+
+An owned snapshot remains valid after dropping the engine. After stopping admission and cancelling or finishing owned calls, `engine.settled_usage()` waits for their workers and returns a settled copy. Do not call it while a producer is waiting for more input or from that producer itself. Dropping a client still allows independently owned calls to finish.
+
+## Bound client request attempts
+
+Construct an engine with `Settings::default().max_requests(Some(500))` to allow at most 500 HTTP send attempts over its lifetime. Its clones, concurrent calls, retries, request splits and dependent rounds share that allowance. `None` is unlimited; `Some(0)` permits stub work but prevents every remote send.
+
+Exhaustion returns the terminal `local.request-limit` error. Consume a stream through its final result to observe it; already emitted rows remain valid. Reservations are conservative: an attempt can consume allowance without reaching the provider, and a limit is not a billing guarantee. The existing usage snapshot records admitted attempts.
+
+`Engine::from_env()` reads `THINKTHEN_MAX_REQUESTS`. Explicit `Settings::engine` construction uses its configured allowance and does not silently inherit that environment cap.

@@ -1,7 +1,7 @@
 #![cfg(test)]
 //! Answer cells a spreadsheet reads correctly: missing values, kept rows and column evidence.
 
-use super::{change_sheet, member, support, table, workbook};
+use super::{change_sheet, member, replace_member, support, table, workbook};
 use crate::loopback::{KEY, Loopback};
 use serde_json::json;
 use std::fs;
@@ -88,7 +88,7 @@ fn failed_in_place_filter_leaves_the_original_table_and_existing_backup_untouche
             assert!(stderr.contains("1 rows failed"), "{stderr}");
             assert_eq!(fs::read(&input).unwrap(), original);
             assert_eq!(fs::read(&backup).unwrap(), b"previous backup");
-            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 2);
+            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 3);
         }
     }
 }
@@ -112,7 +112,7 @@ fn in_place_filter_reports_transport_failed_rows_without_replacing_the_source() 
     assert!(stderr.contains("backend.transport"), "{stderr}");
     assert!(stderr.contains("2 rows failed"), "{stderr}");
     assert_eq!(fs::read(&input).unwrap(), original);
-    assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
+    assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 2);
 }
 
 #[test]
@@ -213,6 +213,8 @@ fn workbook_filter_hides_the_rows_it_does_not_keep() {
                 let start = sheet.find("<tableParts").unwrap();
                 let end = sheet.find("</worksheet>").unwrap();
                 format!("{}{}", &sheet[..start], &sheet[end..])
+                    .replace("<row r=\"2\">", "<row r=\"2\" hidden=\"1\">")
+                    .replace("<row r=\"5\">", "<row r=\"5\" hidden=\"1\">")
             });
         }
         let output = judge(&server, "filter", &book, &["--sheet", "Intake"]);
@@ -227,7 +229,17 @@ fn workbook_filter_hides_the_rows_it_does_not_keep() {
         // Every row stays, so formulas that point at rows still work.
         assert_eq!(sheet.matches("<row ").count(), 5, "{sheet}");
         for row in [1, 2, 5] {
-            assert!(sheet.contains(&format!("<row r=\"{row}\">")), "{sheet}");
+            // Pre-existing hidden state stays intact even for a kept answer.
+            // XML alone does not identify whether a user or an earlier filter hid it.
+            let hidden = if !tables && row != 1 {
+                " hidden=\"1\""
+            } else {
+                ""
+            };
+            assert!(
+                sheet.contains(&format!("<row r=\"{row}\"{hidden}>")),
+                "{sheet}"
+            );
         }
         for row in [3, 4] {
             assert!(
@@ -331,6 +343,65 @@ fn empty_cells_make_no_request_and_fail_as_empty_records() {
         for row in &rows[2..] {
             assert_eq!(row[2..4], ["", "failed"], "{rows:?}");
             assert!(row[5].starts_with("record.empty: "), "{rows:?}");
+        }
+    }
+}
+
+#[test]
+fn workbook_strings_decode_only_four_ascii_hex_digits() {
+    for shared in [false, true] {
+        for (encoded, decoded) in [
+            ("_x+0A1_", "_x+0A1_"),
+            ("_x00A1_", "¡"),
+            ("_x00a1_", "¡"),
+            ("_x005F_x00A1_", "_x00A1_"),
+            ("_xD83D__xDE00_", "😀"),
+            ("_x00G1_", "_x00G1_"),
+        ] {
+            let directory = TempDir::new().unwrap();
+            let input = directory.path().join("escapes.xlsx");
+            let text = format!("before {encoded} after");
+            rows_workbook(&input, &[&text]);
+            if shared {
+                change_sheet(&input, |sheet| {
+                    sheet.replace(
+                        &format!("<c r=\"A2\" t=\"inlineStr\"><is><t>{text}</t></is></c>"),
+                        "<c r=\"A2\" t=\"s\"><v>0</v></c>",
+                    )
+                });
+                let strings = format!(
+                    "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><si><t>{text}</t></si></sst>"
+                );
+                replace_member(&input, "xl/sharedStrings.xml", strings.as_bytes());
+            }
+            let asked = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+            let seen = asked.clone();
+            let server = Loopback::answering(move |question| {
+                seen.lock()
+                    .unwrap()
+                    .push(question["instructions"].as_str().unwrap().to_owned());
+                json!({"type":"noul","noul":0.9})
+            })
+            .unwrap();
+            let output = judge(&server, "decide", &input, &["--sheet", "Intake"]);
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{shared}: {encoded}: {output:?}"
+            );
+            let asked = asked.lock().unwrap();
+            assert_eq!(asked.len(), 1, "{shared}: {encoded}: {asked:?}");
+            assert!(
+                asked[0].contains(&format!("before {decoded} after")),
+                "{shared}: {encoded}: {asked:?}"
+            );
+            let result = directory.path().join("escapes.thinkthen.xlsx");
+            let sheet = String::from_utf8(member(&result, "xl/worksheets/sheet1.xml")).unwrap();
+            assert_eq!(sheet.matches("<row ").count(), 2, "{sheet}");
+            assert!(
+                sheet.contains("<c r=\"C2\" t=\"b\"><v>1</v></c>"),
+                "{sheet}"
+            );
         }
     }
 }

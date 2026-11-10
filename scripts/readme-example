@@ -7,8 +7,10 @@ import sys
 
 readme, language, destination = sys.argv[1:]
 text = Path(readme).read_text()
-source, = re.findall(r"```" + language + r"\n(.*?)\n```", text, re.S)
-commands, = re.findall(r"```sh\n(.*?)\n```", text, re.S)
+
+# The first program and shell block form the literal quickstart; later blocks extend its context.
+source = re.findall(r"```" + language + r"\n(.*?)\n```", text, re.S)[0]
+commands = re.findall(r"```sh\n(.*?)\n```", text, re.S)[0]
 target = Path(destination)
 target.write_text(source + "\n")
 subprocess.run(["sh", "-eux", "-c", commands], cwd=target.parent, check=True)

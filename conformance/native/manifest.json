@@ -5,39 +5,39 @@
       "accept": true,
       "forward": true,
       "name": "current",
-      "version": 131074
+      "version": 131077
     },
     {
       "accept": true,
       "forward": true,
       "name": "newer-minor",
-      "version": 131075
+      "version": 131078
     },
     {
       "accept": false,
       "forward": false,
       "name": "wrong-major",
-      "version": 196610
+      "version": 196613
     },
     {
       "accept": false,
       "forward": false,
       "name": "insufficient-minor",
-      "version": 131073
+      "version": 131076
     },
     {
       "accept": false,
       "forward": false,
       "missing": "thinkthen_abi_version",
       "name": "missing-version",
-      "version": 131074
+      "version": 131077
     },
     {
       "accept": false,
       "forward": false,
       "missing": "thinkthen_call_next",
       "name": "missing-symbol",
-      "version": 131074
+      "version": 131077
     }
   ],
   "semantic": "../typed/manifest.json",

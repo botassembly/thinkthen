@@ -116,7 +116,14 @@ fn oversized_requests_split_their_questions_only_once() {
                 }
             })
             .unwrap();
-            let result = run(&engine(&server), &["one", "two", "three", "four", "four"]);
+            let runner = engine(&server);
+            let result = run(&runner, &["one", "two", "three", "four", "four"]);
+            let usage = runner.settled_usage();
+            assert_eq!(usage.attempts, 3);
+            assert_eq!(usage.responses, 3);
+            assert_eq!(usage.status_retries, 0);
+            assert_eq!(usage.input_tokens.unknown_attempts, 3);
+            assert_eq!(usage.active_calls, 0);
             assert_eq!(server.count(), 3);
             if refuse_halves {
                 assert_eq!(result.unwrap_err().http_status(), Some(status));

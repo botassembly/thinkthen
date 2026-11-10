@@ -263,16 +263,23 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
   /// The selected backend name.
   public let backend: Backend, url: URL?, model: String?, apiKey: APIKey?, batch: Int?,
     retry: Retry?
+  /// Client send allowance; nil is unlimited and zero forbids sends.
+  public let maxRequests: UInt64?
+  /// Explicit local storage; nil retains no responses.
+  public let responseStore: ResponseStore?
   /// Create this value from its typed fields.
   public init(
     backend: Backend? = nil, url: URL? = nil, model: String? = nil, apiKey: APIKey? = nil,
-    batch: Int? = nil, retry: Retry? = nil
+    batch: Int? = nil, maxRequests: UInt64? = nil,
+    responseStore: ResponseStore? = nil, retry: Retry? = nil
   ) {
     self.backend = backend ?? Self.defaultBackend
     self.url = url
     self.model = model
     self.apiKey = apiKey
     self.batch = batch
+    self.maxRequests = maxRequests
+    self.responseStore = responseStore
     self.retry = retry
   }
   private static var defaultBackend: Backend {
@@ -282,6 +289,8 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
   enum CodingKeys: String, CodingKey {
     case backend, url, model, batch, retry
     case apiKey = "api_key"
+    case maxRequests = "max_requests"
+    case responseStore = "response_store"
   }
   /// Decode this value from its canonical JSON representation.
   public init(from decoder: any Decoder) throws {
@@ -291,6 +300,8 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
     model = try c.decodeIfPresent(String.self, forKey: .model)
     apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey).map(APIKey.init)
     batch = try c.decodeIfPresent(Int.self, forKey: .batch)
+    maxRequests = try c.decodeIfPresent(UInt64.self, forKey: .maxRequests)
+    responseStore = try c.decodeIfPresent(ResponseStore.self, forKey: .responseStore)
     retry = try c.decodeIfPresent(Retry.self, forKey: .retry)
   }
   /// Encode this value in its canonical JSON representation.
@@ -300,6 +311,8 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
     try c.encodeIfPresent(url, forKey: .url)
     try c.encodeIfPresent(model, forKey: .model)
     try c.encodeIfPresent(batch, forKey: .batch)
+    try c.encodeIfPresent(maxRequests, forKey: .maxRequests)
+    try c.encodeIfPresent(responseStore, forKey: .responseStore)
     try c.encodeIfPresent(retry, forKey: .retry)
   }
   /// A readable value summary; credentials remain redacted.

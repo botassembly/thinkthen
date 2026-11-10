@@ -233,3 +233,12 @@ pub fn argument_error(code: Code) -> Error {
         crate::core::diagnostic::requirement(field, expected, "an unsupported value"),
     )
 }
+
+/// Admit settings for a native constructor explicitly documented as from-environment.
+/// # Errors
+/// Returns the shared settings error for an invalid request allowance.
+pub fn environment_settings(
+    variable: impl Fn(&str) -> Option<String>,
+) -> Result<crate::Settings, crate::Error> {
+    crate::Settings::default().environment_request_limit(variable("THINKTHEN_MAX_REQUESTS"))
+}

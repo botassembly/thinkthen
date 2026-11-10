@@ -9,7 +9,21 @@ use crate::{Cancel, Engine, Error, Request, Status};
 use clap::ArgMatches;
 use std::io::{self, IsTerminal, Write};
 
-pub(super) fn invocation(function: &str, args: &ArgMatches, cancel: &Cancel) -> Result<u8, Error> {
+pub(super) fn invocation(
+    function: &str,
+    args: &ArgMatches,
+    cancel: &Cancel,
+    account: &crate::usage::Account,
+) -> Result<u8, Error> {
+    if function == "audit" {
+        return super::audit::run(args, cancel);
+    }
+    if function == "diff" {
+        return super::diff::run(args, cancel);
+    }
+    if function == "recover" {
+        return super::recover::run(args);
+    }
     let output = Output::resolve(args)?;
     let (input, target) = if function == "run" {
         let (target, files) = super::saved_run::target(args)?;
@@ -38,13 +52,13 @@ pub(super) fn invocation(function: &str, args: &ArgMatches, cancel: &Cancel) -> 
         ));
     }
     if let Some(target) = target {
-        return super::saved_run::run(args, &target, input, &output, cancel);
+        return super::saved_run::run(args, &target, input, &output, cancel, account);
     }
     let request = super::invocation::request(function, args)?;
     if !input.table() && options::explicit(args, "into").is_some() {
-        return super::jsonl::run(input, args, &request, &output, cancel);
+        return super::jsonl::run(input, args, &request, &output, cancel, account);
     }
-    let engine = options::client(args)?;
+    let engine = options::client(args, account)?;
     if input.table() {
         super::table::run(&input, args, &request, &engine, cancel, output.quiet)
     } else {

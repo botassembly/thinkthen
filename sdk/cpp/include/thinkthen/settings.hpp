@@ -43,6 +43,20 @@ struct retry_policy {
     /// Timeout for each backend attempt.
     std::chrono::milliseconds attempt_timeout;
 };
+/// Explicit local response-store mode.
+enum class response_mode : std::uint32_t {
+    cache = THINKTHEN_RESPONSE_CACHE,
+    record = THINKTHEN_RESPONSE_RECORD,
+    replay = THINKTHEN_RESPONSE_REPLAY,
+};
+/// Private local storage of input/output text. Optional limits use shared defaults.
+struct response_store {
+    std::string path;
+    response_mode mode;
+    std::string namespace_name;
+    std::string model_generation;
+    std::optional<std::uint64_t> max_bytes, max_entries, max_age, busy_timeout_ms;
+};
 /// Client configuration. Absent settings use the engine’s defaults and environment.
 struct settings {
     /// Override THINKTHEN_BACKEND when supplied.
@@ -55,6 +69,10 @@ struct settings {
     thinkthen::api_key api_key;
     /// Override the engine batch size.
     std::optional<std::uint64_t> batch;
+    /// Client send allowance; absent is unlimited and zero forbids sends.
+    std::optional<std::uint64_t> max_requests;
+    /// Explicit local storage; absent retains no responses.
+    std::optional<thinkthen::response_store> response_store;
     /// Override the engine retry policy.
     std::optional<retry_policy> retry;
 };

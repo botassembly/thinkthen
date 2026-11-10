@@ -296,3 +296,23 @@ pub unsafe extern "C" fn thinkthen_settings_from_json(
         })
     }
 }
+
+/// Set the lifetime HTTP-attempt allowance. Zero prevents all remote sends.
+/// Existing clients are unaffected; clones of a newly opened client share its allowance.
+/// # Safety
+/// settings is live and exclusively borrowed. error is NULL or initialized.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_settings_set_max_requests(
+    settings: *mut SettingsHandle,
+    max_requests: u64,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller lends a live exclusive settings builder. */
+    unsafe {
+        operation(error, || {
+            let handle = live_mut(settings)?;
+            handle.0 = handle.0.clone().max_requests(Some(max_requests));
+            Ok(THINKTHEN_OK)
+        })
+    }
+}

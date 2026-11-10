@@ -73,43 +73,67 @@ const (
 	CodeLocalIO Code = C.THINKTHEN_CODE_LOCAL_IO
 	// CodeLocalToolbox identifies the engine's local.toolbox error.
 	CodeLocalToolbox Code = C.THINKTHEN_CODE_LOCAL_TOOLBOX
+	// CodeLocalAccounting identifies the engine's local.accounting error.
+	CodeLocalAccounting Code = C.THINKTHEN_CODE_LOCAL_ACCOUNTING
+	// CodeLocalRequestLimit identifies the engine's local.request-limit error.
+	CodeLocalRequestLimit Code = C.THINKTHEN_CODE_LOCAL_REQUEST_LIMIT
+	// CodeLocalResponseStore identifies the engine's local.response-store error.
+	CodeLocalResponseStore Code = C.THINKTHEN_CODE_LOCAL_RESPONSE_STORE
+	// CodeLocalStoreCorrupt identifies the engine's local.store-corrupt error.
+	CodeLocalStoreCorrupt Code = C.THINKTHEN_CODE_LOCAL_STORE_CORRUPT
+	// CodeLocalStoreFormat identifies the engine's local.store-format error.
+	CodeLocalStoreFormat Code = C.THINKTHEN_CODE_LOCAL_STORE_FORMAT
+	// CodeLocalStoreAnswer identifies the engine's local.store-answer error.
+	CodeLocalStoreAnswer Code = C.THINKTHEN_CODE_LOCAL_STORE_ANSWER
+	// CodeLocalReplayMiss identifies the engine's local.replay-miss error.
+	CodeLocalReplayMiss Code = C.THINKTHEN_CODE_LOCAL_REPLAY_MISS
+	// CodeLocalStoreQuota identifies the engine's local.store-quota error.
+	CodeLocalStoreQuota Code = C.THINKTHEN_CODE_LOCAL_STORE_QUOTA
 	// CodeInternalBug identifies the engine's internal.bug error.
 	CodeInternalBug Code = C.THINKTHEN_CODE_INTERNAL_BUG
 )
 
 var codeNames = map[Code]string{
-	CodeUsageThreshold:    "usage.threshold",
-	CodeUsageQuestion:     "usage.question",
-	CodeUsageName:         "usage.name",
-	CodeUsageSettings:     "usage.settings",
-	CodeUsageBackend:      "usage.backend",
-	CodeUsageURL:          "usage.url",
-	CodeUsageKeyMissing:   "usage.key-missing",
-	CodeUsageBatch:        "usage.batch",
-	CodeUsagePointer:      "usage.pointer",
-	CodeUsageSQLPolicy:    "usage.sql-policy",
-	CodeUsageSQLSelection: "usage.sql-selection",
-	CodeUsageABI:          "usage.abi",
-	CodeUsageClosed:       "usage.closed",
-	CodeUsageFunction:     "usage.function",
-	CodeUsageRecordKind:   "usage.record-kind",
-	CodeUsageOffsets:      "usage.offsets",
-	CodeUsageArgument:     "usage.argument",
-	CodeUsageOption:       "usage.option",
-	CodeUsageColumn:       "usage.column",
-	CodeUsageSheet:        "usage.sheet",
-	CodeUsageOutput:       "usage.output",
-	CodeUsageTable:        "usage.table",
-	CodeRecordJSON:        "record.json",
-	CodeRecordMissing:     "record.missing",
-	CodeRecordTooLarge:    "record.too-large",
-	CodeRecordInvalid:     "record.invalid",
-	CodeRecordEmpty:       "record.empty",
-	CodeBackendTransport:  "backend.transport",
-	CodeBackendStatus:     "backend.status",
-	CodeBackendReply:      "backend.reply",
-	CodeLocalCancelled:    "local.cancelled",
-	CodeLocalIO:           "local.io",
-	CodeLocalToolbox:      "local.toolbox",
-	CodeInternalBug:       "internal.bug",
+	CodeUsageThreshold:     "usage.threshold",
+	CodeUsageQuestion:      "usage.question",
+	CodeUsageName:          "usage.name",
+	CodeUsageSettings:      "usage.settings",
+	CodeUsageBackend:       "usage.backend",
+	CodeUsageURL:           "usage.url",
+	CodeUsageKeyMissing:    "usage.key-missing",
+	CodeUsageBatch:         "usage.batch",
+	CodeUsagePointer:       "usage.pointer",
+	CodeUsageSQLPolicy:     "usage.sql-policy",
+	CodeUsageSQLSelection:  "usage.sql-selection",
+	CodeUsageABI:           "usage.abi",
+	CodeUsageClosed:        "usage.closed",
+	CodeUsageFunction:      "usage.function",
+	CodeUsageRecordKind:    "usage.record-kind",
+	CodeUsageOffsets:       "usage.offsets",
+	CodeUsageArgument:      "usage.argument",
+	CodeUsageOption:        "usage.option",
+	CodeUsageColumn:        "usage.column",
+	CodeUsageSheet:         "usage.sheet",
+	CodeUsageOutput:        "usage.output",
+	CodeUsageTable:         "usage.table",
+	CodeRecordJSON:         "record.json",
+	CodeRecordMissing:      "record.missing",
+	CodeRecordTooLarge:     "record.too-large",
+	CodeRecordInvalid:      "record.invalid",
+	CodeRecordEmpty:        "record.empty",
+	CodeBackendTransport:   "backend.transport",
+	CodeBackendStatus:      "backend.status",
+	CodeBackendReply:       "backend.reply",
+	CodeLocalCancelled:     "local.cancelled",
+	CodeLocalIO:            "local.io",
+	CodeLocalToolbox:       "local.toolbox",
+	CodeLocalAccounting:    "local.accounting",
+	CodeLocalRequestLimit:  "local.request-limit",
+	CodeLocalResponseStore: "local.response-store",
+	CodeLocalStoreCorrupt:  "local.store-corrupt",
+	CodeLocalStoreFormat:   "local.store-format",
+	CodeLocalStoreAnswer:   "local.store-answer",
+	CodeLocalReplayMiss:    "local.replay-miss",
+	CodeLocalStoreQuota:    "local.store-quota",
+	CodeInternalBug:        "internal.bug",
 }

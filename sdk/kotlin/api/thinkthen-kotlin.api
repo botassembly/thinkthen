@@ -319,8 +319,16 @@ public final class dev.thinkthen.kotlin.ErrorCode extends java.lang.Enum<dev.thi
   public static final dev.thinkthen.kotlin.ErrorCode BACKEND_STATUS;
   public static final dev.thinkthen.kotlin.ErrorCode BACKEND_TRANSPORT;
   public static final dev.thinkthen.kotlin.ErrorCode INTERNAL_BUG;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_ACCOUNTING;
   public static final dev.thinkthen.kotlin.ErrorCode LOCAL_CANCELLED;
   public static final dev.thinkthen.kotlin.ErrorCode LOCAL_IO;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_REPLAY_MISS;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_REQUEST_LIMIT;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_RESPONSE_STORE;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_STORE_ANSWER;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_STORE_CORRUPT;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_STORE_FORMAT;
+  public static final dev.thinkthen.kotlin.ErrorCode LOCAL_STORE_QUOTA;
   public static final dev.thinkthen.kotlin.ErrorCode LOCAL_TOOLBOX;
   public static final dev.thinkthen.kotlin.ErrorCode RECORD_EMPTY;
   public static final dev.thinkthen.kotlin.ErrorCode RECORD_INVALID;
@@ -825,6 +833,41 @@ public final class dev.thinkthen.kotlin.RelationRule$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.RelationRule> serializer();
 }
 
+public final class dev.thinkthen.kotlin.ResponseMode extends java.lang.Enum<dev.thinkthen.kotlin.ResponseMode> {
+  public static dev.thinkthen.kotlin.ResponseMode valueOf(java.lang.String);
+  public static dev.thinkthen.kotlin.ResponseMode[] values();
+  public static final dev.thinkthen.kotlin.ResponseMode CACHE;
+  public static final dev.thinkthen.kotlin.ResponseMode RECORD;
+  public static final dev.thinkthen.kotlin.ResponseMode REPLAY;
+  public static kotlin.enums.EnumEntries<dev.thinkthen.kotlin.ResponseMode> getEntries();
+}
+
+public final class dev.thinkthen.kotlin.ResponseStore {
+  public boolean equals(java.lang.Object);
+  public dev.thinkthen.kotlin.ResponseStore(java.lang.String, dev.thinkthen.kotlin.ResponseMode, java.lang.String, java.lang.String, kotlin.ULong, kotlin.ULong, kotlin.ULong, kotlin.ULong, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ResponseStore(java.lang.String, dev.thinkthen.kotlin.ResponseMode, java.lang.String, java.lang.String, kotlin.ULong, kotlin.ULong, kotlin.ULong, kotlin.ULong, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.ResponseMode component2();
+  public final dev.thinkthen.kotlin.ResponseMode getMode();
+  public final dev.thinkthen.kotlin.ResponseStore copy-TbMk5K4(java.lang.String, dev.thinkthen.kotlin.ResponseMode, java.lang.String, java.lang.String, kotlin.ULong, kotlin.ULong, kotlin.ULong, kotlin.ULong);
+  public final java.lang.String component1();
+  public final java.lang.String component3();
+  public final java.lang.String component4();
+  public final java.lang.String getModelGeneration();
+  public final java.lang.String getNamespace();
+  public final java.lang.String getPath();
+  public final kotlin.ULong component5-6VbMDqA();
+  public final kotlin.ULong component6-6VbMDqA();
+  public final kotlin.ULong component7-6VbMDqA();
+  public final kotlin.ULong component8-6VbMDqA();
+  public final kotlin.ULong getBusyTimeoutMs-6VbMDqA();
+  public final kotlin.ULong getMaxAge-6VbMDqA();
+  public final kotlin.ULong getMaxBytes-6VbMDqA();
+  public final kotlin.ULong getMaxEntries-6VbMDqA();
+  public int hashCode();
+  public java.lang.String toString();
+  public static dev.thinkthen.kotlin.ResponseStore copy-TbMk5K4$default(dev.thinkthen.kotlin.ResponseStore, java.lang.String, dev.thinkthen.kotlin.ResponseMode, java.lang.String, java.lang.String, kotlin.ULong, kotlin.ULong, kotlin.ULong, kotlin.ULong, int, java.lang.Object);
+}
+
 public final class dev.thinkthen.kotlin.RetryPolicy {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.RetryPolicy(int, long, long, kotlin.jvm.internal.DefaultConstructorMarker);
@@ -964,11 +1007,13 @@ public final class dev.thinkthen.kotlin.Settings {
   public dev.thinkthen.kotlin.Settings(dev.thinkthen.kotlin.SettingsBuilder);
   public final dev.thinkthen.kotlin.ApiKey getApiKey();
   public final dev.thinkthen.kotlin.Backend getBackend();
+  public final dev.thinkthen.kotlin.ResponseStore getResponseStore();
   public final dev.thinkthen.kotlin.RetryPolicy getRetry();
   public final java.lang.Integer getBatch();
   public final java.lang.String getModel();
   public final java.lang.String getUrl();
   public final java.lang.String saved();
+  public final kotlin.ULong getMaxRequests-6VbMDqA();
   public final kotlinx.serialization.json.Json getJson();
   public static byte[] encoded$thinkthen_kotlin$default(dev.thinkthen.kotlin.Settings, boolean, java.lang.String, int, java.lang.Object);
 }
@@ -977,16 +1022,20 @@ public final class dev.thinkthen.kotlin.SettingsBuilder {
   public dev.thinkthen.kotlin.SettingsBuilder();
   public final dev.thinkthen.kotlin.ApiKey getApiKey();
   public final dev.thinkthen.kotlin.Backend getBackend();
+  public final dev.thinkthen.kotlin.ResponseStore getResponseStore();
   public final dev.thinkthen.kotlin.RetryPolicy getRetry();
   public final java.lang.Integer getBatch();
   public final java.lang.String getModel();
   public final java.lang.String getUrl();
+  public final kotlin.ULong getMaxRequests-6VbMDqA();
   public final kotlinx.serialization.json.Json getJson();
   public final void setApiKey(dev.thinkthen.kotlin.ApiKey);
   public final void setBackend(dev.thinkthen.kotlin.Backend);
   public final void setBatch(java.lang.Integer);
   public final void setJson(kotlinx.serialization.json.Json);
+  public final void setMaxRequests-ADd3fzo(kotlin.ULong);
   public final void setModel(java.lang.String);
+  public final void setResponseStore(dev.thinkthen.kotlin.ResponseStore);
   public final void setRetry(dev.thinkthen.kotlin.RetryPolicy);
   public final void setUrl(java.lang.String);
 }
@@ -1092,6 +1141,7 @@ public final class dev.thinkthen.kotlin.ThinkThen implements java.lang.AutoClose
   public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rankFlow(dev.thinkthen.kotlin.Rank, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<?>);
   public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rankIterable(dev.thinkthen.kotlin.Rank, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<?>);
   public final dev.thinkthen.kotlin.Settings getSettings();
+  public final dev.thinkthen.kotlin.Usage getUsage();
   public final kotlinx.serialization.json.Json getRecordJson();
   public void close();
 }
@@ -1127,6 +1177,19 @@ public final class dev.thinkthen.kotlin.Threshold$Cut implements dev.thinkthen.k
   public final double getValue();
   public int hashCode();
   public java.lang.String toString();
+}
+
+public final class dev.thinkthen.kotlin.TokenUsage {
+  public boolean equals(java.lang.Object);
+  public dev.thinkthen.kotlin.TokenUsage(kotlin.ULong, long, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.TokenUsage copy-vI5HfzU(kotlin.ULong, long);
+  public final kotlin.ULong component1-6VbMDqA();
+  public final kotlin.ULong getReported-6VbMDqA();
+  public final long component2-s-VKNKU();
+  public final long getUnknownAttempts-s-VKNKU();
+  public int hashCode();
+  public java.lang.String toString();
+  public static dev.thinkthen.kotlin.TokenUsage copy-vI5HfzU$default(dev.thinkthen.kotlin.TokenUsage, kotlin.ULong, long, int, java.lang.Object);
 }
 
 public final class dev.thinkthen.kotlin.Toolbox {
@@ -1179,6 +1242,41 @@ public final class dev.thinkthen.kotlin.ToolboxKt {
 public final class dev.thinkthen.kotlin.UnsureException extends java.util.NoSuchElementException {
   public dev.thinkthen.kotlin.UnsureException(double);
   public final double getProbability();
+}
+
+public final class dev.thinkthen.kotlin.Usage {
+  public boolean equals(java.lang.Object);
+  public dev.thinkthen.kotlin.Usage(long, long, long, long, long, long, long, long, long, dev.thinkthen.kotlin.TokenUsage, dev.thinkthen.kotlin.TokenUsage, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.TokenUsage component10();
+  public final dev.thinkthen.kotlin.TokenUsage component11();
+  public final dev.thinkthen.kotlin.TokenUsage getInputTokens();
+  public final dev.thinkthen.kotlin.TokenUsage getOutputTokens();
+  public final dev.thinkthen.kotlin.Usage copy-zv1xnAA(long, long, long, long, long, long, long, long, long, dev.thinkthen.kotlin.TokenUsage, dev.thinkthen.kotlin.TokenUsage);
+  public final long component1-s-VKNKU();
+  public final long component2-s-VKNKU();
+  public final long component3-s-VKNKU();
+  public final long component4-s-VKNKU();
+  public final long component5-s-VKNKU();
+  public final long component6-s-VKNKU();
+  public final long component7-s-VKNKU();
+  public final long component8-s-VKNKU();
+  public final long component9-s-VKNKU();
+  public final long getActiveAttempts-s-VKNKU();
+  public final long getActiveCalls-s-VKNKU();
+  public final long getAttempts-s-VKNKU();
+  public final long getCacheHits-s-VKNKU();
+  public final long getConnectionRetries-s-VKNKU();
+  public final long getReplayHits-s-VKNKU();
+  public final long getRequestBodyBytes-s-VKNKU();
+  public final long getResponses-s-VKNKU();
+  public final long getStatusRetries-s-VKNKU();
+  public int hashCode();
+  public java.lang.String toString();
+  public static dev.thinkthen.kotlin.Usage copy-zv1xnAA$default(dev.thinkthen.kotlin.Usage, long, long, long, long, long, long, long, long, long, dev.thinkthen.kotlin.TokenUsage, dev.thinkthen.kotlin.TokenUsage, int, java.lang.Object);
+}
+
+public final class dev.thinkthen.kotlin.UsageKt {
+  public static final dev.thinkthen.kotlin.Usage kotlinUsage(dev.thinkthen.Usage);
 }
 
 public interface dev.thinkthen.kotlin.AnnotationQuestion<A, D> extends dev.thinkthen.kotlin.EntryQuestion<A, D> {

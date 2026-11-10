@@ -2,7 +2,7 @@
 package dev.thinkthen.internal;
 final class Contract {
     private Contract() {}
-    static final int ABI_VERSION = 131074;
+    static final int ABI_VERSION = 131077;
     static final String ABI_CODE = "usage.abi";
     static final String ABI_MESSAGE = "the native ABI is incompatible";
     static final String CLOSED_CODE = "usage.closed";
@@ -102,6 +102,14 @@ final class Contract {
             case 4001 -> "local.cancelled";
             case 4002 -> "local.io";
             case 4003 -> "local.toolbox";
+            case 4004 -> "local.accounting";
+            case 4005 -> "local.request-limit";
+            case 4006 -> "local.response-store";
+            case 4007 -> "local.store-corrupt";
+            case 4008 -> "local.store-format";
+            case 4009 -> "local.store-answer";
+            case 4010 -> "local.replay-miss";
+            case 4011 -> "local.store-quota";
             case 5001 -> "internal.bug";
             default -> null;
         };

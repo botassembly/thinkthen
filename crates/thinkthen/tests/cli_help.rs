@@ -43,21 +43,23 @@ fn help_lists_current_options_without_retired_flags_or_settings() {
         ] {
             assert!(help.contains(current), "{name:?}: missing {current}");
         }
-        for line in help
-            .lines()
-            .filter(|line| line.starts_with("  ") && !line.trim().is_empty())
-        {
-            if line.trim_start().starts_with(['-', '[', '<']) {
-                assert!(
-                    line.contains("  ")
-                        && line
-                            .trim()
-                            .split("  ")
-                            .filter(|part| !part.is_empty())
-                            .count()
-                            >= 2,
-                    "missing description: {line}"
-                );
+        let lines: Vec<_> = help.lines().collect();
+        for (index, line) in lines.iter().enumerate() {
+            if line.starts_with("  ") && line.trim_start().starts_with(['-', '[', '<']) {
+                let inline = line
+                    .trim()
+                    .split("  ")
+                    .filter(|part| !part.is_empty())
+                    .count()
+                    >= 2;
+                // Clap wraps descriptions when the longest flag widens its column.
+                let wrapped = lines.get(index + 1).is_some_and(|next| {
+                    next.starts_with("  ")
+                        && !next.trim().is_empty()
+                        && !next.trim_end().ends_with(':')
+                        && !next.trim_start().starts_with(['-', '[', '<'])
+                });
+                assert!(inline || wrapped, "missing description: {line}");
             }
         }
         for retired in [

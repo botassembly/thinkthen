@@ -82,11 +82,12 @@ thinkthen filter 'Does the customer request a refund?' messages.jsonl --field /t
 
 # Exactly one choice, or unsure.
 thinkthen choose 'What is the message about?' message.txt --json \
-  --choice billing --choice shipping --choice other
+  --choice billing --choice shipping --choice other \
+  --describe 'billing=About charges or payments'
 
 # Every applicable label, possibly an empty list.
 thinkthen tag 'Which topics appear?' message.txt --json \
-  --label billing --label shipping
+  --label billing --label shipping --describe 'billing=About charges or payments'
 
 # A number from 0 to 1 on a scale ordered from low to high.
 thinkthen score 'How urgent is the request?' message.txt --json \
@@ -111,9 +112,35 @@ thinkthen annotate questions.json messages.jsonl --json
 
 Choose requires distinct choices. Score and rank require distinct levels ordered from lowest to highest. A score is the probability-weighted position on that scale. Rank judges the whole input before it emits ranked answers. `--top` limits answered ranks; it does not hide failed records. Find selects a whole nonblank line, so preserve line breaks in its field. Find and recognize spans use Unicode character offsets with an inclusive `start` and exclusive `end`. Relate returns `source` and `target` spans, `relation`, `probability` and optional `either`. Add `--either` when a relation has no direction.
 
+For choose and tag, `--describe LABEL=TEXT` describes a label already named with `--choice` or `--label`. Repeat it for different labels; each label can have one description. This replaces 0.1's `--option LABEL=DESCRIPTION` and `--label LABEL=DESCRIPTION`. The label itself remains a name, and `--describe` does not apply to recognize kinds or score levels.
+
 Decide and filter accept `--threshold 0.8` for true at or above the cut and false below it. Their `--low 0.2 --high 0.8` band yields false below the lower bound, unsure inside the band and true at or above the upper bound. Choose accepts a single `--threshold` and yields unsure when the winning choice does not reach it. Tag, find, recognize and relate accept a single numeric `--threshold`. Do not combine `--threshold` with `--low` or `--high`.
 
 Write questions that name the field and the exact meaning you need. Replace an ambiguous phrase such as “currently available” with the allowed status values or the date rule you intend. Use the same wording in a command and its saved toolbox entry.
+
+## Migrating candidate-set find calls
+
+In 0.1, find selected a record from a set. In 0.2 it selects a line within each record. To ask about a candidate set, submit one record containing one candidate per line. For nonblank single-line candidates, preserve their text and retain each line's inclusive start and exclusive end offsets, counted in Unicode characters, alongside the original candidate ID. Use the offsets to identify a selected candidate: two candidates can have identical text.
+
+For example, these two candidates become one text document. The command makes one candidate-set selection:
+
+```bash
+printf 'Café\nLibrary' > candidates.txt
+thinkthen find 'Which candidate names a library?' candidates.txt --json > selection.jsonl
+```
+
+Keep this map with the document:
+
+| Original candidate ID | Exact line text | Start | End |
+| --- | --- | --- | --- |
+| cafe | Café | 0 | 4 |
+| library | Library | 5 | 12 |
+
+Offsets count Unicode scalar values, not UTF-8 bytes or displayed glyphs. The newline occupies offset 4. An answered span `{"start":5,"end":12,"text":"Library"}` maps to `library`; match both offsets and the exact text against the retained map. An answered null maps to no candidate. Check `status` first: unsure, failed and missing output are separate outcomes. Preserve the command's exit status as well as its output. With several candidate sets, write one JSONL record per complete document and select its text with `--field`; do not send each candidate as its own record.
+
+When any candidate is blank or contains line breaks, encode every candidate in that set as a compact JSON object on one physical line, for example `{"id":"a","text":"first\nsecond"}`. Escape CR/LF inside strings, preserve candidate order and compute the offset map after serialization. Empty candidates then remain present rather than disappearing. The returned text is the selected serialized line; map its exact span to the original ID. Do not truncate a set that exceeds the backend's limits: retain its typed failure.
+
+This changes the model's presentation, so measure confidence again on your labeled cases. None is always an available outcome in 0.2; the threshold applies to both a candidate and none. An unsure or failed result is not none. Preserve the result status and command exit code before scoring or saving a selection.
 
 ## Toolboxes, batching and spreadsheets
 
@@ -152,7 +179,7 @@ Pass a whole record stream to one command so the engine can batch its questions.
 
 When a task gives you a call or request-body budget, plan before making calls. Count records and named questions, select the text columns each question needs, and consider how much text each question repeats. Use one annotate command for several questions on the same records or spreadsheet. Keep the complete text needed by find, recognize and relate. Save completed output for later analysis instead of calling again to format a report. Batching reduces request overhead; it does not remove the questions or text bytes the backend must receive. Task budgets belong to the task and do not change product limits.
 
-XLSX date and time formats become ISO 8601 text. Elapsed times become ISO 8601 durations. Date-time and clock values carry no timezone. Fractional seconds round to milliseconds. Excel’s fictitious leap day becomes `1900-02-29 (Excel fictitious leap day)`. A date-time on that day includes its time before the note. Plain numbers and percentages keep their stored values. Locale-specific built-in formats 27–36 and 50–58 keep their stored values.
+XLSX date and time formats become ISO 8601 text. Elapsed times become ISO 8601 durations. Date-time and clock values carry no timezone. Fractional seconds round to milliseconds. Excel’s fictitious leap day becomes `1900-02-29 (Excel fictitious leap day)`. A date-time on that day includes its time before the note. Plain numbers and percentages keep their stored values. Locale-specific built-in formats 27–36 and 50–58 keep their stored values. Their meaning depends on the spreadsheet application’s language; some describe dates and others describe times. To send an explicit date, verify its intended calendar date in your spreadsheet, add a text column with `=TEXT(A2,"yyyy-mm-dd")`, and copy that column with Paste Special → Values. Verify that the new cells contain ISO date text, save the workbook, and select that column with `--column`. Changing a cell’s display format alone does not turn its stored number into text. For clock or date-time fields, prepare and verify the corresponding ISO text instead of treating every number as a date.
 
 CSV, TSV and XLSX inputs require at least one `--column`. One column supplies its cell as the text for every function, annotate included, and replaces any field pointer a saved question or toolbox carries, so the `/text` pointer in `questions.json` gives way to `--column text`. Several columns supply an object with the column names as keys; each saved pointer must then name one of those columns, or the command exits 2 before any call. Don't pass `--field` with a single `--column`.
 
@@ -184,7 +211,7 @@ thinkthen filter 'Does the customer request a refund?' messages.csv \
   --column text --into is_refund --output refunds.csv
 ```
 
-Filter writes only the kept rows to CSV and TSV, as `csvgrep` does. In xlsx it keeps every row, hides the rows it did not keep, and adds an AutoFilter on the answer column, so formulas that point at rows still work. Rank attaches ranks without sorting spreadsheet rows. Output files must be new. Without `--output`, a file input produces a sibling filename with `.thinkthen` before its extension. `--in-place` replaces the source after keeping a backup. Filter with `--in-place` replaces nothing when any row fails: the source stays byte-for-byte unchanged, no backup is written, and the command exits 6 and says how many rows failed. This holds for CSV, TSV and xlsx. Table choices come only from options, never from environment variables. Use saved formula values or plain text for selected field cells.
+Filter writes only the kept rows to CSV and TSV, as `csvgrep` does. In xlsx it keeps every row, hides the rows it did not keep, and adds an AutoFilter on the answer column, so formulas that point at rows still work. Rows that were already hidden stay hidden even when their answers are kept. Rank attaches ranks without sorting spreadsheet rows. Output files must be new. Without `--output`, a file input produces a sibling filename with `.thinkthen` before its extension. `--in-place` replaces the source after keeping a backup. Filter with `--in-place` replaces nothing when any row fails: the source stays byte-for-byte unchanged, no backup is written, and the command exits 6 and says how many rows failed. This holds for CSV, TSV and xlsx. Table choices come only from options, never from environment variables. Use saved formula values or plain text for selected field cells.
 
 A saved entry runs on a table the same way, and a single `--column` replaces its field pointer. Save this one-entry toolbox as `toolbox.json`:
 
@@ -250,3 +277,138 @@ Apart from that early transport failure, the command finishes its current stream
 Press Ctrl-C to cancel input, backend work and run children. A second Ctrl-C exits immediately. Streaming output written before a failure or interruption remains available.
 
 Each annotation child has its own status. For decide and filter, probability means the probability of yes, including when the answer is false. For choose, it means the chosen label's probability. Score and tag have no single probability; their distributions remain in detail.
+
+
+## Audit saved answers offline
+
+`thinkthen audit ROWS --manifest RUN.json --key GOLD.jsonl --bins 10` grades saved decide/filter, choose or find rows. It prints one JSON report and never reads a backend key or makes a model call. `ROWS` may be `-` for standard input. The manifest declares the complete expected inventory: a missing result remains missing rather than disappearing from the coverage denominator. Use stable IDs in the original run; string `"1"` and integer `1` are distinct. One manifest describes one question, backend, model and input representation. Separate groups before auditing; a model alias does not establish an immutable model revision.
+
+This complete synthetic example can be saved and audited without running inference. Save this as `run.json`:
+
+```json
+{
+  "version": 1,
+  "question": {
+    "function": "decide",
+    "question": "Is it ready?",
+    "threshold": 0.5
+  },
+  "name": null,
+  "question_identity": "d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0",
+  "function": "decide",
+  "backend": "openai",
+  "model": "example-model",
+  "input_representation": "text/v1",
+  "offset_unit": "utf8",
+  "expected_cases": [
+    1,
+    2,
+    3
+  ]
+}
+```
+
+Save this single line as `rows.jsonl`:
+
+```json
+{"function":"decide","position":1,"id":1,"source":{"question_identity":"d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0","backend":"openai","model":"example-model"},"status":"answered","answer":false,"probability":0.2}
+```
+
+Save this single line as `gold.jsonl`:
+
+```json
+{"case_id":1,"question_identity":"d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0","gold":false}
+```
+
+Then run `thinkthen audit rows.jsonl --manifest run.json --key gold.jsonl`. This reports one correct answered labeled case, two missing results, and answered accuracy and coverage of 1. Neither missing case has a label. Label a missing case explicitly to include it in the labeled coverage denominator. Retain the original full question, execution name and emitted question identity when preparing a real manifest; changing the threshold or name changes that identity. Copy backend/model metadata from the saved rows without guessing a model revision.
+
+An omitted `gold` field means unlabeled. For find, explicit `"gold":null` means a labeled none case. A span label is `"gold":{"start":0,"end":5}` in the manifest's declared offset convention. Alternatively supply `"gold":{"candidate_id":"a"}` with `"candidates":[{"id":"a","start":0,"end":5}]` in that same key entry; candidate IDs must be unique. Choose labels are strings; decide/filter labels are booleans. Failed and unsure results remain distinct from none. The CLI's filter `item`/`kept` envelope is accepted.
+
+Answered accuracy uses answered labeled cases. Coverage uses every labeled expected case, including missing results. Probability bins use yes probability for decide/filter, including unsure rows, and known-winner correctness for choose/find. An unsure choose/find row has no saved winner, so it is excluded explicitly. The final bin includes probability 1. Binary AUC is available only for decide/filter when both gold classes have saved probabilities; tied scores receive half credit. Unavailable measurements carry a reason rather than zero.
+
+Calibration compares predicted probabilities with observed frequencies; discrimination measures ordering, and high AUC does not establish calibration. Small or unrepresentative labeled sets do not establish a safe threshold. This command recommends no threshold or model and changes no settings. Poor accuracy still exits 0; malformed or ambiguous input exits nonzero. Inference options are rejected; `--quiet` suppresses the report. The CLI admits up to 100,000 cases and 64 MiB per input document. Rust callers can configure `analysis::AuditOptions` for their local join and document readers.
+
+## Compare saved answers offline
+
+Use the audit example above to compare the saved decide probability with a new cut:
+
+```bash
+thinkthen diff rows.jsonl --manifest run.json --threshold 0.8 --key gold.jsonl
+```
+
+For a band, replace `--threshold 0.8` with `--low 0.2 --high 0.8`. Threshold-only diff supports decide/filter and uses the engine's existing cut/band rule, including saved unsure probabilities. A nonfailed row without its probability is refused. Choose/find cannot be rethresholded from saved public rows: unsure rows do not carry a winner. There is no inference fallback. Original probabilities and input files stay unchanged; the derived right manifest carries the changed complete question and its new identity.
+
+Compare two actual saved runs with:
+
+```bash
+thinkthen diff left.jsonl --left-manifest left-run.json \
+  --right right.jsonl --right-manifest right-run.json --key gold.jsonl
+```
+
+Actual-run comparison supports all four functions admitted by audit. Find runs must declare matching offset units; the report cannot translate span starts without the original source text. Labeled find runs sharing a question identity must also share their input representation: otherwise use distinct, explicitly mapped question identities with labels for each side. Without labels, literal selection differences remain available across representations. Exact case IDs pair rows regardless of order. The report retains each original outcome, one-sided and missing cases, status changes, changed selections, and per-side audit denominators. Failed or missing results never become find-none. A comparison without any matching saved cases is a usage error. Only the left rows argument may use `-` for standard input; other inputs require named files.
+
+Different question identities require `--question-map map.json`, whose JSON is an explicit one-to-one array such as `[{"left":"OLD_ID","right":"NEW_ID"}]`. A changed execution name or threshold also changes the identity. The report retains both models and input representations instead of implying equivalence. Mapping permits case pairing; it does not silently copy labels between different questions. Supply key entries under each question's identity to grade both sides. For a threshold-only comparison, labels are carried to the derived question because only the decision cut changes.
+
+Without `--key`, answer/status changes remain available but correctness improvement carries an unavailable reason. With labels on both sides, gained/lost counts include transitions between a correct answer and an unsure, failed or missing result; those dispositions remain separate in the saved outcomes. Cases labeled on only one side contribute only to that side's audit. Poor quality is still a completed command with exit 0; ambiguous IDs, incompatible manifests, mixed comparison modes and unsupported threshold replay exit nonzero. The command reads no backend key, sends no request and changes no settings. `--quiet` suppresses its JSON report.
+
+## Observe request and token usage
+
+Add `--usage` to print one `thinkthen.usage/1` JSON summary on standard error when the invocation finishes, fails, or completes its first-interrupt cleanup. Standard output keeps its normal answer format. `--quiet` suppresses the optional summary. A forced second interrupt cannot guarantee a final summary.
+
+```sh
+printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does the customer request a refund?' --usage
+```
+
+The summary counts actual attempts, retries, encoded request-body bytes and observed input/output tokens, including saved function steps. Token dimensions have a reported subtotal and a count of finished attempts whose usage is unknown; unknown is not zero. Counts do not estimate prices or promise a complete bill. Nothing is saved implicitly. SQL statement accounting and shell subprocess calls are outside this invocation account.
+
+## Bound request attempts before sending
+
+`--max-requests N` bounds HTTP send attempts for the whole invocation, including retries, split requests and saved function steps. It overrides `THINKTHEN_MAX_REQUESTS`. Unset is unlimited; zero prevents remote sends. Shell subprocess calls are outside this allowance.
+
+When exhausted, the command reports `local.request-limit`, explains that work is incomplete, and exits 5. `--usage` still reports the known accounting on stderr. Already reserved attempts may finish. The limit counts attempts conservatively, not invoice charges; an attempt that failed to reach the backend can still consume allowance.
+
+```sh
+printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does the customer request a refund?' --max-requests 10 --usage
+```
+
+SQL statements do not admit `max_requests` or inherit this command environment cap. Bound SQL input explicitly and save completed results instead.
+### Recover completed file answers
+
+Named CSV, TSV and XLSX operations retain completed typed answers in a private recovery artifact beside the intended output until publication succeeds. If an operation is interrupted or fails, its diagnostic names that artifact. Export it without a key or any model calls:
+
+```sh
+thinkthen recover saved.recovery > completed.jsonl
+```
+
+The command writes current typed rows to stdout and a JSON summary to stderr. The summary names the admitted and committed counts, missing position ranges, and whether the operation completed. An incomplete but valid artifact exports successfully; a corrupt committed frame fails. A clearly torn trailing append is excluded and reported. Original occurrence positions distinguish repeated or absent user IDs. A completed rank with `--top N` can emit fewer rows than its admitted input; its summary reports those other positions as `unemitted_ranges`, not missing work. Before final rank rows are emitted, recovery reports zero committed rows and an incomplete operation; it does not export partial scores.
+
+Use `--recovery PATH` to choose a new artifact explicitly, including for JSONL enrichment with `--into` or table input on stdin. Use `--no-recovery` to disable retention. These choices conflict, and an existing artifact is never overwritten. Ordinary streams already emit completed rows and do not accept these file-retention options.
+
+Recovery exports completed rows; it does not resume work, refund requests, retain unfinished dependent asks, or recover rank scores before final rank rows exist. Ordinary completion, error and first-interrupt cleanup synchronize complete frames; there is no power-loss or forced-second-interrupt durability guarantee. A plain rerun still makes new requests. Treat recovery artifacts as private source data and remove them when no longer needed.
+
+## Record, cache and replay responses
+
+Response storage is off by default. Select a private directory on a local filesystem and supply all four options together: `--response-store DIR`, `--response-mode cache|record|replay`, `--response-namespace NAME`, and `--model-generation NAME`. No environment variable enables retention.
+
+Record one invocation with your ordinary backend credentials:
+
+```sh
+printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does this request a refund?' --response-store ./refund-responses --response-mode record --response-namespace support-test --model-generation deployed-2026-11-10 --json --usage
+```
+
+Then unset provider credentials and repeat the same question, record, backend, endpoint, model, namespace and generation with `--response-mode replay`:
+
+```sh
+unset THINKTHEN_API_KEY OPENAI_API_KEY
+printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does this request a refund?' --response-store ./refund-responses --response-mode replay --response-namespace support-test --model-generation deployed-2026-11-10 --json --usage
+```
+
+Replay opens the existing recording before credential or network setup. An unavailable ask ends with `local.replay-miss` and exit 5; it never falls back to a live request. Earlier emitted rows remain valid, but a miss is not successful completion.
+
+`record` appends fully valid exchanges, including repeated samples, and refuses its byte quota rather than deleting recordings. `cache` reuses eligible validated asks and sends only misses; changing batch neighbors or thresholds does not by itself prevent reuse. `replay` uses the most recently recorded answer for an exact ask as of client construction, including later dependent rounds. It ignores cache age and does not replay a sequence of stochastic samples or backend failures.
+
+Optional positive-integer limits are `--response-max-bytes` (default 67108864 logical payload bytes), `--response-max-entries` (4096 eligible asks), and `--response-max-age` (86400 seconds for cache eligibility). SQLite allocation and journals can exceed the logical byte bound. Local filesystems only are supported; do not put the store on a network filesystem. Storage failures, quota exhaustion, corruption and busy timeouts stop the invocation rather than silently omitting a recording or making an unexpected paid call.
+
+The store retains input and output text without encryption at rest. Protect it like the source data. Use a nonsecret namespace and generation label; never derive them from a credential. Change the generation label when a mutable model alias changes or when you want a fresh sample. The label is caller-supplied, not proof of an immutable provider model revision.
+
+`--usage` separates `cache_hits` and `replay_hits` from new remote attempts and tokens. Hits count materialized asks, not rows; historical recording tokens are not new usage. Recovery artifacts are separate: `thinkthen recover FILE` exports completed rows, while a response store supplies validated raw answers to current function interpretation. Neither promises exactly-once billing, automatic resume or a checkpoint for SQL transactions. SQL refuses `response_store`.

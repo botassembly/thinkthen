@@ -68,23 +68,49 @@
 #' @rdname tt_client
 #' @export
 tt_client <- function(backend = NULL, ..., api_key = NULL, url = NULL,
-                      model = NULL, batch = NULL, retry = NULL) {
+                      model = NULL, batch = NULL, max_requests = NULL, response_store = NULL, retry = NULL) {
   .tt_check_abi()
   dots <- .tt_dots(...)
   if (is.null(backend)) {
     backend <- Sys.getenv("THINKTHEN_BACKEND", unset = NA_character_)
     if (identical(backend, NA_character_)) backend <- NULL
   }
-  force(backend); force(api_key); force(url); force(model); force(batch); force(retry)
+  force(backend); force(api_key); force(url); force(model); force(batch); force(max_requests); force(retry)
+  if (is.numeric(max_requests) && any(abs(max_requests) > 9007199254740991, na.rm = TRUE)) .tt_native("r_settings_conversion_error")
+  if (inherits(response_store, "tt_response_store")) response_store <- .tt_snapshot_value(response_store)
   if (inherits(retry, "tt_retry")) retry <- .tt_snapshot_value(retry)
   settings <- .tt_options(backend = backend, api_key = api_key, url = url,
-                          model = model, batch = batch, retry = retry, .dots = dots)
+                          model = model, batch = batch, max_requests = max_requests, response_store = response_store, retry = retry, .dots = dots)
   if (!length(settings)) settings <- structure(list(), names = character())
   structure(.tt_native("r_client", .tt_context_json(settings, "r_settings_conversion_error"))$value,
             class = "tt_client")
 }
 
 print.tt_client <- function(x, ...) { cat("<tt_client>\n"); invisible(x) }
+#' Copy cumulative client usage, including unresolved work in an early snapshot.
+#'
+#' @rdname tt_client
+#' @export
+tt_usage <- function(client) {
+  jsonlite::fromJSON(.tt_native("r_client_usage", client)$value,
+                     simplifyVector = FALSE, bigint_as_char = TRUE)
+}
+
+#' Explicit private local response storage; no storage is enabled by default.
+#'
+#' @rdname tt_client
+#' @export
+tt_response_store <- function(path, mode, namespace, model_generation,
+                              max_bytes = NULL, max_entries = NULL,
+                              max_age = NULL, busy_timeout_ms = NULL) {
+  limits <- list(max_bytes, max_entries, max_age, busy_timeout_ms)
+  if (any(vapply(limits, function(value) is.numeric(value) && any(abs(value) > 9007199254740991, na.rm = TRUE), logical(1)))) .tt_native("r_settings_conversion_error")
+  value <- .tt_options(path = path, mode = mode, namespace = namespace,
+                       model_generation = model_generation, max_bytes = max_bytes,
+                       max_entries = max_entries, max_age = max_age, busy_timeout_ms = busy_timeout_ms)
+  .tt_snapshot(.tt_context_json(value, "r_settings_conversion_error"), "tt_response_store")
+}
+
 #' Release a client; repeated close is safe and scoped defaults borrow clients.
 #'
 #' @rdname tt_client

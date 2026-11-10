@@ -37,6 +37,11 @@ def fixture(*arguments):
 def command(server, value, *, timeout=30):
     return fixture_request(server, value, timeout=timeout)
 
+with fixture("--stress", "healthy") as (server, url):
+    usage = json.loads(subprocess.check_output([consumer, "usage", url], env=env, timeout=120))
+    assert usage["attempts"] == usage["responses"] == 1, usage
+    assert usage["request_body_bytes"] > 0, usage
+
 def call(settings, request, cancelled=False, single=False):
     return json.loads(subprocess.check_output(
         [consumer, "single" if single else "cancelled" if cancelled else "run",

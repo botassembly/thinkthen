@@ -60,6 +60,46 @@ fn finds_one_nonblank_line_with_scalar_offsets_and_settled_ties() {
             0.5,
         ),
         (
+            "first\nsecond",
+            json!({"u1":0.33,"u2":0.33,"none":0.34}),
+            "0.9",
+            Value::Null,
+            "unsure",
+            0.34,
+        ),
+        (
+            "first\nsecond",
+            json!({"u1":0.33,"u2":0.33,"none":0.34}),
+            "0.3",
+            Value::Null,
+            "answered",
+            0.34,
+        ),
+        (
+            "first\nsecond",
+            json!({"u1":0.33,"u2":0.33,"none":0.34}),
+            "0.34",
+            Value::Null,
+            "answered",
+            0.34,
+        ),
+        (
+            "first\nsecond",
+            json!({"u1":0.5,"u2":0.0,"none":0.5}),
+            "0.6",
+            Value::Null,
+            "unsure",
+            0.5,
+        ),
+        (
+            "first\nsecond",
+            json!({"u1":0.5,"u2":0.5,"none":0.0}),
+            "0.6",
+            Value::Null,
+            "unsure",
+            0.5,
+        ),
+        (
             "alone",
             json!({"u1":0.9,"none":0.1}),
             "0.5",
@@ -88,6 +128,7 @@ fn finds_one_nonblank_line_with_scalar_offsets_and_settled_ties() {
             .unwrap()
             .map(|row| row.unwrap())
             .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+        assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["status"], status);
         assert_eq!(rows[0]["answer"], answer);
         assert_eq!(rows[0]["probability"], p);

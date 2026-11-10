@@ -27,8 +27,13 @@ public final class JavaClosedClientCases {
         if (entry.equals("client")) {
             var client = ThinkThen.builder().backend(Backend.STUB).build();
             equal(client.decide("Ready?", "alpha").status(), Status.ANSWERED);
+            var before = client.usage();
+            equal(before.attempts(), java.math.BigInteger.ZERO);
+            equal(before.inputTokens().reported(), java.math.BigInteger.ZERO);
             client.close();
             client.close();
+            equal(client.usage(), before);
+            equal(client.usage().activeCalls(), java.math.BigInteger.ZERO);
             try {
                 client.decide("Ready?", "alpha");
                 throw new AssertionError("closed ThinkThen must refuse a call");

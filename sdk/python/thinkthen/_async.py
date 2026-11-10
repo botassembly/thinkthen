@@ -43,11 +43,13 @@ from ._types import (
     Record,
     RelateRow,
     RelationRule,
+    ResponseStore,
     RetryPolicy,
     ScoreRow,
     Strings,
     TagRow,
     Threshold,
+    Usage,
     _Label,
 )
 
@@ -63,7 +65,9 @@ class AsyncClient:
         model: str | None = None,
         api_key: str | None = None,
         batch: int | None = None,
+        max_requests: int | None = None,
         retry: RetryPolicy | None = None,
+        response_store: ResponseStore | None = None,
     ) -> None:
         self._client = Client(
             backend=backend,
@@ -71,13 +75,20 @@ class AsyncClient:
             model=model,
             api_key=api_key,
             batch=batch,
+            max_requests=max_requests,
             retry=retry,
+            response_store=response_store,
         )
         self._active: WeakSet[AsyncRowStream[Any]] = WeakSet()
 
     @property
     def settings(self) -> ClientSettings:
         return self._client.settings
+
+    @property
+    def usage(self) -> Usage:
+        """Cumulative usage for this explicit async client."""
+        return self._client.usage
 
     def __repr__(self) -> str:
         return f"AsyncClient({self._client!r})"

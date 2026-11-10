@@ -20,9 +20,9 @@ module ThinkThen
   end
   class Configuration
     attr_reader :api_key
-    attr_accessor :backend, :model, :url, :batch, :retry
+    attr_accessor :backend, :model, :url, :batch, :max_requests, :response_store, :retry
     def initialize
-      @backend = @model = @url = @batch = @retry = nil
+      @backend = @model = @url = @batch = @max_requests = @response_store = @retry = nil
     end
     def api_key=(value)
       @api_key = value.nil? || value.is_a?(RedactedKey) ? value : RedactedKey.new(value)
@@ -30,7 +30,7 @@ module ThinkThen
     def inspect = "#<ThinkThen::Configuration>"
     alias to_s inspect
     def to_h
-      {backend: backend, model: model, url: url, api_key: api_key, batch: batch, retry: self.retry}
+      {backend: backend, model: model, url: url, api_key: api_key, batch: batch, max_requests: max_requests, response_store: response_store, retry: self.retry}
     end
   end
   @configuration_mutex = Mutex.new

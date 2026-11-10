@@ -1866,6 +1866,8 @@ dependencies = [
  "log",
  "quick-xml",
  "rcgen",
+ "rusqlite",
+ "rustix",
  "rustls",
  "rustls-platform-verifier",
  "schemars",

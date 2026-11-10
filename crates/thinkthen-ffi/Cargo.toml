@@ -19,11 +19,11 @@ fixture-routing = []
 thinkthen = { workspace=true, features=["native"] }
 thinkthen-sql = { path = "../thinkthen-sql" }
 serde_json.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 log.workspace = true
 socket2.workspace = true
-serde.workspace = true
 cbindgen = { version="0.29", default-features=false }
 loopback.workspace = true
 

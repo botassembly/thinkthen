@@ -133,6 +133,13 @@ pub fn main(init: std.process.Init) !void {
         write("\n");
         return;
     }
+    if (std.mem.eql(u8, args[1], "usage")) {
+        var client = try tt.Client.init(.{ .backend = .systemone, .url = args[2] }, null);
+        _ = try client.decide(a, "Ready?", .{ .text = "evidence" }, .{}, null);
+        const snapshot = try client.usage(a, null);
+        client.deinit();
+        return emit(a, snapshot);
+    }
     if (std.mem.eql(u8, args[1], "run")) return run(a, args[2], args[3], .many);
     if (std.mem.eql(u8, args[1], "single")) return run(a, args[2], args[3], .single);
     if (std.mem.eql(u8, args[1], "cancelled")) return run(a, args[2], args[3], .cancelled);

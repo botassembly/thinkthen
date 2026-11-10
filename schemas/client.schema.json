@@ -24,10 +24,28 @@
         }
       ]
     },
+    "max_requests": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    },
     "model": {
       "type": [
         "string",
         "null"
+      ]
+    },
+    "response_store": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResponseStore"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "retry": {
@@ -71,6 +89,75 @@
       "type": "integer",
       "format": "uint",
       "minimum": 1
+    },
+    "ResponseMode": {
+      "description": "How an explicitly selected local store serves this client.",
+      "oneOf": [
+        {
+          "description": "Reuse unexpired answers and retain misses within bounded eviction limits.",
+          "type": "string",
+          "const": "cache"
+        },
+        {
+          "description": "Append immutable live exchanges; never evict recordings to make room.",
+          "type": "string",
+          "const": "record"
+        },
+        {
+          "description": "Read a fixed committed recording snapshot, without credentials or network.",
+          "type": "string",
+          "const": "replay"
+        }
+      ]
+    },
+    "ResponseStore": {
+      "description": "Opt-in local retention of model inputs and responses, without encryption at rest.\nThe directory must be private and on a local filesystem. SQLite allocation\ncan exceed the logical payload limit; its separate allowance is twice that\nlimit plus 16 MiB. No environment variable enables this setting.\nNetwork filesystems are unsupported. Cache mode intentionally reuses one\nsampled answer; change `model_generation` when a provider alias changes.\nReplay selects the latest recorded answer committed before client creation,\nignores cache expiry, and never falls back to live execution.\n\n```no_run\nuse thinkthen::{ResponseMode, ResponseStore, Settings};\nlet store = ResponseStore::new(\"./responses\", ResponseMode::Replay, \"evaluation\", \"v1\")?;\nlet client = Settings::default().response_store(Some(store)).engine(|_| None)?;\n# Ok::<(), thinkthen::Error>(())\n```",
+      "type": "object",
+      "properties": {
+        "busy_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 5000,
+          "minimum": 1
+        },
+        "max_age": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 86400,
+          "minimum": 1
+        },
+        "max_bytes": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 67108864,
+          "minimum": 1
+        },
+        "max_entries": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 4096,
+          "minimum": 1
+        },
+        "mode": {
+          "$ref": "#/$defs/ResponseMode"
+        },
+        "model_generation": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "mode",
+        "namespace",
+        "model_generation"
+      ]
     },
     "Retry": {
       "description": "The existing retry policy expressed in integer milliseconds at JSON boundaries.",

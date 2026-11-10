@@ -2,7 +2,7 @@
 # Generated native requirement. Do not edit.
 module ThinkThen
   module NativeContract
-    ABI_VERSION = 131074
+    ABI_VERSION = 131077
     ABI_CODE = "usage.abi"
     ABI_MESSAGE = "the native ABI is incompatible"
     LIBRARY_VARIABLE = "THINKTHEN_LIBRARY"
@@ -81,6 +81,14 @@ module ThinkThen
     4001 => "local.cancelled",
     4002 => "local.io",
     4003 => "local.toolbox",
+    4004 => "local.accounting",
+    4005 => "local.request-limit",
+    4006 => "local.response-store",
+    4007 => "local.store-corrupt",
+    4008 => "local.store-format",
+    4009 => "local.store-answer",
+    4010 => "local.replay-miss",
+    4011 => "local.store-quota",
     5001 => "internal.bug",
     }.freeze
   end

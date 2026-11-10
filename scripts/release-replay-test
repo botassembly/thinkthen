@@ -315,7 +315,7 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
         self.assertGreaterEqual(builders, 5, 'the dotnet build scan found too few scripts')
         self.assertEqual(unchecked, [], 'dotnet builds may run with a narrowed environment that drops BUILD_SERVERS_OFF')
 
-    def test_complete_candidate_survives_failed_windows_smoke(self):
+    def test_complete_candidate_survives_failed_windows_production(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             package = root / 'candidate' / release_workflow.version() / 'windows-x86_64'

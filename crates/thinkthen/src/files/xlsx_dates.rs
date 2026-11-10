@@ -10,7 +10,9 @@ use std::fs::File;
 use zip::ZipArchive;
 
 pub(super) struct Styles {
-    formats: Vec<NumberFormat>,
+    ids: Vec<usize>,
+    custom: BTreeMap<usize, String>,
+    formats: BTreeMap<usize, NumberFormat>,
     date1904: bool,
 }
 
@@ -21,11 +23,10 @@ impl Styles {
         date1904: bool,
         cancel: &Cancel,
     ) -> Result<Self, FileError> {
-        let mut formats = Vec::new();
+        let mut custom = BTreeMap::new();
+        let mut ids = Vec::new();
         if present {
             let bytes = xml_bytes(zip, "xl/styles.xml", cancel)?;
-            let mut custom = BTreeMap::new();
-            let mut ids = Vec::new();
             let mut parent = Vec::new();
             scan(bytes.as_slice(), cancel, |event, main, depth| {
                 match event {
@@ -38,7 +39,7 @@ impl Styles {
                         {
                             let id = integer(&attr(&e, b"numFmtId")?.unwrap_or_default())?;
                             let code = attr(&e, b"formatCode")?.unwrap_or_default();
-                            custom.insert(id, NumberFormat::read(&code)?);
+                            custom.insert(id, code);
                         }
                         if main
                             && name.as_ref() == b"xf"
@@ -63,37 +64,49 @@ impl Styles {
                 }
                 Ok(())
             })?;
-            formats = ids
-                .into_iter()
-                .map(|id| {
-                    NumberFormat::builtin(match id {
-                        14..=17 => Format::Date,
-                        18..=21 | 45 | 47 => Format::Time,
-                        22 => Format::DateTime,
-                        46 => Format::Duration,
-                        27..=36 | 50..=58 => Format::Stored,
-                        _ => return custom.get(&id).cloned().unwrap_or_default(),
-                    })
-                })
-                .collect();
         }
-        Ok(Self { formats, date1904 })
+        Ok(Self {
+            ids,
+            custom,
+            formats: BTreeMap::new(),
+            date1904,
+        })
     }
 
     pub(super) fn render(
-        &self,
+        &mut self,
         style: Option<usize>,
         value: f64,
     ) -> Result<Option<String>, FileError> {
-        let format = match self.formats.get(style.unwrap_or_default()) {
-            Some(format) => format.select(value),
-            None if style.is_none() => Format::Stored,
+        let id = match self.ids.get(style.unwrap_or_default()) {
+            Some(id) => *id,
+            None if style.is_none() => return Ok(None),
             None => {
                 return Err(invalid(
                     "cell style index is invalid; save a clean .xlsx copy",
                 ));
             }
         };
+        let format = match self.formats.entry(id) {
+            std::collections::btree_map::Entry::Occupied(entry) => entry.into_mut(),
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                let format = match id {
+                    14..=17 => NumberFormat::builtin(Format::Date),
+                    18..=21 | 45 | 47 => NumberFormat::builtin(Format::Time),
+                    22 => NumberFormat::builtin(Format::DateTime),
+                    46 => NumberFormat::builtin(Format::Duration),
+                    27..=36 | 50..=58 => NumberFormat::builtin(Format::Stored),
+                    _ => self
+                        .custom
+                        .get(&id)
+                        .map(|code| NumberFormat::read(code))
+                        .transpose()?
+                        .unwrap_or_default(),
+                };
+                entry.insert(format)
+            }
+        }
+        .select(value);
         if matches!(format, Format::Stored) {
             return Ok(None);
         }

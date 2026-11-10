@@ -12,11 +12,14 @@ mod memory;
 #[cfg(test)]
 mod memory_prefix_tests;
 mod original;
+mod response_store;
 #[cfg(test)]
 mod reuse_tests;
 mod row;
 mod single;
 mod sql;
+mod usage;
+pub use response_store::*;
 mod values;
 pub use builders::*;
 pub use direct::*;
@@ -30,6 +33,7 @@ pub use memory::{
 pub use original::{RecordView, thinkthen_row_original};
 pub use single::*;
 pub use sql::*;
+pub use usage::*;
 pub use values::*;
 
 #[cfg(all(feature = "fixture-routing", debug_assertions))]

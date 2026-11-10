@@ -19,6 +19,8 @@ public final class DriverClient implements AutoCloseable {
     private final Set<DriverCall> calls = new HashSet<>();
     private MemorySegment handle;
     private boolean closed;
+    private dev.thinkthen.Usage finalUsage;
+    private final CompletableFuture<Void> clientReleased = new CompletableFuture<>();
     public DriverClient(byte[] settings) {
         var opening = submit(() -> {
                 try (var arena = Arena.ofConfined()) {
@@ -91,16 +93,51 @@ public final class DriverClient implements AutoCloseable {
     }
     private void releaseClient() {
         if (closed && calls.isEmpty() && handle != MemorySegment.NULL) {
-            Native.call("client_free",handle);
-            handle = MemorySegment.NULL;
-            workers.shutdown();
+            try {
+                finalUsage = snapshot("client_usage_settled");
+            } catch (RuntimeException | Error failure) {
+                clientReleased.completeExceptionally(failure);
+                throw failure;
+            } finally {
+                Native.call("client_free",handle);
+                handle = MemorySegment.NULL;
+                workers.shutdown();
+            }
+            clientReleased.complete(null);
         }
     }
-    @Override public synchronized void close() {
-        if (closed) return;
-        closed = true;
-        for (var call : Set.copyOf(calls)) call.close();
-        releaseClient();
+    /** Return a copied snapshot, including after this owner has closed. */
+    public synchronized dev.thinkthen.Usage usage() {
+        if (handle.equals(MemorySegment.NULL)) return finalUsage;
+        return snapshot("client_usage");
+    }
+    private dev.thinkthen.Usage snapshot(String operation) {
+        try (var arena = Arena.ofConfined()) {
+            var out = arena.allocate(NativeLayouts.BUFFER);
+            var error = Native.error(arena);
+            try {
+                Native.check((int) Native.call(operation,handle,out,error),error);
+                var value = Json.read(Native.copy(out));
+                return new dev.thinkthen.Usage(value.path("attempts").bigIntegerValue(),
+                    value.path("responses").bigIntegerValue(),value.path("status_retries").bigIntegerValue(),
+                    value.path("connection_retries").bigIntegerValue(),value.path("request_body_bytes").bigIntegerValue(),
+                    value.path("active_attempts").bigIntegerValue(),value.path("active_calls").bigIntegerValue(),tokens(value.path("input_tokens")),tokens(value.path("output_tokens")),value.path("cache_hits").bigIntegerValue(),value.path("replay_hits").bigIntegerValue());
+            } finally { Native.call("buffer_free",out); }
+        } catch (RuntimeException error) { throw translate(error); }
+    }
+    private static dev.thinkthen.Usage.Tokens tokens(com.fasterxml.jackson.databind.JsonNode value) {
+        return new dev.thinkthen.Usage.Tokens(value.path("reported").isNull() ? null : value.path("reported").bigIntegerValue(),
+            value.path("unknown_attempts").bigIntegerValue());
+    }
+    @Override public void close() {
+        synchronized (this) {
+            if (!closed) {
+                closed = true;
+                for (var call : Set.copyOf(calls)) call.close();
+                releaseClient();
+            }
+        }
+        await(clientReleased);
     }
     /** Admit a host question through the engine without opening a call. */
     public static void validateQuestion(byte[] json) {

@@ -147,3 +147,19 @@ withr::with_envvar(c(THINKTHEN_BACKEND = ""), {
 })
 tt_close(stub)
 cat("R answer-first public interface passed\n")
+
+# Feature: usage copies survive closing without keeping the client engine alive.
+condition(tt_client(backend = "stub", max_requests = -1), "thinkthen_usage_error")
+usage_client <- tt_client(backend = "stub", max_requests = 0)
+usage_before <- tt_usage(usage_client)
+stopifnot(usage_before$attempts == 0, usage_before$input_tokens$reported == 0)
+tt_close(usage_client)
+stopifnot(identical(tt_usage(usage_client), usage_before))
+usage_before$attempts <- 9
+stopifnot(tt_usage(usage_client)$attempts == 0)
+
+# Feature: explicit store snapshots translate settings without creating a hidden store.
+store <- tt_response_store("unused-private-store", "replay", "tests", "model-v1")
+stopifnot(inherits(store, "tt_response_store"))
+condition(tt_client(backend = "stub", response_store = store), "thinkthen_usage_error")
+stopifnot(tt_usage(stub)$cache_hits == 0, tt_usage(stub)$replay_hits == 0)

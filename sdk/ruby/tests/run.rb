@@ -21,6 +21,7 @@ isolated_ruby_environment do
   loaded = $LOADED_FEATURES.find { |path| path.end_with?("/lib/thinkthen.rb") }
   raise "source checkout was loaded" unless loaded && File.realpath(loaded).start_with?(File.realpath(ENV.fetch("GEM_HOME")) + "/")
 
+  ruby_usage
   ruby_interface
   ruby_bounded_rank
   ruby_packaging

@@ -69,7 +69,14 @@ fn a_kept_name_that_cannot_exist_leaves_the_output_under_its_temporary_name() {
     let kept = fs::read_dir(&elsewhere)
         .unwrap()
         .map(|entry| entry.unwrap().path())
-        .find(|path| *path != output);
+        .find(|path| {
+            *path != output
+                && !path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .contains(".recovery-")
+        });
     assert_kept(&result, &kept.expect("the finished output survives"));
     assert_eq!(fs::read(&output).unwrap(), b"another program's file");
 }
@@ -133,7 +140,7 @@ fn a_destination_created_during_the_request_keeps_the_finished_output_beside_it(
     assert_kept(&result, &elsewhere.join("result.thinkthen.csv"));
     assert_eq!(fs::read(&output).unwrap(), b"another program's file");
     assert_eq!(fs::read(&input).unwrap(), ORIGINAL);
-    assert_eq!(fs::read_dir(&elsewhere).unwrap().count(), 2);
+    assert_eq!(fs::read_dir(&elsewhere).unwrap().count(), 3);
 }
 
 #[cfg(unix)]
@@ -271,7 +278,7 @@ fn a_failed_backup_keeps_the_finished_output_and_the_source() {
     let result = child.wait_with_output().unwrap();
     assert_kept(&result, &root.join("input.thinkthen.csv"));
     assert_eq!(fs::read(&input).unwrap(), ORIGINAL);
-    assert_eq!(fs::read_dir(&root).unwrap().count(), 2);
+    assert_eq!(fs::read_dir(&root).unwrap().count(), 3);
 }
 
 #[cfg(windows)]

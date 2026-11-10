@@ -234,6 +234,7 @@ type Entry = (
 struct EncodedAsk {
     state: std::sync::Arc<str>,
     body: Box<RawValue>,
+    ask: Ask,
 }
 
 /// An ordered record group and the distinct questions in its current round.
@@ -288,6 +289,7 @@ impl<'a, F: Function> Chunk<'a, F> {
                             self.questions.push(EncodedAsk {
                                 state: ask.shared_state(),
                                 body: question,
+                                ask: ask.clone(),
                             });
                             self.questions.len() - 1
                         });
@@ -344,8 +346,11 @@ impl<'a, F: Function> Chunk<'a, F> {
             adapter: self.adapter,
             model: &self.model,
             state: &self.questions[start].state,
-            start,
-            questions: &self.questions[start..end],
+            questions: self.questions[start..end]
+                .iter()
+                .enumerate()
+                .map(|(index, ask)| (start + index, ask))
+                .collect(),
         }
     }
 
@@ -399,7 +404,20 @@ impl<'a, F: Function> Chunk<'a, F> {
                                 )
                             })?;
                         match &reply.reply {
-                            Ok(answer) => answer.read(slot - reply.slots.start, &ask, &stub_key),
+                            Ok(answer) => answer.read(
+                                reply
+                                    .slots
+                                    .iter()
+                                    .position(|held| *held == slot)
+                                    .ok_or_else(|| {
+                                        Error::new(
+                                            ErrorKind::Reply,
+                                            "the round is missing an answer slot",
+                                        )
+                                    })?,
+                                &ask,
+                                &stub_key,
+                            ),
                             Err(error) => Err(error.clone()),
                         }
                     })
@@ -436,8 +454,7 @@ pub(crate) struct Request<'a> {
     adapter: Adapter,
     model: &'a str,
     state: &'a str,
-    start: usize,
-    questions: &'a [EncodedAsk],
+    questions: Vec<(usize, &'a EncodedAsk)>,
 }
 
 impl<'a> Request<'a> {
@@ -447,7 +464,7 @@ impl<'a> Request<'a> {
         let questions: Vec<_> = self
             .questions
             .iter()
-            .map(|question| question.body.as_ref())
+            .map(|(_, question)| question.body.as_ref())
             .collect();
         self.adapter.encode(self.state, self.model, &questions)
     }
@@ -462,13 +479,16 @@ impl<'a> Request<'a> {
         let (left, right) = self.questions.split_at(middle);
         Some((
             Self {
-                questions: left,
-                ..*self
+                questions: left.to_vec(),
+                adapter: self.adapter,
+                model: self.model,
+                state: self.state,
             },
             Self {
-                questions: right,
-                start: self.start + middle,
-                ..*self
+                questions: right.to_vec(),
+                adapter: self.adapter,
+                model: self.model,
+                state: self.state,
             },
         ))
     }
@@ -477,7 +497,7 @@ impl<'a> Request<'a> {
     #[must_use]
     pub(crate) fn stub_answer(&self) -> RequestAnswers {
         RequestAnswers {
-            slots: self.start..self.start + self.questions.len(),
+            slots: self.slots(),
             reply: Ok(Reply::Stub),
         }
     }
@@ -485,8 +505,56 @@ impl<'a> Request<'a> {
     /// Decode a reply while preserving the original round's answer slots.
     pub(crate) fn answered(&self, reply: Result<Vec<u8>, Error>) -> RequestAnswers {
         RequestAnswers {
-            slots: self.start..self.start + self.questions.len(),
+            slots: self.slots(),
             reply: reply.and_then(|body| self.adapter.decode(&body, self.questions.len())),
+        }
+    }
+
+    fn slots(&self) -> Vec<usize> {
+        self.questions.iter().map(|(slot, _)| *slot).collect()
+    }
+
+    /// The exact rendered asks, before a request assigns their wire slots.
+    pub(crate) fn materialized(&self) -> impl Iterator<Item = (&Ask, &str)> {
+        self.questions
+            .iter()
+            .map(|(_, question)| (&question.ask, question.body.get()))
+    }
+    pub(crate) fn state(&self) -> &str {
+        self.state
+    }
+    pub(crate) fn wire(&self) -> &str {
+        self.adapter.path()
+    }
+
+    /// Repack selected misses without changing their original round slots.
+    pub(crate) fn select(&self, positions: &[usize]) -> Self {
+        Self {
+            adapter: self.adapter,
+            model: self.model,
+            state: self.state,
+            questions: positions
+                .iter()
+                .filter_map(|position| self.questions.get(*position).copied())
+                .collect(),
+        }
+    }
+
+    /// Admit every answer before an exchange becomes reusable. A partial reply fails.
+    pub(crate) fn validated(&self, body: &[u8]) -> Result<Vec<AskAnswer>, Error> {
+        let reply = self.adapter.decode(body, self.questions.len())?;
+        self.questions
+            .iter()
+            .enumerate()
+            .map(|(index, (_, question))| reply.read(index, &question.ask, &[0; 32]))
+            .collect()
+    }
+
+    /// Attach already validated answers to this request's current round slots.
+    pub(crate) fn saved(&self, answers: Vec<AskAnswer>) -> RequestAnswers {
+        RequestAnswers {
+            slots: self.slots(),
+            reply: Ok(Reply::Saved(answers)),
         }
     }
 }
@@ -494,7 +562,7 @@ impl<'a> Request<'a> {
 /// A decoded request, bound to the slots that produced it.
 #[derive(Debug)]
 pub(crate) struct RequestAnswers {
-    slots: std::ops::Range<usize>,
+    slots: Vec<usize>,
     reply: Result<Reply, Error>,
 }
 

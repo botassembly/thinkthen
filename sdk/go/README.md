@@ -86,3 +86,30 @@ go build -tags thinkthen_system -o example .
 ```
 
 The `thinkthen_system` tag links the installed library through pkg-config, and the program finds it on the library path when it runs. Windows does not support this tag.
+
+## Usage
+
+`client.Usage()` returns a copied cumulative `Usage` and an error. `InputTokens.Reported` and `OutputTokens.Reported` distinguish a known zero from nil after overflow; unknown-attempt counts retain unavailable provider metadata. Each call returns independent token pointers. This is a reported subtotal, not an invoice.
+
+```go
+usage, err := client.Usage()
+if err != nil { return err }
+fmt.Println(usage.Attempts, usage.ActiveCalls)
+```
+
+`Close` preserves independent existing streams. A getter after close returns the snapshot captured at close, not eventual totals for streams that continued. Nonzero `ActiveCalls` means more work may remain, even when `ActiveAttempts` is zero.
+
+## Request allowance
+
+```go
+limit := uint64(100)
+client, err := thinkthen.New(thinkthen.Config{MaxRequests: &limit})
+```
+
+The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
+
+### Local response storage
+
+`Config.ResponseStore` accepts a `*ResponseStoreConfig` with `Path`, `Mode` (`ResponseCache`, `ResponseRecord`, `ResponseReplay`), `Namespace` and `ModelGeneration`. Optional pointer limits `MaxBytes`, `MaxEntries`, `MaxAge` (seconds), and `BusyTimeoutMS` preserve explicit zero for shared rejection; nil uses defaults. Replay needs no credential. Usage snapshots expose `CacheHits` and `ReplayHits`.
+
+Storage is disabled unless configured. Local recordings retain question and record text; use a private local path and a nonsecret namespace/model-generation label. The shared engine owns limits, identity and concurrency policy. Replay misses fail locally rather than making a model call.

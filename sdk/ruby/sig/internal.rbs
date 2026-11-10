@@ -109,6 +109,9 @@ module ThinkThen
     def self.thinkthen_question_conversion_error: (*untyped) -> untyped
     def self.thinkthen_cancelled_error: (*untyped) -> untyped
     def self.thinkthen_call_send_invalid: (*untyped) -> untyped
+    def self.usage: (untyped, ?settled: bool) -> Usage
+    def self.thinkthen_client_usage: (*untyped) -> untyped
+    def self.thinkthen_client_usage_settled: (*untyped) -> untyped
     def self.thinkthen_client_free: (*untyped) -> untyped
     def self.thinkthen_call_open_records_json: (*untyped) -> untyped
     def self.thinkthen_call_open_json: (*untyped) -> untyped

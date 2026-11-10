@@ -8,6 +8,7 @@ const char *tt_code_family(int32_t value);
 int32_t tt_settings_conversion_error(struct thinkthen_error *error);
 int32_t tt_question_conversion_error(struct thinkthen_error *error);
 int32_t tt_client_open(const struct thinkthen_settings *settings, struct thinkthen_client **out, struct thinkthen_error *error);
+int32_t tt_client_usage(const struct thinkthen_client *, struct thinkthen_buffer *, struct thinkthen_error *);
 void tt_client_free(struct thinkthen_client *client);
 int32_t tt_call_open_question(const struct thinkthen_client *client, const struct thinkthen_question *question, const struct thinkthen_text *name, uint32_t offsets, struct thinkthen_call **out, struct thinkthen_error *error);
 int32_t tt_call_send_text(struct thinkthen_call *call, const char *data, size_t len, struct thinkthen_error *error);
@@ -41,6 +42,7 @@ int32_t tt_settings_set_backend(struct thinkthen_settings *settings, uint32_t ba
 int32_t tt_settings_set_api_key(struct thinkthen_settings *settings, const char *data, size_t len, struct thinkthen_error *error);
 int32_t tt_settings_set_model(struct thinkthen_settings *settings, const char *data, size_t len, struct thinkthen_error *error);
 int32_t tt_settings_set_url(struct thinkthen_settings *settings, const char *data, size_t len, struct thinkthen_error *error);
+int32_t tt_settings_set_max_requests(struct thinkthen_settings *, uint64_t, struct thinkthen_error *);
 int32_t tt_settings_set_batch(struct thinkthen_settings *settings, uint64_t batch, struct thinkthen_error *error);
 int32_t tt_settings_set_retry(struct thinkthen_settings *settings, uint32_t max_retries, uint64_t initial_backoff_ms, uint64_t attempt_timeout_ms, struct thinkthen_error *error);
 void tt_settings_free(struct thinkthen_settings *settings);

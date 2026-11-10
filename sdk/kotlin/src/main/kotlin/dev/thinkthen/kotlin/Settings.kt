@@ -56,6 +56,12 @@ public class Settings internal constructor(builder: SettingsBuilder) {
     /** How many records go in one backend request, or null for the engine's default. */
     public val batch: Int? = builder.batch
 
+    /** Explicit storage; null retains no responses. */
+    public val responseStore: ResponseStore? = builder.responseStore
+
+    /** Client send allowance; null is unlimited, zero forbids sends. */
+    public val maxRequests: ULong? = builder.maxRequests
+
     /** The retry policy, or null for the engine's default. */
     public val retry: RetryPolicy? = builder.retry
 
@@ -67,6 +73,8 @@ public class Settings internal constructor(builder: SettingsBuilder) {
         if (selected != null) put("backend", fixedJson.encodeToJsonElement(Backend.serializer(), selected))
         else if (environmentBackend != null) put("backend", environmentBackend)
         model?.let { put("model", it) }; url?.let { put("url", it) }; batch?.let { put("batch", it) }
+        maxRequests?.let { put("max_requests", fixedJson.parseToJsonElement(it.toString())) }
+        responseStore?.let { put("response_store", it.definition()) }
         retry?.let { put("retry", it.definition()) }
         if (includeKey) apiKey?.let { put("api_key", it.encoded()) }
     }.toString().toByteArray(Charsets.UTF_8)
@@ -92,6 +100,12 @@ public class SettingsBuilder {
 
     /** How many records go in one backend request, or null for the engine's default. */
     public var batch: Int? = null
+
+    /** Explicit storage; null retains no responses. */
+    public var responseStore: ResponseStore? = null
+
+    /** Client send allowance; null is unlimited, zero forbids sends. */
+    public var maxRequests: ULong? = null
 
     /** The retry policy, or null for the engine's default. */
     public var retry: RetryPolicy? = null

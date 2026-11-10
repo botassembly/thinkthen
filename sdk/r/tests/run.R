@@ -114,5 +114,8 @@ numeric_types <- function(value, path = list()) {
   }
   list(list(path = path, type = typeof(value)))
 }
+if (exists("client", inherits = FALSE) && !is.null(case$requests)) {
+  stopifnot(tt_usage(client)$attempts == case$requests)
+}
 result$numeric_types <- numeric_types(result)
 writeLines(jsonlite::toJSON(result, auto_unbox = TRUE, null = "null", na = "null", digits = I(17)), useBytes = TRUE)

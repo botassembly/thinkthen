@@ -15,7 +15,7 @@ import tempfile
 import tomllib
 import zipfile
 
-from release_windows_check import smoke
+from release_windows_check import inventory
 from release_wheel import python_wheel
 from release_native import source_inputs, complete, stage_outputs, publish
 
@@ -201,7 +201,7 @@ def candidate(destination):
         run(sys.executable, source / 'scripts/notices', '--packages', out)
     from release_install import checksums
     checksums(out)
-    smoke(out)
+    inventory(out)
     print(out)
 
 
@@ -302,7 +302,7 @@ def finish_readmes(out, packages, *, root=ROOT):
         'Install the Ruby gems with `gem install --local --no-document` using the bundled ffi dependency and ThinkThen gem. Use the NuGet file as a local source for dotnet. Java and Kotlin include their runtime JAR dependencies beside the package.', '',
         'The C package supplies include/thinkthen.h, lib/thinkthen_ffi.lib and bin/thinkthen_ffi.dll. Link the import library and keep the DLL beside the consuming executable. C++ additionally needs the supplied nlohmann_json headers. Go, Zig and Swift packages include the Windows DLL for their ordinary build tools.', '',
         'Extract each database ZIP before loading its extension by absolute path. SQLite uses thinkthen_sqlite.dll. DuckDB uses thinkthen.duckdb_extension and its official unsigned-extension setting.', '',
-        'The local Wine check verifies the installed command version and the shared decide stub case. The C ABI runs all ten shared stub cases. The release workflow runs every package on a Windows runner before publication.', '',
+        'Package production validates the command and DLL image structure, notices and checksum inventory. Before publication, the release workflow runs the uploaded command, the uploaded C consumer with its packaged DLL and all shared stub cases, and every installed SDK on the supported Windows floor.', '',
     ]
     (out / 'INSTALL.md').write_text('\n'.join(commands))
 

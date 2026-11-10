@@ -2,6 +2,7 @@
 """Exercise Windows process, spreadsheet, text and interrupt behavior on a shipped CLI."""
 import argparse
 import ctypes
+from contextlib import contextmanager
 from ctypes import wintypes
 import hashlib
 import http.server
@@ -27,7 +28,7 @@ import zipfile
 from test_control import read_line
 
 ROOT = Path(__file__).resolve().parent.parent
-CASE_SECONDS = 240  # The slowest case holds three PowerShell runs of 60 seconds at most.
+CASE_SECONDS = 240  # Bound each named case as well as its individual child commands.
 TEXT = '漢字 café evidence 5'
 
 
@@ -83,6 +84,181 @@ def run_case(binary, folder, environment, *arguments, payload=None, code=0):
         env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
     assert result.returncode == code, (arguments, result.returncode, result.stdout, result.stderr)
     return result
+
+
+@contextmanager
+def answer_backend(probability=None):
+    """Serve measured local asks; neither installed case needs a paid provider."""
+    requests = []
+    class Backend(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requests.append(body)
+            value = 0.9 if probability is None else probability(body)
+            answers = {name: {'type': 'noul', 'noul': value} for name in body['questions']}
+            reply = json.dumps({'answers': answers, 'usage': {'input_tokens': 7, 'output_tokens': 1}}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(reply)))
+            self.end_headers()
+            self.wfile.write(reply)
+        def log_message(self, *_):
+            pass
+    with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Backend) as server:
+        worker = threading.Thread(target=server.serve_forever)
+        worker.start()
+        try:
+            yield SimpleNamespace(url=f'http://127.0.0.1:{server.server_address[1]}/v1', requests=requests)
+        finally:
+            server.shutdown()
+            worker.join()
+
+
+def usage_summary(result):
+    records = [json.loads(line) for line in result.stderr.decode('utf-8').splitlines()
+               if line.startswith('{')]
+    summaries = [record for record in records if record.get('kind') == 'thinkthen.usage/1']
+    assert len(summaries) == 1, result.stderr
+    return summaries[0]['usage']
+
+
+def private_response_state(path, environment):
+    """Inspect the actual store/journal; DLL cache privacy is a different claim."""
+    from release_windows_cache import _control, STATE_FUNCTION
+    measured = json.loads(_control(environment, STATE_FUNCTION + """$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
+$caller = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;
+$other = @($a.Access | Where-Object {
+  $_.AccessControlType -ne 'Allow' -or
+  $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -ne $caller
+});
+[pscustomobject]@{state=(Get-CacheState); caller=$caller;
+  private=($a.Access.Count -gt 0 -and $other.Count -eq 0)} | ConvertTo-Json -Depth 3 -Compress""", path))
+    assert measured['state']['owner'] == measured['caller'], (path, measured)
+    assert measured['private'], (path, measured)
+    return measured['state']
+
+
+
+def access_environment(folder, environment):
+    """PowerShell's private profile lives outside the checked operation folder."""
+    from release_windows_cache import cache_environment
+    profile = folder.with_name(folder.name + '-profile')
+    (profile / 'roaming').mkdir(parents=True)
+    return cache_environment(profile / 'local', dict(environment, HOME=str(profile),
+        USERPROFILE=str(profile), APPDATA=str(profile / 'roaming')))
+
+
+def response_store(binary, folder, environment):
+    """Installed record/cache/replay and actual Windows store ACL/owner refusal."""
+    from release_windows_cache import _control, _state, restore_cache
+    environment = access_environment(folder, environment)
+    store = folder / 'responses'
+    keyless = {key: value for key, value in environment.items()
+               if key.upper() not in {'THINKTHEN_API_KEY', 'OPENAI_API_KEY'}}
+    with answer_backend() as backend:
+        def invoke(mode, *, code=0):
+            env = keyless if mode == 'replay' else dict(keyless, THINKTHEN_API_KEY='synthetic-loopback-key')
+            return run_case(binary, folder, env, 'decide', 'Ready?', '--backend', 'systemone',
+                '--url', backend.url, '--json', '--usage', '--response-store', store,
+                '--response-mode', mode, '--response-namespace', 'installed-windows',
+                '--model-generation', 'fixture-v1', '--max-requests', '1' if mode == 'record' else '0',
+                payload=b'paid record', code=code)
+        recorded = invoke('record')
+        row = json.loads(recorded.stdout)
+        assert row['status'] == 'answered' and row['answer'] is True, row
+        assert len(backend.requests) == 1
+        assert usage_summary(recorded)['attempts'] == 1
+        cached = invoke('cache')
+        replayed = invoke('replay')
+        assert cached.stdout == recorded.stdout == replayed.stdout
+        for result, metric in [(cached, 'cache_hits'), (replayed, 'replay_hits')]:
+            usage = usage_summary(result)
+            assert usage['attempts'] == 0 and usage[metric] == 1, usage
+            assert usage['input_tokens']['reported'] == usage['output_tokens']['reported'] == 0, usage
+        assert len(backend.requests) == 1, 'reuse or keyless replay made another request'
+        database = store / 'responses.sqlite3'
+        before = hashlib.sha256(database.read_bytes()).hexdigest()
+        files = sorted(path.name for path in store.iterdir())
+        system = Path(environment['SYSTEMROOT']) / 'System32'
+        for path in (store, database):
+            saved = private_response_state(path, environment)
+            for control in ('everyone-modify', 'distinct-owner'):
+                try:
+                    arguments = ('/grant', '*S-1-1-0:(M)') if control == 'everyone-modify' else ('/setowner', '*S-1-5-19')
+                    subprocess.run([system / 'icacls.exe', path, *arguments], env=environment,
+                        capture_output=True, text=True, check=True, timeout=30)
+                    if control == 'everyone-modify':
+                        installed = _control(environment, """$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
+@($a.Access | Where-Object {
+  $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq 'S-1-1-0' -and
+  $_.AccessControlType -eq 'Allow' -and
+  ($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify) -eq [System.Security.AccessControl.FileSystemRights]::Modify
+}).Count""", path)
+                        assert int(installed) > 0, 'Everyone Modify control was not installed'
+                    else:
+                        assert _state(environment, path)['owner'] == 'S-1-5-19', 'distinct owner control was not installed'
+                    refused = invoke('replay', code=5)
+                    assert not refused.stdout and b'local.response-store' in refused.stderr, refused
+                    assert len(backend.requests) == 1, 'unsafe store caused a backend request'
+                    assert hashlib.sha256(database.read_bytes()).hexdigest() == before
+                    assert sorted(item.name for item in store.iterdir()) == files
+                finally:
+                    restore_cache(path, saved, environment)
+                private_response_state(path, environment)
+                assert invoke('replay').stdout == recorded.stdout, 'restored store did not replay'
+                print(f'Windows response store: {path.name}: {control} refused and restored', flush=True)
+        assert len(backend.requests) == 1
+        assert hashlib.sha256(database.read_bytes()).hexdigest() == before
+
+
+def recovery(binary, folder, environment):
+    """Interrupt blocked publication, then export the installed command's typed answers."""
+    environment = access_environment(folder, environment)
+    source = folder / 'records.jsonl'
+    original = (json.dumps({'id': 7, 'text': 'first', 'padding': 'x' * (4 * 1024 * 1024)}) + '\n'
+                + json.dumps({'id': 7, 'text': 'second'}) + '\n').encode()
+    source.write_bytes(original)
+    journal = folder / 'completed.recovery'
+    with answer_backend(lambda body: 0.9 if body['state'] == 'first' else 0.1) as backend:
+        child = subprocess.Popen([str(binary), 'decide', 'Ready?', '--backend', 'systemone',
+            '--url', backend.url, '--from', 'jsonl', str(source), '--field', '/text', '--into', 'ready',
+            '--batch', '1', '--recovery', str(journal)], cwd=folder,
+            env=dict(environment, THINKTHEN_API_KEY='synthetic-loopback-key'),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        try:
+            # The first enriched row exceeds the pipe buffer. Publication has begun,
+            # both final rows are journaled, and stopping reads holds completion.
+            assert read_line(SimpleNamespace(readline=lambda: child.stdout.read(1)), timeout=30) == b'{'
+            assert child.poll() is None, 'large output did not hold publication'
+            child.send_signal(signal.CTRL_BREAK_EVENT)
+            notice = read_line(child.stderr, timeout=30)
+            assert b'cancelling' in notice, notice
+            stdout, stderr = child.communicate(timeout=30)
+            assert child.returncode == 130, (child.returncode, stdout[:200], notice + stderr)
+            assert len(backend.requests) == 2
+            assert source.read_bytes() == original, 'interrupted enrichment changed the source'
+            private_response_state(journal, environment)
+            offline = {key: value for key, value in environment.items()
+                       if key.upper() not in {'THINKTHEN_API_KEY', 'OPENAI_API_KEY'}}
+            offline.update(THINKTHEN_BACKEND='invalid-offline-trap', THINKTHEN_MAX_REQUESTS='invalid-offline-trap')
+            exported = run_case(binary, folder, offline, 'recover', journal)
+            rows = [json.loads(line) for line in exported.stdout.splitlines()]
+            assert len(rows) == 2 and [row['position'] for row in rows] == [1, 2], rows
+            assert [row['id'] for row in rows] == [7, 7], rows
+            assert all(row['status'] == 'answered' for row in rows), rows
+            assert [row['answer'] for row in rows] == [True, False], rows
+            report = json.loads(exported.stderr)
+            assert report['type'] == 'recovery' and report['admitted'] == report['committed'] == 2, report
+            assert report['complete'] is False and report['operation_status'] == 'incomplete', report
+            assert report['missing_ranges'] == [], report
+            assert len(backend.requests) == 2, 'offline recovery made a backend request'
+            assert source.read_bytes() == original
+            assert {path.name for path in folder.iterdir()} == {'records.jsonl', 'completed.recovery'}
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait()
 
 
 def pipeline(binary, folder, environment):
@@ -438,7 +614,8 @@ def watchdog(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
-    parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'powershell-default', 'ctrl-break', 'ctrl-c', 'stream', 'forced-exit'))
+    parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'powershell-default', 'ctrl-break', 'ctrl-c', 'stream', 'forced-exit', 'response-store', 'recovery'))
+    parser.add_argument('--caller-owned', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--diagnostics', type=Path, help='retain forced-exit process state before failure cleanup')
     parser.add_argument('--powershell', default='powershell.exe', help='PowerShell executable for the Unicode case')
     parser.add_argument('--code-page', type=int, help='Select a console code page for an explicitly labelled probe')
@@ -460,7 +637,7 @@ def main():
                 raise ctypes.WinError(ctypes.get_last_error())
         print('Windows CLI console: ' + json.dumps(console), flush=True)
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-') as temporary:
-            for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('powershell-default', default_pipes), ('ctrl-break', interrupt), ('ctrl-c', ctrl_c), ('stream', stream), ('forced-exit', forced_exit)]:
+            for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('powershell-default', default_pipes), ('ctrl-break', interrupt), ('ctrl-c', ctrl_c), ('stream', stream), ('forced-exit', forced_exit), ('response-store', response_store), ('recovery', recovery)]:
                 if args.case and name != args.case:
                     continue
                 # A console event can end this process, so the log names the case first.
@@ -471,7 +648,17 @@ def main():
                 environment.update(HOME=str(folder), USERPROFILE=str(folder), TMP=str(folder), TEMP=str(folder), PYTHONUTF8='1')
                 timer = watchdog(name)
                 try:
-                    if name == 'forced-exit':
+                    if name in ('response-store', 'recovery') and not args.caller_owned:
+                        # Preserve elevated privileges for hostile owner controls, but
+                        # create store/journal objects with an ordinary caller owner.
+                        from windows_caller_process import launch
+                        try:
+                            launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned',
+                                    '--binary', str(binary), '--case', name], cwd=ROOT,
+                                   env=environment, timeout=CASE_SECONDS)
+                        except SystemExit as error:
+                            raise RuntimeError(f'caller-owned {name} failed with exit {error.code}') from error
+                    elif name == 'forced-exit':
                         forced_exit(binary, folder, environment, diagnostics=args.diagnostics)
                     elif name == 'powershell-unicode':
                         powershell(binary, folder, environment, shell=args.powershell, console=console)

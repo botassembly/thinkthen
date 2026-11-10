@@ -3,6 +3,8 @@ package dev.thinkthen;
 import dev.thinkthen.internal.DriverClient;
 import dev.thinkthen.internal.DriverException;
 import java.net.URI;
+import java.math.BigInteger;
+import org.jspecify.annotations.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -87,6 +89,27 @@ public final class ThinkThen implements AutoCloseable {
          * @return the batch result
          */
         public Builder batch(int value) { settings.put("batch",value); return this; }
+        /** Select explicit local response storage; null disables retention.
+         * @param value caller-owned store configuration
+         * @return this builder
+         */
+        public Builder responseStore(@Nullable ResponseStore value) {
+            if (value == null) settings.remove("response_store"); else settings.put("response_store", value.values());
+            return this;
+        }
+        /** Set the client send allowance; zero forbids sends, absence is unlimited.
+         * @param value the allowance, admitted by the shared engine
+         * @return this builder
+         */
+        public Builder maxRequests(long value) { return maxRequests(BigInteger.valueOf(value)); }
+        /** Set a full unsigned-64-bit allowance without losing precision.
+         * @param value the allowance, or null to remove it
+         * @return this builder
+         */
+        public Builder maxRequests(@Nullable BigInteger value) {
+            if (value == null) settings.remove("max_requests"); else settings.put("max_requests", value);
+            return this;
+        }
         /**
          * Set the client retry policy.
          * @param value the value to set
@@ -105,6 +128,10 @@ public final class ThinkThen implements AutoCloseable {
          */
         public ThinkThen build() { try { return new ThinkThen(this); } finally { settings.remove("api_key"); } }
     }
+    /** Return cumulative client usage; snapshots remain valid after close.
+     * @return an immutable usage snapshot
+     */
+    public Usage usage() { try { return driver.usage(); } catch (DriverException error) { throw Values.error(error); } }
     DriverClient driver() { if (closed) throw Values.error(DriverClient.closedError()); return driver; }
     @org.jspecify.annotations.Nullable RecordCodec codec() { return codec; }
     static byte[] request(Question<?,?> question) { return request(Questions.definition(question),Questions.name(question)); }

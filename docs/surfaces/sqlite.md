@@ -62,13 +62,17 @@ WHERE params = '[1]';
 
 ## Handle not sure and failures
 
-Save the answers in a table once, then read them as often as you like. Running a ThinkThen query again asks again and is billed again.
+Save the answers in a table once, then read them as often as you like. A plain rerun can send questions again and incur new charges.
 
 ```sql
 CREATE TABLE refund_answers AS
 SELECT id AS msg_id, answer AS is_refund, status, error_code, error_message
 FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3',
                       'Does the customer request a refund?');
+
+SELECT m.msg_id, m.body, a.is_refund, a.status
+FROM refund_answers a JOIN messages m ON a.msg_id = m.msg_id
+ORDER BY m.msg_id;
 
 SELECT msg_id FROM refund_answers WHERE is_refund IS TRUE;                      -- yes
 SELECT msg_id FROM refund_answers WHERE is_refund IS FALSE;                     -- no
@@ -344,9 +348,12 @@ SELECT thinkthen_set('backend', 'openai');
 
 ## Control cost and cancel
 
-- One ThinkThen call batches every record of its source query. Running the query again sends every question again.
-- Save results with `CREATE TABLE ... AS SELECT`, then inspect, join and export the table. In the shell, `.headers on`, `.mode csv` and `.once answers.csv` before a `SELECT` write a CSV.
-- Inside one statement, a ThinkThen function that SQLite runs again with the same arguments, such as on the inner side of a join, gives its saved rows and asks nothing new. A correlated call, whose arguments come from the outer row, asks again for each new set of arguments. Save the answers first, then join the table.
-- The functions cannot run inside a view or a trigger.
-- `sqlite3_interrupt`, or Ctrl-C in the shell, stops the query and leaves the connection ready for the next one. The query's answers are discarded, and the backend still bills requests it completed. Split large jobs into several saved queries.
-- Closing the statement or cursor ends its call.
+A function invocation owns one engine call over its supplied input. A statement can invoke a function more than once, especially when its arguments depend on an outer row. A plain rerun can send questions again; reading a saved result table does not.
+
+Choose the input before invoking ThinkThen: put `WHERE`, a deterministic `ORDER BY` on a stable unique key, and any input `LIMIT` inside the supplied source. An output `LIMIT` does not bound paid requests. A CTE is not a durable saved result, and batch size controls packing rather than total work. Retries and dependent questions can make several requests for the same input records. SQL does not admit `max_requests`, inherit `THINKTHEN_MAX_REQUESTS`, or report a statement-wide usage total.
+
+The `refund_answers` example above saves answers in a real table before joining them to application data. For a large job, snapshot the source or keep it unchanged, select a fixed range of unique keys for each chunk, save its answers, and commit that chunk before starting the next. Commit the answer rows and a completed-range marker in the same transaction. Restart only ranges that did not commit; do not treat gaps from a failed range as completed work. A single `CREATE TABLE ... AS SELECT` is one statement, not a checkpoint after each row. Cancelling it can discard all of that statement's results even when requests were paid for. Earlier separately committed chunks remain available.
+
+Within one statement, an unchanged invocation can replay its saved rows without sending another request. A correlated invocation with different arguments performs new work; do not assume that returning to a previous argument value provides a persistent cache. Save answers before joining when you need reuse across statements. ThinkThen functions cannot run inside a view or trigger.
+
+`sqlite3_interrupt`, or Ctrl-C in the shell, stops the query and leaves the connection ready for the next one. Closing a statement or cursor ends its call. Already sent requests can still incur charges; a timeout or early cursor close is not a request allowance. In the shell, `.headers on`, `.mode csv` and `.once answers.csv` before a `SELECT` export the saved table.

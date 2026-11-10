@@ -19,6 +19,7 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
     private readonly object lifecycle = new();
     private readonly HashSet<CallState> active = new();
     private Task? disposal;
+    private Usage? finalUsage;
     /// <summary>Runs typed questions over records and owns active calls.</summary>
     public ThinkThenClient(ThinkThenOptions? options = null, ILogger<ThinkThenClient>? logger = null)
     {
@@ -46,6 +47,24 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
             throw;
         }
     }
+    /// <summary>Returns a copied cumulative snapshot, also available after disposal.</summary>
+    public Usage Usage
+    {
+        get { lock (lifecycle) return finalUsage ?? ReadUsage(false); }
+    }
+    private Usage ReadUsage(bool settled)
+    {
+        NativeError error = NativeError.Empty;
+        Buffer output;
+        int status = settled ? Native.ClientUsageSettled(client, out output, ref error)
+            : Native.ClientUsage(client, out output, ref error);
+        try
+        {
+            Check(status, error);
+            return JsonSerializer.Deserialize(Native.Copy(output), ContractJson.Default.Usage) ?? throw Json.Abi();
+        }
+        finally { Native.BufferFree(ref output); }
+    }
     /// <summary>Releases the owned native resource.</summary>
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
     /// <summary>Cancels active calls, waits for their cleanup and releases the native client.</summary>
@@ -64,7 +83,12 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
     private async Task DisposeCore(CallState[] calls)
     {
         await Task.WhenAll(calls.Select(call => call.Close())).ConfigureAwait(false);
-        client.Dispose();
+        try
+        {
+            Usage snapshot = ReadUsage(true);
+            lock (lifecycle) { finalUsage = snapshot; client.Dispose(); }
+        }
+        catch { lock (lifecycle) client.Dispose(); throw; }
         logger.LogInformation("ThinkThen client closed");
     }
     private unsafe CallState Open(QuestionHandle question, string? name, CancellationToken token)

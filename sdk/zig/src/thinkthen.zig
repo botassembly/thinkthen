@@ -54,6 +54,10 @@ pub const ApiKey = t.ApiKey;
 pub const Retry = t.Retry;
 /// Client settings.
 pub const Settings = t.Settings;
+/// Explicit local response-store configuration.
+pub const ResponseStore = t.ResponseStore;
+/// Local response-store execution mode.
+pub const ResponseMode = t.ResponseMode;
 /// One record.
 pub const Record = t.Record;
 /// Records pulled one at a time.
@@ -148,6 +152,25 @@ pub const NamedAnnotation = r.NamedAnnotation;
 pub const Annotation = r.Annotation;
 /// Annotate's answer, read by name.
 pub const Annotations = r.Annotations;
+/// Reported provider tokens; null means overflow, unknown attempts remain separate.
+pub const TokenUsage = struct {
+    reported: ?u64,
+    unknown_attempts: u64,
+};
+/// A copied cumulative snapshot; active work may still incur more usage.
+pub const Usage = struct {
+    attempts: u64,
+    responses: u64,
+    status_retries: u64,
+    connection_retries: u64,
+    request_body_bytes: u64,
+    active_attempts: u64,
+    active_calls: u64,
+    cache_hits: u64,
+    replay_hits: u64,
+    input_tokens: TokenUsage,
+    output_tokens: TokenUsage,
+};
 /// A connection to the engine and its backend. Open with `init`, close with `deinit`.
 /// Each function has a one-record form, such as `decide`, which returns a row,
 /// and a many-record form, such as `decideAll`, which returns a Call. One client may serve many threads.
@@ -169,7 +192,7 @@ pub const Client = struct {
         const a = fallback.allocator();
         // The engine admits the environment's backend name, so an unknown name fails as usage.backend.
         const backend: ?[]const u8 = if (settings.backend) |value| @tagName(value) else if (std.c.getenv("THINKTHEN_BACKEND")) |name| std.mem.span(name) else null;
-        const encoded = try std.json.Stringify.valueAlloc(a, .{ .backend = backend, .model = settings.model, .url = settings.url, .batch = settings.batch, .retry = settings.retry }, .{ .emit_null_optional_fields = false });
+        const encoded = try std.json.Stringify.valueAlloc(a, .{ .backend = backend, .model = settings.model, .url = settings.url, .batch = settings.batch, .max_requests = settings.max_requests, .response_store = settings.response_store, .retry = settings.retry }, .{ .emit_null_optional_fields = false });
         defer a.free(encoded);
         var builder: ?*c.thinkthen_settings = null;
         var err = d.emptyError();
@@ -182,6 +205,20 @@ pub const Client = struct {
         var handle: ?*c.thinkthen_client = null;
         try d.check(native.function("thinkthen_client_open")(builder, &handle, &err), &err, diag);
         return .{ .handle = handle };
+    }
+    /// Copy usage before deinit; the value remains valid independently of the client.
+    pub fn usage(self: *const Client, allocator: Allocator, diag: ?*Diagnostic) Error!Usage {
+        d.clear(diag);
+        var output: c.thinkthen_buffer = std.mem.zeroes(c.thinkthen_buffer);
+        defer native.function("thinkthen_buffer_free")(&output);
+        var err = d.emptyError();
+        try d.check(native.function("thinkthen_client_usage")(self.handle, &output, &err), &err, diag);
+        const parsed = std.json.parseFromSlice(Usage, allocator, d.bytes(output), .{ .ignore_unknown_fields = true }) catch |failure| switch (failure) {
+            error.OutOfMemory => return error.OutOfMemory,
+            else => return d.incompatible(diag),
+        };
+        defer parsed.deinit();
+        return parsed.value;
     }
     /// Close the client. Calls already open keep working until their own deinit.
     pub fn deinit(self: *Client) void {

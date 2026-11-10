@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check release versions, CLI record framing and build attestation contracts."""
 import collections
+import inspect
+import struct
 import json
 import hashlib
 import http.client
@@ -206,6 +208,28 @@ class ReleaseScripts(unittest.TestCase):
                 verify_nuget(packages, scratch / 'cache')
             cached.write_bytes(b'current package')
             verify_nuget(packages, scratch / 'cache')
+
+    def test_windows_store_and_recovery_cases_use_the_existing_caller_owned_route(self):
+        main = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['main']
+        with tempfile.TemporaryDirectory(prefix='thinkthen-trust-routing-') as temporary:
+            binary = Path(temporary) / 'thinkthen.exe'
+            binary.write_bytes(b'installed command route fixture')
+            for name in ('response-store', 'recovery'):
+                with self.subTest(case=name):
+                    kernel = SimpleNamespace(GetConsoleCP=lambda: 437, GetConsoleOutputCP=lambda: 437,
+                        SetConsoleCP=lambda value: 1, SetConsoleOutputCP=lambda value: 1)
+                    def unowned(*_arguments):
+                        self.fail('case ran before caller-owned launch')
+                    with patch.dict(main.__globals__, os=SimpleNamespace(name='nt', environ=os.environ),
+                            ctypes=SimpleNamespace(WinDLL=lambda *args, **options: kernel),
+                            response_store=unowned, recovery=unowned), \
+                            patch('windows_caller_process.launch') as launch, \
+                            patch.object(sys, 'argv', ['windows-cli-check', '--binary', str(binary), '--case', name]):
+                        main()
+                    launch.assert_called_once()
+                    command = launch.call_args.args[0]
+                    self.assertEqual(command[2:], ['--caller-owned', '--binary', str(binary.resolve()), '--case', name])
+                    self.assertNotIn('normal_log', launch.call_args.kwargs)
 
     def test_windows_unicode_probe_restores_shared_console_pages(self):
         main = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['main']
@@ -761,6 +785,67 @@ for platform, fallback in (
     def test_final_registry_packages(self):
         bounded([sys.executable, ROOT / 'scripts/release-platform-test'], check=True)
 
+    def test_readme_quickstart_allows_context_snippets_without_skipping_a_broken_first_program(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-readme-blocks-') as temporary:
+            folder = Path(temporary)
+            readme = folder / 'README.md'
+            destination = folder / 'example.py'
+            prefix = '```python\nfrom pathlib import Path\nPath("ran").write_text("quickstart")\n```\n'
+            context = '```python\nraise AssertionError("context snippet is not a standalone program")\n```\n'
+            commands = '```sh\npython3 example.py\n```\n'
+            readme.write_text(prefix + context + commands)
+            bounded([sys.executable, ROOT / 'scripts/readme-example', readme, 'python', destination], check=True)
+            self.assertEqual((folder / 'ran').read_text(), 'quickstart')
+            readme.write_text('```python\nraise RuntimeError("broken quickstart")\n```\n' + prefix + commands)
+            result = bounded([sys.executable, ROOT / 'scripts/readme-example', readme, 'python', destination],
+                             capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('broken quickstart', result.stderr)
+
+    def test_day_one_docs_distinguishes_input_prose_from_local_package_instructions(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-day-one-docs-') as temporary:
+            folder = Path(temporary)
+            shutil.copy2(ROOT / 'README.md', folder / 'README.md')
+            shutil.copytree(ROOT / 'docs/surfaces', folder / 'docs/surfaces')
+            destination = folder / 'crates/thinkthen-ffi'
+            destination.mkdir(parents=True)
+            shutil.copy2(ROOT / 'crates/thinkthen-ffi/README.md', destination / 'README.md')
+            for source in (ROOT / 'sdk').glob('*/README.md'):
+                target = folder / source.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+            guide = folder / 'docs/surfaces/bash.md'
+            original = guide.read_text()
+            guide.write_text(original + '\nThe generation is caller-supplied. Judge the supplied input and source.\n')
+            bounded([sys.executable, ROOT / 'scripts/day-one-docs-test', '--root', folder], check=True)
+            for obsolete in ('Extract the supplied archive.',
+                             'Install the supplied matching C++ package.',
+                             'pip install /private/package.whl'):
+                guide.write_text(original + '\n' + obsolete + '\n')
+                result = bounded([sys.executable, ROOT / 'scripts/day-one-docs-test', '--root', folder],
+                                 capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0, obsolete)
+                self.assertIn('bash.md: outdated local-package instruction:', result.stderr)
+
+    def test_postgres_enums_refresh_after_successive_registry_generations(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-postgres-enums-') as temporary:
+            folder = Path(temporary)
+            source = ROOT / 'schemas/contract.json'
+            registry = json.loads(source.read_text())
+            previous = dict(registry, codes=[entry for entry in registry['codes']
+                                            if entry['name'] != 'local.request-limit'])
+            contract = folder / 'contract.json'
+            shutil.copy2(ROOT / 'schemas/client.schema.json', folder / 'client.schema.json')
+            sql = folder / 'thinkthen.sql'
+            shutil.copy2(ROOT / 'extensions/postgres/thinkthen--0.2.0.sql', sql)
+            for current in (previous, registry):
+                contract.write_text(json.dumps(current))
+                bounded([sys.executable, ROOT / 'extensions/postgres/generate.py', contract, sql], check=True)
+                for native_type, key in [('status', 'statuses'), ('error_code', 'codes')]:
+                    labels = re.search(r'CREATE TYPE thinkthen\.' + native_type + r' AS ENUM \(([^;]*)\);',
+                                       sql.read_text())[1]
+                    self.assertEqual(re.findall(r"'([^']+)'", labels), [entry['name'] for entry in current[key]])
+
     def test_installer_verifies_release_archives(self):
         bounded([sys.executable, ROOT / 'scripts/installer-test'], check=True)
 
@@ -974,13 +1059,81 @@ for platform, fallback in (
             self.assertIn('thinkthen.exe', str(failure.exception))
             self.assertIn(hashlib.sha256(b'fixture image').hexdigest(), str(failure.exception))
 
-    def test_windows_smoke_stops_before_application_when_wine_preparation_fails(self):
+    def test_windows_smoke_rejects_valid_c_output_followed_by_nonzero_exit(self):
         with self.assertRaises(AssertionError) as failure:
-            self.windows_smoke('thinkthen ' + version() + '\n', boot_status=7)
+            self.windows_smoke('thinkthen ' + version() + '\n', consumer_status=7)
         self.assertIn("'returncode': 7", str(failure.exception))
-        self.assertIn('Wine initialization diagnostic', str(failure.exception))
+        self.assertIn('c-consumer.exe', str(failure.exception))
+        self.assertIn('answered', str(failure.exception))
 
-    def windows_smoke(self, banner, status=0, stderr=b'', boot_status=0):
+    def test_windows_smoke_requires_native_windows(self):
+        with patch.object(release_windows_check, 'os', SimpleNamespace(name='posix')), \
+                patch.object(release_windows_check, 'inventory') as inventory:
+            with self.assertRaisesRegex(RuntimeError, 'requires native Windows'):
+                release_windows_check.smoke(Path('/unused'))
+            inventory.assert_not_called()
+
+    def test_windows_producer_validates_structure_without_wine(self):
+        import release_windows
+        import release_windows_host
+        from release_install import checksums
+        self.assertIn('inventory(out)', inspect.getsource(release_windows.candidate))
+        self.assertNotIn('smoke(out)', inspect.getsource(release_windows.candidate))
+        calls = []
+        with patch.object(release_windows_host, 'run', side_effect=lambda *args: calls.append(args)):
+            release_windows_host.prepare_cross_build_tools()
+        self.assertEqual(calls[-1][-2:], ('cmake', 'ninja-build'))
+        self.assertNotIn('wine', [argument for call in calls for argument in call])
+        self.assertNotIn('wine64', [argument for call in calls for argument in call])
+        for corrupt in (None, 'command-image', 'command-member', 'dll-image', 'dll-kind',
+                        'missing-dll', 'consumer-image', 'missing-file', 'extra-file', 'checksum'):
+            with self.subTest(corrupt=corrupt), tempfile.TemporaryDirectory() as temporary:
+                folder = Path(temporary)
+                build = self.windows_inventory(folder, corrupt)
+                checksums(folder)
+                if corrupt == 'extra-file':
+                    (folder / 'unlisted').write_bytes(b'not inventoried')
+                if corrupt == 'checksum':
+                    (folder / 'checks/c-consumer.exe').write_bytes(b'changed after checksum')
+                with patch('release_notice_check.verify'), patch.object(
+                        release_windows_check.subprocess, 'run', side_effect=AssertionError('producer executed a binary')):
+                    if corrupt:
+                        with self.assertRaises((AssertionError, KeyError, FileNotFoundError)):
+                            release_windows_check.inventory(folder)
+                    else:
+                        self.assertEqual(release_windows_check.inventory(folder), build)
+
+    def windows_inventory(self, folder, corrupt):
+        def image(dll=False):
+            data = bytearray(128)
+            data[:2] = b'MZ'
+            struct.pack_into('<I', data, 60, 64)
+            data[64:68] = b'PE\0\0'
+            struct.pack_into('<H', data, 68, 0x8664)
+            struct.pack_into('<H', data, 86, 2 | (0x2000 if dll else 0))
+            struct.pack_into('<H', data, 88, 0x20b)
+            return data
+        families = ('command', 'c', 'cpp', 'python', 'typescript', 'go', 'java', 'kotlin',
+                    'csharp', 'r', 'ruby', 'zig', 'swift', 'duckdb', 'sqlite')
+        build = {'version': version(), 'platform': 'windows-x86_64',
+                 'packages': {family: family + '.zip' for family in families}}
+        for family, filename in build['packages'].items():
+            with zipfile.ZipFile(folder / filename, 'w') as archive:
+                if family == 'command':
+                    for name, data in {'thinkthen.exe': b'bad' if corrupt == 'command-image' else image(),
+                                       'thinkthen.1': b'.TH THINKTHEN', 'README.md': b'readme', 'LICENSE': b'license'}.items():
+                        if corrupt != 'command-member' or name != 'LICENSE':
+                            archive.writestr(name, data)
+                elif family == 'c' and corrupt != 'missing-dll':
+                    data = b'bad' if corrupt == 'dll-image' else image(corrupt != 'dll-kind')
+                    archive.writestr('bin/thinkthen_ffi.dll', data)
+        (folder / 'checks').mkdir()
+        if corrupt != 'missing-file':
+            (folder / 'checks/c-consumer.exe').write_bytes(b'bad' if corrupt == 'consumer-image' else image())
+        (folder / 'build.json').write_text(json.dumps(build))
+        return build
+
+    def windows_smoke(self, banner, status=0, stderr=b'', consumer_status=0):
         cases = json.loads((ROOT / 'construction/stub.json').read_bytes())
         first = next(case for case in cases if case['request']['question']['function'] == 'decide')
         # Keep the framing regression on a nonempty structured array.
@@ -1001,17 +1154,12 @@ for platform, fallback in (
 
             def run(args, **options):
                 calls.append((args, options.get('input')))
-                if args[-2:] == ['wineboot', '-u']:
-                    runtime = Path(options['env']['XDG_RUNTIME_DIR'])
-                    self.assertEqual(runtime.parent, options['cwd'])
-                    self.assertEqual(runtime.stat().st_mode & 0o777, 0o700)
-                    self.assertEqual(Path(options['env']['WINEPREFIX']).parent, options['cwd'])
-                    return subprocess.CompletedProcess(args, boot_status, b'', b'Wine initialization diagnostic')
-                elif args[-1] == '--version':
+                if args[-1] == '--version':
                     return subprocess.CompletedProcess(args, status, banner.encode(), stderr)
                 elif Path(args[-3]).name == 'c-consumer.exe':
                     case = next(case for case in cases if json.loads(args[-2]) == case['request'])
                     output = json.dumps({'rows': case['expected']})
+                    return subprocess.CompletedProcess(args, consumer_status, output.encode(), b'')
                 else:
                     self.assertIn('jsonl', args)
                     self.assertEqual(options['input'], b'["evidence"]\n')
@@ -1022,14 +1170,11 @@ for platform, fallback in (
             build = {'version': version(), 'packages': {'command': 'command.zip', 'c': 'c.zip'}}
             with patch.object(release_windows_check, 'inventory', return_value=build), \
                  patch.object(release_windows_check, 'pe'), \
-                 patch.object(release_windows_check, 'wine_executable', return_value='fixture-wine'), \
+                 patch.object(release_windows_check, 'os', SimpleNamespace(name='nt', environ=os.environ)), \
+                 patch.object(release_windows_sdks, 'runtime_environment', side_effect=lambda scratch, env: env), \
                  patch.object(release_windows_check.subprocess, 'run', side_effect=run):
-                try:
-                    release_windows_check.smoke(package)
-                finally:
-                    if boot_status:
-                        self.assertEqual(len(calls), 1, 'failed Wine preparation ran an application')
-            self.assertEqual(len(calls), len(cases) + 3)
+                release_windows_check.smoke(package, core_only=True)
+            self.assertEqual(len(calls), len(cases) + 2)
 
     def test_live_install_names_use_public_sites_and_isolated_consumers(self):
         script = ROOT / 'scripts/release-live-install-check'

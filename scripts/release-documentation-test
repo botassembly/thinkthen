@@ -87,15 +87,19 @@ assert 'not a qualification of the new release' in limits
 assert '8 known failures' not in limits
 assert 'future growth and absence of leaks remain unproven' in limits
 upgrade = note.split('## For 0.1 users', 1)[1].split('## Platforms and requirements', 1)[0]
-# These are the removed public spellings in the published 0.1.2 command/crate.
-for command in ('status', 'check', 'cache', 'transform', 'audit', 'diff', 'prune', 'unused', 'convert'):
+# Released v0.1.2 (08328c9c04574719b9e93900dd8fa46ad3b645b4) CLI args,
+# audit and diff supply this migration inventory, including their nested commands.
+for command in ('status', 'check', 'cache', 'transform', 'cache prune', 'cache unused', 'cache convert'):
     assert f'`{command}`' in upgrade, command
 for option in ('details', 'json', 'jsonl', 'on-error', 'plan', 'dry-run', 'timeout',
                'seed', 'profile', 'max-requests-total', 'max-estimated-input-tokens-total',
                'facts', 'input', 'lines', 'csv', 'tsv', 'field', 'context', 'jobs',
                'max-retries', 'max-request-bytes', 'max-text-bytes', 'raw',
                'option', 'options', 'label', 'kind', 'relation', 'relation-threshold',
-               'kind-field', 'none', 'record', 'replay', 'cache', 'no-cache', 'refresh-cache'):
+               'kind-field', 'none', 'record', 'replay', 'cache', 'no-cache', 'refresh-cache',
+               'max-size', 'older-than', 'answered-by-other-than', 'used', 'quote',
+               'by', 'id', 'target', 'optimize', 'write', 'write-to', 'match', 'curve',
+               'pooled', 'table', 'cases', 'compare-threshold'):
     assert f'`--{option}`' in upgrade, option
 for feature in ('polars', 'bundled-sqlite', 'host-sqlite'):
     assert f'`{feature}`' in upgrade, feature
@@ -110,6 +114,29 @@ assert 'Botassembly.ThinkThen' in note
 assert 'github.com/botassembly/thinkthen/sdk/go/thinkthen' in note
 assert '0.1.2' in note
 assert '`--true TEXT` and `--false TEXT` describe what yes and no mean' in upgrade
+assert '`--quiet` suppresses answers, JSON rows, notices and progress' in upgrade
+assert 'failure diagnostics still reach standard error' in upgrade
+assert '`--check --quiet`' in upgrade and 'false/none (1), unsure (3)' in upgrade
+assert 'For choose and tag, add `--describe LABEL=TEXT`' in upgrade
+assert '--choice billing --choice shipping --describe "billing=About charges"' in upgrade
+assert '0.1 selected a candidate record from the whole input; 0.2 selects a line within each record' in upgrade
+assert 'Unicode-scalar span-to-ID map' in upgrade
+assert 'Multiline or blank candidates need an explicit single-line encoding' in upgrade
+assert 'An answered null means none; unsure and failed do not' in upgrade
+assert 'Old thresholds and model-quality results do not establish parity' in upgrade
+assert 'Audit and diff are available as offline tools with new 0.2 formats and syntax' in upgrade
+assert 'thinkthen audit ROWS --manifest RUN.json --key GOLD.jsonl' in upgrade
+assert 'thinkthen diff LEFT --left-manifest L.json --right RIGHT --right-manifest R.json' in upgrade
+assert 'recommend no threshold and change no settings' in upgrade
+assert '`--usage` for observed request/token accounting on stderr' in upgrade
+assert '`--max-requests N` to cap actual send attempts for one command invocation' in upgrade
+assert 'Recovery is not automatic resume' in upgrade
+assert '--response-store DIR --response-mode cache|record|replay --response-namespace NAME --model-generation NAME' in upgrade
+for option in ('response-max-bytes', 'response-max-entries', 'response-max-age'):
+    assert f'`--{option}`' in upgrade, option
+assert 'No environment variable enables retention' in upgrade
+assert 'Strict replay needs no provider key and never falls back to a live call' in upgrade
+assert 'new store does not import old cache folders' in upgrade
 assert '`THINKTHEN_URL` sets only the System One address' in upgrade
 assert 'OpenAI reads `OPENAI_BASE_URL`' in upgrade
 assert '`THINKTHEN_MODEL` applies only to commands' in upgrade

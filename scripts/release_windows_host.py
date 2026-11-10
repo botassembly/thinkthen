@@ -204,10 +204,10 @@ def native():
     print('release: native Windows runtime preparation complete; installed checks remain mandatory')
 
 
-def prepare_wine():
-    # Wine runs only the x64 command and C smoke consumers.
+def prepare_cross_build_tools():
+    # CMake and Ninja remain build prerequisites; execution uses native Windows.
     run('sudo', 'apt-get', 'update')
-    run('sudo', 'apt-get', 'install', '-y', '--no-install-recommends', 'wine64', 'wine', 'cmake', 'ninja-build')
+    run('sudo', 'apt-get', 'install', '-y', '--no-install-recommends', 'cmake', 'ninja-build')
 
 
 def prepare():
@@ -226,7 +226,7 @@ def prepare():
         run('sudo', 'tee', '/etc/apt/sources.list.d/thinkthen-llvm.list', input='deb [signed-by=/usr/share/keyrings/thinkthen-llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main\n', text=True)
         run('sudo', 'apt-get', 'update')
         run('sudo', 'apt-get', 'install', '-y', 'clang-21', 'lld-21', 'llvm-21', 'llvm-21-tools')
-    prepare_wine()
+    prepare_cross_build_tools()
     prepared('sh', '-eu', '-c', 'for tool in clang-cl lld-link llvm-readobj llvm-lib-21 llvm-rc-21; do command -v "$tool"; done')
     pins = selections()
     prepared('scripts/release-windows-prepare', 'inputs')

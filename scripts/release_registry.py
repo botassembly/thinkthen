@@ -124,7 +124,8 @@ def nuget(libraries, destination, scratch, notices):
                        DOTNET_CLI_HOME=str(scratch / 'dotnet-home'),
                        NUGET_PACKAGES=str(scratch / 'nuget-build-cache'),
                        DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
-                       DOTNET_GENERATE_ASPNET_CERTIFICATE='false')
+                       DOTNET_GENERATE_ASPNET_CERTIFICATE='false',
+                       DOTNET_CLI_USE_MSBUILD_SERVER='0', UseSharedCompilation='false')
     run('dotnet', 'pack', ROOT / 'sdk/csharp/ThinkThen.csproj', '-c', 'Release',
         '--configfile', config, '--artifacts-path', scratch / 'dotnet', '-o', destination,
         '-p:Version=' + version(), '-p:DebugType=None', '-p:DebugSymbols=false',

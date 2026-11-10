@@ -15,7 +15,7 @@ use thinkthen::{
 };
 
 #[derive(Debug)]
-struct NativeClient(RefCell<Option<Engine>>);
+struct NativeClient(RefCell<Option<Engine>>, RefCell<Option<thinkthen::Usage>>);
 
 #[derive(Debug)]
 struct NativeCall(RefCell<Option<Call>>);
@@ -52,7 +52,9 @@ fn r_client(settings: &str) -> List {
     match Settings::from_json(settings)
         .and_then(|settings| settings.engine(|name| std::env::var(name).ok()))
     {
-        Ok(client) => list!(value = ExternalPtr::new(NativeClient(RefCell::new(Some(client))))),
+        Ok(client) => list!(
+            value = ExternalPtr::new(NativeClient(RefCell::new(Some(client)), RefCell::new(None)))
+        ),
         Err(error) => failure(error),
     }
 }
@@ -60,7 +62,30 @@ fn r_client(settings: &str) -> List {
 /// Release this client's engine; calls already opened retain their own engine.
 #[extendr]
 fn r_client_close(client: ExternalPtr<NativeClient>) {
-    client.0.borrow_mut().take();
+    if let Some(engine) = client.0.borrow_mut().take() {
+        *client.1.borrow_mut() = Some(engine.usage());
+    }
+}
+
+/// Copy cumulative usage without retaining the engine after close.
+#[extendr]
+fn r_client_usage(client: ExternalPtr<NativeClient>) -> List {
+    let result = if let Some(engine) = client.0.borrow().as_ref() {
+        serde_json::to_string(&engine.usage()).map_err(|_| thinkthen::native::internal_error())
+    } else {
+        client
+            .1
+            .borrow()
+            .as_ref()
+            .ok_or_else(thinkthen::native::internal_error)
+            .and_then(|usage| {
+                serde_json::to_string(usage).map_err(|_| thinkthen::native::internal_error())
+            })
+    };
+    match result {
+        Ok(value) => list!(value = value),
+        Err(error) => failure(error),
+    }
 }
 
 /// Return immutable canonical snapshots from public shared admission.
@@ -291,6 +316,7 @@ extendr_module! {
     mod thinkthen;
     fn r_admit;
     fn r_client_close;
+    fn r_client_usage;
     fn r_cancel_release;
     fn r_settings_conversion_error;
     fn r_question_conversion_error;

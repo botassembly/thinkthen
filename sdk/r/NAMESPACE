@@ -1,5 +1,7 @@
 useDynLib(thinkthen, .registration = TRUE)
 export(tt_client)
+export(tt_response_store)
+export(tt_usage)
 export(tt_question)
 export(tt_answer)
 export(tt_bind)

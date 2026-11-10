@@ -67,6 +67,9 @@ if [ "$shared_abi" = 1 ]; then
     scripts/ruby-dev-prepare
     npm --prefix sdk/typescript ci --ignore-scripts --no-audit --no-fund
 fi
+case "$(uname -s)" in
+    Linux) python3 scripts/installer-test --prepare-fish ;;
+esac
 export CARGO_NET_OFFLINE=true UV_OFFLINE=1 npm_config_offline=true
 # Every selected slice runs even if another fails. Exit 77 is also a failure.
 failed=

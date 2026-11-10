@@ -152,67 +152,68 @@ impl BackendTable {
             .filter(|name| !name.is_empty())
     }
 
-    pub(crate) fn resolve_direct(
+    pub(crate) fn resolve_route(
         &self,
         name: &str,
         url: Option<&str>,
         model: Option<&str>,
-        api_key: Option<&Key>,
-        variable: impl Fn(&str) -> Option<String>,
-    ) -> Result<Backend, Error> {
-        self.resolve_options(name, url, model, api_key, variable)
-    }
-
-    fn resolve_options(
-        &self,
-        name: &str,
-        url: Option<&str>,
-        model: Option<&str>,
-        api_key: Option<&Key>,
         variable: impl Fn(&str) -> Option<String>,
     ) -> Result<Backend, Error> {
         let (entry, model) = self.selected(name, model)?;
-        let Some(adapter) = entry.adapter else {
-            return Ok(Backend {
-                name: entry.name.clone(),
-                backend_name: name.parse()?,
-                remote: None,
-                model: entry.default_model.clone(),
-                limits: entry.limits,
-            });
-        };
-        let base = url
-            .map(str::to_owned)
-            .or_else(|| {
-                entry
-                    .address_variables
-                    .iter()
-                    .find_map(|name| variable(name))
+        let remote = if let Some(adapter) = entry.adapter {
+            let base = url
+                .map(str::to_owned)
+                .or_else(|| {
+                    entry
+                        .address_variables
+                        .iter()
+                        .find_map(|name| variable(name))
+                })
+                .unwrap_or_else(|| entry.address.clone());
+            validate_url(&base)?;
+            Some(Remote {
+                base,
+                key: None,
+                adapter,
             })
-            .unwrap_or_else(|| entry.address.clone());
-        validate_url(&base)?;
-        let key = api_key
-            .cloned()
-            .or_else(|| variable(&entry.key_variable).as_deref().and_then(Key::new))
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::KeyMissing,
-                    crate::core::diagnostic::requirement(
-                        "api_key",
-                        &format!("a credential in {}", entry.key_variable),
-                        "an unset or blank credential (contents redacted)",
-                    ),
-                )
-            })?;
-        let model = model.to_owned();
-        let limits = entry.limits;
+        } else {
+            None
+        };
         Ok(Backend {
             name: entry.name.clone(),
             backend_name: name.parse()?,
-            remote: Some(Remote { base, key, adapter }),
-            model,
-            limits,
+            remote,
+            model: model.to_owned(),
+            limits: entry.limits,
         })
+    }
+
+    pub(crate) fn authorize(
+        &self,
+        backend: &mut Backend,
+        api_key: Option<&Key>,
+        variable: impl Fn(&str) -> Option<String>,
+    ) -> Result<(), Error> {
+        let Some(remote) = backend.remote.as_mut() else {
+            return Ok(());
+        };
+        let (entry, _) = self.selected(&backend.name, None)?;
+        remote.key = Some(
+            api_key
+                .cloned()
+                .or_else(|| variable(&entry.key_variable).as_deref().and_then(Key::new))
+                .ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::KeyMissing,
+                        crate::core::diagnostic::requirement(
+                            "api_key",
+                            &format!("a credential in {}", entry.key_variable),
+                            "an unset or blank credential (contents redacted)",
+                        ),
+                    )
+                })?,
+        );
+        Ok(())
     }
 
     /// Select a backend and effective model without resolving credentials or addresses.
@@ -270,7 +271,7 @@ pub(crate) struct Backend {
 #[derive(Debug, Clone)]
 pub(crate) struct Remote {
     base: String,
-    pub(crate) key: Key,
+    pub(crate) key: Option<Key>,
     pub(crate) adapter: Adapter,
 }
 

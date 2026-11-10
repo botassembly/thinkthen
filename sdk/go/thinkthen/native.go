@@ -78,6 +78,19 @@ func takeError(value *C.thinkthen_error) error {
 type nativeClient struct{ ptr *C.thinkthen_client }
 type nativeCall struct{ ptr *C.thinkthen_call }
 
+func (c nativeClient) usage() (Usage, error) {
+	var buffer C.thinkthen_buffer
+	e := C.thinkthen_error{struct_size: C.uint32_t(C.sizeof_thinkthen_error)}
+	if C.tt_client_usage(c.ptr, &buffer, &e) != C.THINKTHEN_OK {
+		return Usage{}, takeError(&e)
+	}
+	defer C.tt_buffer_free(&buffer)
+	var usage Usage
+	if err := json.Unmarshal(copyBuffer(buffer), &usage); err != nil {
+		return Usage{}, abiError()
+	}
+	return usage, nil
+}
 func (c nativeClient) free() { C.tt_client_free(c.ptr) }
 func (c nativeCall) send(record wireRecord) error {
 	e := C.thinkthen_error{struct_size: C.uint32_t(C.sizeof_thinkthen_error)}

@@ -26,6 +26,7 @@ pub(crate) enum Reply {
     SystemOne(systemone::Reply),
     OpenAi(openai::Reply),
     Stub,
+    Saved(Vec<AskAnswer>),
 }
 
 impl Adapter {
@@ -108,6 +109,12 @@ impl Reply {
             Self::SystemOne(reply) => reply.read(place, ask),
             Self::OpenAi(reply) => reply.read(place, ask),
             Self::Stub => stub::answer(stub_key, ask),
+            Self::Saved(answers) => answers.get(place).cloned().ok_or_else(|| {
+                Error::new(
+                    crate::core::ErrorKind::Reply,
+                    "the stored reply is missing an answer",
+                )
+            }),
         }
     }
 }

@@ -177,3 +177,40 @@ if $PROGRAM_NAME == __FILE__
   end
   puts "Ruby interface public stub cases passed"
 end
+
+# Feature: usage is an immutable independent value and remains readable after close.
+def ruby_usage
+  raises(ThinkThen::UsageError) { ThinkThen::Client.new(backend: :stub, max_requests: -1) }
+  client = ThinkThen::Client.new(backend: :stub, max_requests: 0)
+  before = client.usage
+  equal(0, before.attempts, "stub has no remote attempts")
+  equal(0, before.cache_hits, "cache metrics translate independently")
+  equal(0, before.replay_hits, "replay metrics translate independently")
+  store = ThinkThen::ResponseStore.new(path: "unused-private-store", mode: :replay, namespace: "tests", model_generation: "v1")
+  assert(store.frozen?, "response-store configuration is immutable")
+  assert(!store.to_h.key?("max_bytes"), "unspecified bounds remain absent")
+  raises(ThinkThen::UsageError) { ThinkThen::Client.new(backend: :stub, response_store: store) }
+  equal(0, before.active_calls, "new client has no active calls")
+  equal(0, before.input_tokens.reported, "stub input usage is known zero")
+  assert(before.frozen? && before.input_tokens.frozen?, "snapshot values are immutable")
+  client.decide("Ready?", "record")
+  client.close
+  Backend.open("--stress", "healthy") do |backend|
+    remote = ThinkThen::Client.new(backend: :systemone, url: backend.url, api_key: "synthetic-loopback-key")
+    remote.decide("Ready?", "record")
+    used = remote.usage
+    equal(1, used.attempts, "snapshot translates a remote attempt")
+    equal(1, used.responses, "snapshot translates a received response")
+    assert(used.request_body_bytes > 0, "snapshot retains encoded byte count")
+    remote.close
+    equal(used.attempts, remote.usage.attempts, "closed copy preserves paid attempts")
+  ensure
+    remote&.close
+  end
+  equal(0, client.usage.active_calls, "owned calls settle before close snapshot")
+  equal(0, client.usage.attempts, "closed client retains usage without native access")
+  equal(0, before.responses, "old copy remains independent")
+  client.close
+ensure
+  client&.close
+end

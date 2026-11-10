@@ -46,12 +46,12 @@ const route = (rel) => `/reference/${rel.replace(/(index)?\.mdx?$/, '').replace(
 const put = (rel, front, body) => pages.set(rel, `${fm(front)}\n${linkTerms(body.trim(), route(rel))}\n`);
 
 // Reuse the release's own limits instead of keeping a second version of its findings.
-const releaseSource = fs.readFileSync(path.join(REPO, 'scripts/release_install.py'), 'utf8');
-const releaseLimits = releaseSource.match(/limits = r"""([\s\S]*?)"""/)?.[1];
-if (!releaseLimits) throw new Error('release_install.py: cannot find release limits');
+const releaseSource = fs.readFileSync(path.join(OUT, 'release-notes.mdx'), 'utf8');
+const releaseLimits = releaseSource.split('\n## Known limits\n')[1]?.split('\n## ')[0].trim();
+if (!releaseLimits?.startsWith('| Limit |')) throw new Error('release-notes.mdx: cannot find known-limits table');
 const limitLines = releaseLimits.split('\n');
 // New release notes keep precise observations in the canonical resource document.
-// Older source revisions still carry that same table inside release_install.py.
+// The release table remains the fallback for source revisions without that document.
 const observationsFile = path.join(REPO, 'docs/resource-observations.md');
 const resourceLines = (fs.existsSync(observationsFile) ? fs.readFileSync(observationsFile, 'utf8') : releaseLimits).split('\n');
 const memoryRows = resourceLines.filter((line) => /^\| .*memory/.test(line));

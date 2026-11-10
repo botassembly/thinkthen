@@ -1,9 +1,9 @@
 // Generated native requirement. Do not edit.
-export const ABI_VERSION = 131074;
+export const ABI_VERSION = 131077;
 export const ABI_VERSION_EXPORT = "abiVersion";
 export const ABI_CODE = "usage.abi";
 export const ABI_MESSAGE = "the native ABI is incompatible";
-export const ABI_EXPORTS = ["Client","Client.prototype.close","Client.prototype.start","Client.prototype.startFinite","Operation","Operation.prototype.cancel","Operation.prototype.close","Operation.prototype.reference","Operation.prototype.unreference","abiVersion","parseToolbox","rejectCancellation","rejectNonFiniteJson","rejectQuestionConversion","rejectRecordKind","rejectSettingsConversion","serializeToolbox"];
+export const ABI_EXPORTS = ["Client","Client.prototype.beginClose","Client.prototype.close","Client.prototype.settledUsage","Client.prototype.start","Client.prototype.startFinite","Client.prototype.usage","Operation","Operation.prototype.cancel","Operation.prototype.close","Operation.prototype.reference","Operation.prototype.unreference","abiVersion","parseToolbox","rejectCancellation","rejectNonFiniteJson","rejectQuestionConversion","rejectRecordKind","rejectSettingsConversion","serializeToolbox"];
 /** @type {Readonly<Record<number, string>>} */
 export const FUNCTION_NAMES = Object.freeze({
     "1": "decide",
@@ -85,5 +85,13 @@ export const CODE_NAMES = Object.freeze({
     "4001": "local.cancelled",
     "4002": "local.io",
     "4003": "local.toolbox",
+    "4004": "local.accounting",
+    "4005": "local.request-limit",
+    "4006": "local.response-store",
+    "4007": "local.store-corrupt",
+    "4008": "local.store-format",
+    "4009": "local.store-answer",
+    "4010": "local.replay-miss",
+    "4011": "local.store-quota",
     "5001": "internal.bug",
 });

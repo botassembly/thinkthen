@@ -42,7 +42,7 @@ Not sure: a double charge might be a refund request, or might not. Send not sure
 
 <Example id="decide-why" />
 
-`probability` is the chance of yes. 0.7 falls between the bars of 0.2 and 0.8, so decide is not sure. [JSON output](/reference/json-output/) lists every field.
+`probability` is the backend's estimate of yes. 0.7 falls between the bars of 0.2 and 0.8, so decide is not sure. [JSON output](/reference/json-output/) lists every field.
 
 </details>
 
@@ -55,7 +55,7 @@ With one bar, `--threshold`, decide always says yes or no. Raise the bar to 0.8 
 
 <Example id="decide-bar" />
 
-The default bar is 0.5. Lower it to say yes more often. Raise it to say yes only when the model is sure.
+The default bar is 0.5. Lower it to say yes more often. Raise it to require a larger estimate for yes. See [interpreting probability](/reference/json-output/#interpreting-probability) for what these estimates mean.
 
 </details>
 

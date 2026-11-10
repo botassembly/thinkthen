@@ -86,7 +86,7 @@ fn plain_and_flat_questions_share_identity_and_required_lists() {
 }
 #[test]
 fn sql_policy_and_forbidden_fields_precede_environment_access() {
-    for field in ["url", "api_key", "key_source"] {
+    for field in ["url", "api_key", "key_source", "max_requests"] {
         let settings = format!("{{\"{field}\":null}}");
         let error =
             thinkthen_sql::client(&settings, |_| panic!("invalid settings read environment"))

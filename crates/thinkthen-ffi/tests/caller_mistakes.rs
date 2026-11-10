@@ -55,6 +55,10 @@ fn a_null_handle_is_an_abi_error_at_every_export_that_can_report_one() {
     }
     let (request, len) = (REQUEST.as_ptr(), REQUEST.len());
     refused! {
+        thinkthen_client_usage(none(), &mut Buffer::default());
+        thinkthen_client_usage_settled(none(), &mut Buffer::default());
+        thinkthen_client_usage_values(none(), &mut HostUsage::default());
+        thinkthen_client_usage_values_settled(none(), &mut HostUsage::default());
         thinkthen_call_open_question(none(), question, none(), CODE_POINTS, &mut empty());
         thinkthen_call_open_question(client, none(), none(), CODE_POINTS, &mut empty());
         thinkthen_call_open_json(none(), request, len, CODE_POINTS, &mut empty());

@@ -78,12 +78,14 @@ internal static partial class Program
         if (args is [var construction, "--stub-only"])
         {
             InterfaceCases();
+            await UsageCases();
             await Construction(construction);
             return;
         }
         Check(args.Length == 3, "supply construction file, canonical conformance directory and loopback executable");
         InterfaceCases();
         await InterfaceNativeCases();
+        await UsageCases();
         await Construction(args[0]);
         await AdmissionCases(args[1]);
         await Conformance(Path.Combine(args[1], "typed"), args[2]);

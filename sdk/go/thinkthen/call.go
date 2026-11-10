@@ -11,8 +11,10 @@ import (
 
 // Client admits settings once and owns independent concurrent calls.
 type Client struct {
-	mu     sync.Mutex
-	native *nativeClient
+	mu         sync.Mutex
+	native     *nativeClient
+	finalUsage *Usage
+	usageError error
 }
 
 // New opens a client using cfg, with zero values selecting engine defaults.
@@ -32,10 +34,15 @@ func (c *Client) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.native != nil {
+		usage, err := c.native.usage()
+		c.usageError = err
+		if err == nil {
+			c.finalUsage = &usage
+		}
 		c.native.free()
 		c.native = nil
 	}
-	return nil
+	return c.usageError
 }
 func (c *Client) open(ctx context.Context, q question, input Input) (nativeCall, error) {
 	if ctx == nil {

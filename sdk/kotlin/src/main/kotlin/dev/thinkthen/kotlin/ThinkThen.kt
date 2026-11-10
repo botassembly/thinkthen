@@ -31,6 +31,8 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
     public val settings: Settings = Settings(SettingsBuilder().apply(build))
     @PublishedApi internal val recordJson: Json get() = settings.json
     private val driver: DriverClient
+    /** Cumulative client usage, also available after close. */
+    public val usage: Usage get() = translate { driver.usage() }.kotlinUsage()
     private val collectors = mutableSetOf<Job>()
     private var closed = false
     init {

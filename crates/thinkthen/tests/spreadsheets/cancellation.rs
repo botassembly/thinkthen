@@ -57,7 +57,27 @@ fn cancellation_during_an_open_request_publishes_nothing() {
         assert!(output.stdout.is_empty());
         assert!(closed.recv().unwrap().is_ok());
         assert_eq!(fs::read(&input).unwrap(), original);
-        assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
+        assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 2);
+        let journal = fs::read_dir(directory.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .find(|path| {
+                path.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .contains(".recovery-")
+            })
+            .unwrap();
+        let recovered = support::command()
+            .arg("recover")
+            .arg(journal)
+            .output()
+            .unwrap();
+        assert_eq!(recovered.status.code(), Some(0), "{recovered:?}");
+        assert!(recovered.stdout.is_empty());
+        let summary: serde_json::Value = serde_json::from_slice(&recovered.stderr).unwrap();
+        assert_eq!(summary["admitted"], 2);
+        assert_eq!(summary["missing_ranges"], serde_json::json!([[1, 2]]));
     }
 }
 
@@ -156,11 +176,49 @@ fn cancellation_after_backup_removes_only_the_pending_publication() {
             assert!(output.stdout.is_empty());
             assert_eq!(fs::read(&input).unwrap(), original);
             assert_eq!(fs::read(prior_backup).unwrap(), b"older backup");
-            assert_eq!(
-                fs::read_dir(root).unwrap().count(),
-                2,
-                "an output, provisional backup, lock or spool survived cancellation"
-            );
+            let paths: Vec<_> = fs::read_dir(root)
+                .unwrap()
+                .map(|entry| entry.unwrap().path())
+                .collect();
+            let journal = paths
+                .iter()
+                .find(|path| {
+                    path.file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .contains(".recovery-")
+                })
+                .unwrap();
+            let recovered = support::command()
+                .arg("recover")
+                .arg(journal)
+                .output()
+                .unwrap();
+            assert_eq!(recovered.status.code(), Some(0), "{recovered:?}");
+            let rows: Vec<serde_json::Value> = String::from_utf8(recovered.stdout)
+                .unwrap()
+                .lines()
+                .map(|line| serde_json::from_str(line).unwrap())
+                .collect();
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0]["status"], "answered");
+            assert_eq!(rows[0]["answer"], true);
+            let summary: serde_json::Value = serde_json::from_slice(&recovered.stderr).unwrap();
+            assert_eq!(summary["committed"], 1);
+            if !forced {
+                let kept = summary["completed_output"]
+                    .as_str()
+                    .expect("recovery locates completed unpublished output");
+                assert!(std::path::Path::new(kept).is_file());
+                assert!(
+                    paths.iter().any(|path| path
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .contains(".thinkthen")),
+                    "finished unpublished output was lost: {paths:?}"
+                );
+            }
         }));
         if let Err(failure) = result {
             let child_status = child.as_mut().map(|process| process.try_wait());

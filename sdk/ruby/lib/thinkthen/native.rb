@@ -92,6 +92,8 @@ module ThinkThen
       attach_function :thinkthen_question_conversion_error, [:pointer], :int32
       attach_function :thinkthen_cancelled_error, [:pointer], :int32
       attach_function :thinkthen_call_send_invalid, [:pointer, :pointer], :int32, blocking: true
+      attach_function :thinkthen_client_usage, [:pointer, :pointer, :pointer], :int32
+      attach_function :thinkthen_client_usage_settled, [:pointer, :pointer, :pointer], :int32, blocking: true
       attach_function :thinkthen_client_free, [:pointer], :void
       attach_function :thinkthen_call_open_records_json,
                       [:pointer, :pointer, :size_t, :pointer, :size_t, :size_t, :uint32, :pointer, :pointer], :int32, blocking: true
@@ -269,6 +271,25 @@ module ThinkThen
       bytes = view[:len].zero? ? +"" : view[:data].read_string_length(view[:len])
       bytes.force_encoding(Encoding::UTF_8)
       kind == "text" ? bytes : parse(bytes)
+    end
+
+    def self.usage(pointer, settled: false)
+      output = Buffer.new
+      checked do |error|
+        settled ? thinkthen_client_usage_settled(pointer, output, error) : thinkthen_client_usage(pointer, output, error)
+      end
+      fields = JSON.parse(copy(output), symbolize_names: true)
+      input = fields.fetch(:input_tokens)
+      output_tokens = fields.fetch(:output_tokens)
+      Usage.new(attempts: fields.fetch(:attempts), responses: fields.fetch(:responses),
+                status_retries: fields.fetch(:status_retries), connection_retries: fields.fetch(:connection_retries),
+                request_body_bytes: fields.fetch(:request_body_bytes), active_attempts: fields.fetch(:active_attempts),
+                active_calls: fields.fetch(:active_calls),
+                cache_hits: fields.fetch(:cache_hits), replay_hits: fields.fetch(:replay_hits),
+                input_tokens: TokenUsage.new(reported: input.fetch(:reported), unknown_attempts: input.fetch(:unknown_attempts)),
+                output_tokens: TokenUsage.new(reported: output_tokens.fetch(:reported), unknown_attempts: output_tokens.fetch(:unknown_attempts)))
+    ensure
+      thinkthen_buffer_free(output) if output
     end
 
     def self.copy(buffer)

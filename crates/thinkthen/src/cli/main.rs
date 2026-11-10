@@ -1,4 +1,6 @@
 //! The command translates shell conventions to the typed library.
+mod audit;
+mod diff;
 mod execute;
 mod grammar;
 mod help;
@@ -7,6 +9,7 @@ mod invocation;
 mod jsonl;
 mod options;
 mod question_options;
+mod recover;
 mod render;
 mod saved_run;
 mod syntax;
@@ -41,6 +44,25 @@ pub(crate) fn main() -> ExitCode {
             Err(_) => ExitCode::from(5),
         };
     }
+    let usage_requested = match options::boolean("usage", options::explicit(args, "usage")) {
+        Ok(value) => value.unwrap_or(false),
+        Err(error) => {
+            report(&error);
+            return ExitCode::from(2);
+        }
+    };
+    let allowance = if matches!(function, "audit" | "diff" | "recover") {
+        None
+    } else {
+        match options::request_limit(args) {
+            Ok(limit) => limit,
+            Err(error) => {
+                report(&error);
+                return ExitCode::from(2);
+            }
+        }
+    };
+    let account = crate::usage::Account::new(allowance);
     let cancel = Cancel::default();
     let signal = cancel.clone();
     let interrupt_notice = Arc::new(Mutex::new(None));
@@ -71,7 +93,31 @@ pub(crate) fn main() -> ExitCode {
         });
     })
     .map_err(|_| local("the interrupt handler could not be installed"))
-    .and_then(|()| execute::invocation(function, args, &cancel));
+    .and_then(|()| execute::invocation(function, args, &cancel, &account));
+    account.settle();
+    if usage_requested && !options::switch(args, "quiet").unwrap_or(false) {
+        #[derive(serde::Serialize)]
+        struct Summary {
+            kind: &'static str,
+            status: &'static str,
+            usage: crate::Usage,
+        }
+        let status = if cancel.is_cancelled() {
+            "cancelled"
+        } else if matches!(&result, Ok(0 | 1 | 3)) {
+            "completed"
+        } else {
+            "failed"
+        };
+        let summary = Summary {
+            kind: "thinkthen.usage/1",
+            status,
+            usage: account.snapshot(),
+        };
+        if let Ok(text) = serde_json::to_string(&summary) {
+            let _ = writeln!(io::stderr().lock(), "{text}");
+        }
+    }
     match result {
         _ if cancel.is_cancelled() => {
             let notice = interrupt_notice

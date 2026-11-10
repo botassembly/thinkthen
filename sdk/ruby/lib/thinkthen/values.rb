@@ -29,6 +29,21 @@ module ThinkThen
       klass.members.to_h { |key| [key.to_s, Values.wire(public_send(key))] }.reject { |_, value| value.nil? }
     end
   end
+  # Explicit private local response storage; optional bounds use engine defaults.
+  ResponseStore = Data.define(:path, :mode, :namespace, :model_generation, :max_bytes, :max_entries, :max_age, :busy_timeout_ms)
+  class ResponseStore
+    include WireValue
+    def initialize(path:, mode:, namespace:, model_generation:, max_bytes: nil, max_entries: nil, max_age: nil, busy_timeout_ms: nil)
+      super(path: Values.freeze_copy(path), mode: mode, namespace: Values.freeze_copy(namespace),
+            model_generation: Values.freeze_copy(model_generation), max_bytes: max_bytes,
+            max_entries: max_entries, max_age: max_age, busy_timeout_ms: busy_timeout_ms)
+    end
+  end
+  # Provider-reported token sum (nil on overflow), with finished unknown attempts.
+  TokenUsage = Data.define(:reported, :unknown_attempts)
+  # An immutable copied cumulative client snapshot, independent of native ownership.
+  Usage = Data.define(:attempts, :responses, :status_retries, :connection_retries,
+                      :request_body_bytes, :active_attempts, :active_calls, :cache_hits, :replay_hits, :input_tokens, :output_tokens)
   # The question identity, backend, model and optional execution name.
   Source = Data.define(:question_identity, :backend, :model, :name)
   class Source

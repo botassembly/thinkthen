@@ -1,5 +1,5 @@
 {
-  "abi_version": 131074,
+  "abi_version": 131077,
   "contract": "contract.json",
   "error": {
     "code": "usage.abi",
@@ -106,6 +106,30 @@
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_open_json(const char *settings, size_t len, struct thinkthen_client **out, struct thinkthen_error *error);",
       "name": "thinkthen_client_open_json"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_usage(const struct thinkthen_client *client, struct thinkthen_buffer *out, struct thinkthen_error *error);",
+      "name": "thinkthen_client_usage"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_usage_settled(const struct thinkthen_client *client, struct thinkthen_buffer *out, struct thinkthen_error *error);",
+      "name": "thinkthen_client_usage_settled"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_usage_v2_values(const struct thinkthen_client *client, struct thinkthen_usage_v2 *out, struct thinkthen_error *error);",
+      "name": "thinkthen_client_usage_v2_values"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_usage_v2_values_settled(const struct thinkthen_client *client, struct thinkthen_usage_v2 *out, struct thinkthen_error *error);",
+      "name": "thinkthen_client_usage_v2_values_settled"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_usage_values(const struct thinkthen_client *client, struct thinkthen_usage *out, struct thinkthen_error *error);",
+      "name": "thinkthen_client_usage_values"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_client_usage_values_settled(const struct thinkthen_client *client, struct thinkthen_usage *out, struct thinkthen_error *error);",
+      "name": "thinkthen_client_usage_values_settled"
     },
     {
       "declaration": "int32_t thinkthen_code_at(size_t index);",
@@ -300,8 +324,16 @@
       "name": "thinkthen_settings_set_batch"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_settings_set_max_requests(struct thinkthen_settings *settings, uint64_t max_requests, struct thinkthen_error *error);",
+      "name": "thinkthen_settings_set_max_requests"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_settings_set_model(struct thinkthen_settings *settings, const char *data, size_t len, struct thinkthen_error *error);",
       "name": "thinkthen_settings_set_model"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_settings_set_response_store(struct thinkthen_settings *settings, const struct thinkthen_response_store_config *config, struct thinkthen_error *error);",
+      "name": "thinkthen_settings_set_response_store"
     },
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_settings_set_retry(struct thinkthen_settings *settings, uint32_t max_retries, uint64_t initial_backoff_ms, uint64_t attempt_timeout_ms, struct thinkthen_error *error);",

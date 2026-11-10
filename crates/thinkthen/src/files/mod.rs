@@ -1,35 +1,12 @@
 //! Read tabular field and append judgments without replacing existing cells.
 
-#[cfg(windows)]
-#[allow(unsafe_code, reason = "the standard library has no access-list call")]
-mod access_list;
-#[cfg(not(windows))]
-mod access_list {
-    //! Elsewhere the file mode does this job, so there is no list to carry.
-
-    use std::fs::File;
-    use std::io;
-    use std::path::Path;
-
-    #[derive(Debug)]
-    pub(crate) struct AccessList;
-
-    impl AccessList {
-        pub(crate) fn read(_file: &File) -> io::Result<Option<Self>> {
-            Ok(Some(Self))
-        }
-
-        pub(crate) fn apply(&self, _path: &Path) -> io::Result<()> {
-            Ok(())
-        }
-    }
-}
 mod admission;
 mod cells;
 mod cleanup;
 mod csv;
 mod lock;
 mod operation;
+pub(crate) mod recovery;
 mod spool;
 mod xlsx;
 mod xlsx_dates;
@@ -78,6 +55,15 @@ pub(crate) struct FileJob {
     into: Option<String>,
     output: FileOutput,
     details: bool,
+    recovery: Recovery,
+}
+
+#[derive(Debug, Default)]
+pub(crate) enum Recovery {
+    #[default]
+    Default,
+    Disabled,
+    Path(PathBuf),
 }
 
 /// The most failed rows a receipt names; `failed` counts them all.
@@ -90,6 +76,8 @@ pub(crate) struct FileReceipt {
     pub(crate) output: Option<PathBuf>,
     /// The original input retained before in-place publication.
     pub(crate) backup: Option<PathBuf>,
+    /// Completed answers remain owned until the command publishes its projection.
+    pub(crate) recovery: Option<recovery::Journal>,
     /// The first failed rows in input order, by source row number, at most
     /// [`NAMED_FAILURES`]. A row's failure is its first, including annotations.
     pub(crate) failures: Vec<(usize, Error)>,
@@ -204,7 +192,13 @@ impl FileJob {
             into,
             output,
             details: false,
+            recovery: Recovery::Default,
         })
+    }
+
+    pub(crate) fn recovery(mut self, recovery: Recovery) -> Self {
+        self.recovery = recovery;
+        self
     }
 
     /// Add status, probability, error, detail and source columns after each answer.

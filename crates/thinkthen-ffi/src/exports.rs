@@ -152,7 +152,8 @@ fn code_metadata(value: i32) -> Option<&'static (i32, std::ffi::CString, std::ff
 /// Open a client from settings, or from the environment when settings is NULL.
 ///
 /// With NULL settings, THINKTHEN_BACKEND picks the backend and the backend's own variables give
-/// the key and URL. The client copies the settings, so they may be freed at once. Returns
+/// the key and URL. THINKTHEN_MAX_REQUESTS supplies the client allowance only on this
+/// explicitly from-environment path. The client copies the settings, so they may be freed at once. Returns
 /// THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
 /// -THINKTHEN_CODE_USAGE_BACKEND for an unknown THINKTHEN_BACKEND,
 /// -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a key and none is set, or another
@@ -173,9 +174,10 @@ pub unsafe extern "C" fn thinkthen_client_open(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let settings = settings
-                .as_ref()
-                .map_or_else(Settings::default, |settings| settings.0.clone());
+            let settings = match settings.as_ref() {
+                Some(settings) => settings.0.clone(),
+                None => native::environment_settings(|name| std::env::var(name).ok())?,
+            };
             let engine = crate::engine(settings)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(THINKTHEN_OK)
@@ -240,6 +242,62 @@ pub unsafe extern "C" fn thinkthen_client_open_json(
             let settings = Settings::from_json(text(settings, len)?)?;
             let engine = crate::engine(settings)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
+            Ok(THINKTHEN_OK)
+        })
+    }
+}
+/// Copy cumulative client usage into an independently owned JSON buffer.
+///
+/// The snapshot remains valid after the client is freed. Active attempts are
+/// unresolved; this is client-wide accounting, not SQL statement accounting.
+/// Free the returned bytes with thinkthen_buffer_free.
+/// # Safety
+/// client is live, out is writable and empty, and error is NULL or initialized.
+/// No thread may free client until this function returns.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_client_usage(
+    client: *const ClientHandle,
+    out: *mut Buffer,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller lends a live client and exclusive output slots. */
+    unsafe {
+        operation(error, || {
+            out.write(Buffer::default());
+            let client = client
+                .as_ref()
+                .ok_or_else(|| native::argument_error(Code::UsageAbi))?;
+            let text =
+                serde_json::to_string(&client.0.usage()).map_err(|_| native::internal_error())?;
+            out.write(Buffer::new(text));
+            Ok(THINKTHEN_OK)
+        })
+    }
+}
+/// Wait for owned calls to settle and copy final cumulative client usage.
+///
+/// First stop admitting calls and cancel/free every owned unfinished call.
+/// Unlike thinkthen_client_usage, this waits for their engine workers to end.
+/// The returned JSON has the same independently owned format.
+/// # Safety
+/// client is live; no thread opens new calls or frees it during this function.
+/// out is writable and empty, and error is NULL or initialized.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_client_usage_settled(
+    client: *const ClientHandle,
+    out: *mut Buffer,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller lends a live client and exclusive output slots. */
+    unsafe {
+        operation(error, || {
+            out.write(Buffer::default());
+            let client = client
+                .as_ref()
+                .ok_or_else(|| native::argument_error(Code::UsageAbi))?;
+            let text = serde_json::to_string(&client.0.settled_usage())
+                .map_err(|_| native::internal_error())?;
+            out.write(Buffer::new(text));
             Ok(THINKTHEN_OK)
         })
     }

@@ -102,8 +102,12 @@ public sealed class ThinkThenOptions
     public ApiKey? ApiKey { get; set; }
     /// <summary>Sets the record batch size; null uses the engine default.</summary>
     public int? Batch { get; set; }
+    /// <summary>Limits client send attempts; null is unlimited, zero forbids sends.</summary>
+    public ulong? MaxRequests { get; set; }
     /// <summary>Sets retry options; null uses engine defaults.</summary>
     public RetryOptions? Retry { get; set; }
+    /// <summary>Explicit opt-in local response storage; null disables it.</summary>
+    public ResponseStoreOptions? ResponseStore { get; set; }
     /// <summary>Gets the json value.</summary>
     [JsonIgnore]
     public JsonSerializerOptions Json { get; set; } = new();

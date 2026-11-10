@@ -20,8 +20,21 @@ export type RecordInput = null | undefined | boolean | number | string | {
 export type Records<T extends RecordInput = RecordInput> = (Iterable<T> | AsyncIterable<T>) & object;
 /** JSON object keys or array indices used to select field. */
 export type KeyPath = readonly (string | number)[];
+/** Explicit local response storage, admitted by the shared engine. */
+export interface ResponseStoreOptions {
+  readonly path: string;
+  readonly mode: "cache" | "record" | "replay";
+  readonly namespace: string;
+  readonly modelGeneration: string;
+  readonly maxBytes?: number;
+  readonly maxEntries?: number;
+  readonly maxAge?: number;
+  readonly busyTimeoutMs?: number;
+}
 /** Backend settings admitted once when the client is constructed. */
 export interface ClientOptions {
+  /** Local storage is disabled unless explicitly configured. */
+  readonly responseStore?: ResponseStoreOptions | null;
   /** Select the service backend; otherwise use THINKTHEN_BACKEND, then systemone. */
   readonly backend?: Backend;
   /** Override the selected backend model. */
@@ -32,6 +45,8 @@ export interface ClientOptions {
   readonly apiKey?: string;
   /** Maximum records admitted to each request. */
   readonly batch?: number;
+  /** Client send allowance as an exact safe integer; zero forbids sends, omitted is unlimited. */
+  readonly maxRequests?: number | null;
   /** Configure bounded retries and attempt deadlines. */
   readonly retry?: {
   /** Maximum retries after the first attempt. */
@@ -444,12 +459,31 @@ export function rankStream<T extends RecordInput>(question: string, records: Rec
 /** Evaluate rank lazily and retain every outcome with its input position. */
 export function rankStream<T extends RecordInput>(question: RankQuestion, records: Records<T>, options?: SignalOptions): RowStream<RankRow<T>>;
 
+/** Provider-reported subtotal; null indicates overflow, unknownAttempts counts unavailable finished sends. */
+export interface TokenUsage { readonly reported: bigint | null; readonly unknownAttempts: bigint; }
+/** Immutable cumulative accounting for an explicit client, not an invoice. */
+export interface Usage {
+  readonly attempts: bigint;
+  readonly responses: bigint;
+  readonly statusRetries: bigint;
+  readonly connectionRetries: bigint;
+  readonly requestBodyBytes: bigint;
+  readonly activeAttempts: bigint;
+  readonly activeCalls: bigint;
+  readonly cacheHits: bigint;
+  readonly replayHits: bigint;
+  readonly inputTokens: TokenUsage;
+  readonly outputTokens: TokenUsage;
+}
+
 /** Reusable native engine client. Close it, or use await using, after its calls finish. */
 export declare class ThinkThen implements AsyncDisposable {
   /** Create an engine with explicit settings or the documented environment defaults. */
   constructor(options?: ClientOptions);
   /** Cancel active calls and release native resources; repeated closes are safe. */
   close(): Promise<void>;
+  /** Copy cumulative accounting; remains available after awaited close. */
+  usage(): Usage;
   /** Close the client when leaving an await using scope. */
   [Symbol.asyncDispose](): Promise<void>;
   /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
