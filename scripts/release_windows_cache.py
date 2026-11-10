@@ -85,10 +85,22 @@ def run_consumer(command, environment, *, cwd=None, timeout=600):
 
 def _control(environment, script, path, **values):
     powershell = Path(environment['SYSTEMROOT']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+    # A pwsh parent's module path hides Windows PowerShell's own Get-Acl,
+    # just as in the caller-token probe. Let this runtime select its modules.
+    selected = {key: value for key, value in (environment | values).items()
+                if key.upper() != 'PSMODULEPATH'}
     result = subprocess.run([powershell, '-NoProfile', '-NonInteractive', '-Command',
         "$ErrorActionPreference='Stop'; " + script],
-        env=environment | {'TT_CACHE_PATH': str(path)} | values, capture_output=True, text=True, check=True,
+        env=selected | {'TT_CACHE_PATH': str(path)}, capture_output=True, text=True, check=False,
         timeout=600)
+    if result.returncode:
+        detail = result.stderr or '<no stderr>'
+        for name, value in selected.items():
+            if value and any(word in name.upper() for word in ('KEY', 'TOKEN', 'SECRET', 'PASSWORD', 'CREDENTIAL')):
+                detail = detail.replace(value, '<redacted>')
+        detail = detail.encode('utf-8', errors='replace')[:4096].decode('utf-8', errors='replace')
+        raise RuntimeError(f'Windows ACL control failed for {path.name}: exit {result.returncode}; '
+                           f'stderr: {detail}') from None
     return result.stdout.strip()
 
 

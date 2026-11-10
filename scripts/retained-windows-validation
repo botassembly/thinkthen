@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Run the reviewed Windows harness against one authenticated retained package."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import runpy
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+import zipfile
+
+SOURCE = '2e8ccec301ee9f6a423c46157947f391e1e960d7'
+RUN, ATTEMPT, ARTIFACT = 42866225471, 1, 13792868034
+ZIP = '2ab30433a49c1116af89fe1789db3713aebbff8051b6898f5567ddd80b412c78'
+ARCHIVE = 'f7a8a20cffc8d7d936c11d826d39d2801587edc16698778dfdd3d4c546d6dc7e'
+OVERLAY = ('windows-cli-check', 'windows_caller_process.py', 'release_windows_cache.py',
+           'release_windows_sdks.py', 'long_path_scratch.py')
+
+
+def digest(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def admit(source, metadata, artifact, output):
+    if subprocess.check_output(['git', '-C', source, 'rev-parse', 'HEAD'], text=True).strip() != SOURCE:
+        raise ValueError('retained product source differs')
+    if subprocess.check_output(['git', '-C', source, 'status', '--porcelain'], text=True):
+        raise ValueError('retained product source is dirty before admission')
+    run, item, jobs = (metadata[key] for key in ('run', 'artifact', 'jobs'))
+    if (run['id'] != RUN or run['run_attempt'] != ATTEMPT or run['head_sha'] != SOURCE
+            or run['repository']['full_name'] != 'botassembly/thinkthen'
+            or run['path'] != '.github/workflows/release-prepare.yml'
+            or run['event'] != 'workflow_dispatch' or run['head_branch'] != 'main'
+            or item['id'] != ARTIFACT or item['expired'] or item['name'] != 'platform-windows-x86_64'
+            or item['workflow_run']['id'] != RUN or item['workflow_run']['head_sha'] != SOURCE
+            or item['digest'] != 'sha256:' + ZIP or digest(artifact) != ZIP):
+        raise ValueError('retained artifact association or ZIP digest differs')
+    producers = [job for job in jobs['jobs'] if job['run_id'] == RUN and job['run_attempt'] == ATTEMPT
+                 and job['name'] == 'qualification / build-windows (windows-x86_64, ubuntu-24.04)'
+                 and job['conclusion'] == 'success'
+                 and job['started_at'] <= item['created_at'] <= job['completed_at']]
+    if len(producers) != 1 or len(jobs['jobs']) >= 100:
+        raise ValueError('no unique successful artifact producer')
+    nested = output / 'platform.tar.gz'
+    with zipfile.ZipFile(artifact) as archive:
+        if archive.namelist() != ['thinkthen-0.2.0-windows-x86_64-packages.tar.gz']:
+            raise ValueError('unexpected retained artifact members')
+        with archive.open(archive.namelist()[0]) as original, nested.open('wb') as target:
+            shutil.copyfileobj(original, target)
+    if digest(nested) != ARCHIVE:
+        raise ValueError('retained nested archive digest differs')
+    with tarfile.open(nested) as archive:
+        archive.extractall(output / 'package', filter='data')
+    package = output / 'package/0.2.0/windows-x86_64'
+    sys.path.insert(0, str(source / 'scripts'))
+    from release_workflow import validate
+    from release_windows_check import inventory
+    validate(package, 'windows-x86_64', SOURCE)
+    build = inventory(package)
+    return package, build, producers[0]['id']
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ('source', 'harness', 'provenance', 'artifact', 'output'):
+        parser.add_argument('--' + name, type=Path, required=True)
+    args = parser.parse_args()
+    if os.name != 'nt':
+        parser.error('requires supported native Windows')
+    source, harness, output = args.source.resolve(), args.harness.resolve(), args.output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    package, build, producer = admit(source, json.loads(args.provenance.read_text()), args.artifact, output)
+    identity = dict(product_source=SOURCE, producer_run=RUN, producer_attempt=ATTEMPT,
+                    producer_job=producer, artifact_id=ARTIFACT, zip_sha256=ZIP, archive_sha256=ARCHIVE,
+                    harness_revision=subprocess.check_output(['git', '-C', harness, 'rev-parse', 'HEAD'], text=True).strip(),
+                    python=sys.version, python_sha256=digest(Path(sys.executable)), platform=platform.platform(),
+                    overlay={name: digest(harness / 'scripts' / name) for name in OVERLAY},
+                    package_inventory_sha256=digest(package / 'SHA256SUMS'), product_build=False,
+                    fixture_build=True, c_consumer_build=True, results=[])
+    def save():
+        (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n', encoding='utf-8')
+    save()
+    # Only reviewed harness files change. Package bytes and product source inputs remain named separately.
+    for name in OVERLAY:
+        shutil.copy2(harness / 'scripts' / name, source / 'scripts' / name)
+    from windows_caller_process import OwnedJob
+    from release_windows_host import environment
+    env = environment()
+    env.update(CARGO_TARGET_DIR=str(output / 'fixture-target'), CARGO_BUILD_JOBS='2',
+               RUSTFLAGS='-C target-feature=+crt-static')
+    env.pop('CARGO_ENCODED_RUSTFLAGS', None)
+    from release_rust import prepare
+    prepare()
+    def checked(command):
+        subprocess.run(list(map(str, command)), cwd=source, env=env, check=True, timeout=600)
+    checked(['cargo', 'fetch', '--locked'])
+    command = ['cargo', 'build', '--locked', '--offline', '--target', 'x86_64-pc-windows-msvc',
+               '-p', 'loopback', '--bin', 'loopback']
+    checked(command)
+    loopback = output / 'fixture-target/x86_64-pc-windows-msvc/debug/loopback.exe'
+    env['THINKTHEN_LOOPBACK'] = str(loopback)
+    fixture_inputs = subprocess.check_output(['git', '-C', source, 'ls-files', 'crates/loopback',
+        'crates/thinkthen/test-support/server', 'crates/thinkthen/src/engine/limits.rs',
+        'conformance/stress.json', '.cargo'], text=True).splitlines()
+    identity['fixture'] = dict(source=SOURCE, command=command, sha256=digest(loopback),
+        rustc=subprocess.check_output(['rustc', '-vV'], cwd=source, env=env, text=True),
+        compiler=subprocess.check_output(['clang-cl', '--version'], env=env, text=True),
+        compiler_sha256=digest(Path(shutil.which('clang-cl', path=env['PATH']))),
+        inputs={name: digest(source / name) for name in ('Cargo.lock', 'Cargo.toml', 'rust-toolchain.toml',
+                                                       '.cargo/config.toml') if (source / name).is_file()},
+        RUSTFLAGS=env['RUSTFLAGS'], CARGO_BUILD_JOBS=env['CARGO_BUILD_JOBS'],
+        fixture_sources={name: digest(source / name) for name in fixture_inputs})
+    binary = output / 'command'
+    with zipfile.ZipFile(package / build['packages']['command']) as archive:
+        archive.extractall(binary)
+    binary /= 'thinkthen.exe'
+    identity['command_sha256'] = digest(binary)
+    save()
+    commands = [(name, [sys.executable, source / 'scripts/windows-cli-check', '--binary', binary,
+                       '--case', name, '--diagnostics', output / name]) for name in runpy.run_path(str(source / 'scripts/windows-cli-check'))['CALLER_CASES']]
+    commands.append(('c', [sys.executable, '-c',
+        "import sys,json;sys.path.insert(0,sys.argv[1]);from release_windows_sdks import full;"
+        "from pathlib import Path;p=Path(sys.argv[2]);"
+        "full(p,json.loads((p/'build.json').read_text()),families=['c'])",
+        source / 'scripts', package]))
+    return exercise(commands, source, output, env, identity, save, OwnedJob)
+
+
+def exercise(commands, source, output, env, identity, save, owner_factory):
+    """Keep independent cases observable when another case cannot start or finish."""
+    for name, command in commands:
+        started = time.time()
+        with (output / (name + '.log')).open('wb') as log:
+            try:
+                with owner_factory() as owner:
+                    process = owner.start(list(map(str, command)), cwd=source, env=env,
+                                          stdout=log, stderr=subprocess.STDOUT)
+                    try:
+                        status = process.wait(timeout=900 if name == 'c' else 300)
+                    finally:
+                        owner.close()
+                        process.wait()
+            except Exception as error:  # noqa: BLE001 - retain independent case outcomes
+                status = 124 if isinstance(error, subprocess.TimeoutExpired) else 1
+                log.write(('Harness failure: ' + type(error).__name__ + '\n').encode())
+        identity['results'].append(dict(case=name, exit=status, started_at=started, completed_at=time.time()))
+        save()
+        print(name + ': exit=' + str(status), flush=True)
+        print((output / (name + '.log')).read_text(encoding='utf-8', errors='replace')[-16384:], flush=True)
+    return int(any(result['exit'] for result in identity['results']))
+
+
+if __name__ == '__main__':
+    sys.exit(main())
