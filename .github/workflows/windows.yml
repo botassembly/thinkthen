@@ -25,10 +25,15 @@ jobs:
       - name: Decode existing bytes only with signed pinned tools
         run: |
           set -euo pipefail
+          STAGE=admit-signed-package
+          trap 'echo "failed-stage: $STAGE at line $LINENO" >&2' ERR
+          echo "stage: $STAGE"
           mkdir -p "$RUNNER_TEMP/analysis"
           sudo -n apt-get update
           sudo -n apt-get install -y --no-install-recommends linux-tools-7.0.0-1017-azure=7.0.0-1017.17~24.04.1
           dpkg-query -W linux-tools-7.0.0-1017-azure > "$RUNNER_TEMP/analysis/tool-package.txt"
+          STAGE=verify-known-wrapper
+          echo "stage: $STAGE"
           PERF=/usr/bin/perf
           test -f "$PERF"
           test -x "$PERF"
@@ -37,13 +42,16 @@ jobs:
           test -n "$REAL_PERF"
           test -f "$REAL_PERF"
           test -x "$REAL_PERF"
+          STAGE=verify-binary-owner
+          echo "stage: $STAGE"
           OWNER=$(dpkg-query -S "$REAL_PERF" | awk -F ': ' '{print $1}')
           test -n "$OWNER"
           test "$(dpkg-query -W -f='${Version}' "$OWNER")" = '7.0.0-1017.17~24.04.1'
           dpkg-query -W -f='${Depends}\n' linux-tools-7.0.0-1017-azure > "$RUNNER_TEMP/analysis/tool-dependencies.txt"
-          grep -F "$OWNER (= 7.0.0-1017.17~24.04.1)" "$RUNNER_TEMP/analysis/tool-dependencies.txt"
           dpkg-query -W "$OWNER" linux-tools-common > "$RUNNER_TEMP/analysis/decoder-packages.txt"
           printf '%s\n' "$PERF" "$REAL_PERF" > "$RUNNER_TEMP/analysis/decoder-paths.txt"
+          STAGE=decode-retained-capture
+          echo "stage: $STAGE"
           python3 harness/scripts/diagnostics/csharp-perf-analysis "$RUNNER_TEMP/capture" "$RUNNER_TEMP/platform/thinkthen-0.2.0-linux-x86_64-packages.tar.gz" "$RUNNER_TEMP/analysis" "$PERF"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

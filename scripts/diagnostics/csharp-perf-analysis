@@ -4,6 +4,7 @@ import hashlib, io, json, os, re, shutil, subprocess, sys, tarfile, zipfile
 from pathlib import Path
 if len(sys.argv) != 5 or any(not s or not Path(s).is_absolute() for s in sys.argv[1:]):
     raise RuntimeError('require exactly four nonempty absolute paths')
+print('stage: validate-paths', flush=True)
 capture, platform, output, perf = map(Path, sys.argv[1:])
 if not capture.is_dir() or not platform.is_file() or not perf.is_file() or not os.access(perf, os.X_OK):
     raise RuntimeError('capture directory, archive file and executable regular perf file required')
@@ -13,8 +14,10 @@ def sha(p):
 def save(name, data): (output / name).write_text(json.dumps(data, indent=2) + '\n')
 env = dict(PATH='/usr/bin:/bin', HOME=str(output), LANG='C.UTF-8', DEBUGINFOD_URLS='')
 def run(args, name):
+    print('stage: ' + name, flush=True)
     with (output / name).open('w') as f, (output / (name + '.stderr')).open('w') as err:
         subprocess.run(args, env=env, stdout=f, stderr=err, check=True)
+print('stage: validate-retained-hashes-owner', flush=True)
 data = capture / 'perf.data'
 assert sha(data) == 'd77529ec6c29c0428d6c96ff745f98d1576940246ddb255ae62a068e1d43c4d4'
 assert data.stat().st_uid == os.getuid()
@@ -28,7 +31,9 @@ from release_downloads import fetch
 symfs = output.parent / 'symfs'
 original = symfs / 'home/runner/work/_temp/perf-bootstrap-work'
 sdk = original / 'sdk'; sdk.mkdir(parents=True)
+print('stage: extract-pinned-sdk-only', flush=True)
 with tarfile.open(fetch(sdk_archive(), output.parent / 'sdk.tar.gz')) as t: t.extractall(sdk, filter='data')
+print('stage: extract-final-package-only', flush=True)
 with tarfile.open(platform) as t:
     member, = [m for m in t.getmembers() if m.name.endswith('/csharp/Botassembly.ThinkThen.0.2.0.nupkg')]
     package = t.extractfile(member).read()
@@ -43,6 +48,7 @@ with zipfile.ZipFile(io.BytesIO(package)) as z:
 assert sha(native) == '9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435'
 for name, digest in [('libcoreclr.so','843b66a2b33a570537c779283b27f7c1f3ff5394e5a72436bf181c885d4cdfff'), ('libclrjit.so','fd4e672a34b28fb38d2b5f43d7c50d8b1892aebca97d41cfaccc1c8be3ee40e9')]:
     assert sha(sdk / 'shared/Microsoft.NETCore.App/10.0.14' / name) == digest
+print('stage: verify-recorded-buildids', flush=True)
 modules, missing, excluded = [], [], []
 for line in (output / 'buildids.txt').read_text().splitlines():
     buildid, path = line.split(maxsplit=1)
