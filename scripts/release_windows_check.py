@@ -61,7 +61,7 @@ def inventory(folder):
     return build
 
 
-def smoke(folder):
+def smoke(folder, *, core_only=False):
     folder = Path(folder).resolve()
     build = inventory(folder)
     with tempfile.TemporaryDirectory(prefix='thinkthen-windows-check-') as temporary:
@@ -120,6 +120,6 @@ def smoke(folder):
                      payload=encode_records([record]))
         assert json.loads(output) == expected
     print('Windows candidate: checked inventory; installed CLI and C ABI shared stub cases pass')
-    if os.name == 'nt':
+    if os.name == 'nt' and not core_only:
         from release_windows_sdks import full
         full(folder, build)

@@ -7,7 +7,7 @@ on:
         description: Select independent unfinished work without repeating earlier jobs
         type: choice
         default: initial
-        options: [initial, sdks, rust, remaining, ordinary-full, source-sdks]
+        options: [initial, sdks, rust, remaining, ordinary-full, source-sdks, windows-harness]
       smoke:
         description: Run bounded wiring or preparation checks only; never full qualification evidence
         type: boolean
@@ -21,6 +21,7 @@ env:
 
 jobs:
   validate:
+    if: inputs.batch != 'windows-harness'
     name: ${{ matrix.task }}
     strategy:
       fail-fast: false
@@ -124,4 +125,25 @@ jobs:
           name: linux-validation-${{ matrix.task }}-${{ inputs.smoke && 'smoke' || 'full' }}
           path: ${{ runner.temp }}/evidence/
           if-no-files-found: warn
+          retention-days: 7
+
+  qualification-harness:
+    if: inputs.batch == 'windows-harness'
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Prove process cleanup and ACL transactions without building products
+        shell: bash
+        run: python scripts/windows-qualification-proof "$RUNNER_TEMP/windows-qualification-proof"
+      - name: Preserve harness identity and every fixture result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-qualification-proof
+          path: ${{ runner.temp }}/windows-qualification-proof/
+          if-no-files-found: error
           retention-days: 7

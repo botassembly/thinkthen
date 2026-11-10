@@ -15,6 +15,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 
 
@@ -36,6 +37,82 @@ class SidAttributes(C.Structure):
     _fields_ = [('sid', C.c_void_p), ('attributes', W.DWORD)]
 
 
+class BasicLimits(C.Structure):
+    _fields_ = [('process_time', C.c_longlong), ('job_time', C.c_longlong), ('flags', W.DWORD),
+                ('minimum_working_set', C.c_size_t), ('maximum_working_set', C.c_size_t),
+                ('active_process_limit', W.DWORD), ('affinity', C.c_size_t),
+                ('priority', W.DWORD), ('scheduling', W.DWORD)]
+
+
+class ExtendedLimits(C.Structure):
+    _fields_ = [('basic', BasicLimits), ('io', C.c_ulonglong * 6),
+                ('process_memory', C.c_size_t), ('job_memory', C.c_size_t),
+                ('peak_process_memory', C.c_size_t), ('peak_job_memory', C.c_size_t)]
+
+
+class JobAccounting(C.Structure):
+    _fields_ = [('times', C.c_longlong * 4), ('page_faults', W.DWORD), ('total', W.DWORD),
+                ('active', W.DWORD), ('terminated', W.DWORD)]
+
+
+class OwnedJob:
+    """Own descendants before their first instruction, then reap before log cleanup."""
+    def __init__(self, functions=None):
+        self.functions = functions if functions is not None else api()
+        self.job = self.functions['CreateJobObjectW'](None, None)
+        checked(self.job, 'CreateJobObjectW')
+        limits = ExtendedLimits()
+        limits.basic.flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        try:
+            checked(self.functions['SetInformationJobObject'](self.job, 9, C.byref(limits), C.sizeof(limits)),
+                    'SetInformationJobObject')
+        except BaseException:
+            self.functions['CloseHandle'](self.job)
+            raise
+
+    def attach(self, process):
+        checked(self.functions['AssignProcessToJobObject'](self.job, process), 'AssignProcessToJobObject')
+
+    def start(self, command, **options):
+        process = subprocess.Popen(command, creationflags=0x00000004 | 0x00000200, **options)
+        try:
+            self.attach(int(process._handle))
+            resume = C.WinDLL('ntdll').NtResumeProcess
+            resume.argtypes, resume.restype = [W.HANDLE], W.LONG
+            if resume(int(process._handle)):
+                raise RuntimeError('Owned Windows process did not resume')
+        except BaseException:
+            process.kill()
+            process.wait()
+            raise
+        return process
+
+    def close(self):
+        if not self.job:
+            return
+        try:
+            checked(self.functions['TerminateJobObject'](self.job, 1), 'TerminateJobObject')
+            deadline = time.monotonic() + 30
+            while True:
+                info = JobAccounting()
+                checked(self.functions['QueryInformationJobObject'](self.job, 1, C.byref(info), C.sizeof(info), None),
+                        'QueryInformationJobObject')
+                if not info.active:
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('Owned Windows process tree did not terminate')
+                time.sleep(0.01)
+        finally:
+            self.functions['CloseHandle'](self.job)
+            self.job = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_error):
+        self.close()
+
+
 def api():
     kernel = C.WinDLL('kernel32', use_last_error=True)
     security = C.WinDLL('advapi32', use_last_error=True)
@@ -45,6 +122,13 @@ def api():
         'LocalFree': (kernel, [C.c_void_p], C.c_void_p),
         'WaitForSingleObject': (kernel, [W.HANDLE, W.DWORD], W.DWORD),
         'GetExitCodeProcess': (kernel, [W.HANDLE, C.POINTER(W.DWORD)], W.BOOL),
+        'CreateJobObjectW': (kernel, [C.c_void_p, W.LPCWSTR], W.HANDLE),
+        'SetInformationJobObject': (kernel, [W.HANDLE, C.c_int, C.c_void_p, W.DWORD], W.BOOL),
+        'AssignProcessToJobObject': (kernel, [W.HANDLE, W.HANDLE], W.BOOL),
+        'TerminateJobObject': (kernel, [W.HANDLE, W.UINT], W.BOOL),
+        'QueryInformationJobObject': (kernel, [W.HANDLE, C.c_int, C.c_void_p, W.DWORD, C.c_void_p], W.BOOL),
+        'ResumeThread': (kernel, [W.HANDLE], W.DWORD),
+        'TerminateProcess': (kernel, [W.HANDLE, W.UINT], W.BOOL),
         'OpenProcessToken': (security, [W.HANDLE, W.DWORD, C.POINTER(W.HANDLE)], W.BOOL),
         'DuplicateTokenEx': (security, [W.HANDLE, W.DWORD, C.c_void_p, C.c_int, C.c_int, C.POINTER(W.HANDLE)], W.BOOL),
         'GetTokenInformation': (security, [W.HANDLE, C.c_int, C.c_void_p, W.DWORD, C.POINTER(W.DWORD)], W.BOOL),
@@ -151,7 +235,7 @@ def normal_token(functions):
         functions['CloseHandle'](source)
 
 
-def launch(command, *, cwd, env, probe=False, normal_log=None):
+def launch(command, *, cwd, env, probe=False, normal_log=None, timeout=3600):
     """Run a child whose default owner is the caller, and wait.
 
     The child has the current token, or with normal_log a normal user's token and
@@ -182,28 +266,43 @@ def launch(command, *, cwd, env, probe=False, normal_log=None):
         print('Windows proof token: parent owner=' + original + '; child owner=' + caller, flush=True)
         folder = nullcontext() if normal_log else tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-')
         with folder as temporary:
-            log = Path(normal_log) if normal_log else Path(temporary) / 'child.log'
-            child = [sys.executable, str(Path(__file__).resolve()), '--child', str(log),
-                     '90' if probe else '3600', *map(str, command)]
-            line = subprocess.list2cmdline(child)
-            if len(line) >= 32767:
-                raise RuntimeError('Caller-owned proof command exceeds CreateProcessAsUserW limit')
-            environment = C.create_unicode_buffer('\0'.join(key + '=' + value for key, value in
-                sorted(env.items(), key=lambda item: item[0].upper())) + '\0\0')
-            startup = StartupInfo()
-            startup.cb = C.sizeof(startup)
-            result = functions['CreateProcessAsUserW'](duplicate, sys.executable,
-                C.create_unicode_buffer(line), None, None, False, 0x00000400, environment,
-                str(Path(cwd).resolve()), C.byref(startup), C.byref(process))
-            checked(result, 'CreateProcessAsUserW')
-            # The wrapper owns the command timeout, including killing and waiting
-            # for PowerShell. Wait for it so cleanup cannot orphan its command.
-            stream(log, lambda: functions['WaitForSingleObject'](process.process, 100))
-            status = W.DWORD()
-            checked(functions['GetExitCodeProcess'](process.process, C.byref(status)), 'GetExitCodeProcess')
-            if status.value:
-                print('Windows proof child exited ' + str(status.value), flush=True)
-                raise SystemExit(status.value)
+            with OwnedJob(functions) as job:
+                log = Path(normal_log) if normal_log else Path(temporary) / 'child.log'
+                child = [sys.executable, str(Path(__file__).resolve()), '--child', str(log),
+                         '90' if probe else str(timeout), *map(str, command)]
+                line = subprocess.list2cmdline(child)
+                if len(line) >= 32767:
+                    raise RuntimeError('Caller-owned proof command exceeds CreateProcessAsUserW limit')
+                environment = C.create_unicode_buffer('\0'.join(key + '=' + value for key, value in
+                    sorted(env.items(), key=lambda item: item[0].upper())) + '\0\0')
+                startup = StartupInfo()
+                startup.cb = C.sizeof(startup)
+                result = functions['CreateProcessAsUserW'](duplicate, sys.executable,
+                    C.create_unicode_buffer(line), None, None, False, 0x00000400 | 0x00000004, environment,
+                    str(Path(cwd).resolve()), C.byref(startup), C.byref(process))
+                checked(result, 'CreateProcessAsUserW')
+                try:
+                    job.attach(process.process)
+                    if functions['ResumeThread'](process.thread) == 0xffffffff:
+                        checked(False, 'ResumeThread')
+                except BaseException:
+                    checked(functions['TerminateProcess'](process.process, 1), 'TerminateProcess')
+                    functions['WaitForSingleObject'](process.process, 30000)
+                    raise
+                deadline = time.monotonic() + (90 if probe else timeout) + 30
+
+                def wait():
+                    status = functions['WaitForSingleObject'](process.process, 100)
+                    if status == 0x102 and time.monotonic() >= deadline:
+                        raise subprocess.TimeoutExpired(command, timeout)
+                    return status
+
+                stream(log, wait)
+                status = W.DWORD()
+                checked(functions['GetExitCodeProcess'](process.process, C.byref(status)), 'GetExitCodeProcess')
+                if status.value:
+                    print('Windows proof child exited ' + str(status.value), flush=True)
+                    raise SystemExit(status.value)
     finally:
         try:
             if original is not None:
@@ -298,7 +397,7 @@ def child():
             result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT,
                                     timeout=int(timeout), check=False)
             return result.returncode
-        except Exception:
+        except Exception:  # noqa: BLE001 - preserve the child failure in its streamed log
             traceback.print_exc(file=output)
             return 1
 

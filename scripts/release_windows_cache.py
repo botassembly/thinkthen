@@ -4,8 +4,11 @@ import json
 from functools import partial
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
+import threading
+from contextlib import nullcontext
 
 from long_path_scratch import EXTENDED, extended
 
@@ -34,16 +37,49 @@ def cache_environment(root, environment):
                 PSModuleAnalysisCachePath=str(powershell / 'ModuleAnalysisCache'))
 
 
-def run_consumer(command, environment, *, cwd=None):
+def run_consumer(command, environment, *, cwd=None, timeout=600):
     """Forward installed consumer output and retain diagnostics for cache assertions."""
     chunks = []
-    with subprocess.Popen(list(map(str, command)), env=environment, cwd=cwd,
-                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
-        while data := process.stdout.read1(65536):
-            sys.stdout.buffer.write(data)
-            sys.stdout.buffer.flush()
-            chunks.append(data)
-        status = process.wait()
+    errors = []
+    if os.name == 'nt':
+        from windows_caller_process import OwnedJob
+        owner = OwnedJob()
+    else:
+        owner = nullcontext()
+    with owner as job:
+        options = dict(env=environment, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = (job.start(list(map(str, command)), **options) if job else
+                   subprocess.Popen(list(map(str, command)), start_new_session=True, **options))
+
+        def forward():
+            try:
+                while data := process.stdout.read1(65536):
+                    sys.stdout.buffer.write(data)
+                    sys.stdout.buffer.flush()
+                    chunks.append(data)
+            except Exception as error:  # noqa: BLE001 - propagate the reader failure to the owner
+                errors.append(error)
+
+        reader = threading.Thread(target=forward, daemon=True)
+        reader.start()
+        try:
+            status = process.wait(timeout=timeout)
+        finally:
+            # Reap descendants before draining: a grandchild may hold stdout open.
+            if job:
+                job.close()
+            else:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            process.wait()
+            reader.join(timeout=30)
+            if reader.is_alive():
+                raise RuntimeError('Consumer output did not close after process-tree cleanup')
+            process.stdout.close()
+        if errors:
+            raise errors[0]
     return status, b''.join(chunks).decode('utf-8', errors='replace')
 
 
@@ -51,42 +87,45 @@ def _control(environment, script, path, **values):
     powershell = Path(environment['SYSTEMROOT']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
     result = subprocess.run([powershell, '-NoProfile', '-NonInteractive', '-Command',
         "$ErrorActionPreference='Stop'; " + script],
-        env=environment | {'TT_CACHE_PATH': str(path)} | values, capture_output=True, text=True, check=True)
+        env=environment | {'TT_CACHE_PATH': str(path)} | values, capture_output=True, text=True, check=True,
+        timeout=600)
     return result.stdout.strip()
 
 
+STATE_FUNCTION = """function Get-CacheState {
+  $a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
+  [pscustomobject]@{
+    owner = $a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;
+    access = $a.GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::Access)
+  }
+};
+"""
+
+
 def _state(environment, path):
-    return json.loads(_control(environment, """$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
-[pscustomobject]@{
-  owner = $a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;
-  access = $a.GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::Access)
-} | ConvertTo-Json -Compress""", path))
+    return json.loads(_control(environment, STATE_FUNCTION + 'Get-CacheState | ConvertTo-Json -Compress', path))
 
 
 def private_root(root, environment):
     """Give the root the owner and access a user's own local app data folder has."""
     root.mkdir(parents=True, exist_ok=True)
-    control = partial(_control, environment)
-    state = partial(_state, environment)
-    identity = json.loads(control('''$i = [System.Security.Principal.WindowsIdentity]::GetCurrent();
-[pscustomobject]@{ caller = $i.User.Value; defaultOwner = $i.Owner.Value } | ConvertTo-Json -Compress''', root))
-    print('Windows cache baseline identity: ' + json.dumps(identity), flush=True)
-    print('Windows cache inherited root: ' + json.dumps(state(root)), flush=True)
-    control('''$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User;
+    result = json.loads(_control(environment, STATE_FUNCTION + '''$i = [System.Security.Principal.WindowsIdentity]::GetCurrent();
+$identity = [pscustomobject]@{ caller = $i.User.Value; defaultOwner = $i.Owner.Value };
+$inherited = Get-CacheState;
+$sid = $i.User;
 $acl = New-Object System.Security.AccessControl.DirectorySecurity;
 $acl.SetOwner($sid);
 $acl.SetAccessRuleProtection($true, $false);
 foreach ($principal in @($sid.Value, 'S-1-5-18', 'S-1-5-32-544')) {
-  $identity = New-Object System.Security.Principal.SecurityIdentifier($principal);
+  $principalSid = New-Object System.Security.Principal.SecurityIdentifier($principal);
   $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-    $identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow');
+    $principalSid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow');
   $acl.AddAccessRule($rule);
 }
-Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $acl''', root)
-    baseline = state(root)
-    assert baseline['owner'] == identity['caller'], 'private cache root owner is not the caller'
-    verified = control('''$acl = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
-$caller = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;
+Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $acl;
+$baseline = Get-CacheState;
+$acl = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
+$caller = $i.User.Value;
 $allowed = @($caller, 'S-1-5-18', 'S-1-5-32-544');
 $rules = @($acl.Access);
 $valid = $acl.AreAccessRulesProtected -and $rules.Count -eq $allowed.Count;
@@ -95,8 +134,13 @@ foreach ($rule in $rules) {
   $valid = $valid -and ($sid -in $allowed) -and $rule.AccessControlType -eq 'Allow' -and
     $rule.FileSystemRights -eq 'FullControl' -and $rule.InheritanceFlags -eq 'ContainerInherit,ObjectInherit';
 }
-$valid''', root)
-    assert verified == 'True', 'private cache root DACL was not established'
+[pscustomobject]@{identity=$identity; inherited=$inherited; baseline=$baseline; verified=$valid} |
+  ConvertTo-Json -Depth 4 -Compress''', root))
+    identity, baseline = result['identity'], result['baseline']
+    print('Windows cache baseline identity: ' + json.dumps(identity), flush=True)
+    print('Windows cache inherited root: ' + json.dumps(result['inherited']), flush=True)
+    assert baseline['owner'] == identity['caller'], 'private cache root owner is not the caller'
+    assert result['verified'] is True, 'private cache root DACL was not established'
     print('Windows cache private root verified: ' + json.dumps(baseline), flush=True)
     return identity
 
@@ -178,6 +222,17 @@ def check_elevated(consumers):
         raise RuntimeError('Windows elevated cache runs failed: ' + '; '.join(failures))
 
 
+def restore_cache(path, saved, environment):
+    subprocess.run([Path(environment['SYSTEMROOT']) / 'System32/icacls.exe', path,
+                    '/setowner', '*' + saved['owner']], env=environment,
+                   capture_output=True, text=True, check=True, timeout=600)
+    restored = json.loads(_control(environment, STATE_FUNCTION + '''$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
+$a.SetSecurityDescriptorSddlForm($env:TT_CACHE_ACCESS, [System.Security.AccessControl.AccessControlSections]::Access);
+Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a;
+Get-CacheState | ConvertTo-Json -Compress''', path, TT_CACHE_ACCESS=saved['access']))
+    assert restored == saved, 'cache security was not restored: ' + str(path)
+
+
 def check_cache(command, root, environment, filename):
     root.mkdir()
     env = cache_environment(root, environment)
@@ -190,12 +245,7 @@ def check_cache(command, root, environment, filename):
         subprocess.run([system / 'icacls.exe', path, *args], env=env,
                        capture_output=True, text=True, check=True)
 
-    def restore(path, saved):
-        icacls(path, '/setowner', '*' + saved['owner'])
-        control('''$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
-$a.SetSecurityDescriptorSddlForm($env:TT_CACHE_ACCESS, [System.Security.AccessControl.AccessControlSections]::Access);
-Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=saved['access'])
-        assert state(path) == saved, 'cache security was not restored: ' + str(path)
+    restore = partial(restore_cache, environment=env)
 
     def consumer(rejected=False):
         status, output = run_consumer(command, env)

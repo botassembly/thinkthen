@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Run bounded native Windows harness fixtures without building a product."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import subprocess
+import sys
+import time
+
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('output', type=Path)
+args = parser.parse_args()
+if os.name != 'nt':
+    parser.error('requires native Windows')
+args.output.mkdir(parents=True, exist_ok=True)
+sources = ('qualification-candidate', 'qualification-recipe-test', 'release-windows-sdks-test',
+           'release_windows_sdks.py', 'release_windows_cache.py', 'windows_caller_process.py')
+identity = dict(harness_revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+                python=sys.version, platform=platform.platform(),
+                source_hashes={name: hashlib.sha256((Path('scripts') / name).read_bytes()).hexdigest()
+                               for name in sources}, product_build=False)
+(args.output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n', encoding='utf-8')
+commands = [
+    [sys.executable, 'scripts/qualification-recipe-test', *('QualificationRecipes.' + name for name in (
+        'test_native_cache_transactions_set_and_restore_exact_security',
+        'test_native_caller_timeout_cleans_descendants_before_removing_log',
+        'test_streamed_consumer_deadline_reaps_descendants_holding_output',
+        'test_default_windows_qualification_bounds_every_family_and_later_stage'))],
+    [sys.executable, 'scripts/release-windows-sdks-test'],
+]
+results = []
+for index, command in enumerate(commands):
+    started = time.time()
+    with (args.output / f'{index}.log').open('w', encoding='utf-8') as log:
+        try:
+            status = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=600, check=False).returncode
+        except subprocess.TimeoutExpired:
+            status = 124
+    result = dict(command=command, started_at=started, completed_at=time.time(), exit=status)
+    results.append(result)
+    print(json.dumps(result), flush=True)
+    print((args.output / f'{index}.log').read_text(encoding='utf-8'), flush=True)
+    (args.output / 'results.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
+    if status:
+        sys.exit(status)
