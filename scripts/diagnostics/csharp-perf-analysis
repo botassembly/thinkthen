@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Decode one retained recording; never execute the SDK or record a target."""
+import hashlib, io, json, os, re, shutil, subprocess, sys, tarfile, zipfile
+from pathlib import Path
+capture, platform, output, perf = map(Path, sys.argv[1:])
+output.mkdir(parents=True, exist_ok=True)
+def sha(p):
+    with p.open('rb') as f: return hashlib.file_digest(f, 'sha256').hexdigest()
+def save(name, data): (output / name).write_text(json.dumps(data, indent=2) + '\n')
+env = dict(PATH='/usr/bin:/bin', HOME=str(output), LANG='C.UTF-8', DEBUGINFOD_URLS='')
+def run(args, name):
+    with (output / name).open('w') as f, (output / (name + '.stderr')).open('w') as err:
+        subprocess.run(args, env=env, stdout=f, stderr=err, check=True)
+data = capture / 'perf.data'
+assert sha(data) == 'd77529ec6c29c0428d6c96ff745f98d1576940246ddb255ae62a068e1d43c4d4'
+assert data.stat().st_uid == os.getuid()
+assert sha(platform) == '1d1ad293b3dff7e7e90e816ee82c53b4d42d83db729516e85cf3782022bd68c0'
+save('input.json', dict(raw_sha256=sha(data), uid=os.getuid(), file_uid=data.stat().st_uid, scope='offline decoding only'))
+run([str(perf), 'version', '--build-options'], 'perf-version.txt')
+run([str(perf), 'buildid-list', '-i', str(data)], 'buildids.txt')
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from csharp_dependencies import sdk_archive
+from release_downloads import fetch
+symfs = output.parent / 'symfs'
+original = symfs / 'home/runner/work/_temp/perf-bootstrap-work'
+sdk = original / 'sdk'; sdk.mkdir(parents=True)
+with tarfile.open(fetch(sdk_archive(), output.parent / 'sdk.tar.gz')) as t: t.extractall(sdk, filter='data')
+with tarfile.open(platform) as t:
+    member, = [m for m in t.getmembers() if m.name.endswith('/csharp/Botassembly.ThinkThen.0.2.0.nupkg')]
+    package = t.extractfile(member).read()
+assert hashlib.sha256(package).hexdigest() == 'ad275a6b3e46b2087f8574662d23c08ac7a38b944a9787d435dc0bb53e07f833'
+with zipfile.ZipFile(io.BytesIO(package)) as z:
+    native = original / 'bin/runtimes/linux-x64/native/libthinkthen_ffi.so'; native.parent.mkdir(parents=True)
+    native.write_bytes(z.read('runtimes/linux-x64/native/libthinkthen_ffi.so'))
+assert sha(native) == '9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435'
+for name, digest in [('libcoreclr.so','843b66a2b33a570537c779283b27f7c1f3ff5394e5a72436bf181c885d4cdfff'), ('libclrjit.so','fd4e672a34b28fb38d2b5f43d7c50d8b1892aebca97d41cfaccc1c8be3ee40e9')]:
+    assert sha(sdk / 'shared/Microsoft.NETCore.App/10.0.14' / name) == digest
+modules, missing = [], []
+for line in (output / 'buildids.txt').read_text().splitlines():
+    buildid, path = line.split(maxsplit=1)
+    if not path.startswith('/'): missing.append(dict(path=path, reason='non-file module')); continue
+    destination = symfs / path.lstrip('/')
+    candidate = destination if destination.is_file() else Path(path)
+    if not candidate.is_file(): missing.append(dict(path=path, reason='not retained or installed')); continue
+    header = subprocess.check_output(['/usr/bin/readelf', '-n', str(candidate)], env=env, text=True)
+    actual = re.search(r'Build ID: ([0-9a-f]+)', header)
+    if not actual or actual[1] != buildid:
+        missing.append(dict(path=path, expected=buildid, actual=actual[1] if actual else None)); continue
+    if candidate != destination:
+        destination.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(candidate, destination)
+    modules.append(dict(path=path, buildid=buildid, sha256=sha(destination)))
+save('modules.json', modules); save('missing.json', missing)
+if missing: raise RuntimeError('missing/mismatched ELF: stop before unwind; no substituted modules')
+run([str(perf), 'script', '-i', str(data), '--symfs', str(symfs), '--ns', '--show-task-events', '--show-mmap-events', '--show-lost-events', '-F', 'comm,pid,tid,time,event,trace,ip,sym,dso,symoff'], 'perf-script.txt')
+save('result.json', dict(scope='decoder completed; manual caller/loss/exit review required', raw_sha256=sha(data), module_count=len(modules)))
