@@ -1,0 +1,384 @@
+#!/usr/bin/env python3
+"""Check frozen Linux source or one final installed SDK backend, without publishing."""
+import argparse
+from contextlib import ExitStack
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tarfile
+import time
+
+REPOSITORY = 'botassembly/thinkthen'
+NATIVE = {'c': 'checks/c-consumer', 'cpp': 'checks/cpp-consumer',
+          'go': 'checks/go-consumer', 'swift': 'checks/swift/Consumer', 'zig': 'checks/zig/consumer'}
+FAMILIES = (*NATIVE, 'java', 'typescript')
+
+
+def digest(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def revision(root):
+    return subprocess.check_output(['git', '-C', root, 'rev-parse', 'HEAD'], text=True).strip()
+
+
+def run(command, source, output, name, env=None):
+    with (output / (name + '.log')).open('w') as log:
+        result = subprocess.run(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT)
+    (output / (name + '-exit-code.txt')).write_text(str(result.returncode) + '\n')
+    if result.returncode:
+        print((output / (name + '.log')).read_text()[-16384:], file=sys.stderr)
+        result.check_returncode()
+
+
+def admit(source, expected_source, provenance, archive, zip_sha, archive_sha, destination):
+    """Admit the named successful producer attempt, then the complete package."""
+    if revision(source) != expected_source or subprocess.check_output(
+            ['git', '-C', source, 'status', '--porcelain', '--untracked-files=all'], text=True):
+        raise ValueError('product source must be the clean supplied revision')
+    if len(expected_source) != 40 or any(c not in '0123456789abcdef' for c in expected_source):
+        raise ValueError('product source must be a full commit SHA')
+    recorded = json.loads(provenance.read_text())
+    producer, artifact, jobs = (recorded[name] for name in ('run', 'artifact', 'jobs'))
+    requested = recorded['requested']
+    if (producer['repository']['full_name'] != REPOSITORY
+            or producer['path'] != '.github/workflows/release-prepare.yml'
+            or producer['event'] != 'workflow_dispatch' or producer['head_branch'] != 'main'
+            or producer['id'] != requested['run'] or producer['head_sha'] != expected_source
+            or producer['run_attempt'] != requested['attempt']
+            or artifact['id'] != requested['artifact'] or artifact['expired']
+            or artifact['workflow_run']['id'] != producer['id']
+            or artifact['workflow_run']['head_sha'] != expected_source
+            or artifact['name'] != 'platform-linux-x86_64'
+            or artifact['digest'] != 'sha256:' + zip_sha):
+        raise ValueError('producer run, source, attempt or artifact association differs')
+    candidates = [job for job in jobs['jobs'] if job['run_id'] == producer['id']
+                  and job['run_attempt'] == requested['attempt']
+                  and job['name'] == 'qualification / build (linux-x86_64, ubuntu-24.04)'
+                  and job['conclusion'] == 'success'
+                  and job['started_at'] <= artifact['created_at'] <= job['completed_at']]
+    if len(candidates) != 1 or len(jobs['jobs']) >= 100:
+        raise ValueError('artifact has no unique successful producer job in this attempt')
+    if digest(archive) != zip_sha:
+        raise ValueError('artifact ZIP digest differs')
+    import zipfile
+    with zipfile.ZipFile(archive) as package:
+        names = package.namelist()
+        if len(names) != 1 or not names[0].endswith('-linux-x86_64-packages.tar.gz'):
+            raise ValueError('artifact must contain one Linux platform archive')
+        nested = destination / 'platform.tar.gz'
+        with package.open(names[0]) as original, nested.open('wb') as target:
+            import shutil
+            shutil.copyfileobj(original, target)
+    if digest(nested) != archive_sha:
+        raise ValueError('nested archive digest differs')
+    with tarfile.open(nested) as package:
+        package.extractall(destination / 'package', filter='data')
+    sys.path.insert(0, str(source / 'scripts'))
+    from release_workflow import validate, version
+    installed = destination / 'package' / version() / 'linux-x86_64'
+    validate(installed, 'linux-x86_64', expected_source)
+    return installed, candidates[0]['id']
+
+
+def one(folder, pattern):
+    paths = list(folder.glob(pattern))
+    if len(paths) != 1:
+        raise ValueError('expected one installed member: ' + pattern)
+    return paths[0]
+
+
+def unpack(archive, destination):
+    import zipfile
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as package:
+            package.extractall(destination)
+    else:
+        with tarfile.open(archive) as package:
+            package.extractall(destination, filter='data')
+    return destination
+
+
+def stage(package, output, family, source, env):
+    """Install package bytes; never compile a replacement SDK or engine."""
+    import shutil
+    work = output / 'installed'
+    work.mkdir()
+    libraries = []
+    if family in ('c', 'cpp'):
+        unpack(one(package / 'c', '*.tar.gz'), work / 'c')
+        consumer = work / NATIVE[family]
+        consumer.parent.mkdir()
+        shutil.copy2(package / NATIVE[family], consumer)
+        libraries = [one(work / 'c/lib', 'libthinkthen.so.0.*')]
+    elif family == 'zig':
+        consumer = work / 'consumer'
+        shutil.copy2(package / NATIVE[family], consumer)
+        unpack(one(package / 'zig', '*.tar.gz'), work / 'zig')
+        library = one(work / 'zig/thinkthen/native/linux-x64', '*.so')
+        shutil.copy2(library, work / 'libthinkthen_ffi.so')
+        libraries = [work / 'libthinkthen_ffi.so']
+    elif family == 'swift':
+        shutil.copytree(package / 'checks/swift', work / 'swift')
+        consumer = work / 'swift/Consumer'
+        resource = one(work / 'swift', '**/libthinkthen_ffi.so')
+        shipped = work / 'shipped-swift-native.so'
+        with tarfile.open(one(package / 'swift', '*.tar.gz')) as sdk:
+            shipped.write_bytes(sdk.extractfile('Sources/ThinkThen/Native/linux-x64/libthinkthen_ffi.so').read())
+        if digest(resource) != digest(shipped):
+            raise ValueError('Swift consumer resource differs from the shipped SDK native member')
+        libraries = [shipped]
+        env['LD_LIBRARY_PATH'] = str(package / 'prerequisites/swift-runtime/linux')
+    elif family == 'go':
+        consumer = work / 'consumer'
+        shutil.copy2(package / NATIVE[family], consumer)
+        # Go embeds the library; the staged Go package contains its exact bytes.
+        unpack(one(package / 'go', '*.tar.gz'), work / 'go')
+        libraries = [one(work / 'go', '**/native/library')]
+        env['XDG_CACHE_HOME'] = str(work / 'cache')
+    elif family == 'java':
+        (work / 'home').mkdir(mode=0o700)
+        consumer = package / 'checks/jvm/consumer.jar'
+        classpath = [consumer, *sorted((package / 'java').glob('*.jar')),
+                     *sorted((package / 'java/dependencies').glob('*.jar'))]
+        import zipfile
+        for jar in classpath:
+            with zipfile.ZipFile(jar) as entries:
+                for name in entries.namelist():
+                    if name.endswith('/linux-amd64/libthinkthen_ffi.so'):
+                        library = work / 'libthinkthen_ffi.so'
+                        library.write_bytes(entries.read(name))
+                        libraries.append(library)
+        adapter = [shutil.which('java'), '-Duser.home=' + str(work / 'home'),
+                   '--enable-native-access=ALL-UNNAMED', '-cp', os.pathsep.join(map(str, classpath)), 'StressCases']
+    elif family == 'typescript':
+        subprocess.run(['npm', 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
+                        '--prefix', str(work), str(one(package / 'typescript', '*.tgz'))], check=True)
+        installed = work / 'node_modules/thinkthen'
+        env['THINKTHEN_NODE_PACKAGE'] = str(installed / 'runtime.js')
+        libraries = [one(installed, '**/*.node')]
+        consumer = source / 'sdk/typescript/tests/stress.test.js'
+        adapter = [shutil.which('node'), str(consumer)]
+    else:
+        raise ValueError('unsupported installed family')
+    if len(libraries) != 1:
+        raise ValueError('package must identify exactly one loaded native member')
+    if family in NATIVE:
+        consumer.chmod(0o755)
+        adapter = ([str(consumer), '-test.run=^TestSharedStress$'] if family == 'go' else
+                   [sys.executable, 'sdk/c/tests/stress.py', family, str(consumer)])
+    return list(map(str, adapter)), consumer, digest(libraries[0])
+
+
+def process_identity(pid):
+    proc = Path('/proc') / str(pid)
+    # Field22 follows the final ')' even when the process name contains spaces.
+    start = (proc / 'stat').read_text().rsplit(')', 1)[1].split()[19]
+    return dict(pid=pid, start=start, command=(proc / 'cmdline').read_bytes().split(b'\0')[:-1],
+                executable=str((proc / 'exe').resolve()))
+
+
+def mapped_runtime(parent, adapter, consumer, library_sha, output):
+    """Bind a live descendant to its executable, command, start time and loaded bytes."""
+    import shutil
+    native_command = len(adapter) > 2 and adapter[1] == 'sdk/c/tests/stress.py'
+    expected = ([str(consumer), 'stress'] if native_command and adapter[0] == sys.executable else adapter)
+    executable = str(Path(shutil.which(expected[0]) or expected[0]).resolve())
+    deadline = time.monotonic() + 60
+    while parent.poll() is None and time.monotonic() < deadline:
+        pending = [parent.pid]
+        while pending:
+            pid = pending.pop()
+            try:
+                proc = Path('/proc') / str(pid)
+                pending.extend(map(int, (proc / 'task' / str(pid) / 'children').read_text().split()))
+                before = process_identity(pid)
+                command = [arg.decode() for arg in before['command']]
+                if before['executable'] != executable or command[1:len(expected)] != expected[1:]:
+                    continue
+                maps = (proc / 'maps').read_text()
+                paths = {Path(row.split(None, 5)[5]) for row in maps.splitlines()
+                         if len(row.split(None, 5)) == 6 and row.split(None, 5)[5].startswith('/')}
+                native = [path for path in paths if path.is_file() and
+                          ('thinkthen' in path.name or path.name == 'library' or path.suffix == '.node')]
+                if not native:
+                    continue
+                # Open the mapped inodes and bind the live identity before hashing
+                # large runtime images. A short adapter may exit during the reads.
+                with ExitStack() as held:
+                    streams = {path: held.enter_context(path.open('rb'))
+                               for path in sorted(paths) if path.is_file()}
+                    for row in maps.splitlines():
+                        fields = row.split(None, 5)
+                        if len(fields) != 6 or Path(fields[5]) not in streams:
+                            continue
+                        stat = os.fstat(streams[Path(fields[5])].fileno())
+                        major, minor = fields[3].split(':')
+                        if (stat.st_ino != int(fields[4]) or os.major(stat.st_dev) != int(major, 16)
+                                or os.minor(stat.st_dev) != int(minor, 16)):
+                            raise ValueError('mapped runtime inode changed before capture')
+                    if before != process_identity(pid):
+                        raise ValueError('adapter process identity changed during capture')
+                    hashes = {}
+                    for path, stream in streams.items():
+                        stat = os.fstat(stream.fileno())
+                        hashes[str(path)] = hashlib.file_digest(stream, 'sha256').hexdigest()
+                        after = os.fstat(stream.fileno())
+                        if (stat.st_size, stat.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                            raise ValueError('mapped runtime bytes changed during capture')
+                if any(hashes.get(str(path)) != library_sha for path in native):
+                    raise ValueError('loaded native member differs from the admitted package')
+                before['command'] = command
+                before['consumer_sha256'] = digest(consumer)
+                before['files'] = hashes
+                (output / 'consumer.maps').write_text(maps)
+                (output / 'loaded-sha256.json').write_text(json.dumps(before, indent=2) + '\n')
+                return native[0]
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+        time.sleep(0.02)
+    raise RuntimeError('actual installed adapter/library mapping was not captured')
+
+
+def load_count_preflight(source, output, family, backend, adapter):
+    """Use the product runner for eight100-row calls, without a resource verdict."""
+    import runpy
+    sys.path.insert(0, str(source / 'scripts'))
+    runner = runpy.run_path(str(source / 'scripts/stress-adapters.py'))
+    table = json.loads((source / 'conformance/stress.json').read_text())
+    healthy = next(case for case in table['scenarios'] if case['name'] == 'healthy')
+    report = runner['run'](adapter, table, backend, healthy, 100, 1, 8, False,
+                           resources=False, surface=family,
+                           evidence_path=output / 'preflight.jsonl')
+    if (report['calls'], report['rows'], report['failed']) != (8, 800, 0) or 'resources' in report:
+        raise ValueError('load/count preflight did not complete eight correct100-row calls')
+    (output / 'preflight-result.json').write_text(json.dumps(dict(
+        scope='bounded load/count/identity only; no resource verdict', report=report), indent=2) + '\n')
+    return 0
+
+
+def native_workload(source, output, family, backend, adapter, consumer, library_sha, env, *, preflight=False):
+    command = [sys.executable, 'scripts/stress-adapters.py', '--surface', family, '--full',
+               '--rounds', '60', '--backend', backend,
+               '--evidence-path', str(output / f'{family}-{backend}.jsonl'), '--', *adapter]
+    if preflight:
+        command = [sys.executable, str(Path(__file__).resolve()), '--load-count', str(source),
+                   str(output), family, backend, json.dumps(adapter)]
+    consumer_sha = digest(consumer)
+    with ExitStack() as logs:
+        log = logs.enter_context((output / 'soak.log').open('w'))
+        with subprocess.Popen(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT,
+                              start_new_session=True) as process:
+            try:
+                library = mapped_runtime(process, adapter, consumer, library_sha, output)
+                status = process.wait()
+            except (RuntimeError, ValueError, OSError):
+                import signal
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                status = process.wait()
+                (output / 'adapter-exit-code.txt').write_text(str(status) + '\n')
+                raise
+    (output / 'soak-exit-code.txt').write_text(str(status) + '\n')
+    if digest(consumer) != consumer_sha or digest(library) != library_sha:
+        raise ValueError('installed consumer or native bytes changed during the workload')
+    return status
+
+
+def check_runtime_version(family, expected, actual):
+    import re
+    build = re.search(r'\(build ([^),]+)(?:\)|,)', actual) if family == 'java' else None
+    valid = build is not None and build[1] == expected if family == 'java' else actual.strip() == expected
+    if not valid:
+        raise ValueError('installed host runtime differs from the release pin')
+
+
+def prepare_runtime(family, source):
+    """Select the existing release pin and downloader without preparing SDK builds."""
+    import re
+    from release_downloads import fetch, prepare_tool
+    from release_prepare_common import TOOLS
+    if family == 'java':
+        script = (source / 'scripts/jvm-prepare').read_text()
+        asset = re.search(r"'Linux x86_64'\) asset=([^; ]+)", script)[1]
+        base = re.search(r'base=(https://github.com/adoptium/[^\n]+)', script)[1]
+        version = re.search(r'java_folder=([^ ;]+)', script)[1]
+        executable = prepare_tool(TOOLS / 'jvm' / version, 'bin/java',
+                                  lambda: fetch(base + '/' + asset, TOOLS / 'sources' / asset))
+    elif family == 'typescript':
+        from release_host_tools import HOST_PINS
+        name = 'node-v' + HOST_PINS['node'] + '-linux-x64'
+        url = 'https://nodejs.org/dist/v' + HOST_PINS['node'] + '/' + name + '.tar.gz'
+        executable = prepare_tool(TOOLS / 'node', 'bin/node',
+                                  lambda: fetch(url, TOOLS / 'sources' / (name + '.tar.gz')))
+    else:
+        return
+    expected = version.removeprefix('jdk-') if family == 'java' else 'v' + HOST_PINS['node']
+    actual = subprocess.check_output([executable, '--version'], text=True)
+    check_runtime_version(family, expected, actual)
+    os.environ['PATH'] = str(executable.parent) + os.pathsep + os.environ['PATH']
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('task', choices=[f'{family}-{wire}' for family in FAMILIES
+                                       for wire in ('systemone', 'openai')])
+    for name in ('source', 'provenance', 'archive', 'output'):
+        parser.add_argument('--' + name, type=Path, required=True)
+    for name in ('product-sha', 'zip-sha256', 'archive-sha256'):
+        parser.add_argument('--' + name, required=True)
+    parser.add_argument('--preflight-only', action='store_true')
+    args = parser.parse_args()
+    source, output = args.source.resolve(), args.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    package, producer_job = admit(source, args.product_sha, args.provenance, args.archive,
+                                  args.zip_sha256, args.archive_sha256, output)
+    family, backend = args.task.split('-')
+    sys.path.insert(0, str(source / 'scripts'))
+    prepare_runtime(family, source)
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith(('THINKTHEN_', 'OPENAI_'))
+           and key not in ('LD_LIBRARY_PATH', 'LD_PRELOAD', 'PYTHONPATH', 'RUBYLIB')}
+    env.update(PYTHONDONTWRITEBYTECODE='1', HOME=str(output / 'home'),
+               XDG_CACHE_HOME=str(output / 'cache'), XDG_CONFIG_HOME=str(output / 'config'))
+    for name in ('home', 'cache', 'config'):
+        (output / name).mkdir(mode=0o700)
+    adapter, consumer, library_sha = stage(package, output, family, source, env)
+    if family in ('java', 'typescript'):
+        run([adapter[0], '--version'], source, output, 'runtime-version', env=env)
+    identity = dict(source_revision=args.product_sha, producer_job=producer_job,
+                    harness_revision=revision(Path(__file__).resolve().parents[1]),
+                    task=args.task, artifact_zip_sha256=args.zip_sha256,
+                    archive_sha256=args.archive_sha256, consumer_sha256=digest(consumer),
+                    library_sha256=library_sha, adapter=adapter, preflight_only=args.preflight_only,
+                    actual_execution='Ubuntu host; no glibc2.28 memory or previous-floor clearance claim')
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    run(['uname', '-a'], source, output, 'kernel')
+    run(['getconf', 'GNU_LIBC_VERSION'], source, output, 'glibc')
+    run(['cargo', 'build', '--locked', '-p', 'loopback', '--bin', 'loopback'],
+        source, output, 'loopback-build')
+    target = Path(os.environ.get('CARGO_TARGET_DIR', source / 'target')).resolve()
+    loopback = target / 'debug/loopback'
+    env['THINKTHEN_LOOPBACK'] = str(loopback)
+    identity['loopback_sha256'] = digest(loopback)
+    (output / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    preflight = output / 'preflight'
+    preflight.mkdir()
+    status = native_workload(source, preflight, family, backend, adapter, consumer, library_sha,
+                             env, preflight=True)
+    if status or args.preflight_only:
+        return status
+    return native_workload(source, output, family, backend, adapter, consumer, library_sha, env)
+
+
+if __name__ == '__main__':
+    if sys.argv[1:2] == ['--load-count']:
+        raise SystemExit(load_count_preflight(Path(sys.argv[2]), Path(sys.argv[3]),
+                                              sys.argv[4], sys.argv[5], json.loads(sys.argv[6])))
+    raise SystemExit(main())
