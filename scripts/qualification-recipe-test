@@ -3,6 +3,7 @@
 import ast
 from contextlib import redirect_stdout
 import io
+import json
 import os
 from pathlib import Path, PureWindowsPath
 import runpy
@@ -11,10 +12,12 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import textwrap
 from types import SimpleNamespace
 import unittest
 import zipfile
+import socket
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,6 +25,138 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 
 
 class QualificationRecipes(unittest.TestCase):
+    def test_private_cache_transactions_preserve_readback_assertions(self):
+        import release_windows_cache as cache
+        saved = dict(owner='caller', access='saved-access')
+        response = dict(identity=dict(caller='caller', defaultOwner='default'), inherited=saved,
+                        baseline=saved, verified=True)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for verified, owner, accepted in ((True, 'caller', True), (False, 'caller', False),
+                                              (True, 'other', False)):
+                result = response | dict(verified=verified, baseline=saved | dict(owner=owner))
+                with patch.object(cache, '_control', return_value=json.dumps(result)) as control:
+                    if accepted:
+                        self.assertEqual(cache.private_root(root, {}), response['identity'])
+                    else:
+                        with self.assertRaises(AssertionError):
+                            cache.private_root(root, {})
+                    self.assertEqual(control.call_count, 1)
+                    script = control.call_args.args[1]
+                    self.assertLess(script.index('$inherited = Get-CacheState'), script.index('Set-Acl'))
+                    self.assertLess(script.index('Set-Acl'), script.index('$baseline = Get-CacheState'))
+            for readback in (saved, saved | dict(access='not-restored')):
+                with patch.object(cache, '_control', return_value=json.dumps(readback)) as control, \
+                        patch.object(cache.subprocess, 'run') as run:
+                    if readback == saved:
+                        cache.restore_cache(root, saved, {'SYSTEMROOT': directory})
+                    else:
+                        with self.assertRaisesRegex(AssertionError, 'not restored'):
+                            cache.restore_cache(root, saved, {'SYSTEMROOT': directory})
+                    self.assertEqual(control.call_count, 1)
+                    self.assertEqual(run.call_args.args[0][-2:], ['/setowner', '*caller'])
+                    script = control.call_args.args[1]
+                    self.assertLess(script.index('Set-Acl'), script.index('Get-CacheState |'))
+
+    @unittest.skipUnless(os.name == 'nt', 'requires native Windows ACLs')
+    def test_native_cache_transactions_set_and_restore_exact_security(self):
+        import release_windows_cache as cache
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'cache'
+            with patch.object(cache, '_control', wraps=cache._control) as control:
+                started = time.monotonic()
+                cache.private_root(root, dict(os.environ))
+                print('Windows cache private-root transaction: ' + json.dumps(dict(
+                    seconds=time.monotonic() - started, powershell_launches=control.call_count)), flush=True)
+                self.assertEqual(control.call_count, 1)
+                saved = cache._state(dict(os.environ), root)
+                subprocess.run([Path(os.environ['SYSTEMROOT']) / 'System32/icacls.exe', root,
+                                '/grant', '*S-1-1-0:(M)'], check=True, capture_output=True, timeout=600)
+                self.assertNotEqual(cache._state(dict(os.environ), root), saved)
+                before = control.call_count
+                started = time.monotonic()
+                cache.restore_cache(root, saved, dict(os.environ))
+                print('Windows cache restore transaction: ' + json.dumps(dict(
+                    seconds=time.monotonic() - started, powershell_launches=control.call_count - before)), flush=True)
+                self.assertEqual(control.call_count, before + 1)
+                self.assertEqual(cache._state(dict(os.environ), root), saved)
+
+    @unittest.skipUnless(os.name == 'nt', 'requires native Windows process tokens and jobs')
+    def test_native_caller_timeout_cleans_descendants_before_removing_log(self):
+        import windows_caller_process as caller
+        with tempfile.TemporaryDirectory() as directory:
+            caller.probe(directory, dict(os.environ))
+            address = Path(directory) / 'port'
+            worker = ('import socket,pathlib,sys; s=socket.socket(); s.bind(("127.0.0.1",0)); '
+                      's.listen(); pathlib.Path(sys.argv[1]).write_text(str(s.getsockname()[1])); s.accept()')
+            parent = ('import subprocess,sys; subprocess.Popen([sys.executable,"-c",sys.argv[1],sys.argv[2]]); '
+                      'import time; time.sleep(3600)')
+            with self.assertRaises(SystemExit) as result:
+                caller.launch([sys.executable, '-c', parent, worker, str(address)],
+                              cwd=directory, env=dict(os.environ), timeout=15)
+            self.assertNotEqual(result.exception.code, 0)
+            self.assertTrue(address.exists(), 'fixture did not reach its blocking descendant')
+            with socket.socket() as connection:
+                connection.settimeout(1)
+                self.assertNotEqual(connection.connect_ex(('127.0.0.1', int(address.read_text()))), 0)
+
+    def test_default_windows_qualification_bounds_every_family_and_later_stage(self):
+        import builtins
+        import release_windows_sdks
+        import windows_caller_process
+        calls = []
+        imported = builtins.__import__
+        fake_os = SimpleNamespace(name='nt', environ=dict(os.environ))
+
+        def imports(name, *args, **options):
+            return fake_os if name == 'os' else imported(name, *args, **options)
+
+        def launch(command, **options):
+            calls.append((command, options))
+            if command[-1] == 'sdk/go':
+                raise SystemExit(1)
+
+        workflow = SimpleNamespace(validate=lambda *args: None, version=lambda: '0.2.0', prepared=None)
+        with patch.dict(sys.modules, release_workflow=workflow), patch.object(sys, 'argv',
+                ['qualification-candidate', 'windows-x86_64', '/unused', 'revision']), \
+                patch.object(windows_caller_process, 'launch', launch):
+            namespace = {'__file__': str(ROOT / 'scripts/qualification-candidate'),
+                         '__builtins__': vars(builtins) | {'__import__': imports}}
+            with self.assertRaisesRegex(SystemExit, 'release qualification failed: sdk/go'):
+                exec(compile(Path(namespace['__file__']).read_text(), namespace['__file__'], 'exec'), namespace)
+        self.assertEqual([command[-1] for command, _ in calls],
+                         ['core', *('sdk/' + key for key in release_windows_sdks.SDK_FAMILIES),
+                          'source-install-check', 'qualification-readmes'])
+        self.assertTrue(all(options['timeout'] == 3600 for _, options in calls))
+
+    def test_streamed_consumer_deadline_reaps_descendants_holding_output(self):
+        from release_windows_cache import run_consumer
+        # The child owns a listening socket and stdout. After tree cleanup the
+        # socket must refuse connections, including when its parent exits first.
+        worker = ('import socket,sys,pathlib; s=socket.socket(); s.bind(("127.0.0.1",0)); '
+                  's.listen(); print("descendant ready",flush=True); '
+                  'pathlib.Path(sys.argv[1]).write_text(str(s.getsockname()[1])); s.accept()')
+        parent = ('import subprocess,sys,pathlib,time; '
+                  'subprocess.Popen([sys.executable,"-u","-c",sys.argv[1],sys.argv[2]]); '
+                  '\nwhile not pathlib.Path(sys.argv[2]).exists(): time.sleep(.01)\n'
+                  'if sys.argv[3]=="timeout": time.sleep(3600)')
+        for mode in ('exit', 'timeout'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
+                address = Path(temporary) / 'port'
+                output = SimpleNamespace(buffer=io.BytesIO())
+                command = [sys.executable, '-u', '-c', parent, worker, str(address), mode]
+                with patch('sys.stdout', output):
+                    if mode == 'timeout':
+                        with self.assertRaises(subprocess.TimeoutExpired):
+                            run_consumer(command, dict(os.environ), timeout=15)
+                    else:
+                        self.assertEqual(run_consumer(command, dict(os.environ), timeout=60)[0], 0)
+                self.assertTrue(address.exists(), 'fixture never started its descendant')
+                self.assertIn(b'descendant ready', output.buffer.getvalue())
+                with socket.socket() as connection:
+                    connection.settimeout(1)
+                    self.assertNotEqual(connection.connect_ex(('127.0.0.1', int(address.read_text()))), 0)
+
     def test_installed_cli_forwards_the_existing_uploaded_diagnostic_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

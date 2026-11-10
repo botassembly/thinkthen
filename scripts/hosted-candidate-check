@@ -56,6 +56,14 @@ fi
 if [ "${1:-}" = --scan ]; then
     exec ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/runtime-floor-build scripts/release_workflow.py scripts/postgres-installed-prepare-test scripts/hosted-candidate-inputs scripts/release-replay-test scripts/release-staging-test scripts/release-platform-check scripts/release-platform-test scripts/qualification-continuation-test scripts/public-export-test scripts/public_export_gate.py scripts/native-producer-test scripts/stress-dispatch-test scripts/loader-failure-check scripts/release-floor-inputs-test scripts/qualification-recipe-test scripts/release_workflow_prepare.py scripts/release_rust.py scripts/release_prepare_common.py databases/duckdb/community-prepare.py scripts/duckdb-community-prepare-test
 fi
+if [ "${1:-}" = --windows-qualification-checks ]; then
+    shift
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/qualification-candidate scripts/qualification-recipe-test scripts/release-windows-sdks-test scripts/release_windows_cache.py scripts/release_windows_check.py scripts/release_windows_sdks.py scripts/windows_caller_process.py scripts/windows-qualification-proof
+    [ "$#" -gt 0 ] || set -- qualification-recipe-test release-windows-sdks-test release-report-all-test qualification-continuation-test
+    run_gates python3 "$@"
+    git diff --check
+    exit
+fi
 if [ "${1:-}" = --loader-checks ] || [ "${1:-}" = --day-one-sdk-checks ]; then
     check_mode=$1
     [ "$#" -eq 5 ] || { echo 'usage: hosted-candidate-check MODE CARGO_HOME TARGET FLOOR_IMAGE SWIFT_IMAGE' >&2; exit 2; }

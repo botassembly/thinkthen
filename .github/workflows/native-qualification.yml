@@ -564,7 +564,10 @@ jobs:
     needs: build-windows
     if: always()
     runs-on: windows-2022
-    timeout-minutes: 120
+    # The prior run spent ~87 minutes before aggregate SDK expiry, with the
+    # remaining SDKs plus source/README checks still pending. Keep room for all
+    # stages; each caller-owned family/stage has its own one-hour deadline.
+    timeout-minutes: 240
     permissions: {contents: read}
     env:
       PYTHONUTF8: '1'

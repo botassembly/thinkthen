@@ -1,0 +1,12 @@
+#!/bin/sh
+# Focused fixture/controller proof; no SDK gate or long resource soak.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+cargo fmt --all --check
+cargo test --locked -p loopback --bin loopback --test stress
+cargo clippy --locked -p loopback --all-targets -- -D warnings
+python3 scripts/stress-runner-test
+python3 scripts/stress-dispatch-test
+ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/test_control.py scripts/stress-runner-test
+git diff --check

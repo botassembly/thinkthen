@@ -4,6 +4,7 @@ Run only on native Windows with the ordinary runtimes from requirements.json.
 Missing packages, compilers or runtimes fail the check; no surface is skipped.
 """
 from contextlib import contextmanager
+from functools import cache
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,14 @@ import subprocess
 import sys
 import zipfile
 import xml.etree.ElementTree as ET
+
+
+SDK_FAMILIES = {
+    'python': 'Python', 'python-frames': 'Python frames', 'typescript': 'TypeScript',
+    'go': 'Go', 'java': 'java', 'kotlin': 'kotlin', 'csharp': 'C#', 'ruby': 'Ruby',
+    'r': 'R', 'c': 'C', 'cpp': 'C++', 'swift': 'Swift', 'zig': 'Zig',
+    'sqlite': 'sqlite', 'duckdb': 'duckdb',
+}
 
 
 def run(*arguments, cwd, env, timeout=600, resolve_path=None, stream_output=False):
@@ -38,7 +47,7 @@ def run(*arguments, cwd, env, timeout=600, resolve_path=None, stream_output=Fals
         command = [runtime, str(script), *command[1:]]
     if stream_output:
         from release_windows_cache import run_consumer
-        status, output = run_consumer(command, env, cwd=cwd)
+        status, output = run_consumer(command, env, cwd=cwd, timeout=timeout)
         result = subprocess.CompletedProcess(command, status, stdout=output, stderr='')
     else:
         result = subprocess.run(command, cwd=cwd, env=env, capture_output=True,
@@ -138,20 +147,32 @@ def sdk_scratch():
     return long_path_scratch('thinkthen-windows-sdks-', 'Windows SDK')
 
 
-def full(folder, build, *, caller_owned=False):
+def full(folder, build, *, caller_owned=False, families=None):
     if os.name != 'nt':
         raise RuntimeError('All installed Windows SDK checks require a native Windows runner')
     folder = Path(folder).resolve()
+    selected = set(SDK_FAMILIES if families is None else families)
+    if not selected or selected - SDK_FAMILIES.keys():
+        raise ValueError('Select known installed Windows SDK families')
     if not caller_owned:
         from windows_caller_process import launch
-        launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', folder],
-               cwd=folder, env=dict(os.environ))
+        failed = []
+        for name in SDK_FAMILIES:
+            if name not in selected:
+                continue
+            try:
+                launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', folder, name],
+                       cwd=folder, env=dict(os.environ))
+            except SystemExit as error:
+                if error.code:
+                    failed.append(name)
+        if failed:
+            raise RuntimeError('Windows installed SDK checks failed: ' + ', '.join(failed))
         return
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(errors='backslashreplace')
     from release_windows_cache import check_cache
-    languages = ('Python', 'Python frames', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
-                 'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')
+    languages = [SDK_FAMILIES[name] for name in SDK_FAMILIES if name in selected]
     failures = {}
 
     @contextmanager
@@ -190,117 +211,136 @@ def full(folder, build, *, caller_owned=False):
             return shutil.which(name, path=env['PATH'])
         python = Path(sys.executable)
         installed_python = scratch / 'python/Scripts/python.exe'
-        with check('Python'):
+        @cache
+        def prepare_go():
+            return unpack(packages['go'], scratch / 'go/package')
+        @cache
+        def prepare_python():
             execute(python, '-I', '-m', 'venv', scratch / 'python')
             execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', wheelhouse(folder), packages['python'])
-            execute(installed_python, '-I', checks / 'python.py', fixture)
-            cancel('Python', installed_python, '-I', checks / 'python_cancel.py')
-        with check('Python frames'):
-            optional = folder / 'prerequisites/python-frames-windows'
-            loopback = Path(os.environ['THINKTHEN_LOOPBACK']).resolve(strict=True)
-            execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index',
-                    '--require-hashes', '--find-links', optional / 'wheels',
-                    '-r', optional / 'requirements.txt')
-            execute(installed_python, checks / 'python-frames.py', '--cases',
-                    checks / 'conformance', extra={'THINKTHEN_LOOPBACK': str(loopback)})
-        with check('TypeScript'):
-            node = scratch / 'node'
-            node.mkdir()
-            execute('npm', 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
-                    packages['typescript'], cwd=node)
-            shutil.copy2(checks / 'node.mjs', node / 'consumer.mjs')
-            execute('node', node / 'consumer.mjs', fixture, cwd=node)
-            execute('node', '--test', checks / 'typescript/stream-concurrency.test.js', cwd=node, stream_output=True,
-                    extra={'THINKTHEN_NODE_PACKAGE': str(node / 'node_modules/thinkthen/runtime.js')})
-            cancel('TypeScript', tool('node'), checks / 'typescript/stress.test.js',
-                   extra={'THINKTHEN_NODE_PACKAGE': str(node / 'node_modules/thinkthen/runtime.js')})
-        with check('Go'):
-            go = scratch / 'go'
-            unpack(packages['go'], go / 'package')
-            shutil.copytree(checks / 'go', go / 'consumer')
-            build_consumer('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(go / 'package'), cwd=go / 'consumer')
-            go_binary = go / 'consumer.exe'
-            build_consumer('go', 'test', '-mod=mod', '-c', '-o', go_binary, cwd=go / 'consumer')
-            go_arguments = ['-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=10m']
-            go_env = {'THINKTHEN_STUB_CASES': str(fixture), 'THINKTHEN_CASES': str(checks)}
-            execute(go_binary, *go_arguments, stream_output=True,
-                    extra=go_env)
-            check_cache([go_binary, *go_arguments],
-                        scratch / 'go-cache-proof', runtime | go_env, 'library.dll')
-            go_temporary_cache(execute, go_binary)
-            go_load_failure(execute, go_binary)
-            lookup_check(execute, checks, go / 'package/native/library', go_binary, *go_arguments,
-                         embedded=True, extra=go_env)
-            cancel('Go', go_binary, '-test.run=^TestSharedStress$', '-test.count=1', '-test.timeout=5m')
+        if 'python' in selected:
+            with check('Python'):
+                prepare_python()
+                execute(installed_python, '-I', checks / 'python.py', fixture)
+                cancel('Python', installed_python, '-I', checks / 'python_cancel.py')
+        if 'python-frames' in selected:
+            with check('Python frames'):
+                prepare_python()
+                optional = folder / 'prerequisites/python-frames-windows'
+                loopback = Path(os.environ['THINKTHEN_LOOPBACK']).resolve(strict=True)
+                execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index',
+                        '--require-hashes', '--find-links', optional / 'wheels',
+                        '-r', optional / 'requirements.txt')
+                execute(installed_python, checks / 'python-frames.py', '--cases',
+                        checks / 'conformance', extra={'THINKTHEN_LOOPBACK': str(loopback)})
+        if 'typescript' in selected:
+            with check('TypeScript'):
+                node = scratch / 'node'
+                node.mkdir()
+                execute('npm', 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
+                        packages['typescript'], cwd=node)
+                shutil.copy2(checks / 'node.mjs', node / 'consumer.mjs')
+                execute('node', node / 'consumer.mjs', fixture, cwd=node)
+                execute('node', '--test', checks / 'typescript/stream-concurrency.test.js', cwd=node, stream_output=True,
+                        extra={'THINKTHEN_NODE_PACKAGE': str(node / 'node_modules/thinkthen/runtime.js')})
+                cancel('TypeScript', tool('node'), checks / 'typescript/stress.test.js',
+                       extra={'THINKTHEN_NODE_PACKAGE': str(node / 'node_modules/thinkthen/runtime.js')})
+        if 'go' in selected:
+            with check('Go'):
+                go = scratch / 'go'
+                prepare_go()
+                shutil.copytree(checks / 'go', go / 'consumer')
+                build_consumer('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(go / 'package'), cwd=go / 'consumer')
+                go_binary = go / 'consumer.exe'
+                build_consumer('go', 'test', '-mod=mod', '-c', '-o', go_binary, cwd=go / 'consumer')
+                go_arguments = ['-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=10m']
+                go_env = {'THINKTHEN_STUB_CASES': str(fixture), 'THINKTHEN_CASES': str(checks)}
+                execute(go_binary, *go_arguments, stream_output=True,
+                        extra=go_env)
+                check_cache([go_binary, *go_arguments],
+                            scratch / 'go-cache-proof', runtime | go_env, 'library.dll')
+                go_temporary_cache(execute, go_binary)
+                go_load_failure(execute, go_binary)
+                lookup_check(execute, checks, go / 'package/native/library', go_binary, *go_arguments,
+                             embedded=True, extra=go_env)
+                cancel('Go', go_binary, '-test.run=^TestSharedStress$', '-test.count=1', '-test.timeout=5m')
         for name, main in [('java', 'ConsumerCases'), ('kotlin', 'KotlinCasesKt')]:
-            with check(name):
-                classpath = os.pathsep.join(map(str, [checks / 'jvm/consumer.jar', folder / name / '*',
-                                                       folder / name / 'dependencies/*']))
-                execute('java', '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
-                        main, fixture, '--stub-only')
-                if name == 'java':
+            if name in selected:
+                with check(name):
+                    classpath = os.pathsep.join(map(str, [checks / 'jvm/consumer.jar', folder / name / '*',
+                                                           folder / name / 'dependencies/*']))
                     execute('java', '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
-                            'JavaApiCases', '--stub-only')
-                    check_cache([shutil.which('java', path=env['PATH']), '--enable-native-access=ALL-UNNAMED',
-                                 '-cp', classpath, main, fixture, '--stub-only'],
-                                scratch / 'java-cache-proof', runtime, 'thinkthen_ffi.dll')
-                    lookup_check(execute, checks, scratch / 'go/package/native/library', shutil.which('java', path=env['PATH']),
-                                 '--enable-native-access=ALL-UNNAMED', '-cp', classpath, main, fixture, '--stub-only', embedded=True)
-                cancel(name, tool('java'), '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
-                       {'java': 'StressCases', 'kotlin': 'consumer.StressCasesKt'}[name])
-        with check('C#'):
-            consumer = scratch / 'dotnet'
-            shutil.copytree(checks / 'csharp-source', consumer)
-            project = consumer / 'Consumer.csproj'
-            project.write_text(project.read_text(encoding='utf-8').replace('Version="0.0.0"', 'Version="' + build['version'] + '"'), encoding='utf-8')
-            config = ET.Element('configuration')
-            sources = ET.SubElement(config, 'packageSources')
-            ET.SubElement(sources, 'clear')
-            for name, value in [('candidate', str(packages['csharp'].parent)),
-                                ('prepared', os.environ['THINKTHEN_WINDOWS_SINGLEFILE_FEED'])]:
-                ET.SubElement(sources, 'add', key=name, value=value)
-            ET.ElementTree(config).write(consumer / 'NuGet.Config', encoding='unicode')
-            single = scratch / 'single-file'
-            build_consumer('dotnet', 'publish', project, '--disable-build-servers',
-                           '--configfile', consumer / 'NuGet.Config',
-                           '-r', 'win-x64', '-p:PublishSingleFile=true', '-p:SelfContained=false',
-                           '--artifacts-path', scratch / 'dotnet-artifacts', '-o', single,
-                           extra={'NUGET_PACKAGES': str(scratch / 'nuget-packages')})
-            assert (single / 'thinkthen_ffi.dll').is_file(), 'single-file publish lost its side-by-side native DLL'
-            execute(single / 'Consumer.exe', fixture, '--stub-only')
-            lookup_check(execute, checks, single / 'thinkthen_ffi.dll', single / 'Consumer.exe', fixture, '--stub-only')
-            cancel('C#', single / 'Consumer.exe', '--stress-adapter')
-        with check('Ruby'):
-            gems = scratch / 'gems'
-            ruby_env = {'GEM_HOME': str(gems), 'GEM_PATH': str(gems), 'GEM_SPEC_CACHE': str(scratch / 'gem-specs')}
-            dependencies = sorted((folder / 'ruby/dependencies').glob('*.gem'))
-            if not dependencies: raise RuntimeError('Missing bundled Windows ffi dependency')
-            execute('gem', 'install', '--local', '--no-document', *dependencies, packages['ruby'], extra=ruby_env)
-            signatures = execute('ruby', '-e', 'puts Gem::Specification.find_by_name("thinkthen").full_gem_path',
-                                 extra=ruby_env).strip()
-            build_consumer('ruby', '-S', 'rbs', '-I', Path(signatures) / 'sig', 'validate')
-            execute('ruby', checks / 'ruby.rb', fixture, extra=ruby_env)
-            lookup_check(execute, checks, Path(signatures) / 'lib/thinkthen/thinkthen_ffi.dll', shutil.which('ruby', path=env['PATH']),
-                         '-e', 'require "thinkthen"; ThinkThen::Client.open(backend: :stub) {}', extra=ruby_env)
-            cancel('Ruby', tool('ruby'), checks / 'ruby-stress.rb', extra=ruby_env)
-        with check('R'):
-            r_env = r_cases(execute, folder, scratch, packages['r'], cases)
-            # Rscript only starts Rterm and dies on the interrupt that Rterm handles.
-            cancel('R', tool('Rterm'), '--vanilla', '--no-echo', '--file=' + str(checks / 'r-stress.R'),
-                   interrupt=True, extra=r_env)
-        c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, runtime, check, cancel)
-        swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check, cancel)
+                            main, fixture, '--stub-only')
+                    if name == 'java':
+                        execute('java', '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
+                                'JavaApiCases', '--stub-only')
+                        check_cache([shutil.which('java', path=env['PATH']), '--enable-native-access=ALL-UNNAMED',
+                                     '-cp', classpath, main, fixture, '--stub-only'],
+                                    scratch / 'java-cache-proof', runtime, 'thinkthen_ffi.dll')
+                        lookup_check(execute, checks, prepare_go() / 'native/library', shutil.which('java', path=env['PATH']),
+                                     '--enable-native-access=ALL-UNNAMED', '-cp', classpath, main, fixture, '--stub-only', embedded=True)
+                    cancel(name, tool('java'), '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
+                           {'java': 'StressCases', 'kotlin': 'consumer.StressCasesKt'}[name])
+        if 'csharp' in selected:
+            with check('C#'):
+                consumer = scratch / 'dotnet'
+                shutil.copytree(checks / 'csharp-source', consumer)
+                project = consumer / 'Consumer.csproj'
+                project.write_text(project.read_text(encoding='utf-8').replace('Version="0.0.0"', 'Version="' + build['version'] + '"'), encoding='utf-8')
+                config = ET.Element('configuration')
+                sources = ET.SubElement(config, 'packageSources')
+                ET.SubElement(sources, 'clear')
+                for name, value in [('candidate', str(packages['csharp'].parent)),
+                                    ('prepared', os.environ['THINKTHEN_WINDOWS_SINGLEFILE_FEED'])]:
+                    ET.SubElement(sources, 'add', key=name, value=value)
+                ET.ElementTree(config).write(consumer / 'NuGet.Config', encoding='unicode')
+                single = scratch / 'single-file'
+                build_consumer('dotnet', 'publish', project, '--disable-build-servers',
+                               '--configfile', consumer / 'NuGet.Config',
+                               '-r', 'win-x64', '-p:PublishSingleFile=true', '-p:SelfContained=false',
+                               '--artifacts-path', scratch / 'dotnet-artifacts', '-o', single,
+                               extra={'NUGET_PACKAGES': str(scratch / 'nuget-packages')})
+                assert (single / 'thinkthen_ffi.dll').is_file(), 'single-file publish lost its side-by-side native DLL'
+                execute(single / 'Consumer.exe', fixture, '--stub-only')
+                lookup_check(execute, checks, single / 'thinkthen_ffi.dll', single / 'Consumer.exe', fixture, '--stub-only')
+                cancel('C#', single / 'Consumer.exe', '--stress-adapter')
+        if 'ruby' in selected:
+            with check('Ruby'):
+                gems = scratch / 'gems'
+                ruby_env = {'GEM_HOME': str(gems), 'GEM_PATH': str(gems), 'GEM_SPEC_CACHE': str(scratch / 'gem-specs')}
+                dependencies = sorted((folder / 'ruby/dependencies').glob('*.gem'))
+                if not dependencies: raise RuntimeError('Missing bundled Windows ffi dependency')
+                execute('gem', 'install', '--local', '--no-document', *dependencies, packages['ruby'], extra=ruby_env)
+                signatures = execute('ruby', '-e', 'puts Gem::Specification.find_by_name("thinkthen").full_gem_path',
+                                     extra=ruby_env).strip()
+                build_consumer('ruby', '-S', 'rbs', '-I', Path(signatures) / 'sig', 'validate')
+                execute('ruby', checks / 'ruby.rb', fixture, extra=ruby_env)
+                lookup_check(execute, checks, Path(signatures) / 'lib/thinkthen/thinkthen_ffi.dll', shutil.which('ruby', path=env['PATH']),
+                             '-e', 'require "thinkthen"; ThinkThen::Client.open(backend: :stub) {}', extra=ruby_env)
+                cancel('Ruby', tool('ruby'), checks / 'ruby-stress.rb', extra=ruby_env)
+        if 'r' in selected:
+            with check('R'):
+                r_env = r_cases(execute, folder, scratch, packages['r'], cases)
+                # Rscript only starts Rterm and dies on the interrupt that Rterm handles.
+                cancel('R', tool('Rterm'), '--vanilla', '--no-echo', '--file=' + str(checks / 'r-stress.R'),
+                       interrupt=True, extra=r_env)
+        c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, runtime, check, cancel, selected)
+        swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check, cancel, selected)
         for name in ('sqlite', 'duckdb'):
-            with check(name):
-                installed = unpack(packages[name], scratch / name)
-                executable = 'sqlite3' if name == 'sqlite' else 'duckdb'
-                extension = installed / ('thinkthen_sqlite.dll' if name == 'sqlite' else 'thinkthen.duckdb_extension')
-                executable = shutil.which(executable, path=env['PATH'])
-                if executable is None: raise RuntimeError('Missing installed database runtime: ' + name)
-                execute(python, checks / 'sql.py', name, executable, extension.as_posix(), fixture)
+            if name in selected:
+                with check(name):
+                    installed = unpack(packages[name], scratch / name)
+                    executable = 'sqlite3' if name == 'sqlite' else 'duckdb'
+                    extension = installed / ('thinkthen_sqlite.dll' if name == 'sqlite' else 'thinkthen.duckdb_extension')
+                    executable = shutil.which(executable, path=env['PATH'])
+                    if executable is None: raise RuntimeError('Missing installed database runtime: ' + name)
+                    execute(python, checks / 'sql.py', name, executable, extension.as_posix(), fixture)
     if failures:
         raise RuntimeError('Windows installed SDK checks failed: ' + ', '.join(failures))
-    print('Windows candidate: every installed SDK passed', flush=True)
+    if selected == set(SDK_FAMILIES):
+        print('Windows candidate: every installed SDK passed', flush=True)
+    else:
+        print('Windows candidate: selected installed SDKs passed: ' + ', '.join(languages), flush=True)
 
 
 def r_cases(execute, folder, scratch, package, cases):
@@ -332,59 +372,66 @@ def native_contract(checks):
     return native_cases, registry
 
 
-def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, env, check, cancel):
-    with check('C'):
-        c = unpack(packages['c'], scratch / 'c')
-        c_output = scratch / 'c-consumer.exe'
-        build_consumer('clang-cl', '/nologo', '/TC', '/std:c11', '/MD', '/W4', '/WX', '/UNDEBUG',
-                '/D_CRT_SECURE_NO_WARNINGS', '/I' + str(c / 'include'),
-                '/I' + str(checks / 'c'), checks / 'c/conformance.c',
-                '/Fe:' + str(c_output), '/link', c / 'lib/thinkthen_ffi.lib')
-        c_env = {'PATH': os.pathsep.join((str(c / 'bin'), env['PATH']))}
-        native_cases, registry = native_contract(checks)
-        for case in cases:
-            rows = execute(c_output, json.dumps(case['request']), json.dumps(case['client']), extra=c_env)
-            native_cases.compare(rows, case, registry)
-        cancel('C', c_output, native=True, extra=c_env)
-    with check('C++'):
-        c = unpack(packages['c'], scratch / 'cpp-c')
-        cpp = unpack(packages['cpp'], scratch / 'cpp')
-        binary = scratch / 'cpp-consumer.exe'
-        build_consumer('clang-cl', '/nologo', '/std:c++17', '/EHsc', '/MD', '/W4', '/WX', '/UNDEBUG',
-                '/I' + str(cpp / 'include'), '/I' + str(c / 'include'), checks / 'cpp/consumer.cpp', '/Fe:' + str(binary), '/link',
-                c / 'lib/thinkthen_ffi.lib')
-        native_cases, registry = native_contract(checks)
-        for case in cases:
-            output = execute(binary, json.dumps(case['request']), json.dumps(case['client']), extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
-            native_cases.compare(output, case, registry, 'utf8')
-        cancel('C++', binary, native=True, extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
+def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, env, check, cancel, selected=None):
+    selected = set(SDK_FAMILIES) if selected is None else selected
+    if 'c' in selected:
+        with check('C'):
+            c = unpack(packages['c'], scratch / 'c')
+            c_output = scratch / 'c-consumer.exe'
+            build_consumer('clang-cl', '/nologo', '/TC', '/std:c11', '/MD', '/W4', '/WX', '/UNDEBUG',
+                    '/D_CRT_SECURE_NO_WARNINGS', '/I' + str(c / 'include'),
+                    '/I' + str(checks / 'c'), checks / 'c/conformance.c',
+                    '/Fe:' + str(c_output), '/link', c / 'lib/thinkthen_ffi.lib')
+            c_env = {'PATH': os.pathsep.join((str(c / 'bin'), env['PATH']))}
+            native_cases, registry = native_contract(checks)
+            for case in cases:
+                rows = execute(c_output, json.dumps(case['request']), json.dumps(case['client']), extra=c_env)
+                native_cases.compare(rows, case, registry)
+            cancel('C', c_output, native=True, extra=c_env)
+    if 'cpp' in selected:
+        with check('C++'):
+            c = unpack(packages['c'], scratch / 'cpp-c')
+            cpp = unpack(packages['cpp'], scratch / 'cpp')
+            binary = scratch / 'cpp-consumer.exe'
+            build_consumer('clang-cl', '/nologo', '/std:c++17', '/EHsc', '/MD', '/W4', '/WX', '/UNDEBUG',
+                    '/I' + str(cpp / 'include'), '/I' + str(c / 'include'), checks / 'cpp/consumer.cpp', '/Fe:' + str(binary), '/link',
+                    c / 'lib/thinkthen_ffi.lib')
+            native_cases, registry = native_contract(checks)
+            for case in cases:
+                output = execute(binary, json.dumps(case['request']), json.dumps(case['client']), extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
+                native_cases.compare(output, case, registry, 'utf8')
+            cancel('C++', binary, native=True, extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
 
 
-def swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check, cancel):
-    with check('Swift'):
-        swift = scratch / 'swift'
-        unpack(packages['swift'], swift / 'ThinkThen')
-        shutil.copytree(checks / 'swift', swift / 'Consumer')
-        build_consumer('swift', 'build', '--package-path', swift / 'Consumer', '-c', 'release', '--jobs', '2',
-                '--disable-sandbox', '-Xswiftc', '-warnings-as-errors')
-        binary = build_consumer('swift', 'build', '--package-path', swift / 'Consumer', '-c', 'release', '--show-bin-path').strip()
-        execute(sys.executable, checks / 'swift.py', Path(binary) / 'Consumer.exe', fixture)
-        lookup_check(execute, checks, Path(binary) / 'ThinkThen_ThinkThen.resources/Native/win-x64/thinkthen_ffi.dll',
-                     Path(binary) / 'Consumer.exe', fixture)
-        cancel('Swift', Path(binary) / 'Consumer.exe', native=True)
-    with check('Zig'):
-        zig = scratch / 'zig'
-        unpack(packages['zig'], zig / 'package')
-        shutil.copytree(checks / 'zig', zig / 'consumer')
-        build_consumer('zig', 'build', '-j2', '-Dtarget=x86_64-windows-msvc', '-Doptimize=ReleaseSafe', cwd=zig / 'consumer')
-        execute(sys.executable, checks / 'zig.py', zig / 'consumer/zig-out/bin/consumer.exe', fixture)
-        execute(zig / 'consumer/zig-out/bin/public-api.exe', stream_output=True)
-        lookup_check(execute, checks, zig / 'consumer/zig-out/bin/thinkthen_ffi.dll', zig / 'consumer/zig-out/bin/consumer.exe', 'load')
-        cancel('Zig', zig / 'consumer/zig-out/bin/consumer.exe', native=True)
+def swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch, check, cancel, selected=None):
+    selected = set(SDK_FAMILIES) if selected is None else selected
+    if 'swift' in selected:
+        with check('Swift'):
+            swift = scratch / 'swift'
+            unpack(packages['swift'], swift / 'ThinkThen')
+            shutil.copytree(checks / 'swift', swift / 'Consumer')
+            build_consumer('swift', 'build', '--package-path', swift / 'Consumer', '-c', 'release', '--jobs', '2',
+                    '--disable-sandbox', '-Xswiftc', '-warnings-as-errors')
+            binary = build_consumer('swift', 'build', '--package-path', swift / 'Consumer', '-c', 'release', '--show-bin-path').strip()
+            execute(sys.executable, checks / 'swift.py', Path(binary) / 'Consumer.exe', fixture)
+            lookup_check(execute, checks, Path(binary) / 'ThinkThen_ThinkThen.resources/Native/win-x64/thinkthen_ffi.dll',
+                         Path(binary) / 'Consumer.exe', fixture)
+            cancel('Swift', Path(binary) / 'Consumer.exe', native=True)
+    if 'zig' in selected:
+        with check('Zig'):
+            zig = scratch / 'zig'
+            unpack(packages['zig'], zig / 'package')
+            shutil.copytree(checks / 'zig', zig / 'consumer')
+            build_consumer('zig', 'build', '-j2', '-Dtarget=x86_64-windows-msvc', '-Doptimize=ReleaseSafe', cwd=zig / 'consumer')
+            execute(sys.executable, checks / 'zig.py', zig / 'consumer/zig-out/bin/consumer.exe', fixture)
+            execute(zig / 'consumer/zig-out/bin/public-api.exe', stream_output=True)
+            lookup_check(execute, checks, zig / 'consumer/zig-out/bin/thinkthen_ffi.dll', zig / 'consumer/zig-out/bin/consumer.exe', 'load')
+            cancel('Zig', zig / 'consumer/zig-out/bin/consumer.exe', native=True)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3 or sys.argv[1] != '--caller-owned':
+    if len(sys.argv) < 3 or sys.argv[1] != '--caller-owned':
         raise SystemExit('Use the installed candidate checker')
     folder = Path(sys.argv[2]).resolve()
-    full(folder, json.loads((folder / 'build.json').read_text(encoding='utf-8')), caller_owned=True)
+    full(folder, json.loads((folder / 'build.json').read_text(encoding='utf-8')), caller_owned=True,
+         families=sys.argv[3:] or None)

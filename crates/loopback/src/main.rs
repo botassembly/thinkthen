@@ -3,7 +3,25 @@
 use loopback::{HeldReply, Loopback, StressFixture, UnavailableBackend};
 use std::io::{BufRead, Write};
 use std::sync::mpsc::Receiver;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+fn wait_arrivals(
+    arrived: &Receiver<()>,
+    count: usize,
+    deadline: Instant,
+    mut progress: impl FnMut(usize) -> std::io::Result<()>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    progress(0)?;
+    for received in 0..count {
+        arrived
+            .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+            .map_err(|error| {
+                format!("arrival wait failed: received={received} required={count} reason={error}")
+            })?;
+        progress(received + 1)?;
+    }
+    Ok(())
+}
 
 enum Fixture {
     Case(Loopback),
@@ -86,7 +104,11 @@ impl Fixture {
         }
     }
 
-    fn command(&self, command: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn command(
+        &self,
+        command: &str,
+        output: &mut impl Write,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         match (self, command) {
             (Self::Stress(server) | Self::First { server, .. }, "stats") => {
                 Ok(server.stats().to_string())
@@ -109,17 +131,34 @@ impl Fixture {
             (Self::Held { arrived, .. } | Self::First { arrived, .. }, command)
                 if command == "arrived" || command.starts_with("arrived ") =>
             {
-                let count = command
-                    .strip_prefix("arrived ")
+                let mut args = command.split_whitespace().skip(1);
+                let count = args
+                    .next()
                     .map(str::parse::<usize>)
                     .transpose()?
                     .unwrap_or(1);
-                if count == 0 {
-                    return Err("arrival count must be positive".into());
+                let milliseconds = args.next().map(str::parse::<u64>).transpose()?;
+                if count == 0 || milliseconds == Some(0) || args.next().is_some() {
+                    return Err(
+                        "expected arrived [positive count [positive budget milliseconds]]".into(),
+                    );
                 }
-                for _ in 0..count {
-                    arrived.recv_timeout(Duration::from_secs(30))?;
-                }
+                let budget = Duration::from_millis(milliseconds.unwrap_or(30_000));
+                let started = Instant::now();
+                let deadline = started
+                    .checked_add(budget)
+                    .ok_or("arrival budget is too large")?;
+                wait_arrivals(arrived, count, deadline, |received| {
+                    if milliseconds.is_some() {
+                        writeln!(output, "{}", serde_json::json!({
+                            "event": "arrival", "received": received, "required": count,
+                            "elapsed_ms": started.elapsed().as_millis(), "budget_ms": budget.as_millis(),
+                        }))?;
+                        output.flush()?;
+                    }
+                    Ok(())
+                }).map_err(|error| format!("{error}; elapsed_ms={} budget_ms={}",
+                                          started.elapsed().as_millis(), budget.as_millis()))?;
                 Ok("arrived".to_owned())
             }
             (Self::Held { closed, .. } | Self::First { closed, .. }, "closed") => {
@@ -157,8 +196,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if command == "shutdown" {
             break;
         }
-        writeln!(output, "{}", fixture.command(&command)?)?;
+        let response = fixture.command(&command, &mut output)?;
+        writeln!(output, "{response}")?;
         output.flush()?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wait_arrivals;
+    use std::sync::mpsc;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn expired_total_deadline_keeps_partial_arrivals_without_starting_another_wait() {
+        let (send, receive) = mpsc::channel();
+        for _ in 0..3 {
+            send.send(()).unwrap();
+        }
+        let mut seen = Vec::new();
+        let started = Instant::now();
+        let error = wait_arrivals(&receive, 4, started, |received| {
+            seen.push(received);
+            Ok(())
+        })
+        .unwrap_err();
+        assert!(started.elapsed() < Duration::from_secs(15));
+        assert_eq!(seen, [0, 1, 2, 3]);
+        assert!(error.to_string().contains("received=3 required=4"));
+    }
 }

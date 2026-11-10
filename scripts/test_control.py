@@ -1,10 +1,13 @@
 """Bounded reads for the local fixture's line-oriented control pipe, and its process."""
 import os
+import json
+import math
 from pathlib import Path
 import queue
 import subprocess
 import sys
 import threading
+import time
 
 
 def read_line(stream, *, timeout=30):
@@ -52,13 +55,24 @@ class Fixture:
     def read(self, timeout=30):
         return read_line(self.process.stdout, timeout=timeout).strip()
 
-    def command(self, command, timeout=30):
+    def command(self, command, timeout=30, *, progress=None):
+        deadline = time.monotonic() + timeout
         self.process.stdin.write(command + '\n')
         self.process.stdin.flush()
-        response = self.read(timeout)
-        if not response:
-            raise RuntimeError(f'loopback stopped during {command}')
-        return response
+        while True:
+            response = self.read(max(0, deadline - time.monotonic()))
+            if not response:
+                raise RuntimeError(f'loopback stopped during {command}')
+            if progress is None or response == 'arrived':
+                return response
+            report = json.loads(response)
+            if (set(report) != {'event', 'received', 'required', 'elapsed_ms', 'budget_ms'}
+                    or report['event'] != 'arrival'
+                    or any(type(report[key]) is not int or report[key] < 0
+                           for key in ('received', 'required', 'elapsed_ms', 'budget_ms'))
+                    or report['received'] > report['required']):
+                raise RuntimeError('invalid fixture arrival progress')
+            progress(report)
 
     def close(self):
         try:
@@ -108,19 +122,37 @@ class Capture:
 def arrived_or_exited(fixture, process, arrivals=1, *, timeout=30):
     """An adapter that fails before opening its request cannot strand arrival."""
     events = queue.Queue()
+    started = time.monotonic()
+    deadline = started + timeout
+    received = 0
     def arrival():
         try:
-            events.put(('arrival', fixture.command('arrived' if arrivals == 1 else f'arrived {arrivals}', timeout)))
+            remaining = max(0, deadline - time.monotonic())
+            milliseconds = max(1, math.ceil(remaining * 1000))
+            events.put(('arrival', fixture.command(f'arrived {arrivals} {milliseconds}', remaining,
+                        progress=lambda report: events.put(('progress', report)))))
         except Exception as error:  # noqa: BLE001 - the arrival thread hands every failure to its caller
             events.put(('error', str(error)))
     threading.Thread(target=arrival, daemon=True).start()
     threading.Thread(target=lambda: events.put(('exit', process.wait(timeout=timeout + 90))), daemon=True).start()
-    try:
-        kind, value = events.get(timeout=timeout)
-    except queue.Empty as error:
-        raise RuntimeError("adapter did not open a request before its deadline") from error
-    if kind != 'arrival' or value != 'arrived':
-        raise RuntimeError(f'adapter stopped before request arrival: {kind} {value}')
+    while True:
+        try:
+            kind, value = events.get(timeout=max(0, deadline - time.monotonic()))
+        except queue.Empty:
+            kind, value = 'deadline', 'adapter did not open every request before its deadline'
+        if kind == 'progress':
+            if value['required'] != arrivals or value['received'] < received:
+                kind, value = 'error', 'invalid fixture arrival progress count'
+            else:
+                received = value['received']
+                continue
+        if kind == 'arrival' and value == 'arrived':
+            if time.monotonic() <= deadline:
+                return
+            kind, value = 'deadline', 'arrival confirmation exceeded the controller deadline'
+        raise RuntimeError(f'adapter stopped before request arrival: {kind} {value}; '
+                           f'last_observed_received={received} required={arrivals} '
+                           f'elapsed_seconds={time.monotonic() - started:.3f} budget_seconds={timeout:g}')
 
 
 def soak(surface, command, environment, **options):

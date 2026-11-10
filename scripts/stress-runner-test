@@ -425,7 +425,7 @@ try:
     silent_read, silent_write = os.pipe()
     with os.fdopen(silent_read) as silent, os.fdopen(silent_write, 'w'):
         class Silent:
-            def command(self, _text, timeout):
+            def command(self, _text, timeout, **_options):
                 return read_line(silent, timeout=timeout)
         waiting = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
         try:
@@ -440,3 +440,57 @@ try:
 finally:
     sys.path.pop(0)
 print('Stress cancel: the first-request deadline scales with records and still expires')
+
+# Feature: all arrival reads share one budget; partial counts survive the
+# adapter's exit, fixture EOF and the controller's own expiry.
+import io
+import threading
+from types import SimpleNamespace
+import test_control
+
+clock = [0.0]
+seen_timeouts, progress = [], []
+fixture = object.__new__(test_control.Fixture)
+fixture.process = SimpleNamespace(stdin=io.StringIO())
+responses = iter([json.dumps(dict(event='arrival', received=n, required=4,
+                                 elapsed_ms=n * 1000, budget_ms=130000)) for n in (0, 3)] + ['arrived'])
+def read_progress(timeout):
+    seen_timeouts.append(timeout)
+    clock[0] += 1
+    return next(responses)
+fixture.read = read_progress
+with patch.object(test_control.time, 'monotonic', side_effect=lambda: clock[0]):
+    assert fixture.command('arrived 4 130000', 130, progress=progress.append) == 'arrived'
+assert seen_timeouts == [130, 129, 128], seen_timeouts
+assert [item['received'] for item in progress] == [0, 3]
+
+for failure in ('exit', 'eof', 'deadline'):
+    reported, done = threading.Event(), threading.Event()
+    class Partial:
+        def command(self, text, timeout, *, progress, mode=failure, ready=reported, finish=done):
+            fields = text.split()
+            assert fields[:2] == ['arrived', '4'], fields
+            assert 0 < int(fields[2]) <= 130000, fields
+            assert 0 <= int(fields[2]) - timeout * 1000 <= 1.001, (fields, timeout)
+            progress(dict(event='arrival', received=3, required=4, elapsed_ms=0, budget_ms=int(fields[2])))
+            ready.set()
+            if mode == 'eof':
+                raise RuntimeError('controlled fixture EOF')
+            finish.wait(15)
+            return 'arrived'
+    class Adapter:
+        def wait(self, timeout, mode=failure, ready=reported, finish=done):
+            assert ready.wait(15)
+            if mode != 'exit':
+                finish.wait(15)
+            return 9
+    try:
+        test_control.arrived_or_exited(Partial(), Adapter(), 4, timeout=0.2 if failure == 'deadline' else 130)
+    except RuntimeError as error:
+        assert 'last_observed_received=3 required=4' in str(error), error
+        assert {'exit': 'exit 9', 'eof': 'controlled fixture EOF', 'deadline': 'deadline'}[failure] in str(error), error
+    else:
+        raise AssertionError('an incomplete arrival frontier was accepted')
+    finally:
+        done.set()
+print('Stress arrival: one budget and observed partial counts survive every exit path')

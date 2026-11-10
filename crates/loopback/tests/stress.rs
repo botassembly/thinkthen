@@ -218,6 +218,29 @@ fn held_process_waits_for_the_whole_paid_frontier() {
     assert_eq!(line.trim(), "arrived");
     drop(peers);
     drop(third);
+    // Explicit-budget callers receive bounded progress. The first request is
+    // absent until zero is observed; the fourth waits until three are observed.
+    writeln!(control, "arrived 4 15000").unwrap();
+    control.flush().unwrap();
+    let mut held = Vec::new();
+    for received in 0..=4 {
+        line.clear();
+        output.read_line(&mut line).unwrap();
+        let progress: serde_json::Value = serde_json::from_str(&line).unwrap();
+        assert_eq!(progress["event"], "arrival");
+        assert_eq!(progress["received"], received);
+        assert_eq!(progress["required"], 4);
+        assert_eq!(progress["budget_ms"], 15000);
+        if received < 4 {
+            let mut peer = TcpStream::connect(&address).unwrap();
+            peer.write_all(REQUEST).unwrap();
+            held.push(peer);
+        }
+    }
+    line.clear();
+    output.read_line(&mut line).unwrap();
+    assert_eq!(line.trim(), "arrived");
+    drop(held);
     writeln!(control, "shutdown").unwrap();
     control.flush().unwrap();
     assert!(child.wait().unwrap().success());
