@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Record only a zero-data final-NuGet bootstrap with standard native Ubuntu perf."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+
+HERE = Path(__file__).resolve().parent
+ARCHIVE = '1d1ad293b3dff7e7e90e816ee82c53b4d42d83db729516e85cf3782022bd68c0'
+NUGET = 'ad275a6b3e46b2087f8574662d23c08ac7a38b944a9787d435dc0bb53e07f833'
+MANAGED = '19dff531e39a9b2b61facdba1082a194686ff9ea6a9fe5e0f66a3b9cb16c9d6d'
+NATIVE = '9f1641a0b2d7530227b2d7cc4d7d858e329678572949379bec9ab392a2bd9435'
+CORELIB = 'dbe82a7a9a38f468d8dafb7890a3301f904c420718a8a985a302aa182c1268bc'
+CORECLR = '843b66a2b33a570537c779283b27f7c1f3ff5394e5a72436bf181c885d4cdfff'
+
+
+def sha(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def save(path, value):
+    path.write_text(json.dumps(value, indent=2) + '\n')
+
+
+def run(command, log, env=None):
+    with log.open('w') as stream:
+        subprocess.run(command, env=env, stdout=stream, stderr=subprocess.STDOUT, check=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source', type=Path, required=True)
+    parser.add_argument('--archive', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    output, source = args.output.resolve(), args.source.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    work = output.parent / 'perf-bootstrap-work'
+    work.mkdir()
+    if sha(args.archive) != ARCHIVE:
+        raise RuntimeError('actual final platform archive differs')
+    sys.path.insert(0, str(source / 'scripts'))
+    from csharp_dependencies import sdk_archive
+    from release_downloads import fetch
+    sdk, feed, consumer = work / 'sdk', work / 'feed', work / 'consumer'
+    sdk.mkdir(); feed.mkdir()
+    with tarfile.open(fetch(sdk_archive(), work / 'dotnet-sdk.tar.gz')) as archive:
+        archive.extractall(sdk, filter='data')
+    with tarfile.open(args.archive) as archive:
+        member, = [m for m in archive.getmembers() if m.name.endswith('/csharp/Botassembly.ThinkThen.0.2.0.nupkg')]
+        package = feed / 'Botassembly.ThinkThen.0.2.0.nupkg'
+        package.write_bytes(archive.extractfile(member).read())
+    if sha(package) != NUGET or sha(sdk / 'shared/Microsoft.NETCore.App/10.0.14/libcoreclr.so') != CORECLR:
+        raise RuntimeError('final NuGet or pinned runtime differs')
+    shutil.copytree(source / 'sdk/csharp/tests', consumer)
+    shutil.copy2(HERE / 'SoakDiagnostic.cs', consumer)
+    program, anchor = consumer / 'Program.cs', 'if (args is ["--interface-only"])'
+    text = program.read_text()
+    if text.count(anchor) != 1:
+        raise RuntimeError('existing bootstrap anchor changed')
+    bootstrap = 'if (args is ["--soak-diagnostic-bootstrap"]) { using var client = new ThinkThenClient(new() { Backend = Backend.Stub }); SoakDiagnostic.Identity(); SoakDiagnostic.Capture(0); File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("SOAK_DIAGNOSTIC_OUTPUT")!, "target-maps.txt"), File.ReadAllText("/proc/self/maps")); return; }\n        '
+    program.write_text(text.replace(anchor, bootstrap + anchor))
+    config = consumer / 'NuGet.Config'
+    config.write_text(f'<configuration><packageSources><clear/><add key="final" value="{feed}"/><add key="public" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="final"><package pattern="Botassembly.ThinkThen"/></packageSource><packageSource key="public"><package pattern="Microsoft.*"/><package pattern="System.*"/></packageSource></packageSourceMapping></configuration>')
+    env = dict(PATH=str(sdk) + ':/usr/local/bin:/usr/bin:/bin', HOME=str(work / 'home'), LANG='C.UTF-8',
+               DOTNET_ROOT=str(sdk), DOTNET_CLI_HOME=str(work / 'home'), NUGET_PACKAGES=str(work / 'packages'),
+               DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
+               SOAK_DIAGNOSTIC_OUTPUT=str(output), SOAK_MANAGED_SHA256=MANAGED, SOAK_NATIVE_SHA256=NATIVE)
+    run([str(sdk / 'dotnet'), 'build', str(consumer / 'Consumer.csproj'), '--disable-build-servers', '--configfile', str(config), '-o', str(work / 'bin')], output / 'build.log', env)
+    events = [f'syscalls:sys_{phase}_{name}' for name in ('mprotect', 'mmap', 'mremap', 'brk', 'munmap') for phase in ('enter', 'exit')]
+    for event in events:
+        if not Path('/sys/kernel/tracing/events', *event.split(':'), 'id').is_file():
+            raise RuntimeError('required syscall tracepoint unavailable: ' + event)
+    waiter = 'import json,subprocess,sys;from pathlib import Path;p=subprocess.Popen(sys.argv[2:]);r=p.wait();Path(sys.argv[1]).write_text(json.dumps({"pid":p.pid,"exit_code":r}));sys.exit(r)'
+    command = ['sudo', '-n', 'env', '-i', *[f'{k}={v}' for k, v in env.items()], '/usr/bin/prlimit', '--fsize=134217728:134217728', '--', '/usr/bin/perf', 'record', '-o', str(output / 'perf.data'), '--clockid', 'mono', '-c', '1', '--call-graph', 'dwarf,8192', '--user-callchains', '-m', '256', '--max-size', '128M', '-e', ','.join(events), '--', '/usr/bin/python3', '-c', waiter, str(output / 'target-exit.json'), str(sdk / 'dotnet'), str(work / 'bin/Consumer.dll'), '--soak-diagnostic-bootstrap']
+    save(output / 'command.json', command)
+    started = time.monotonic()
+    run(command, output / 'record.log')
+    run(['sudo', '-n', 'chown', f'{os.getuid()}:{os.getgid()}', str(output / 'perf.data')], output / 'artifact-owner.log')
+    run(['sudo', '-n', '/usr/bin/perf', 'buildid-list', '-i', str(output / 'perf.data')], output / 'buildids.txt')
+    run(['sudo', '-n', '/usr/bin/perf', 'script', '-i', str(output / 'perf.data'), '--ns', '--show-task-events', '--show-mmap-events', '--show-lost-events', '-F', 'comm,pid,tid,time,event,trace'], output / 'perf-script.txt')
+    identity = json.loads((output / 'loaded-identity.json').read_text())
+    exit_info = json.loads((output / 'target-exit.json').read_text())
+    if exit_info != dict(pid=identity['pid'], exit_code=0) or identity['managed_sha256'] != MANAGED or identity['native_sha256'] != NATIVE or identity['runtime_version'] != '10.0.14' or identity['corelib_sha256'] != CORELIB:
+        raise RuntimeError('actual target normal exit/SDK/runtime identity failed')
+    decoded = (output / 'perf-script.txt').read_text()
+    if re.search(r'PERF_RECORD_LOST|LOST_SAMPLES|lost\s+[1-9]\d*\s+events', decoded + (output / 'record.log').read_text(), re.I):
+        raise RuntimeError('lost events prevent admission')
+    if not re.search(rf'PERF_RECORD_EXIT.*?\b{identity["pid"]}[:/]{identity["pid"]}\b', decoded):
+        raise RuntimeError('target main-thread exit missing from trace; recording may have stopped early')
+    pending, pairs, current = {}, [], None
+    for line in decoded.splitlines():
+        header = re.match(r'^.*?\s+(\d+)(?:/|\s+)(\d+)\s+(\d+\.\d+):\s+syscalls:sys_(enter|exit)_(\w+):\s+(.*)', line)
+        if header:
+            pid, tid, stamp, phase, name, raw = header.groups(); current = None
+            if int(pid) != identity['pid']: continue
+            key = (int(tid), name)
+            if phase == 'enter':
+                current = dict(pid=int(pid), tid=int(tid), time=stamp, syscall=name, raw=raw, frames=[]); pending[key] = current
+            elif key in pending:
+                entry = pending.pop(key); ret = re.search(r'\bret:\s*(0x[0-9a-fA-F]+|-?\d+)', raw)
+                if ret and 0 <= int(ret.group(1), 16 if ret.group(1).startswith('0x') else 10) < 2**63 and entry['frames']: pairs.append(entry)
+        elif current is not None and re.match(r'^\s+[0-9a-fA-F]+\s', line) and any(n in line for n in ('libcoreclr.so', 'libclrjit.so', 'libthinkthen_ffi.so')):
+            current['frames'].append(line.strip())
+    save(output / 'caller-candidates.json', pairs)
+    modules = {}
+    for line in (output / 'target-maps.txt').read_text().splitlines():
+        fields = line.split(maxsplit=5)
+        if len(fields) == 6 and fields[5].startswith('/') and Path(fields[5]).is_file(): modules[fields[5]] = sha(fields[5])
+    if [v for p, v in modules.items() if Path(p).name == 'libcoreclr.so'] != [CORECLR]:
+        raise RuntimeError('actual mapped CoreCLR differs')
+    save(output / 'mapped-sha256.json', modules)
+    (output / 'modules').mkdir()
+    for name, digest in modules.items():
+        with Path(name).open('rb') as stream:
+            if stream.read(4) == b'\x7fELF': shutil.copy2(name, output / 'modules' / (digest + '-' + Path(name).name))
+    save(output / 'identity.json', dict(scope='native-Ubuntu-perf-bootstrap-only', sdk_data_calls=0, sdk_rows=0, stress_checkpoints=0,
+        source_revision=subprocess.check_output(['git', '-C', source, 'rev-parse', 'HEAD'], text=True).strip(),
+        archive_sha256=ARCHIVE, nuget_sha256=NUGET, consumer_sha256=sha(work / 'bin/Consumer.dll'),
+        perf_data_sha256=sha(output / 'perf.data'), wall_seconds=time.monotonic()-started, useful_candidate_count=len(pairs),
+        claim='mechanics candidates require manual frame/module review; no data workload or release verdict'))
+    if not pairs or (output / 'perf.data').stat().st_size >= 128 * 1024 * 1024:
+        raise RuntimeError('no useful successful target syscall frames or trace cap reached')
+
+
+if __name__ == '__main__':
+    main()
