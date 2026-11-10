@@ -209,12 +209,63 @@ class ReleaseScripts(unittest.TestCase):
             cached.write_bytes(b'current package')
             verify_nuget(packages, scratch / 'cache')
 
+    def test_recovery_backend_discriminates_questions_with_shared_state(self):
+        module = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))
+        body = dict(state='Each question quotes the text it asks about.', model='fixture', questions={
+            'q1': dict(type='noul', instructions='The text is "first". Ready?'),
+            'q2': dict(type='noul', instructions='The text is "second". Ready?')})
+        with module['answer_backend'](module['recovery_probability']) as server:
+            from urllib.parse import urlsplit
+            route = urlsplit(server.url)
+            connection = http.client.HTTPConnection(route.hostname, route.port, timeout=30)
+            try:
+                connection.request('POST', route.path, json.dumps(body), {'Content-Type': 'application/json'})
+                reply = connection.getresponse()
+                self.assertEqual(reply.status, 200)
+                answers = json.loads(reply.read())['answers']
+                self.assertEqual([answers[name]['noul'] for name in ('q1', 'q2')], [0.9, 0.1])
+                self.assertEqual(server.requests, [body])
+            finally:
+                connection.close()
+        with self.assertRaises(KeyError):
+            module['recovery_probability'](dict(instructions='unexpected text'))
+
+    def test_windows_acl_control_uses_own_modules_and_reports_safe_bounded_errors(self):
+        import release_windows_cache as cache
+        real_run = subprocess.run
+        with tempfile.TemporaryDirectory(prefix='acl-control-fixture-') as temporary:
+            path = Path(temporary) / 'owned-store'
+            environment = dict(os.environ, SYSTEMROOT=temporary, PsModulePath='foreign-runtime-modules',
+                               PSMODULEPATH='another-foreign-path', THINKTHEN_API_KEY='synthetic-private-value')
+            for fails in (False, True):
+                def child(command, **options):
+                    self.assertNotIn('PSMODULEPATH', {key.upper() for key in options['env']})
+                    self.assertEqual(options['env']['TT_CACHE_PATH'], str(path))
+                    self.assertIn('Get-Acl', command[-1])
+                    self.assertIn('-NoProfile', command)
+                    source = ("import os,sys;sys.stderr.write('Get-Acl unavailable: ' + "
+                              "os.environ['THINKTHEN_API_KEY'] + '\u0020' + 'x'*9000);sys.exit(1)"
+                              if fails else "print('private state')")
+                    return real_run([sys.executable, '-c', source], **options)
+                with self.subTest(fails=fails), patch.object(cache.subprocess, 'run', side_effect=child):
+                    if fails:
+                        with self.assertRaisesRegex(RuntimeError, 'Get-Acl unavailable') as raised:
+                            cache._control(environment, 'Get-Acl', path)
+                        message = str(raised.exception)
+                        self.assertIn('exit 1', message)
+                        self.assertIn('<redacted>', message)
+                        self.assertNotIn('synthetic-private-value', message)
+                        self.assertLess(len(message.encode()), 4300)
+                    else:
+                        self.assertEqual(cache._control(environment, 'Get-Acl', path), 'private state')
+            self.assertEqual(environment['PsModulePath'], 'foreign-runtime-modules')
+
     def test_windows_store_and_recovery_cases_use_the_existing_caller_owned_route(self):
         main = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['main']
         with tempfile.TemporaryDirectory(prefix='thinkthen-trust-routing-') as temporary:
             binary = Path(temporary) / 'thinkthen.exe'
             binary.write_bytes(b'installed command route fixture')
-            for name in ('response-store', 'recovery'):
+            for name in ('response-store', 'response-directory', 'response-database', 'recovery'):
                 with self.subTest(case=name):
                     kernel = SimpleNamespace(GetConsoleCP=lambda: 437, GetConsoleOutputCP=lambda: 437,
                         SetConsoleCP=lambda value: 1, SetConsoleOutputCP=lambda value: 1)
@@ -228,8 +279,23 @@ class ReleaseScripts(unittest.TestCase):
                         main()
                     launch.assert_called_once()
                     command = launch.call_args.args[0]
-                    self.assertEqual(command[2:], ['--caller-owned', '--binary', str(binary.resolve()), '--case', name])
+                    self.assertEqual(command[2:7], ['--caller-owned', '--binary', str(binary.resolve()), '--case', name])
+                    self.assertEqual(command[7], '--deadline')
+                    self.assertIsNone(launch.call_args.kwargs['timeout'])
                     self.assertNotIn('normal_log', launch.call_args.kwargs)
+
+    def test_windows_store_cases_are_mandatory_and_child_diagnostics_precede_kill(self):
+        module = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))
+        self.assertEqual(module['CALLER_CASES'],
+                         ('response-store', 'response-directory', 'response-database', 'recovery'))
+        self.assertTrue(set(module['CALLER_CASES']) <= {name for name, _case, _caller in module['CASES']})
+        with patch.object(module['watchdog'].__globals__['threading'], 'Timer') as timer, \
+             patch.object(module['watchdog'].__globals__['time'], 'monotonic', return_value=100):
+            timers = module['watchdog']('response-directory', child=True, deadline=340)
+        self.assertEqual([call.args[0] for call in timer.call_args_list], [230])
+        self.assertIsNone(timers[0])
+        self.assertEqual(len(timers), 2)
+        self.assertEqual(module['CASE_SECONDS'], 240)
 
     def test_windows_unicode_probe_restores_shared_console_pages(self):
         main = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['main']

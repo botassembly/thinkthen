@@ -14,6 +14,107 @@ use std::time::Duration;
 use support::*;
 use thinkthen::{BackendName, Code, Decide, Key, ResponseMode, ResponseStore, Settings, Threshold};
 
+#[cfg(unix)]
+#[test]
+fn ancestor_alias_records_reuses_and_replays_without_losing_directory_identity() {
+    use std::os::unix::fs::symlink;
+    let temporary = tempfile::tempdir().unwrap();
+    let root = temporary.path().canonicalize().unwrap();
+    let real = root.join("real");
+    std::fs::create_dir(&real).unwrap();
+    let alias = root.join("alias");
+    symlink(&real, &alias).unwrap();
+    let path = alias.join("store");
+    let sends = Arc::new(AtomicUsize::new(0));
+    let observed = sends.clone();
+    let server = Loopback::start(move |request| {
+        let index = observed.fetch_add(1, Ordering::SeqCst);
+        let body = request.json().unwrap();
+        let probability = if index == 0 { 0.8 } else { 0.2 };
+        response(&body, BackendName::SystemOne, probability)
+    })
+    .unwrap();
+    let question = Decide::new("Relevant?").unwrap();
+    let recorded = settings(
+        &path,
+        ResponseMode::Record,
+        BackendName::SystemOne,
+        server.base(),
+    )
+    .engine(|_| None)
+    .unwrap();
+    for (text, answer) in [("yes", true), ("no", false)] {
+        assert_eq!(
+            recorded
+                .run(&question, text)
+                .unwrap()
+                .into_answer()
+                .unwrap(),
+            answer
+        );
+    }
+    drop(recorded);
+    let cached = settings(
+        &path,
+        ResponseMode::Cache,
+        BackendName::SystemOne,
+        server.base(),
+    )
+    .max_requests(Some(0))
+    .engine(|_| None)
+    .unwrap();
+    let replayed = replay(&path, server.base());
+    for (text, answer) in [("yes", true), ("no", false)] {
+        assert_eq!(
+            cached.run(&question, text).unwrap().into_answer().unwrap(),
+            answer
+        );
+        assert_eq!(
+            replayed
+                .run(&question, text)
+                .unwrap()
+                .into_answer()
+                .unwrap(),
+            answer
+        );
+    }
+    assert_eq!(sends.load(Ordering::SeqCst), 2);
+    assert_eq!(cached.usage().cache_hits, 2);
+    assert_eq!(replayed.usage().replay_hits, 2);
+    let replacement = root.join("replacement");
+    std::fs::create_dir(&replacement).unwrap();
+    std::fs::remove_file(&alias).unwrap();
+    symlink(&replacement, &alias).unwrap();
+    assert_eq!(
+        cached.run(&question, "yes").unwrap_err().code(),
+        Code::LocalResponseStore
+    );
+    assert_eq!(
+        replayed.run(&question, "yes").unwrap_err().code(),
+        Code::LocalResponseStore
+    );
+    assert_eq!(sends.load(Ordering::SeqCst), 2);
+    // The caller alias can still resolve to the held directory while the
+    // canonical pathname names a replacement. Both identities must be checked.
+    std::fs::remove_file(&alias).unwrap();
+    let moved = root.join("moved");
+    std::fs::rename(&real, &moved).unwrap();
+    symlink(&moved, &alias).unwrap();
+    let mut private = std::fs::DirBuilder::new();
+    use std::os::unix::fs::DirBuilderExt;
+    private.mode(0o700).recursive(true).create(&real).unwrap();
+    private.create(real.join("store")).unwrap();
+    assert_eq!(
+        cached.run(&question, "yes").unwrap_err().code(),
+        Code::LocalResponseStore
+    );
+    assert_eq!(
+        replayed.run(&question, "yes").unwrap_err().code(),
+        Code::LocalResponseStore
+    );
+    assert_eq!(sends.load(Ordering::SeqCst), 2);
+}
+
 #[test]
 fn cache_reinterprets_thresholds_and_repacks_only_misses_on_both_wires() {
     for backend in [BackendName::SystemOne, BackendName::OpenAi] {

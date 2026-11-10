@@ -85,6 +85,8 @@ def fixture(failure):
         for filename in packages.values():
             with zipfile.ZipFile(folder / filename, 'w') as archive:
                 archive.writestr('fixture', b'')
+                if filename == 'c.zip':
+                    archive.writestr('bin/thinkthen_ffi.dll', b'fixture engine')
                 if filename == 'go.zip':
                     archive.writestr('native/library', b'embedded engine')
         calls = []
@@ -118,6 +120,10 @@ def fixture(failure):
                 raise RuntimeError('injected C compiler failure')
             if failure == 'Python' and args[1:4] == ['-I', '-m', 'venv']:
                 raise RuntimeError('injected Python installation failure')
+            if args[0] == 'clang-cl':
+                for argument in args:
+                    if argument.startswith('/Fe:'):
+                        Path(argument[4:]).write_bytes(b'compiled fixture consumer')
             if args[0] == 'dotnet':
                 single = Path(args[args.index('-o') + 1])
                 single.mkdir()

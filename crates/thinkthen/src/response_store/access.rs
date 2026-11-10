@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 #[derive(Debug)]
 pub(super) struct Directory {
     path: PathBuf,
+    #[cfg(unix)]
+    canonical: PathBuf,
     database: PathBuf,
     held: File,
     database_file: File,
@@ -41,6 +43,20 @@ impl Directory {
             crate::access::AccessList::private(&held, path).map_err(fail)?;
         }
         crate::access::validate_private(&held).map_err(fail)?;
+        #[cfg(unix)]
+        let canonical = {
+            let canonical = fs::canonicalize(path).map_err(fail)?;
+            let resolved = crate::access::directory(&canonical).map_err(fail)?;
+            if !crate::access::AccessList::same_file(&held, &resolved).map_err(fail)? {
+                return Err(error(Code::LocalResponseStore));
+            }
+            crate::access::validate_private(&resolved).map_err(fail)?;
+            canonical
+        };
+        // SQLite NOFOLLOW rejects aliases in any ancestor, including macOS /var.
+        #[cfg(unix)]
+        let database = canonical.join("responses.sqlite3");
+        #[cfg(not(unix))]
         let database = path.join("responses.sqlite3");
         if let Ok(metadata) = fs::symlink_metadata(&database)
             && !metadata.is_file()
@@ -80,6 +96,8 @@ impl Directory {
         }
         let directory = Self {
             path: path.to_path_buf(),
+            #[cfg(unix)]
+            canonical,
             database,
             held,
             database_file,
@@ -92,7 +110,11 @@ impl Directory {
     }
     pub(super) fn check(&self) -> Result<(), Error> {
         let fail = |_| error(Code::LocalResponseStore);
-        for path in [&self.path, &self.database] {
+        self.check_directory(&self.path)?;
+        #[cfg(unix)]
+        self.check_directory(&self.canonical)?;
+        let requested_database = self.path.join("responses.sqlite3");
+        for path in [&requested_database, &self.database] {
             if fs::symlink_metadata(path)
                 .map_err(fail)?
                 .file_type()
@@ -111,19 +133,25 @@ impl Directory {
                 return Err(error(Code::LocalStoreFormat));
             }
         }
-        let directory = crate::access::directory(&self.path).map_err(fail)?;
         let database = File::open(&self.database).map_err(fail)?;
-        if !crate::access::AccessList::same_file(&self.held, &directory).map_err(fail)?
-            || !crate::access::AccessList::same_file(&self.database_file, &database)
-                .map_err(fail)?
-        {
+        if !crate::access::AccessList::same_file(&self.database_file, &database).map_err(fail)? {
             return Err(error(Code::LocalResponseStore));
         }
-        crate::access::validate_private(&directory).map_err(fail)?;
         crate::access::validate_private(&database).map_err(fail)?;
         if !database.metadata().map_err(fail)?.is_file() {
             return Err(error(Code::LocalResponseStore));
         }
         Ok(())
+    }
+    fn check_directory(&self, path: &Path) -> Result<(), Error> {
+        let fail = |_| error(Code::LocalResponseStore);
+        if !fs::symlink_metadata(path).map_err(fail)?.is_dir() {
+            return Err(error(Code::LocalResponseStore));
+        }
+        let directory = crate::access::directory(path).map_err(fail)?;
+        if !crate::access::AccessList::same_file(&self.held, &directory).map_err(fail)? {
+            return Err(error(Code::LocalResponseStore));
+        }
+        crate::access::validate_private(&directory).map_err(fail)
     }
 }

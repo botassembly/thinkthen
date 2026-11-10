@@ -94,8 +94,8 @@ def answer_backend(probability=None):
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             requests.append(body)
-            value = 0.9 if probability is None else probability(body)
-            answers = {name: {'type': 'noul', 'noul': value} for name in body['questions']}
+            answers = {name: {'type': 'noul', 'noul': 0.9 if probability is None else probability(question)}
+                       for name, question in body['questions'].items()}
             reply = json.dumps({'answers': answers, 'usage': {'input_tokens': 7, 'output_tokens': 1}}).encode()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -148,7 +148,7 @@ def access_environment(folder, environment):
         USERPROFILE=str(profile), APPDATA=str(profile / 'roaming')))
 
 
-def response_store(binary, folder, environment):
+def response_store(binary, folder, environment, target=None):
     """Installed record/cache/replay and actual Windows store ACL/owner refusal."""
     from release_windows_cache import _control, _state, restore_cache
     environment = access_environment(folder, environment)
@@ -176,11 +176,13 @@ def response_store(binary, folder, environment):
             assert usage['attempts'] == 0 and usage[metric] == 1, usage
             assert usage['input_tokens']['reported'] == usage['output_tokens']['reported'] == 0, usage
         assert len(backend.requests) == 1, 'reuse or keyless replay made another request'
+        if target is None:
+            return
         database = store / 'responses.sqlite3'
         before = hashlib.sha256(database.read_bytes()).hexdigest()
         files = sorted(path.name for path in store.iterdir())
         system = Path(environment['SYSTEMROOT']) / 'System32'
-        for path in (store, database):
+        for path in (store if target == 'directory' else database,):
             saved = private_response_state(path, environment)
             for control in ('everyone-modify', 'distinct-owner'):
                 try:
@@ -204,11 +206,26 @@ def response_store(binary, folder, environment):
                     assert sorted(item.name for item in store.iterdir()) == files
                 finally:
                     restore_cache(path, saved, environment)
-                private_response_state(path, environment)
+                # restore_cache verifies exact saved private owner/access state.
                 assert invoke('replay').stdout == recorded.stdout, 'restored store did not replay'
                 print(f'Windows response store: {path.name}: {control} refused and restored', flush=True)
         assert len(backend.requests) == 1
         assert hashlib.sha256(database.read_bytes()).hexdigest() == before
+
+
+def response_directory(binary, folder, environment):
+    response_store(binary, folder, environment, 'directory')
+
+
+def response_database(binary, folder, environment):
+    response_store(binary, folder, environment, 'database')
+
+
+
+def recovery_probability(question):
+    """Discriminate the actual quoted record text, never the shared wire state."""
+    return {'The text is "first". Ready?': 0.9,
+            'The text is "second". Ready?': 0.1}[question['instructions']]
 
 
 def recovery(binary, folder, environment):
@@ -219,7 +236,7 @@ def recovery(binary, folder, environment):
                 + json.dumps({'id': 7, 'text': 'second'}) + '\n').encode()
     source.write_bytes(original)
     journal = folder / 'completed.recovery'
-    with answer_backend(lambda body: 0.9 if body['state'] == 'first' else 0.1) as backend:
+    with answer_backend(recovery_probability) as backend:
         child = subprocess.Popen([str(binary), 'decide', 'Ready?', '--backend', 'systemone',
             '--url', backend.url, '--from', 'jsonl', str(source), '--field', '/text', '--into', 'ready',
             '--batch', '1', '--recovery', str(journal)], cwd=folder,
@@ -596,7 +613,7 @@ def interrupt(binary, folder, environment, *, creationflags=None,
             worker.join()
 
 
-def watchdog(name):
+def watchdog(name, *, child=False, deadline=None):
     """End a hung case by name, with its stacks, and stop the processes it started."""
     def expired():
         try:
@@ -605,16 +622,34 @@ def watchdog(name):
             subprocess.run(['taskkill', '/T', '/F', '/PID', str(os.getpid())], capture_output=True, timeout=30)
         finally:
             os._exit(1)
-    timer = threading.Timer(CASE_SECONDS, expired)
-    timer.daemon = True
-    timer.start()
-    return timer
+    # The outer owner still kills at CASE_SECONDS. Its caller-owned child
+    # writes its stack first, while its persistent log remains available.
+    diagnostic = threading.Timer(max(0, deadline - time.monotonic() - 10), faulthandler.dump_traceback) if child else None
+    if diagnostic:
+        diagnostic.daemon = True
+        diagnostic.start()
+    timer = None if child else threading.Timer(CASE_SECONDS, expired)
+    if timer:
+        timer.daemon = True
+        timer.start()
+    return timer, diagnostic
+
+
+CASES = [('saved-run', pipeline, False), ('xlsx', spreadsheet, False),
+         ('powershell-unicode', powershell, False), ('powershell-default', default_pipes, False),
+         ('ctrl-break', interrupt, False), ('ctrl-c', ctrl_c, False), ('stream', stream, False),
+         ('forced-exit', forced_exit, False), ('response-store', response_store, True),
+         ('response-directory', response_directory, True), ('response-database', response_database, True),
+         ('recovery', recovery, True)]
+CALLER_CASES = tuple(name for name, _case, caller_owned in CASES if caller_owned)
+
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
-    parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'powershell-default', 'ctrl-break', 'ctrl-c', 'stream', 'forced-exit', 'response-store', 'recovery'))
+    parser.add_argument('--case', choices=[name for name, _case, _caller in CASES])
+    parser.add_argument('--deadline', type=float, help=argparse.SUPPRESS)
     parser.add_argument('--caller-owned', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--diagnostics', type=Path, help='retain forced-exit process state before failure cleanup')
     parser.add_argument('--powershell', default='powershell.exe', help='PowerShell executable for the Unicode case')
@@ -622,6 +657,8 @@ def main():
     args = parser.parse_args()
     if os.name != 'nt':
         parser.error('Windows CLI checks require native Windows')
+    if args.caller_owned and args.deadline is None:
+        parser.error('caller-owned cases require the outer deadline')
     binary = args.binary.resolve(strict=True)
     print('Windows CLI binary: ' + str(binary) + ' sha256=' + hashlib.sha256(binary.read_bytes()).hexdigest(), flush=True)
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -637,7 +674,7 @@ def main():
                 raise ctypes.WinError(ctypes.get_last_error())
         print('Windows CLI console: ' + json.dumps(console), flush=True)
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-') as temporary:
-            for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('powershell-default', default_pipes), ('ctrl-break', interrupt), ('ctrl-c', ctrl_c), ('stream', stream), ('forced-exit', forced_exit), ('response-store', response_store), ('recovery', recovery)]:
+            for name, case, caller_owned in CASES:
                 if args.case and name != args.case:
                     continue
                 # A console event can end this process, so the log names the case first.
@@ -646,16 +683,19 @@ def main():
                 folder.mkdir()
                 environment = {key: value for key, value in os.environ.items() if not key.startswith('THINKTHEN_')}
                 environment.update(HOME=str(folder), USERPROFILE=str(folder), TMP=str(folder), TEMP=str(folder), PYTHONUTF8='1')
-                timer = watchdog(name)
+                deadline = args.deadline if args.caller_owned else time.monotonic() + CASE_SECONDS
+                timers = watchdog(name, child=args.caller_owned, deadline=deadline)
                 try:
-                    if name in ('response-store', 'recovery') and not args.caller_owned:
+                    if caller_owned and not args.caller_owned:
                         # Preserve elevated privileges for hostile owner controls, but
                         # create store/journal objects with an ordinary caller owner.
                         from windows_caller_process import launch
                         try:
                             launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned',
-                                    '--binary', str(binary), '--case', name], cwd=ROOT,
-                                   env=environment, timeout=CASE_SECONDS)
+                                    '--binary', str(binary), '--case', name, '--deadline', str(deadline),
+                                    *(['--diagnostics', str(args.diagnostics.resolve())] if args.diagnostics else [])], cwd=ROOT,
+                                   env=environment, timeout=None,
+                                   log_path=args.diagnostics / (name + '-child.log') if args.diagnostics else None)
                         except SystemExit as error:
                             raise RuntimeError(f'caller-owned {name} failed with exit {error.code}') from error
                     elif name == 'forced-exit':
@@ -670,7 +710,9 @@ def main():
                     print('Windows CLI: ' + name + ': FAIL: ' + str(error), flush=True)
                     logging.exception('Windows CLI case %s failed', name)
                 finally:
-                    timer.cancel()
+                    for timer in timers:
+                        if timer:
+                            timer.cancel()
         if failures:
             sys.exit('Windows CLI failures: ' + ', '.join(failures))
     finally:

@@ -2,6 +2,8 @@
 """Feature: Windows-run scratch cleanup reaches long paths and never hides a failure."""
 from contextlib import contextmanager
 import os
+import io
+import json
 from pathlib import Path, PureWindowsPath
 import runpy
 import shutil
@@ -26,6 +28,53 @@ CONVERTED_NPM = """
 with long_path_scratch('thinkthen-npm-', 'npm') as scratch:
     subprocess.run(['npm', 'ci', '--cache', scratch], check=True)
 """
+
+
+def cleanup_witness():
+    """A failed cleanup preserves safe bounded metadata and the original cause."""
+    with tempfile.TemporaryDirectory(prefix='scratch-witness-fixture-') as folder:
+        root = Path(folder)
+        scratch = root / 'scratch'
+        scratch.mkdir()
+        (scratch / 'home').mkdir()
+        (scratch / 'home/leftover').write_text('must never appear in diagnostics')
+        secret = root / 'outside'
+        secret.mkdir()
+        (secret / 'not-followed').touch()
+        if os.name != 'nt':
+            (scratch / 'link').symlink_to(secret, target_is_directory=True)
+        failure = OSError(39, 'directory is not empty')
+        temporary = SimpleNamespace(name=str(scratch), cleanup=lambda: (_ for _ in ()).throw(failure))
+        output = io.StringIO()
+        with patch.object(scratch_module.tempfile, 'TemporaryDirectory', return_value=temporary), \
+             patch.object(scratch_module.sys, 'stderr', output):
+            try:
+                with scratch_module.long_path_scratch('fixture-', 'SDK', process_witness=lambda: dict(
+                        scope='tracked fixture', processes=[dict(pid=123, created_filetime=456, executable='consumer.exe')])):
+                    pass
+            except RuntimeError as error:
+                assert error.__cause__ is failure
+            else:
+                raise AssertionError('cleanup failure became success')
+        witness = json.loads(output.getvalue())
+        assert witness['owned_processes']['processes'][0]['created_filetime'] == 456
+        assert any(item['path'] == 'home/leftover' for item in witness['residuals']['entries'])
+        assert 'not-followed' not in output.getvalue() and 'must never appear' not in output.getvalue()
+        assert all(not Path(item['path']).is_absolute() for item in witness['residuals']['entries'])
+        for index in range(80):
+            (scratch / str(index)).touch()
+        bounded = scratch_module.residuals(scratch)
+        assert len(bounded['entries']) == 64 and bounded['truncated']
+        with patch.object(scratch_module.tempfile, 'TemporaryDirectory', return_value=temporary), \
+             patch.object(scratch_module.sys, 'stderr', io.StringIO()):
+            try:
+                with scratch_module.long_path_scratch('fixture-', 'SDK', process_witness=lambda: 1 / 0):
+                    pass
+            except RuntimeError as error:
+                assert error.__cause__ is failure
+            else:
+                raise AssertionError('diagnostic failure masked cleanup failure')
+    print('Cleanup failure preserves bounded no-follow metadata without contents or masking its cause')
 
 
 def windows_root():
@@ -83,10 +132,12 @@ def readme_child(failure, package):
     @contextmanager
     def scratch(prefix, label):
         with real_scratch(prefix, label) as folder:
-            yield folder
-            held = folder / LEFTOVER
-            held.parent.mkdir(parents=True)
-            held.write_text('npm cache entry', encoding='utf-8')
+            try:
+                yield folder
+            finally:
+                held = folder / LEFTOVER
+                held.parent.mkdir(parents=True)
+                held.write_text('npm cache entry', encoding='utf-8')
 
     def unlink(path, *args, **kwargs):
         # Windows reports a file past 260 characters missing, so its folder stays full.
@@ -117,7 +168,7 @@ def readme_cleanup():
                 assert 'README checks failed: ' + ', '.join(READMES) in result.stderr, result.stderr
                 assert not retained, retained
                 continue
-            assert len(retained) == 1, (retained, result.stderr)
+            assert len(retained) == 1, (retained, result.stdout, result.stderr)
             assert 'README scratch cleanup failed; retained ' + str(retained[0]) in result.stderr, result.stderr
             assert 'Directory not empty' in result.stderr, result.stderr
             assert (retained[0] / LEFTOVER).is_file(), 'cleanup failure lost its evidence'
@@ -218,6 +269,7 @@ if sys.argv[1:2] == ['source']:
 elif len(sys.argv) == 3:
     readme_child(sys.argv[1], sys.argv[2])
 else:
+    cleanup_witness()
     windows_root()
     readme_cleanup()
     readme_only()
