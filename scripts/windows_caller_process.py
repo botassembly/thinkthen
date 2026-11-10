@@ -55,6 +55,9 @@ class JobAccounting(C.Structure):
                 ('active', W.DWORD), ('terminated', W.DWORD)]
 
 
+OWNED_JOBS = []
+
+
 class OwnedJob:
     """Own descendants before their first instruction, then reap before log cleanup."""
     def __init__(self, functions=None):
@@ -69,6 +72,8 @@ class OwnedJob:
         except BaseException:
             self.functions['CloseHandle'](self.job)
             raise
+
+        OWNED_JOBS.append(self)
 
     def attach(self, process):
         checked(self.functions['AssignProcessToJobObject'](self.job, process), 'AssignProcessToJobObject')
@@ -105,12 +110,53 @@ class OwnedJob:
         finally:
             self.functions['CloseHandle'](self.job)
             self.job = None
+            if self in OWNED_JOBS:
+                OWNED_JOBS.remove(self)
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_error):
         self.close()
+
+
+def owned_processes():
+    """Snapshot only live processes in this harness's currently tracked jobs.
+
+    These are owned processes, not proven scratch writers. Empty jobs do not
+    establish that no untracked process exists.
+    """
+    result = []
+    kernel = C.WinDLL('kernel32', use_last_error=True)
+    kernel.OpenProcess.argtypes, kernel.OpenProcess.restype = [W.DWORD, W.BOOL, W.DWORD], W.HANDLE
+    kernel.GetProcessTimes.argtypes = [W.HANDLE, *([C.POINTER(W.FILETIME)] * 4)]
+    kernel.QueryFullProcessImageNameW.argtypes = [W.HANDLE, W.DWORD, W.LPWSTR, C.POINTER(W.DWORD)]
+    kernel.CloseHandle.argtypes = [W.HANDLE]
+    for job in list(OWNED_JOBS):
+        data = (C.c_size_t * 66)()
+        checked(job.functions['QueryInformationJobObject'](job.job, 3, data, C.sizeof(data), None),
+                'QueryInformationJobObject process list')
+        count = C.cast(data, C.POINTER(W.DWORD))[1]
+        for pid in list(data)[1:1 + min(count, 64)]:
+            row = dict(pid=int(pid))
+            handle = kernel.OpenProcess(0x1000, False, pid)
+            if not handle:
+                row['query_error'] = C.get_last_error()
+            else:
+                try:
+                    created, exited, system, user = (W.FILETIME() for _ in range(4))
+                    if kernel.GetProcessTimes(handle, C.byref(created), C.byref(exited), C.byref(system), C.byref(user)):
+                        row['created_filetime'] = (created.dwHighDateTime << 32) | created.dwLowDateTime
+                    size = W.DWORD(32768)
+                    image = C.create_unicode_buffer(size.value)
+                    if kernel.QueryFullProcessImageNameW(handle, 0, image, C.byref(size)):
+                        row['executable'] = image.value[:1024]
+                        row['executable_truncated'] = len(image.value) > 1024
+                finally:
+                    kernel.CloseHandle(handle)
+            result.append(row)
+    return dict(scope='currently tracked owned jobs; not writer attribution', processes=result[:64],
+                truncated=len(result) > 64)
 
 
 def api():
@@ -235,7 +281,7 @@ def normal_token(functions):
         functions['CloseHandle'](source)
 
 
-def launch(command, *, cwd, env, probe=False, normal_log=None, timeout=3600):
+def launch(command, *, cwd, env, probe=False, normal_log=None, timeout=3600, log_path=None):
     """Run a child whose default owner is the caller, and wait.
 
     The child has the current token, or with normal_log a normal user's token and
@@ -264,10 +310,11 @@ def launch(command, *, cwd, env, probe=False, normal_log=None, timeout=3600):
         checked(functions['SetTokenInformation'](duplicate, 4, C.byref(owner), C.sizeof(owner)), 'SetTokenInformation(TokenOwner)')
         assert sid(functions, token_info(functions, duplicate, 4)) == caller, 'duplicate default owner differs from caller'
         print('Windows proof token: parent owner=' + original + '; child owner=' + caller, flush=True)
-        folder = nullcontext() if normal_log else tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-')
+        folder = nullcontext() if normal_log or log_path else tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-')
         with folder as temporary:
             with OwnedJob(functions) as job:
-                log = Path(normal_log) if normal_log else Path(temporary) / 'child.log'
+                log = (Path(normal_log or log_path) if normal_log or log_path else Path(temporary) / 'child.log').resolve()
+                log.parent.mkdir(parents=True, exist_ok=True)
                 child = [sys.executable, str(Path(__file__).resolve()), '--child', str(log),
                          '90' if probe else str(timeout), *map(str, command)]
                 line = subprocess.list2cmdline(child)
@@ -289,11 +336,11 @@ def launch(command, *, cwd, env, probe=False, normal_log=None, timeout=3600):
                     checked(functions['TerminateProcess'](process.process, 1), 'TerminateProcess')
                     functions['WaitForSingleObject'](process.process, 30000)
                     raise
-                deadline = time.monotonic() + (90 if probe else timeout) + 30
+                deadline = time.monotonic() + (90 if probe else timeout) + 30 if probe or timeout is not None else None
 
                 def wait():
                     status = functions['WaitForSingleObject'](process.process, 100)
-                    if status == 0x102 and time.monotonic() >= deadline:
+                    if status == 0x102 and deadline is not None and time.monotonic() >= deadline:
                         raise subprocess.TimeoutExpired(command, timeout)
                     return status
 
@@ -395,7 +442,7 @@ def child():
     with open(log, 'w', encoding='utf-8') as output:
         try:
             result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT,
-                                    timeout=int(timeout), check=False)
+                                    timeout=None if timeout == 'None' else int(timeout), check=False)
             return result.returncode
         except Exception:  # noqa: BLE001 - preserve the child failure in its streamed log
             traceback.print_exc(file=output)

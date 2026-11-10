@@ -6,6 +6,7 @@ Missing packages, compilers or runtimes fail the check; no surface is skipped.
 from contextlib import contextmanager
 from functools import cache
 import json
+import hashlib
 import os
 from pathlib import Path
 from package_inventory import python_wheelhouse as wheelhouse
@@ -144,7 +145,9 @@ def lookup_check(execute, checks, engine, *command, embedded=False, extra=None):
 
 
 def sdk_scratch():
-    return long_path_scratch('thinkthen-windows-sdks-', 'Windows SDK')
+    from windows_caller_process import owned_processes
+    return long_path_scratch('thinkthen-windows-sdks-', 'Windows SDK',
+                             process_witness=owned_processes if os.name == 'nt' else None)
 
 
 def full(folder, build, *, caller_owned=False, families=None):
@@ -382,6 +385,9 @@ def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch
                     '/D_CRT_SECURE_NO_WARNINGS', '/I' + str(c / 'include'),
                     '/I' + str(checks / 'c'), checks / 'c/conformance.c',
                     '/Fe:' + str(c_output), '/link', c / 'lib/thinkthen_ffi.lib')
+            print('Installed C consumer identity: ' + json.dumps(dict(
+                consumer_sha256=hashlib.sha256(c_output.read_bytes()).hexdigest(),
+                library_sha256=hashlib.sha256((c / 'bin/thinkthen_ffi.dll').read_bytes()).hexdigest())), flush=True)
             c_env = {'PATH': os.pathsep.join((str(c / 'bin'), env['PATH']))}
             native_cases, registry = native_contract(checks)
             for case in cases:
