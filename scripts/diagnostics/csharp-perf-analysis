@@ -53,6 +53,8 @@ for line in (output / 'buildids.txt').read_text().splitlines():
         missing.append(dict(path=path, expected=buildid, actual=actual[1] if actual else None)); continue
     if candidate != destination:
         destination.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(candidate, destination)
+    (output / 'modules').mkdir(exist_ok=True)
+    shutil.copy2(destination, output / 'modules' / (sha(destination) + '-' + destination.name))
     modules.append(dict(path=path, buildid=buildid, sha256=sha(destination)))
 save('modules.json', modules); save('missing.json', missing); save('excluded.json', excluded)
 if missing: raise RuntimeError('missing/mismatched ELF: stop before unwind; no substituted modules')
