@@ -29,8 +29,21 @@ jobs:
           sudo -n apt-get update
           sudo -n apt-get install -y --no-install-recommends linux-tools-7.0.0-1017-azure=7.0.0-1017.17~24.04.1
           dpkg-query -W linux-tools-7.0.0-1017-azure > "$RUNNER_TEMP/analysis/tool-package.txt"
-          PERF=$(dpkg -L linux-tools-7.0.0-1017-azure | awk '/\/perf$/ {print}')
-          test -n "$PERF" && test -x "$PERF"
+          PERF=/usr/bin/perf
+          test -f "$PERF"
+          test -x "$PERF"
+          test "$(/usr/bin/perf version)" = 'perf version 7.0.14'
+          REAL_PERF=$(readlink -f "/usr/lib/linux-tools/$(uname -r)/perf")
+          test -n "$REAL_PERF"
+          test -f "$REAL_PERF"
+          test -x "$REAL_PERF"
+          OWNER=$(dpkg-query -S "$REAL_PERF" | awk -F ': ' '{print $1}')
+          test -n "$OWNER"
+          test "$(dpkg-query -W -f='${Version}' "$OWNER")" = '7.0.0-1017.17~24.04.1'
+          dpkg-query -W -f='${Depends}\n' linux-tools-7.0.0-1017-azure > "$RUNNER_TEMP/analysis/tool-dependencies.txt"
+          grep -F "$OWNER (= 7.0.0-1017.17~24.04.1)" "$RUNNER_TEMP/analysis/tool-dependencies.txt"
+          dpkg-query -W "$OWNER" linux-tools-common > "$RUNNER_TEMP/analysis/decoder-packages.txt"
+          printf '%s\n' "$PERF" "$REAL_PERF" > "$RUNNER_TEMP/analysis/decoder-paths.txt"
           python3 harness/scripts/diagnostics/csharp-perf-analysis "$RUNNER_TEMP/capture" "$RUNNER_TEMP/platform/thinkthen-0.2.0-linux-x86_64-packages.tar.gz" "$RUNNER_TEMP/analysis" "$PERF"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

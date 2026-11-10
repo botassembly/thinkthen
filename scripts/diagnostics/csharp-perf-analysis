@@ -2,7 +2,11 @@
 """Decode one retained recording; never execute the SDK or record a target."""
 import hashlib, io, json, os, re, shutil, subprocess, sys, tarfile, zipfile
 from pathlib import Path
+if len(sys.argv) != 5 or any(not s or not Path(s).is_absolute() for s in sys.argv[1:]):
+    raise RuntimeError('require exactly four nonempty absolute paths')
 capture, platform, output, perf = map(Path, sys.argv[1:])
+if not capture.is_dir() or not platform.is_file() or not perf.is_file() or not os.access(perf, os.X_OK):
+    raise RuntimeError('capture directory, archive file and executable regular perf file required')
 output.mkdir(parents=True, exist_ok=True)
 def sha(p):
     with p.open('rb') as f: return hashlib.file_digest(f, 'sha256').hexdigest()
