@@ -1,144 +1,72 @@
-name: Windows native SDK proof
-
+name: Retained Windows harness diagnosis
 on:
   workflow_dispatch:
     inputs:
-      surface:
-        description: Select all checks or only the surface that needs evidence
-        type: choice
-        default: all
-        options: [all, cache, csharp, cli, harness]
-      cli_case:
-        description: CLI diagnostic to run when surface is cli
-        type: choice
-        default: forced-exit
-        options: [forced-exit, all]
-
-permissions: {contents: read}
+      recovery_only:
+        description: Run only recovery without rebuilding the native fixture or C consumer
+        type: boolean
+        default: false
+permissions: {contents: read, actions: read}
 env:
   PYTHONDONTWRITEBYTECODE: '1'
   PYTHONUTF8: '1'
-
 jobs:
   windows:
-    if: inputs.surface != 'harness'
     runs-on: windows-2022
-    timeout-minutes: 120
+    timeout-minutes: 45
     defaults: {run: {shell: pwsh}}
     steps:
-      - name: Preserve source bytes on Windows
-        id: configure-checkout
-        if: always()
+      - name: Preserve source bytes
         run: git config --global core.autocrlf false
-      - id: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with: {persist-credentials: false}
-      - if: always()
-        id: setup-python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with: {python-version: '3.13'}
-      - if: always() && (inputs.surface == 'all' || inputs.surface == 'cache')
-        id: setup-go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with: {go-version: '1.24.13', cache: false}
-      - if: always() && (inputs.surface == 'all' || inputs.surface == 'cache')
-        id: setup-java
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with: {distribution: temurin, java-version: '22.0.2+9'}
-      - if: always() && (inputs.surface == 'all' || inputs.surface == 'csharp')
-        id: setup-dotnet
-        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
-        with: {dotnet-version: '10.0.114'}
-      - name: Select the pinned Node runtime
-        id: setup-node
-        if: always() && inputs.surface == 'all'
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with: {node-version: '22.12.0'}
-      - name: Select the pinned Ruby runtime
-        id: setup-ruby
-        if: always() && inputs.surface == 'all'
-        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
-        with: {ruby-version: '3.3.8'}
-      - name: Build the current native engine once
-        id: native
-        if: always()
-        env:
-          NATIVE_PHASE: ${{ inputs.surface == 'cli' && 'cli' || 'native' }}
-        run: python scripts/windows-native-proof "$env:NATIVE_PHASE" "$env:RUNNER_TEMP/windows-native-proof"
-      - name: Prove installed Go cache security
-        id: go
-        if: always() && (inputs.surface == 'all' || inputs.surface == 'cache')
-        run: python scripts/windows-native-proof go "$env:RUNNER_TEMP/windows-native-proof"
-      - name: Prove installed Java and Kotlin cache security
-        id: jvm
-        if: always() && (inputs.surface == 'all' || inputs.surface == 'cache')
-        run: python scripts/windows-native-proof jvm "$env:RUNNER_TEMP/windows-native-proof"
-      - name: Prove Go, Java and Kotlin from an elevated token, then as a normal user
-        id: elevated
-        if: always() && (inputs.surface == 'all' || inputs.surface == 'cache')
-        run: python scripts/windows-native-proof elevated "$env:RUNNER_TEMP/windows-native-proof"
-      - name: Prove the installed C# single-file consumer
-        id: csharp
-        if: always() && (inputs.surface == 'all' || inputs.surface == 'csharp')
-        run: python scripts/windows-native-proof csharp "$env:RUNNER_TEMP/windows-native-proof"
-      - name: Prove file operations on Windows
-        id: spreadsheets
-        if: always() && inputs.surface == 'all'
-        run: cargo test --locked -p thinkthen --test cli_spreadsheets
-      - name: Lint the Windows-only thinkthen code
-        id: clippy
-        if: always() && inputs.surface == 'all'
-        run: cargo clippy --locked -p thinkthen --all-features --all-targets -- -D warnings
-      - name: Run the selected native CLI diagnostic
-        id: cli
-        if: always() && inputs.surface == 'cli'
-        shell: bash
-        env:
-          CLI_CASE: ${{ inputs.cli_case }}
-        run: python scripts/windows-cli-proof "$RUNNER_TEMP/windows-native-proof" --case "$CLI_CASE"
-      - name: Preserve native CLI diagnostic evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Check out the reviewed diagnostic carrier
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {path: harness, persist-credentials: false}
+      - name: Check out the retained product source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          name: windows-cli-proof
+          ref: 2e8ccec301ee9f6a423c46157947f391e1e960d7
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with: {python-version: '3.13'}
+      - name: Fetch only the named official producer evidence and artifact
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          @'
+          import json,os,pathlib,subprocess
+          output=pathlib.Path(os.environ['RUNNER_TEMP'])/'windows-retained'
+          output.mkdir()
+          def api(path):
+              return json.loads(subprocess.check_output(['gh','api','repos/botassembly/thinkthen/'+path]))
+          metadata={'run':api('actions/runs/42866225471/attempts/1'),
+                    'artifact':api('actions/artifacts/13792868034'),
+                    'jobs':api('actions/runs/42866225471/attempts/1/jobs?per_page=100')}
+          (output/'provenance.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          with (output/'platform.zip').open('wb') as stream:
+              result=subprocess.run(['gh','api','repos/botassembly/thinkthen/actions/artifacts/13792868034/zip'],stdout=stream,stderr=subprocess.PIPE)
+              if result.returncode:
+                  raise SystemExit('Retained artifact download failed; no proof ran')
+          '@ | python -
+      - name: Run the selected installed Windows controls
+        env: {RECOVERY_ONLY: '${{ inputs.recovery_only }}'}
+        run: |
+          $selection = @()
+          if ($env:RECOVERY_ONLY -eq 'true') { $selection = @('--recovery-only') }
+          python harness/scripts/retained-windows-validation `
+            --source source --harness harness `
+            --provenance "$env:RUNNER_TEMP/windows-retained/provenance.json" `
+            --artifact "$env:RUNNER_TEMP/windows-retained/platform.zip" `
+            --output "$env:RUNNER_TEMP/windows-retained/evidence" @selection
+      - name: Preserve independent case results and failure witnesses
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retained-windows-harness-diagnosis
           path: |
-            ${{ runner.temp }}/windows-native-proof/cli/identity.json
-            ${{ runner.temp }}/windows-native-proof/cli-proof/
-          if-no-files-found: warn
-          retention-days: 7
-      - name: Report every Windows qualification failure
-        if: always()
-        env:
-          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
-        run: python scripts/qualification-summary
-  qualification-harness:
-    if: inputs.surface == 'harness'
-    runs-on: windows-2022
-    timeout-minutes: 15
-    steps:
-      - id: checkout
-        if: always()
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with: {persist-credentials: false}
-      - id: setup-python
-        if: always()
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with: {python-version: '3.13'}
-      - name: Prove process cleanup and ACL transactions without building products
-        id: proof
-        if: always()
-        shell: bash
-        run: python scripts/windows-qualification-proof "$RUNNER_TEMP/windows-qualification-proof"
-      - name: Preserve harness identity and every fixture result
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: windows-qualification-proof
-          path: ${{ runner.temp }}/windows-qualification-proof/
+            ${{ runner.temp }}/windows-retained/provenance.json
+            ${{ runner.temp }}/windows-retained/evidence/identity.json
+            ${{ runner.temp }}/windows-retained/evidence/*.log
+            ${{ runner.temp }}/windows-retained/evidence/response-*/
+            ${{ runner.temp }}/windows-retained/evidence/recovery/
           if-no-files-found: error
           retention-days: 7
-      - name: Report every harness proof failure
-        if: always()
-        env:
-          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
-        run: python scripts/qualification-summary
