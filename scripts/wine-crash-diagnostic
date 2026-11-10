@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Capture one retained Wine failure; never build, qualify or publish a candidate."""
+import hashlib
+import importlib.util
+import io
+import json
+import os
+from pathlib import Path
+import shutil
+import signal
+import subprocess
+import sys
+import tarfile
+import threading
+import time
+import zipfile
+
+ARTIFACT = '13729574040'
+RUN = '42733981518'
+CANDIDATE = 'ad57e94779c1508817d5805efe8cf49b4727968a'
+ZIP_SHA = '2c9c845a7b9fa3b25221daf9879e46e7d8a9bc70bb3cce97f2a2cc91fcb9c484'
+INPUTS = {
+    'c-consumer.exe': 'ab5da081aef7c9199454e4b2f5e62dffc27e58485a6a8db30bea17ab26fe6bdc',
+    'thinkthen_ffi.dll': 'b2843cf4bccb7f5a31299215408b8491aeed16102a515a045a3a06ee9d0aaa9d',
+    'stub.json': '8cb9a57adac5094fcd16ff064dedf5ba83b46658bc725d9e76aee015d8ff33ea',
+    'native_cases.py': 'c7da6ffd56f2be2c5797904e528fac49828ec3a9e9defe3359e121ed75979431',
+    'contract.json': 'c4a8a8024a59696edc66e821a5c7dbd8ad5569790ac3162651f7781963f03cfe',
+}
+TRACE_BYTES = 8 * 1024 * 1024
+CHILD_SECONDS = 120
+
+
+def digest(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def save(path, value):
+    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n')
+
+
+def inputs(archive, output):
+    if digest(archive) != ZIP_SHA:
+        raise ValueError('retained artifact ZIP checksum differs')
+    with zipfile.ZipFile(archive) as outer:
+        name = 'thinkthen-0.2.0-windows-x86_64-packages.tar.gz'
+        # Read only named regular members, never archive-controlled output paths.
+        with outer.open(name) as stream, tarfile.open(fileobj=stream, mode='r|gz') as package:
+            wanted = {'0.2.0/windows-x86_64/' + name: name for name in (
+                'checks/c-consumer.exe', 'checks/stub.json', 'checks/native_cases.py', 'checks/contract.json',
+                'c/thinkthen-c-0.2.0-windows-x86_64.zip')}
+            for member in package:
+                if member.name not in wanted:
+                    continue
+                if not member.isfile() or member.size > 64 * 1024 * 1024:
+                    raise ValueError('retained input is not a bounded regular file')
+                data = package.extractfile(member).read()
+                if wanted[member.name].startswith('c/'):
+                    with zipfile.ZipFile(io.BytesIO(data)) as native:
+                        data = native.read('bin/thinkthen_ffi.dll')
+                    name = 'thinkthen_ffi.dll'
+                else:
+                    name = Path(member.name).name
+                (output / name).write_bytes(data)
+    for name, expected in INPUTS.items():
+        if digest(output / name) != expected:
+            raise ValueError('retained input checksum differs: ' + name)
+    cases = json.loads((output / 'stub.json').read_text())
+    selected = [case for case in cases if case['request']['question']['function'] == 'find']
+    if len(selected) != 1:
+        raise ValueError('expected exactly one retained find case')
+    case = selected[0]
+    expected_identity = 'a94cfeac612903a89e6f02f9bc714ab88dcb7a87a354731b3240058a07087609'
+    if (case['client']['backend'] != 'stub' or case['requests'] != 0
+            or case['request']['question']['question'] != 'Which line?'
+            or case['expected'][0]['source']['question_identity'] != expected_identity):
+        raise ValueError('retained case identity differs')
+    save(output / 'case.json', case)
+    return case
+
+
+def capture(command, environment, cwd, output, name, *, seconds=CHILD_SECONDS, limit=TRACE_BYTES):
+    """Drain both pipes with bounded storage and kill the owned group at the deadline."""
+    started = time.monotonic()
+    result = {'command': list(map(str, command)), 'deadline_seconds': seconds,
+              'per_stream_limit_bytes': limit, 'timed_out': False, 'streams': {}}
+    process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, cwd=cwd, env=environment,
+                               start_new_session=True)
+    def drain(label, stream):
+        count = 0
+        path = output / (name + '.' + label)
+        with path.open('wb') as target:
+            while block := stream.read(16384):
+                target.write(block[:max(0, limit - count)])
+                count += len(block)
+        result['streams'][label] = {'bytes': count, 'truncated': count > limit,
+                                    'retained_sha256': digest(path)}
+    threads = [threading.Thread(target=drain, args=(label, stream), daemon=True)
+               for label, stream in [('stdout', process.stdout), ('stderr', process.stderr)]]
+    for thread in threads:
+        thread.start()
+    try:
+        process.wait(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        result['timed_out'] = True
+    finally:
+        if not result['timed_out']:
+            for thread in threads:
+                thread.join(timeout=1)
+        result['group_cleanup_required'] = result['timed_out'] or any(thread.is_alive() for thread in threads)
+        if result['group_cleanup_required']:
+            # A daemon holding a pipe must not keep its owner alive indefinitely.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        process.wait()
+        for thread in threads:
+            thread.join(timeout=5)
+        if any(thread.is_alive() for thread in threads):
+            raise RuntimeError('capture pipes remain open after owned process group cleanup')
+    result.update(returncode=process.returncode, elapsed_seconds=time.monotonic() - started)
+    save(output / (name + '.json'), result)
+    return result
+
+
+def runtime(wine, output):
+    identity = {'os_release': Path('/etc/os-release').read_text(),
+                'uname': list(os.uname()), 'wine_path': wine,
+                'wine_sha256': digest(wine),
+                'runner': {key: os.environ.get(key) for key in (
+                    'ImageOS', 'ImageVersion', 'RUNNER_OS', 'RUNNER_ARCH',
+                    'GITHUB_RUN_ID', 'GITHUB_SHA')}}
+    # Fixed queries only; no inherited environment or credential dump.
+    for name, command in [('wine-version', [wine, '--version']),
+                          ('wine-packages', ['dpkg-query', '-W', '-f=${Package} ${Version} ${Architecture}\n',
+                                             'wine', 'wine64', 'libwine'])]:
+        reply = subprocess.run(command, capture_output=True, timeout=15, check=False)
+        identity[name] = {'returncode': reply.returncode,
+                          'stdout': reply.stdout.decode(errors='replace')[:65536],
+                          'stderr': reply.stderr.decode(errors='replace')[:4096]}
+    listing = subprocess.run(['dpkg-query', '-L', 'wine', 'wine64', 'libwine'],
+                             capture_output=True, timeout=15, check=False)
+    names = {'ntdll.dll', 'ntdll.so', 'kernel32.dll', 'kernelbase.dll', 'msvcrt.dll',
+             'ucrtbase.dll', 'libwine.so.1', 'wine', 'wine64', 'wineserver', 'wineserver64'}
+    identity['core_module_sha256'] = {
+        str(path): digest(path) for path in map(Path, listing.stdout.decode().splitlines())
+        if path.name in names and path.is_file()}
+    save(output / 'runtime.json', identity)
+    if identity['wine-version']['returncode'] or listing.returncode:
+        raise RuntimeError('Wine runtime identity capture unavailable')
+    return identity
+
+
+def main(archive, destination):
+    output = Path(destination).resolve()
+    output.mkdir(mode=0o700)
+    receipt = {'artifact_id': ARTIFACT, 'original_run': RUN, 'candidate': CANDIDATE,
+               'expected_zip_sha256': ZIP_SHA, 'disposition': 'capture-unavailable',
+               'original_runtime': 'Wine version, modules and prefix were not retained',
+               'original_host': 'Ubuntu 24.04.5; image 20261101.360.1',
+               'differences': ['fresh hosted image and apt-selected recorded Wine runtime',
+                               'fresh prefix; original prefix was discarded',
+                               'WINEDEBUG=+seh,+loaddll replaces -all',
+                               'only the failed find case; preceding CLI/other C cases are not repeated',
+                               'stdin is closed; output streams are bounded and retained',
+                               'owned process group is killed only at deadline or if inherited pipes stay open'],
+               'release_cleared': False}
+    save(output / 'result.json', receipt)
+    try:
+        case = inputs(Path(archive), output)
+        receipt['input_sha256'] = {name: digest(output / name) for name in INPUTS}
+        wine = shutil.which('wine') or shutil.which('wine64')
+        if not wine:
+            raise RuntimeError('Wine executable unavailable')
+        runtime(wine, output)
+        environment = {key: value for key, value in os.environ.items()
+                       if key in ('PATH', 'HOME', 'LANG', 'SYSTEMROOT', 'TEMP', 'TMP')}
+        prefix = output / 'wine'
+        runtime_dir = output / 'runtime'
+        runtime_dir.mkdir(mode=0o700)
+        environment.update(WINEPREFIX=str(prefix), WINEDEBUG='+seh,+loaddll',
+                           WINEDLLOVERRIDES='mscoree,mshtml=', XDG_RUNTIME_DIR=str(runtime_dir))
+        receipt['environment'] = environment
+        save(output / 'result.json', receipt)
+        prepared = capture([wine, 'wineboot', '-u'], environment, output, output, 'prefix')
+        if prepared['timed_out'] or prepared['returncode']:
+            raise RuntimeError('prefix preparation did not complete successfully')
+        if any(stream['truncated'] for stream in prepared['streams'].values()):
+            receipt['disposition'] = 'trace-truncated-unlocated'
+            raise RuntimeError('prefix preparation trace was truncated; consumer was not run')
+        prefix_identity = {name: digest(prefix / name) for name in ('system.reg', 'user.reg', 'userdef.reg')
+                           if (prefix / name).is_file()}
+        receipt['prefix_registry_sha256_before_case'] = prefix_identity
+        command = [wine, str(output / 'c-consumer.exe'), json.dumps(case['request']), json.dumps(case['client'])]
+        save(output / 'result.json', receipt)
+        result = capture(command, environment, output, output, 'find')
+        if result['timed_out']:
+            receipt['disposition'] = 'timed-out-unlocated'
+        elif any(stream['truncated'] for stream in result['streams'].values()):
+            receipt['disposition'] = 'trace-truncated-unlocated'
+        elif result['returncode']:
+            receipt['disposition'] = 'failure-captured-unlocated'
+        else:
+            spec = importlib.util.spec_from_file_location('retained_native_cases', output / 'native_cases.py')
+            native_cases = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(native_cases)
+            native_cases.compare((output / 'find.stdout').read_text(), case,
+                                 json.loads((output / 'contract.json').read_text()))
+            receipt['disposition'] = 'different-runtime-non-reproduction'
+        receipt['consumer'] = result
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyError,
+            tarfile.TarError, zipfile.BadZipFile, AssertionError) as error:
+        receipt['error'] = str(error)
+    finally:
+        save(output / 'result.json', receipt)
+    print(json.dumps(receipt, ensure_ascii=False))
+    return 0 if receipt['disposition'] == 'different-runtime-non-reproduction' else 1
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        raise SystemExit('usage: wine-crash-diagnostic RETAINED_ARTIFACT_ZIP NEW_OUTPUT_DIRECTORY')
+    raise SystemExit(main(*sys.argv[1:]))
