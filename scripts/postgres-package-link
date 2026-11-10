@@ -8,7 +8,13 @@ archive=$3
 test_build=$4
 job=${PM_JOB:-local}
 mkdir -p "$output"
-docker run --pull=never --rm --network none --label "$(python3 "$driver/scripts/build_targets.py")" --label "pm.ticket=${job%% *}" \
+set --
+if [ -n "${JOB_LABEL_FILE:-}" ]; then
+    set -- "$@" --label-file "$JOB_LABEL_FILE"
+else
+    set -- "$@" --label "$(python3 "$driver/scripts/build_targets.py")" --label "pm.ticket=${job%% *}"
+fi
+docker run "$@" --pull=never --rm --network none \
     -v "$root:/src:ro" -v "$output:/work" -v "$archive:/native/libthinkthen_ffi.a:ro" \
     "$(python3 "$driver/scripts/release_images.py" floor)" sh -c '
         sharedir=$(pg_config --sharedir)

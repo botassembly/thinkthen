@@ -7,6 +7,7 @@ if [ "$(uname -s)" != Linux ]; then
     echo 'Skipped PostgreSQL: package targets Linux; installed gate runs on the Linux builder'
     exit 77
 fi
+scope=${1:-all}
 job=${PM_JOB:-local}
 root=$PWD
 fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the shared explicit fixture-routing archive}
@@ -27,7 +28,13 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     LLVM_PROFILE_FILE="$target/postgres-%p-%m.profraw"
 fi
 test_image=$(docker image inspect "${THINKTHEN_POSTGRES_TEST_IMAGE:-thinkthen-postgres-build:18.6}" --format '{{.Id}}')
-docker run --pull=never --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
+set --
+if [ -n "${JOB_LABEL_FILE:-}" ]; then
+    set -- "$@" --label-file "$JOB_LABEL_FILE"
+else
+    set -- "$@" --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}"
+fi
+docker run "$@" --pull=never --rm --network none \
     -v "$root:/src:ro" -v "$scratch:/work" -v "${THINKTHEN_LOOPBACK:-$target/debug/loopback}:/loopback:ro" \
     -v "$scratch/built/build:/work/build" -v "$target:$target" -v "${THINKTHEN_SOAK_FOLDER:-$scratch}:/soak" \
     "$test_image" sh -eu -c '
@@ -57,7 +64,7 @@ docker run --pull=never --rm --network none --label "$(python3 scripts/build_tar
                 esac
                 exit "$status"
             '\'' sh "$4"
-    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}" "${THINKTHEN_STRESS_FULL:-}" "${THINKTHEN_GATE_STRICT:-0}" "${THINKTHEN_SOAK_FOLDER:+/soak}"
+    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "$scope" "${THINKTHEN_STRESS_FULL:-}" "${THINKTHEN_GATE_STRICT:-0}" "${THINKTHEN_SOAK_FOLDER:+/soak}"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     cp "$scratch/installed/lib/thinkthen_postgres.so" "$target/debug/thinkthen-sql-postgres.so"
 fi

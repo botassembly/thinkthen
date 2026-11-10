@@ -50,6 +50,9 @@ if os.environ.get('THINKTHEN_DOCKER_IN_FLOOR') == '1':
     command += ['--group-add', str(Path('/var/run/docker.sock').stat().st_gid),
                 '-v', '/var/run/docker.sock:/var/run/docker.sock',
                 '-v', str(home / '.local/share/thinkthen-build-tools/gate-docker/docker') + ':/usr/local/bin/docker:ro']
+if os.environ.get('JOB_LABEL_FILE'):
+    label_file = Path(os.environ['JOB_LABEL_FILE']).resolve(strict=True)
+    command += ['-v', f'{label_file}:{label_file}:ro', '-e', 'JOB_LABEL_FILE=' + str(label_file)]
 for path in sorted(mounts):
     path.mkdir(parents=True, exist_ok=True)
     command += ['-v', f'{path}:{path}']

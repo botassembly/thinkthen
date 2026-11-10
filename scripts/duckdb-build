@@ -16,7 +16,12 @@ if [ -n "${THINKTHEN_DUCKDB_ABI_HEADER:-}" ]; then
     [ -f "$THINKTHEN_DUCKDB_ABI_HEADER" ] || { echo 'Missing job-owned ABI header' >&2; exit 2; }
     set -- --mount "type=bind,source=$THINKTHEN_DUCKDB_ABI_HEADER,target=/native/required-abi.h,readonly"
 fi
-docker run "$@" --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
+if [ -n "${JOB_LABEL_FILE:-}" ]; then
+    set -- "$@" --label-file "$JOB_LABEL_FILE"
+else
+    set -- "$@" --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}"
+fi
+docker run "$@" --rm --network none \
     -v "$PWD:/src:ro" -v "$THINKTHEN_DUCKDB_DEPS:/deps:ro" \
     -v "$THINKTHEN_SQL_ARCHIVE:/native/libthinkthen_ffi.a:ro" -v "$output:/out" \
     "$(python3 scripts/release_images.py floor)" sh -eu -c '

@@ -328,7 +328,7 @@ def main():
                     if line.startswith('FROM '))
         assert '@sha256:' in base, 'installer test base must be pinned'
         print('installer PATH: prepare fish 3.7.0-1 using ' + base, flush=True)
-        subprocess.run(['docker', 'build', *container_labels(ROOT), '--build-arg', 'BASE=' + base,
+        subprocess.run(['docker', 'build', *container_labels(ROOT, image_build=True), '--build-arg', 'BASE=' + base,
                         '-t', TAGS['installer'], '-f', str(ROOT / 'scripts/floors/Installer.Dockerfile'), str(ROOT)], check=True)
         return
     windows = os.name == 'nt'
