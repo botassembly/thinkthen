@@ -291,10 +291,14 @@ def job_labels(scratch):
     from build_targets import container_labels, repository_label
     folder = scratch / 'job labels'
     folder.mkdir()
-    labels = folder / 'labels'
+    alias = scratch / 'job labels alias'
+    alias.symlink_to(folder.resolve(), target_is_directory=True)
+    labels = alias / 'labels'
     labels.write_text('# canonical ownership\npm.repo=owned-repo\npm.ticket=fixture-ticket\npm.job=j-test\n')
+    canonical_labels = labels.resolve(strict=True)
+    assert labels != canonical_labels, 'fixture must supply a real ancestor alias'
     with patch.dict(os.environ, JOB_LABEL_FILE=str(labels), PM_JOB='wrong-ticket'):
-        assert container_labels(ROOT) == ['--label-file', str(labels)]
+        assert container_labels(ROOT) == ['--label-file', str(canonical_labels)]
         assert container_labels(ROOT, image_build=True) == [
             '--label', 'pm.repo=owned-repo', '--label', 'pm.ticket=fixture-ticket', '--label', 'pm.job=j-test']
         cli = subprocess.check_output([sys.executable, ROOT / 'scripts/build_targets.py'], text=True).strip()
@@ -319,10 +323,10 @@ sys.exit(int(os.environ['CHILD_STATUS']))
     result = subprocess.run([sys.executable, '-c', bootstrap], cwd=ROOT, env=env, capture_output=True, text=True)
     assert result.returncode == 37, result.stderr
     args = json.loads((folder / 'argv.json').read_text())
-    assert '--rm' in args and args[args.index('--label-file') + 1] == str(labels)
+    assert '--rm' in args and args[args.index('--label-file') + 1] == str(canonical_labels)
     assert '--label' not in args, 'fallback labels overwrite job ownership'
-    assert str(labels) + ':' + str(labels) + ':ro' in args
-    assert 'JOB_LABEL_FILE=' + str(labels) in args
+    assert str(canonical_labels) + ':' + str(canonical_labels) + ':ro' in args
+    assert 'JOB_LABEL_FILE=' + str(canonical_labels) in args
     assert labels.read_text().endswith('pm.job=j-test\n')
     # The real installer image-build caller must use supported individual flags.
     build = "import sys,runpy,platform; platform.system=lambda:'Linux'; sys.path.insert(0,'scripts'); sys.argv=['scripts/installer-test','--prepare-fish']; runpy.run_path(sys.argv[0],run_name='__main__')"
