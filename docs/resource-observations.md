@@ -1,16 +1,16 @@
 # Resource observations
 
-The measurements on this page are historical observations, not final qualification for a release. The observations retained here leave long-running memory growth unresolved for C#, Java and TypeScript. Earlier PASS rows below do not clear later failures, establish a safe memory bound or prove that any surface is free of leaks. Consult the release body for results tied to the exact released packages and runtimes.
+The measurements on this page are historical observations, not final qualification for a release. The observations retained here leave long-running memory growth unresolved for C#, Java and TypeScript. Earlier PASS rows below do not clear later failures, establish a safe memory bound or prove that any surface is free of leaks. Releases no longer run memory soaks; see the Known limits in the release notes.
 
-## Current criterion and unresolved results
+## Retired criterion and unresolved results
 
-The current memory check runs 60 rounds of 100,000 records against local backend stubs. It compares the highest resident memory (RSS) in rounds 41–45 with the highest in rounds 56–60, dividing the difference by the 1,500,000 verified records after the first five-round window. Growth at or above 1 byte per verified record fails, whether or not the intervening window highs all rise. Twenty-round memory reports and reduced-record controls do not replace this check.
+The retired memory check ran 60 rounds of 100,000 records against local backend stubs. It compared the highest resident memory (RSS) in rounds 41–45 with the highest in rounds 56–60, dividing the difference by the 1,500,000 verified records after the first five-round window. Growth at or above 1 byte per verified record failed, whether or not the intervening window highs all rose. Twenty-round memory reports and reduced-record controls did not replace this check.
 
 The older point-to-point observations below instead compare completed checkpoints 41 and 60 over 1,900,000 subsequent verified records. Those figures retain their original calculation and verdict; substituting either denominator would misrepresent the measurements.
 
 The following completed cases used Linux x86_64 with glibc 2.28. Each returned 6,000,000 correct rows with zero failed rows and 187,500 workload requests. Descriptor, connection, thread and process checks passed. These are completed-case results, not a claim that every enclosing qualification run completed successfully. Rates are rounded to nine decimal places.
 
-| Public source | Surface / client path | Late RSS growth, bytes | Bytes per verified record | Current memory criterion |
+| Public source | Surface / client path | Late RSS growth, bytes | Bytes per verified record | Retired memory criterion |
 | --- | --- | ---: | ---: | --- |
 | `2ff27384b4d94e03cf7060aa3dd0e94a9729fcac` | C# / System One | 155,648 | 0.103765333 | Below floor in this case |
 | Same source | C# / OpenAI | 1,523,712 | 1.015808000 | Failed |
@@ -27,7 +27,7 @@ The two C# diagnostics at source `4874fbb0…` used installed package archive SH
 
 The C# diagnostics confirm real resident-memory growth, but do not identify the allocating caller, establish a plateau or show a safe upper bound. The rates above describe measured intervals; they do not establish a per-record allocation mechanism or predict unlimited linear growth. No common cause across C#, Java and TypeScript, safe operating duration or effective workaround has been demonstrated. Correct rows and passing resource counts do not certify bounded memory in continuously running clients.
 
-These observations do not qualify later packages or changes to usage, allowance, recovery and response-store lifetimes. Release-specific results belong in the release body with their own source, package, native member, consumer, fixture and runtime identities. No final-release result is supplied here.
+These observations do not qualify later packages or changes to usage, allowance, recovery and response-store lifetimes.
 
 These long-running resource observations cover Linux only. They provide no measurement of long-running memory on Windows or macOS.
 

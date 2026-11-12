@@ -4,7 +4,7 @@ description: What ThinkThen 0.2.0 holds, from the ten functions and their not-su
 goal: Someone about to install ThinkThen or send it paid questions leaves knowing what 0.2.0 holds and each known limit, with the step that avoids it.
 reader: A developer or reviewer about to install ThinkThen or put it in front of a paid service
 kind: reference
-verified: 2026-11-06
+verified: 2026-11-12
 head:
   - tag: title
     content: "Release notes: what ThinkThen 0.2.0 holds and its limits"
@@ -23,8 +23,8 @@ ThinkThen answers questions about text with ten functions, from the command line
 - **Toolboxes.** A file of named questions, asked together with annotate or run from a saved entry with `run`. [Toolboxes](/command-line/toolboxes/) covers them.
 - **SDKs** for Python, with pandas and Polars, TypeScript, Go, Java, Kotlin, C#, R, Ruby, Rust, Swift, Zig, C and C++, and extensions for DuckDB, SQLite and PostgreSQL. Each returns the same answers as the command.
 - **Two services:** System One, with its model Jev as the default, and OpenAI. [Configuration](/configuration/) sets them up.
-- **34 error codes,** each with its fix in [Troubleshooting](/reference/troubleshooting/), plus a manual page and shell completions.
-- **Platforms:** Linux with glibc 2.28 or later, macOS 15 on Apple silicon, and Windows on x86-64.
+- **42 error codes.** [Troubleshooting](/reference/troubleshooting/) gives the fix for 35 of them. The seven it doesn't cover are `local.accounting` and the response-store codes `local.response-store`, `local.store-corrupt`, `local.store-format`, `local.store-answer`, `local.replay-miss` and `local.store-quota`. 0.2.0 also has a manual page and shell completions.
+- **Platforms:** Linux with glibc 2.28 or later, macOS 15 on Apple silicon, and Windows on x86-64. The Swift SDK on Linux needs glibc 2.35 or later. Windows is tested on Windows Server 2022; Windows 10 and 11 are expected to work but are not tested. The PostgreSQL extension runs on Linux only.
 
 ## Upgrading from 0.1
 
@@ -48,4 +48,4 @@ ThinkThen is still at 0.x, so commands, options and SDKs can change between rele
 | Swift 6.3.2 optimized builds on macOS | We observed an Apple Swift 6.3.2 compiler abort when `result().get()` caught only `RowError.failed` and let `RowError.unsure` propagate implicitly. | Explicitly catch `RowError.unsure(let probability)` and rethrow `RowError.unsure(probability: probability)`. This preserves the error payload and let the packaged consumer build and run with release optimization. |
 | DuckDB version | The extension loads only into DuckDB 2.0.0, with unsigned extensions allowed. | Start DuckDB with `duckdb -unsigned`. [DuckDB](/sdks/duckdb/) shows the steps. |
 | Toolbox shell steps | A toolbox can run programs on your machine. | ThinkThen runs them only with `--allow-shell`, and passes your key only to a step whose `env` names it. Run only toolboxes you have read. |
-| Memory over long runs | Memory was measured over long test runs of the SDKs and databases on Linux only, and the measurements don't prove they never leak. Memory over long runs on Windows and macOS is unmeasured. | Keep long-running programs bounded and watch their memory. The [resource observations](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/resource-observations.md) give the measurements. |
+| Slow memory leaks | Releases are not tested for memory over long runs on any platform. Each release runs one short engine leak check, and the engine has a check that later calls start no new threads. A slow leak in one SDK or database extension that shows only after hours of use can go uncaught. Older measurements on Linux left memory growth unresolved for C#, Java and TypeScript. | Keep long-running programs bounded, restart them from time to time and watch their memory. The [resource observations](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/resource-observations.md) hold the older measurements. |

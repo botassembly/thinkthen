@@ -101,7 +101,7 @@ def release_note(version, platforms):
     from runtime_floors import FLOORS
 
     lines = [f'# ThinkThen {version}', '',
-             'Ask typed questions about records from Python, TypeScript, R, Go, Java, Kotlin, C#, C, C++, Swift, Zig and Ruby. Use the `thinkthen` command or query DuckDB, SQLite and PostgreSQL. Work with pandas, Polars and R data frames. Read and write CSV, TSV and Excel files. Run saved questions and steps from toolboxes with `thinkthen run`.', '',
+             'Ask typed questions about records from Python, TypeScript, R, Go, Java, Kotlin, C#, C, C++, Rust, Swift, Zig and Ruby. Use the `thinkthen` command or query DuckDB, SQLite and PostgreSQL. Work with pandas, Polars and R data frames. Read and write CSV, TSV and Excel files. Run saved questions and steps from toolboxes with `thinkthen run`.', '',
              '## Install', '',
              'Install the command on Linux or macOS with `curl -fsSL https://thinkthen.dev/install.sh | sh`. On Windows PowerShell, run `irm https://thinkthen.dev/install.ps1 | iex`.', '',
              'The installers add their command folder to your user PATH for new terminals. Set `THINKTHEN_NO_MODIFY_PATH=1` for print-only PATH instructions. The receipt lists any shell profile or registry changes.', '',
