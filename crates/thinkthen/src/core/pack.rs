@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
+use std::sync::Arc;
 
 use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
@@ -26,23 +27,23 @@ fn prefixed(field: &[u8], mut write: impl FnMut(&[u8])) {
 
 /// Groups records into bounded batches whose rounds can span requests.
 #[derive(Debug)]
-pub(crate) struct Packer<'a, F: Function> {
-    question: &'a F,
+pub(crate) struct Packer<F: Function> {
+    question: Arc<F>,
     adapter: Adapter,
     batch: NonZeroUsize,
     limits: crate::core::Limits,
     empty_len: usize,
     seed: Vec<u8>,
     position: usize,
-    open: Chunk<'a, F>,
+    open: Chunk<F>,
 }
 
-impl<'a, F: Function> Packer<'a, F> {
+impl<F: Function> Packer<F> {
     /// A packer for `adapter` at `address` asking `model`, closing each request
     /// at `batch` records or at the selected backend model limits.
     #[must_use]
     pub(crate) fn new(
-        question: &'a F,
+        question: Arc<F>,
         adapter: Adapter,
         address: &str,
         model: &str,
@@ -58,7 +59,6 @@ impl<'a, F: Function> Packer<'a, F> {
             .encode(crate::core::ask::DEFAULT_STATE, model, &[])
             .len();
         Self {
-            question,
             adapter,
             batch,
             limits,
@@ -66,13 +66,14 @@ impl<'a, F: Function> Packer<'a, F> {
             seed,
             position: 0,
             open: Chunk::new(
-                question,
+                question.clone(),
                 adapter,
                 limits,
                 model.to_owned(),
                 empty_len,
                 identity,
             ),
+            question,
         }
     }
 
@@ -80,11 +81,11 @@ impl<'a, F: Function> Packer<'a, F> {
     ///
     /// A record whose question alone passes the byte limit fails with
     /// `record.too-large` and sends nothing.
-    pub(crate) fn push(&mut self, record: Record) -> Option<Chunk<'a, F>> {
+    pub(crate) fn push(&mut self, record: Record) -> Option<Chunk<F>> {
         self.position += 1;
         let id = record.id.clone().unwrap_or(Id::position(self.position));
         let record = AdmittedRecord::new(record);
-        let question = self.question;
+        let question = self.question.clone();
         let limits = self.limits;
         self.push_round(id, record, Vec::new(), |record| {
             question.try_asks_record(record, limits)
@@ -97,7 +98,7 @@ impl<'a, F: Function> Packer<'a, F> {
         record: Result<AdmittedRecord, Error>,
         history: Vec<Result<AskAnswer, Error>>,
         asks: impl FnOnce(&AdmittedRecord) -> Result<Vec<Ask>, Error>,
-    ) -> Option<Chunk<'a, F>> {
+    ) -> Option<Chunk<F>> {
         let entry = record.as_ref().map_err(Clone::clone).and_then(|record| {
             let prepared = asks(record)?
                 .into_iter()
@@ -160,16 +161,16 @@ impl<'a, F: Function> Packer<'a, F> {
 
     /// The last open request, if it holds any record.
     #[must_use]
-    pub(crate) fn finish(mut self) -> Option<Chunk<'a, F>> {
+    pub(crate) fn finish(mut self) -> Option<Chunk<F>> {
         self.flush()
     }
-    pub(crate) fn flush(&mut self) -> Option<Chunk<'a, F>> {
+    pub(crate) fn flush(&mut self) -> Option<Chunk<F>> {
         (!self.open.entries.is_empty()).then(|| self.take())
     }
     pub(crate) fn pending_records(&self) -> usize {
         self.open.entries.len()
     }
-    pub(crate) fn flush_full(&mut self) -> Option<Chunk<'a, F>> {
+    pub(crate) fn flush_full(&mut self) -> Option<Chunk<F>> {
         (self.open.entries.len() == self.batch.get()).then(|| self.take())
     }
 
@@ -186,7 +187,7 @@ impl<'a, F: Function> Packer<'a, F> {
         prefixed(ask.state().as_bytes(), |part| hasher.update(part));
         prefixed(question.get().as_bytes(), |part| hasher.update(part));
         let stub_key = F::stub_key(
-            FunctionAnswers::new(self.question, record, history),
+            FunctionAnswers::new(&self.question, record, history),
             &self.open.identity,
             self.limits,
             position,
@@ -207,9 +208,9 @@ impl<'a, F: Function> Packer<'a, F> {
         Ok(())
     }
 
-    fn take(&mut self) -> Chunk<'a, F> {
+    fn take(&mut self) -> Chunk<F> {
         let fresh = Chunk::new(
-            self.question,
+            self.question.clone(),
             self.adapter,
             self.limits,
             self.open.model.clone(),
@@ -239,8 +240,8 @@ struct EncodedAsk {
 
 /// An ordered record group and the distinct questions in its current round.
 #[derive(Debug)]
-pub(crate) struct Chunk<'a, F: Function> {
-    question: &'a F,
+pub(crate) struct Chunk<F: Function> {
+    question: Arc<F>,
     identity: String,
     adapter: Adapter,
     limits: crate::core::Limits,
@@ -251,9 +252,9 @@ pub(crate) struct Chunk<'a, F: Function> {
     len: usize,
 }
 
-impl<'a, F: Function> Chunk<'a, F> {
+impl<F: Function> Chunk<F> {
     fn new(
-        question: &'a F,
+        question: Arc<F>,
         adapter: Adapter,
         limits: crate::core::Limits,
         model: String,
@@ -363,7 +364,7 @@ impl<'a, F: Function> Chunk<'a, F> {
                     .and(record)
                     .map(|record| {
                         F::read_record(
-                            FunctionAnswers::new(self.question, &record, &history),
+                            FunctionAnswers::new(&self.question, &record, &history),
                             self.limits,
                         )
                     })
@@ -379,9 +380,9 @@ impl<'a, F: Function> Chunk<'a, F> {
         replies: Vec<RequestAnswers>,
         address: &str,
         batch: NonZeroUsize,
-    ) -> Vec<NextRound<'a, F>> {
+    ) -> Vec<NextRound<F>> {
         let mut packer = Packer::new(
-            self.question,
+            self.question.clone(),
             self.adapter,
             address,
             &self.model,
@@ -424,7 +425,7 @@ impl<'a, F: Function> Chunk<'a, F> {
                 }));
                 let record = record.as_ref().map_err(Clone::clone)?;
                 F::followup_record(
-                    FunctionAnswers::new(self.question, record, &history),
+                    FunctionAnswers::new(&self.question, record, &history),
                     self.limits,
                 )
             });
@@ -574,9 +575,9 @@ impl RequestAnswers {
 
 /// The original question's next request, or its finished rows.
 #[derive(Debug)]
-pub(crate) enum NextRound<'a, F: Function> {
+pub(crate) enum NextRound<F: Function> {
     /// This record group has finished every dependent round.
     Ready(Vec<Row>),
     /// This record group has another request to send.
-    Pending(Chunk<'a, F>),
+    Pending(Chunk<F>),
 }

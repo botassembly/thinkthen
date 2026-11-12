@@ -15,7 +15,9 @@ import java.util.concurrent.Executors;
 
 /** The shared JVM driver owns all foreign memory and blocking native operations. */
 public final class DriverClient implements AutoCloseable {
-    private final ExecutorService workers = Executors.newThreadPerTaskExecutor( Thread.ofPlatform().daemon().name("thinkthen-native-",0).factory());
+    // Reused threads keep native allocations in the allocator arenas already in use.
+    private final ExecutorService workers = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().name("thinkthen-native-",0).factory());
+    private final ExecutorService streams = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().name("thinkthen-stream-",0).factory());
     private final Set<DriverCall> calls = new HashSet<>();
     private MemorySegment handle;
     private boolean closed;
@@ -45,6 +47,8 @@ public final class DriverClient implements AutoCloseable {
         });
         return result;
     }
+    /** Lend one pooled thread to a call until that call is released. */
+    void drive(Runnable driver) { streams.execute(driver); }
     static RuntimeException translate(Throwable error) {
         if (error instanceof ThinkThenException coded) return new DriverException(coded);
         if (error instanceof RuntimeException runtime) return runtime;
@@ -102,6 +106,7 @@ public final class DriverClient implements AutoCloseable {
                 Native.call("client_free",handle);
                 handle = MemorySegment.NULL;
                 workers.shutdown();
+                streams.shutdown();
             }
             clientReleased.complete(null);
         }

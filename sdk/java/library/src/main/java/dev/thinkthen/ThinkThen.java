@@ -35,7 +35,7 @@ public final class ThinkThen implements AutoCloseable {
     private static final System.Logger LOG = System.getLogger("dev.thinkthen");
     private final DriverClient driver;
     private final @org.jspecify.annotations.Nullable RecordCodec codec;
-    private final ExecutorService asyncWorkers = Executors.newThreadPerTaskExecutor(Thread.ofPlatform().daemon().name("thinkthen-async-",0).factory());
+    private final ExecutorService asyncWorkers = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().name("thinkthen-async-",0).factory());
     private final Set<CompletableFuture<?>> futures = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private volatile boolean closed;
     private ThinkThen(Builder builder) {
@@ -180,7 +180,7 @@ public final class ThinkThen implements AutoCloseable {
              */
             @Override public boolean cancel(boolean interrupt) {
                 boolean won = super.completeExceptionally(Values.cancelled());
-                if (won) { cancellation.cancel(); var running = thread.get(); if (running != null) running.interrupt(); }
+                if (won) { cancellation.cancel(); synchronized (thread) { var running = thread.get(); if (running != null) running.interrupt(); } }
                 return won || isCancelled();
             }
         };
@@ -192,7 +192,8 @@ public final class ThinkThen implements AutoCloseable {
                 CURRENT.set(cancellation);
                 try { if (!result.isCancelled()) result.complete(operation.get()); }
                 catch (Throwable error) { result.completeExceptionally(error); }
-                finally { cancellation.clear(); CURRENT.remove(); thread.set(null); Thread.interrupted(); }
+                // A reused thread must not carry this call's interrupt into its next task.
+                finally { cancellation.clear(); CURRENT.remove(); synchronized (thread) { thread.set(null); } Thread.interrupted(); }
             });
         } catch (java.util.concurrent.RejectedExecutionException error) { result.cancel(false); }
         return result;

@@ -158,26 +158,27 @@ impl<F: Function> Iterator for Rows<F> {
         Some(self.admit(row))
     }
 }
+/// Closes its queue when dropped.
 #[derive(Debug)]
-struct SenderOwner {
-    input: Arc<Queue<Record>>,
+struct Closer<T: Send + std::fmt::Debug + 'static> {
+    queue: Arc<Queue<T>>,
 }
-impl Drop for SenderOwner {
+impl<T: Send + std::fmt::Debug + 'static> Drop for Closer<T> {
     fn drop(&mut self) {
-        self.input.close();
+        self.queue.close();
     }
 }
 /// An owning sender whose last owner closes input.
 #[non_exhaustive]
 #[derive(Debug, Clone)]
-pub struct RecordSender(Arc<SenderOwner>);
+pub struct RecordSender(Arc<Closer<Record>>);
 impl RecordSender {
     /// Transfer one record to the call, waiting for bounded input capacity.
     /// Rows must be drained concurrently as described in [`Engine::open`].
     /// # Errors
     /// Returns cancellation when the call closes or is cancelled.
     pub fn send(&self, record: Record) -> Result<(), Error> {
-        self.0.input.send(record)
+        self.0.queue.send(record)
     }
     /// Transfer one record if input has room, without waiting, as
     /// [`SyncSender::try_send`](std::sync::mpsc::SyncSender::try_send) does.
@@ -211,11 +212,11 @@ impl RecordSender {
     /// [`TrySendError::Disconnected`] when the call is closed or cancelled. The
     /// call's own error, if it has one, comes from its rows.
     pub fn try_send(&self, record: Record) -> Result<(), TrySendError<Record>> {
-        self.0.input.try_send(record)
+        self.0.queue.try_send(record)
     }
     /// Close input without waiting for output to be drained.
     pub fn close(&self) {
-        self.0.input.close();
+        self.0.queue.close();
     }
 }
 /// A heterogeneous call with explicit input ownership.
@@ -292,8 +293,8 @@ impl Engine {
     }
     /// Evaluate records through a lazy iterator on a bounded worker.
     ///
-    /// Each record is anything that converts into a [`Record`]. A worker thread
-    /// reads them, so they must be owned: collect borrowed items into a `Vec` first.
+    /// Each record is anything that converts into a [`Record`]. A thread the client
+    /// keeps reads them, so they must be owned: collect borrowed items into a `Vec` first.
     /// # Errors
     /// Returns call setup or pre-existing cancellation errors.
     pub fn rows<F: Function, I>(&self, question: &F, records: I) -> Result<Rows<F>, Error>
@@ -374,8 +375,8 @@ impl Engine {
     ) -> Result<AnyCall, Error> {
         let engine = self.for_call();
         let input = Queue::new(capacity, &engine.cancel);
-        let sender = RecordSender(Arc::new(SenderOwner {
-            input: input.clone(),
+        let sender = RecordSender(Arc::new(Closer {
+            queue: input.clone(),
         }));
         let mut flushed = initial.is_empty();
         let records = initial
@@ -435,9 +436,8 @@ impl Engine {
         let send = output.clone();
         let engine = self.clone();
         let activity = self.account.open_call()?;
-        std::thread::Builder::new()
-            .spawn(move || {
-                let _activity = activity;
+        self.threads
+            .run(move || {
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     execute::drive(
                         &engine,
@@ -461,7 +461,9 @@ impl Engine {
                 if let Err(error) = result {
                     let _ = send.send(Err(error));
                 }
-                send.close();
+                // Dropped in this order once the thread is free for the next call:
+                // the rows end, then the call settles.
+                (Closer { queue: send }, activity)
             })
             .map_err(|cause| {
                 let mut error =

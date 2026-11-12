@@ -28,7 +28,7 @@ class DownloadCache(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.root = Path(self.directory.name)
         self.bodies, self.requests = {}, []
-        self.barrier = None
+        self.barrier, self.cut = None, 0
         owner = self
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
@@ -38,9 +38,14 @@ class DownloadCache(unittest.TestCase):
                 if self.path not in owner.bodies:
                     self.send_error(404)
                     return
+                body = owner.bodies[self.path]
                 self.send_response(200)
+                if owner.cut:
+                    owner.cut -= 1
+                    self.send_header('Content-Length', str(len(body)))
+                    body = body[:len(body) // 2]
                 self.end_headers()
-                self.wfile.write(owner.bodies[self.path])
+                self.wfile.write(body)
             def log_message(self, *arguments):
                 pass
         self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
@@ -95,6 +100,22 @@ class DownloadCache(unittest.TestCase):
         self.assertFalse(list(self.root.glob('*.partial')))
         self.bodies['/tool'] = b'correct pinned tool'
         self.assertEqual(fetch(url, path, 'sha512:' + expected).read_bytes(), b'correct pinned tool')
+
+    def test_a_transfer_that_closes_early_is_fetched_again(self):
+        path = self.root / 'sdk.tar.gz'
+        self.bodies['/sdk'] = b'pinned release input that arrives in two halves'
+        digest = hashlib.sha256(self.bodies['/sdk']).hexdigest()
+        self.cut = 1
+        self.assertEqual(fetch(self.base + '/sdk', path, digest).read_bytes(), self.bodies['/sdk'])
+        self.assertEqual(self.requests, ['/sdk', '/sdk'])
+        path.unlink()
+        self.cut = 3
+        with self.assertRaises(subprocess.CalledProcessError) as closed:
+            fetch(self.base + '/sdk', path, digest)
+        self.assertEqual(closed.exception.returncode, 18)
+        self.assertEqual(self.requests, ['/sdk'] * 5)
+        self.assertFalse(path.exists())
+        self.assertFalse(list(self.root.glob('*.partial')))
 
     def test_urls_pinned_to_one_digest_back_each_other_up(self):
         pinned, wrong = b'pinned release input', b'wrong network payload'

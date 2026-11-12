@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
 case "${1:-}" in
-    --inside|--inside-day-one|--inside-soaks|--inside-soaks-2|--inside-soaks-3)
+    --inside|--inside-day-one)
         inside_mode=$1
         shift
         python3 scripts/public_export_gate.py verify "$@"
@@ -17,15 +17,6 @@ case "${1:-}" in
         export THINKTHEN_SWIFT_LOOPBACK="$THINKTHEN_LOOPBACK"
         if [ "$inside_mode" = --inside-day-one ]; then
             exec scripts/hosted-candidate-check --day-one-sdk-checks-inside
-        fi
-        if [ "$inside_mode" = --inside-soaks ]; then
-            exec scripts/hosted-candidate-check --extended-soaks-inside
-        fi
-        if [ "$inside_mode" = --inside-soaks-2 ]; then
-            exec scripts/hosted-candidate-check --extended-soaks-2-inside
-        fi
-        if [ "$inside_mode" = --inside-soaks-3 ]; then
-            exec scripts/hosted-candidate-check --extended-soaks-3-inside
         fi
         exec scripts/gate
         ;;

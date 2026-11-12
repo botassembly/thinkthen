@@ -15,11 +15,7 @@ public final class DriverCall implements AutoCloseable {
     public record DriverRow(byte[] fields, byte[] detail, long position, @org.jspecify.annotations.Nullable DriverRecord original) implements Event {}
     private final Object lifetime = new Object();
     private volatile Thread driverThread;
-    private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
-        var thread = Thread.ofPlatform().daemon().name("thinkthen-stream-",0).unstarted(task);
-        driverThread = thread;
-        return thread;
-    });
+    private final java.util.concurrent.BlockingQueue<Runnable> tasks = new java.util.concurrent.LinkedBlockingQueue<>();
     private final DriverClient client;
     private final String expectedFunction;
     private final MemorySegment clientHandle;
@@ -33,6 +29,7 @@ public final class DriverCall implements AutoCloseable {
         this.client = client;
         expectedFunction = Json.read(request).path("question").path("function").asText();
         this.clientHandle = clientHandle;
+        client.drive(this::drive);
         synchronized (lifetime) {
             admission = submit(() -> {
                 synchronized (lifetime) { if (cancelled) return null; }
@@ -65,6 +62,14 @@ public final class DriverCall implements AutoCloseable {
             }
         }
     }
+    /** Run this call's tasks in order on one borrowed thread, until the release task clears it. */
+    private void drive() {
+        driverThread = Thread.currentThread();
+        while (driverThread != null) {
+            try { tasks.take().run(); }
+            catch (InterruptedException ignored) { /* A task's leftover interrupt; the next take waits again. */ }
+        }
+    }
     /** Preserve admission-before-encoding while sharing the stream's driver. */
     public void replaceRecords(byte[] request, java.util.List<DriverRecord> records) {
         var snapshot = java.util.List.copyOf(records);
@@ -84,7 +89,7 @@ public final class DriverCall implements AutoCloseable {
         synchronized (lifetime) {
             if (releasing) throw DriverClient.cancelled();
             var result = new CompletableFuture<T>();
-            worker.execute(() -> {
+            tasks.add(() -> {
                 try { result.complete(operation.call()); }
                 catch (Throwable error) { result.completeExceptionally(error); }
             });
@@ -208,7 +213,7 @@ public final class DriverCall implements AutoCloseable {
             if (releasing) return;
             releasing = true;
         }
-        worker.execute(() -> {
+        tasks.add(() -> {
             DriverEvents retained;
             synchronized (lifetime) {
                 if (handle != MemorySegment.NULL) { NativeStream.call_free(handle); handle = MemorySegment.NULL; }
@@ -217,9 +222,9 @@ public final class DriverCall implements AutoCloseable {
             var done = retained == null ? CompletableFuture.<Void>completedFuture(null) : retained.close();
             done.whenComplete((ignored,failure) -> {
                 client.released(this);
-                worker.shutdown();
                 released.complete(null);
             });
+            driverThread = null;
         });
     }
 }

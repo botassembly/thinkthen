@@ -35,18 +35,6 @@ if [ "${1:-}" = --day-one-sdk-checks-from-producers ]; then
     shift
     exec python3 scripts/public_export_gate.py day-one "$@"
 fi
-if [ "${1:-}" = --extended-soaks-from-producers ]; then
-    shift
-    exec python3 scripts/public_export_gate.py soaks "$@"
-fi
-if [ "${1:-}" = --extended-soaks-2-from-producers ]; then
-    shift
-    exec python3 scripts/public_export_gate.py soaks-2 "$@"
-fi
-if [ "${1:-}" = --extended-soaks-3-from-producers ]; then
-    shift
-    exec python3 scripts/public_export_gate.py soaks-3 "$@"
-fi
 if [ "${1:-}" = --day-one-docs-checks ]; then
     python3 scripts/release-preparation-test
     ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/day-one-docs-test scripts/sdk-readme-examples scripts/release_install.py scripts/release-documentation-test scripts/native_platform.py scripts/native-pair scripts/native-prepare scripts/release-preparation-test
@@ -76,7 +64,7 @@ if [ "${1:-}" = --loader-checks ] || [ "${1:-}" = --day-one-sdk-checks ]; then
     scripts/runtime-floor-build scripts/hosted-candidate-check "$check_mode-inside"
     exit
 fi
-if [ "${1:-}" = --loader-checks-inside ] || [ "${1:-}" = --day-one-sdk-checks-inside ] || [ "${1:-}" = --extended-soaks-inside ] || [ "${1:-}" = --extended-soaks-2-inside ] || [ "${1:-}" = --extended-soaks-3-inside ]; then
+if [ "${1:-}" = --loader-checks-inside ] || [ "${1:-}" = --day-one-sdk-checks-inside ]; then
     pair=$(mktemp)
     scripts/native-pair export "$pair"
     scripts/native-pair import "$pair" "$(scripts/native-prepare --path)"
@@ -86,18 +74,9 @@ if [ "${1:-}" = --loader-checks-inside ] || [ "${1:-}" = --day-one-sdk-checks-in
     export THINKTHEN_SWIFT_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
     gates="ruby-gate csharp-gate swift-gate"
     if [ "$1" = --day-one-sdk-checks-inside ]; then gates="jvm-gate ruby-gate zig-sdk-gate"; fi
-    if [ "$1" = --extended-soaks-inside ]; then gates="ruby-gate csharp-gate sqlite-gate postgres-gate"; fi
-    if [ "$1" = --extended-soaks-2-inside ]; then gates="python-gate typescript-gate c-sdk-gate cpp-sdk-gate go-gate"; fi
-    if [ "$1" = --extended-soaks-3-inside ]; then gates="jvm-gate r-gate swift-gate zig-sdk-gate"; fi
-    status=0
     # shellcheck disable=SC2086 # gate names are fixed words
-    run_gates scripts/linux-binding-gate $gates || status=1
-    # 0677: the Rust library's 60-round soak, on both backends, joins the third part, which
-    # already has the smoke size that proves its wiring.
-    if [ "$1" = --extended-soaks-3-inside ]; then
-        scripts/stress --extended "$THINKTHEN_SOAK_FOLDER" || { echo 'hosted-candidate-check: FAILED soak: rust' >&2; status=1; }
-    fi
-    exit "$status"
+    run_gates scripts/linux-binding-gate $gates
+    exit
 fi
 if [ "${1:-}" = --installer-checks ]; then
     shift

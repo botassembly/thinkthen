@@ -97,20 +97,11 @@ class Export(unittest.TestCase):
             self.assertEqual(result.returncode, 23, result.stderr)
             self.assertEqual(events.read_text().splitlines(), ['verify'])
             events.unlink()
-            result = subprocess.run([*command[:2], '--inside-soaks', *command[3:]], env=env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(events.read_text().splitlines(),
-                             ['verify', 'native-env', 'sdk --extended-soaks-inside'])
-            events.unlink()
-            result = subprocess.run([*command[:2], '--inside-soaks-2', *command[3:]], env=env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(events.read_text().splitlines(),
-                             ['verify', 'native-env', 'sdk --extended-soaks-2-inside'])
-            events.unlink()
-            result = subprocess.run([*command[:2], '--inside-soaks-3', *command[3:]], env=env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(events.read_text().splitlines(),
-                             ['verify', 'native-env', 'sdk --extended-soaks-3-inside'])
+            # 2026-11-11 decision: the per-surface soak modes are gone; an old mode is no inside mode.
+            for retired in ('--inside-soaks', '--inside-soaks-2', '--inside-soaks-3'):
+                result = subprocess.run([*command[:2], retired, *command[3:]], env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 97, result.stderr)
+                self.assertFalse(events.exists(), retired)
 
     def test_candidate_gate_uses_a_symlinked_temporary_root(self):
         entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
@@ -170,120 +161,6 @@ class Export(unittest.TestCase):
             observed = json.loads((evidence / 'temporary.json').read_text())
             self.assertNotEqual(observed['alias'], observed['physical'])
             self.assertFalse(Path(observed['physical']).exists(), 'successful candidate scratch survived')
-
-    def test_a_skipped_or_short_soak_refuses_the_receipt(self):
-        from stress_resources import METRICS
-        entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
-        rows = [dict(dict.fromkeys(METRICS, 0), completed_round=index) for index in range(1, 61)]
-
-        def text(chosen):
-            return ''.join(json.dumps(row) + '\n' for row in [{'completed_round': None}, *chosen])
-
-        # Feature: the two soak halves cover each surface once.
-        halves = entry['SOAKS']
-        self.assertEqual(set(halves), {'soaks', 'soaks-2', 'soaks-3'})
-        # 0677: the Rust library's 60-round soak joins the third part on both backends.
-        self.assertEqual(halves['soaks-3'], ('java-systemone', 'java-openai', 'r-systemone', 'r-openai',
-                                             'swift-systemone', 'swift-openai', 'zig-systemone', 'zig-openai',
-                                             'rust-systemone', 'rust-openai'))
-        named = [name for part in halves.values() for name in part]
-        self.assertEqual(len(named), len(set(named)))
-        self.assertEqual(halves['soaks-2'], ('python-systemone', 'python-openai', 'typescript-systemone', 'typescript-openai',
-                                             'c-systemone', 'c-openai', 'cpp-systemone', 'cpp-openai', 'go-systemone', 'go-openai'))
-        with tempfile.TemporaryDirectory(prefix='soak-receipt-2-') as temporary:
-            evidence = Path(temporary)
-            for name in halves['soaks-2']:
-                (evidence / (name + '.jsonl')).write_text(text(rows))
-            entry['soak_receipt'](evidence, 'a' * 40, 'j2', 'soaks-2')
-            receipt = json.loads((evidence / 'receipt.json').read_text())
-            self.assertEqual(sorted(receipt['soaks']), sorted(halves['soaks-2']))
-            # The first half's receipt still needs its own eight soaks.
-            with self.assertRaisesRegex(ValueError, 'soak evidence is missing: ruby-systemone.jsonl'):
-                entry['soak_receipt'](evidence, 'a' * 40, 'j2')
-        with tempfile.TemporaryDirectory(prefix='soak-receipt-') as temporary:
-            evidence = Path(temporary)
-            for name in halves['soaks']:
-                (evidence / (name + '.jsonl')).write_text(text(rows))
-            entry['soak_receipt'](evidence, 'a' * 40, 'j1')
-            receipt = json.loads((evidence / 'receipt.json').read_text())
-            self.assertEqual((receipt['job'], receipt['public'], receipt['verdict']), ('j1', 'a' * 40, 'passed'))
-            self.assertEqual(len(receipt['soaks']), 8)
-            self.assertEqual(receipt['soaks']['postgres-openai']['measurement_start_round'], 41)
-            (evidence / 'receipt.json').unlink()
-            (evidence / 'sqlite-openai.jsonl').unlink()
-            with self.assertRaisesRegex(ValueError, 'soak evidence is missing: sqlite-openai.jsonl'):
-                entry['soak_receipt'](evidence, 'a' * 40, 'j1')
-            (evidence / 'sqlite-openai.jsonl').write_text(text(rows[:59]))
-            with self.assertRaisesRegex(ValueError, 'soak did not complete 60 rounds: sqlite-openai'):
-                entry['soak_receipt'](evidence, 'a' * 40, 'j1')
-            self.assertFalse((evidence / 'receipt.json').exists())
-        # Feature: a smoke-size soak proves wiring and never writes a passing receipt.
-        with tempfile.TemporaryDirectory(prefix='soak-receipt-smoke-') as temporary, \
-                patch.dict(os.environ, THINKTHEN_SOAK_ROUNDS='8', THINKTHEN_SOAK_RECORDS='100'):
-            evidence = Path(temporary)
-            # Memory far above the floor at this size is reported, not judged.
-            growing = [dict(row, memory_bytes=row['completed_round'] * 250 * 1024) for row in rows[:8]]
-            for name in halves['soaks-3']:
-                (evidence / (name + '.jsonl')).write_text(text(growing))
-            entry['soak_receipt'](evidence, 'a' * 40, 'j3', 'soaks-3')
-            receipt = json.loads((evidence / 'receipt.json').read_text())
-            self.assertEqual((receipt['verdict'], receipt['soak_rounds'], receipt['records_per_round']), ('smoke', 8, 100))
-            figures = receipt['soaks']['zig-openai']
-            self.assertEqual((figures['measurement_start_round'], figures['measurement_end_round']), (5, 8))
-            self.assertGreaterEqual(figures['bytes_per_verified_record'], 1)
-            self.assertIsNone(figures['floor_bytes_per_verified_record'])
-
-    def test_an_attributed_soak_passes_only_on_its_own_in_use_series(self):
-        from stress_resources import METRICS, SOAK_WINDOW, growth
-        entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
-        flat = [dict(dict.fromkeys(METRICS, 0), completed_round=index) for index in range(1, 61)]
-        # RSS grows 200,000 bytes a round from round 41, past the 1 byte per record floor.
-        grown = [dict(row, memory_bytes=max(0, row['completed_round'] - 40) * 200_000) for row in flat]
-
-        def write(evidence, name, rows):
-            (evidence / (name + '.jsonl')).write_text(''.join(json.dumps(row) + '\n' for row in rows))
-
-        with tempfile.TemporaryDirectory(prefix='soak-attribution-') as temporary:
-            evidence = Path(temporary)
-            for name in entry['SOAKS']['soaks']:
-                write(evidence, name, flat)
-            # The RSS growth is matched by storage glibc has mapped while its bytes in use and
-            # Ruby's heap stay flat: allocator retention.
-            held = [dict(row, allocator_in_use_bytes=6_400_000, runtime_heap_bytes=1_000_000,
-                         allocator_mapped_bytes=8_000_000 + row['memory_bytes']) for row in grown]
-            write(evidence, 'ruby-openai', held)
-            entry['soak_receipt'](evidence, 'a' * 40, 'j1')
-            receipt = json.loads((evidence / 'receipt.json').read_text())
-            self.assertEqual((receipt['verdict'], receipt['attributed']), ('attributed', ['ruby-openai']))
-            ruby = receipt['soaks']['ruby-openai']
-            # The attributed soak reports the same RSS measure the plain path uses.
-            expected = growth(grown, [100_000] * 60, memory_window=SOAK_WINDOW)['metrics']['memory_bytes']
-            self.assertFalse(expected['passed'])
-            self.assertEqual((ruby['verdict'], ruby['allocator'], ruby['bytes_per_verified_record']),
-                             ('attributed', 'glibc', expected['bytes_per_verified_record']))
-            self.assertEqual([ruby[key]['late_half_growth_bytes'] for key in ('allocator_in_use', 'runtime_heap', 'outside_allocator')], [0, 0, 0])
-            self.assertEqual(receipt['soaks']['ruby-systemone']['verdict'], 'passed')
-            (evidence / 'receipt.json').unlink()
-            for rows, message in (
-                    ([dict(row, allocator_in_use_bytes=row['memory_bytes']) for row in held], 'grew allocator memory in use: ruby-openai'),
-                    # Ruby's object heap is mapped outside malloc, so objects retained with flat
-                    # allocator memory still fail.
-                    ([dict(row, runtime_heap_bytes=row['memory_bytes']) for row in held], 'grew runtime heap: ruby-openai'),
-                    (grown, 'lacks allocator memory in use samples: ruby-openai'),
-                    ([dict(row, runtime_heap_bytes=None) for row in held], 'lacks runtime heap samples: ruby-openai'),
-                    # RSS that grows while glibc's mapped storage stays flat is not memory glibc keeps:
-                    # native mappings, another process, or a process not on glibc's allocator.
-                    ([dict(row, allocator_mapped_bytes=8_000_000) for row in held], 'grew RSS outside allocator storage: ruby-openai'),
-                    ([dict(row, allocator_mapped_bytes=None) for row in held], 'lacks allocator mapped storage samples: ruby-openai'),
-                    ([dict(row, descriptors=row['completed_round']) for row in held], 'failed its growth criterion: ruby-openai')):
-                write(evidence, 'ruby-openai', rows)
-                with self.assertRaisesRegex(ValueError, message):
-                    entry['soak_receipt'](evidence, 'a' * 40, 'j1')
-            write(evidence, 'ruby-openai', flat)
-            write(evidence, 'ruby-systemone', [dict(row, allocator_in_use_bytes=0, runtime_heap_bytes=0, allocator_mapped_bytes=row['memory_bytes']) for row in grown])
-            with self.assertRaisesRegex(ValueError, 'failed its growth criterion: ruby-systemone'):
-                entry['soak_receipt'](evidence, 'a' * 40, 'j1')
-            self.assertFalse((evidence / 'receipt.json').exists())
 
     def test_private_publication_changes_only_records(self):
         with tempfile.TemporaryDirectory(prefix='landing-equivalence-') as temporary:

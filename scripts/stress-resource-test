@@ -250,6 +250,44 @@ def saved_samples():
     print(json.dumps(dict(saved_samples=figures, synthetic_leaks='1 and 2 bytes per record fail')))
 
 
+def soak_attribution():
+    """Feature: a single-surface diagnostic soak is attributed only on its own in-use series.
+
+    A listed soak whose RSS misses the floor passes as attributed to allocator retention only
+    when every other resource passes and memory in use, the runtime heap and RSS outside the
+    allocator's storage all pass the same floor (2026-11-08 attribution record).
+    """
+    from stress_resources import METRICS, SOAK_WINDOW, growth, soak_attributions, soak_verdict
+    attributions = soak_attributions(ROOT.parent)
+    flat = [dict(dict.fromkeys(METRICS, 0), completed_round=index) for index in range(1, 61)]
+    # RSS grows 200,000 bytes a round from round 41, past the 1 byte per record floor.
+    grown = [dict(row, memory_bytes=max(0, row['completed_round'] - 40) * 200_000) for row in flat]
+    assert soak_verdict(flat, 100_000, 'ruby-openai', attributions)['verdict'] == 'passed'
+    held = [dict(row, allocator_in_use_bytes=6_400_000, runtime_heap_bytes=1_000_000,
+                 allocator_mapped_bytes=8_000_000 + row['memory_bytes']) for row in grown]
+    ruby = soak_verdict(held, 100_000, 'ruby-openai', attributions)
+    expected = growth(grown, [100_000] * 60, memory_window=SOAK_WINDOW)['metrics']['memory_bytes']
+    assert not expected['passed']
+    assert (ruby['verdict'], ruby['allocator'], ruby['bytes_per_verified_record']) == (
+        'attributed', 'glibc', expected['bytes_per_verified_record']), ruby
+    assert [ruby[key]['late_half_growth_bytes'] for key in ('allocator_in_use', 'runtime_heap', 'outside_allocator')] == [0, 0, 0]
+    for rows, name, message in (
+            ([dict(row, allocator_in_use_bytes=row['memory_bytes']) for row in held], 'ruby-openai', 'grew allocator memory in use'),
+            ([dict(row, runtime_heap_bytes=row['memory_bytes']) for row in held], 'ruby-openai', 'grew runtime heap'),
+            (grown, 'ruby-openai', 'lacks allocator memory in use samples'),
+            ([dict(row, allocator_mapped_bytes=8_000_000) for row in held], 'ruby-openai', 'grew RSS outside allocator storage'),
+            ([dict(row, descriptors=row['completed_round']) for row in held], 'ruby-openai', 'failed its growth criterion'),
+            ([dict(row, allocator_in_use_bytes=0, runtime_heap_bytes=0, allocator_mapped_bytes=row['memory_bytes']) for row in grown],
+             'ruby-systemone', 'failed its growth criterion'),
+            (flat[:59], 'ruby-openai', 'did not complete 60 rounds')):
+        try:
+            soak_verdict(rows, 100_000, name, attributions)
+        except ValueError as error:
+            assert message in str(error), (message, error)
+        else:
+            raise AssertionError('soak accepted: ' + message)
+
+
 def fixture(mode):
     os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps({} if mode == 'missing-counts' else dict(verified_records=32768 if mode == 'below-floor' else 8192))
     if mode == 'invalid-counts':
@@ -420,6 +458,7 @@ if __name__ == '__main__':
         primed_pool()
         extended_window()
         saved_samples()
+        soak_attribution()
     elif len(sys.argv) > 1:
         fixture(sys.argv[2])
     else:
@@ -430,6 +469,7 @@ if __name__ == '__main__':
         primed_pool()
         extended_window()
         saved_samples()
+        soak_attribution()
         zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--', sys.executable, __file__, 'zombies'], capture_output=True, text=True)
         zombie_report = json.loads(zombie_run.stdout.splitlines()[-1])

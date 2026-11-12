@@ -33,7 +33,7 @@ pub(crate) fn stub_key(identity: &str, field: &str, round: usize, position: usiz
 }
 
 /// A question that prepares rounds and reads the answers for one record.
-pub(crate) trait Function: Sync + Sized {
+pub(crate) trait Function: Send + Sync + Sized + 'static {
     /// Deterministic caller-test key for one ask in this question's local round.
     /// Composite questions delegate to the member's own content and field.
     #[must_use]

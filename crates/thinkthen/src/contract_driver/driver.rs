@@ -79,7 +79,7 @@ impl Driver {
     fn from_call(call: AnyCall) -> Self {
         let AnyCall { sender, rows } = call;
         let signal = Arc::new(Signal::default());
-        sender.0.input.observe(signal.clone());
+        sender.0.queue.observe(signal.clone());
         rows.output.observe(signal.clone());
         Self {
             sender,
@@ -97,7 +97,7 @@ impl Driver {
             return Err(abi_error());
         }
         self.waiting = false;
-        self.sender.0.input.send_reserved(record)
+        self.sender.0.queue.send_reserved(record)
     }
     /// Close input without waiting for any output or worker.
     pub(crate) fn end_input(&mut self) {
@@ -132,7 +132,7 @@ impl Driver {
                 .transpose()
                 .map(|event| Some(event.unwrap_or(Event::Finished)));
         }
-        if self.waiting || self.sender.0.input.reserve() {
+        if self.waiting || self.sender.0.queue.reserve() {
             self.waiting = true;
             return Ok(Some(Event::NeedsInput));
         }

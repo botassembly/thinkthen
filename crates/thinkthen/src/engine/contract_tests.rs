@@ -13,15 +13,16 @@ fn a_panic_while_collecting_rows_ends_the_call_as_a_fault() {
         .engine(|_| None)
         .unwrap()
         .batch("1".parse().unwrap());
+    let call = engine.for_call();
     let (finished, result) = channel();
     // A build that hangs here must fail the test, so the call runs on its own thread.
-    thread::spawn(move || {
-        let question = Decide::new("Yes?").unwrap();
+    std::thread::spawn(move || {
+        let question = Arc::new(Decide::new("Yes?").unwrap());
         // More one-record requests than the window holds, so the producer waits on a permit.
         let records = (0..REORDER_WINDOW * 4)
             .map(|place| RecordEvent::Record(Record::text(format!("record {place}"))));
-        finished.send(engine.call_parallel(
-            &question,
+        finished.send(call.call_parallel(
+            question,
             records,
             |_| panic!("the row consumer failed"),
             String::new(),
@@ -32,4 +33,9 @@ fn a_panic_while_collecting_rows_ends_the_call_as_a_fault() {
         .unwrap()
         .unwrap_err();
     assert_eq!(error.code(), Code::InternalBug);
+    // The client answers its next call.
+    let rows = engine
+        .rows(&crate::Decide::new("Yes?").unwrap(), ["record"])
+        .unwrap();
+    assert_eq!(rows.filter(Result::is_ok).count(), 1);
 }

@@ -8,13 +8,13 @@ use crate::engine::RecordEvent;
 use crate::{Engine, Error, OffsetUnit, Question, questions};
 use std::collections::{BTreeMap, VecDeque};
 use std::num::NonZeroU64;
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 
 pub(super) fn drive(
     engine: &Engine,
     question: &Question,
     name: Option<&str>,
-    records: impl Iterator<Item = RecordEvent<Record>> + Send,
+    records: impl Iterator<Item = RecordEvent<Record>> + Send + 'static,
     offsets: OffsetUnit,
     mut sink: impl FnMut(Result<AnyRow, Error>),
 ) -> Result<(), Error> {
@@ -29,7 +29,7 @@ pub(super) fn drive(
         ($variant:ident,$q:ident) => {
             ordinary(
                 engine,
-                &$q.inner,
+                Arc::new($q.inner.clone()),
                 records,
                 &context,
                 |r| {
@@ -51,7 +51,7 @@ pub(super) fn drive(
         Question::Filter(q) => emit!(Filter, q),
         Question::Choose(q) => ordinary(
             engine,
-            q,
+            Arc::new(q.clone()),
             records,
             &context,
             |r| {
@@ -85,7 +85,7 @@ pub(super) fn drive(
                 core::Annotate::new(&core::Toolbox::admitted(members)).complete_choices();
             ordinary(
                 engine,
-                &execution,
+                Arc::new(execution),
                 records,
                 &context,
                 |r| annotation(q, r, &source).map(Some),
@@ -118,33 +118,36 @@ struct Context<'a> {
 }
 fn ordinary<F: core::Function>(
     engine: &Engine,
-    execution: &F,
-    records: impl Iterator<Item = RecordEvent<Record>> + Send,
+    execution: Arc<F>,
+    records: impl Iterator<Item = RecordEvent<Record>> + Send + 'static,
     context: &Context<'_>,
     mut convert: impl FnMut(Evaluated) -> Result<Option<AnyRow>, Error>,
     sink: &mut impl FnMut(Result<AnyRow, Error>),
 ) -> Result<(), Error> {
     let Context { question, offsets } = *context;
-    let metadata = Mutex::new(VecDeque::new());
+    // A kept thread reads the records, so what it needs of the question is owned.
+    let metadata = Arc::new(Mutex::new(VecDeque::new()));
+    let read = metadata.clone();
+    let pointer = if matches!(question, Question::Annotate(_)) {
+        &core::record::ROOT_POINTER
+    } else {
+        question.field_pointer()
+    }
+    .clone();
+    let keeps_original = matches!(question, Question::Rank(_));
     let mut ordinal = 0_u64;
     let mut failure = None;
-    let records = records.map(|event| {
+    let records = records.map(move |event| {
         event.map(|record| {
             ordinal = ordinal.saturating_add(1);
-            let pointer = if matches!(question, Question::Annotate(_)) {
-                &core::record::ROOT_POINTER
-            } else {
-                question.field_pointer()
-            };
-            let prepared = record.prepare(pointer);
-            metadata
-                .lock()
+            let prepared = record.prepare(&pointer);
+            read.lock()
                 .unwrap_or_else(PoisonError::into_inner)
                 .push_back((
                     NonZeroU64::new(ordinal).unwrap_or(NonZeroU64::MIN),
                     record.id().cloned(),
                     prepared.clone(),
-                    matches!(question, Question::Rank(_)).then_some(record),
+                    keeps_original.then_some(record),
                 ));
             prepared
         })
@@ -246,7 +249,7 @@ fn rank(
     engine: &Engine,
     q: &questions::Rank,
     question: &Question,
-    records: impl Iterator<Item = RecordEvent<Record>> + Send,
+    records: impl Iterator<Item = RecordEvent<Record>> + Send + 'static,
     offsets: OffsetUnit,
     source: &Source,
     sink: &mut impl FnMut(Result<AnyRow, Error>),
@@ -255,7 +258,7 @@ fn rank(
     let mut failed = Vec::new();
     ordinary(
         engine,
-        &q.inner,
+        Arc::new(q.inner.clone()),
         records,
         &Context { question, offsets },
         |row| {

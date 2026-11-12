@@ -53,8 +53,15 @@ def fetch(url, path, digest=None):
     try:
         for source in urls:
             try:
-                subprocess.run(['curl', '--fail', '--location', '--silent', '--show-error', '--retry', '2',
-                                '--connect-timeout', '20', '--max-time', '600', source, '-o', str(temporary)], check=True)
+                for left in (2, 1, 0):
+                    try:
+                        subprocess.run(['curl', '--fail', '--location', '--silent', '--show-error', '--retry', '2',
+                                        '--connect-timeout', '20', '--max-time', '600', source, '-o', str(temporary)], check=True)
+                        break
+                    except subprocess.CalledProcessError as error:
+                        # curl's --retry leaves a transfer that closed early (exit 18) alone, and
+                        # --retry-all-errors would also repeat a refusal that another source answers.
+                        if error.returncode != 18 or not left: raise
             except subprocess.CalledProcessError as error:
                 refusal = error
                 print('release input source refused: ' + source, file=sys.stderr)

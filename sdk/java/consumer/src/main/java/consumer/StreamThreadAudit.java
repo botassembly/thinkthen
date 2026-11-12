@@ -20,7 +20,7 @@ public final class StreamThreadAudit implements AutoCloseable {
                 .filter(event -> event.getEventType().getName().equals("jdk.ThreadStart"))
                 .filter(event -> event.getThread("thread").getJavaName().startsWith("thinkthen-"))
                 .count();
-            if (starts != 1) throw new AssertionError("Expected one driver thread per stream, started " + starts);
+            if (starts > 1) throw new AssertionError("Expected at most one driver thread started per stream, started " + starts);
         } finally { recording.close(); Files.deleteIfExists(file); }
     }
 }

@@ -7,6 +7,7 @@ mod support;
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
 use support::process::alive;
 
 #[test]
@@ -111,10 +112,25 @@ fn forced_cleanup(signal: &str) {
         .unwrap();
     // Opening the writer waits for snapshot copying to begin, after lock creation.
     let mut writer = OpenOptions::new().write(true).open(&input).unwrap();
-    writer.write_all(b"evidence\nwaiting\n").unwrap();
+    let written = b"evidence\nwaiting\n";
+    writer.write_all(written).unwrap();
     let lock = root.join(".input.csv.thinkthen.lock");
     assert!(lock.exists());
-    assert!(fs::read_dir(&scratch).unwrap().next().is_some());
+    // The copy checks for cancellation after every read, so an interrupt sent
+    // while these bytes still sit in the pipe lets ordinary cleanup run and
+    // remove the lock. Wait until the snapshot holds them all: the copy is
+    // then waiting for more input and only forced cleanup can end the run.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while !fs::read_dir(&scratch)
+        .unwrap()
+        .any(|entry| entry.unwrap().metadata().unwrap().len() == written.len() as u64)
+    {
+        assert!(
+            Instant::now() < deadline,
+            "the snapshot never held the written rows"
+        );
+        std::thread::yield_now();
+    }
     let mut notice = BufReader::new(table.stderr.take().unwrap());
     let table_pid = table.id().to_string();
     twice(&mut table, &mut notice, signal, || {

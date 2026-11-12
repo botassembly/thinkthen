@@ -133,9 +133,12 @@ class QualificationRecipes(unittest.TestCase):
         from release_windows_cache import run_consumer
         # The child owns a listening socket and stdout. After tree cleanup the
         # socket must refuse connections, including when its parent exits first.
+        # The port file appears whole, by rename: the parent exits once it exists,
+        # and cleanup could otherwise kill the child between creating and writing it.
         worker = ('import socket,sys,pathlib; s=socket.socket(); s.bind(("127.0.0.1",0)); '
                   's.listen(); print("descendant ready",flush=True); '
-                  'pathlib.Path(sys.argv[1]).write_text(str(s.getsockname()[1])); s.accept()')
+                  'p=pathlib.Path(sys.argv[1]); t=p.with_name(p.name+".tmp"); '
+                  't.write_text(str(s.getsockname()[1])); t.replace(p); s.accept()')
         parent = ('import subprocess,sys,pathlib,time; '
                   'subprocess.Popen([sys.executable,"-u","-c",sys.argv[1],sys.argv[2]]); '
                   '\nwhile not pathlib.Path(sys.argv[2]).exists(): time.sleep(.01)\n'

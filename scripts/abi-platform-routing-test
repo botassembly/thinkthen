@@ -95,11 +95,18 @@ class AbiPlatformRouting(unittest.TestCase):
             docker = scratch / 'docker'
             docker.write_text('#!' + sys.executable + '\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n')
             docker.chmod(0o755)
-            env = dict(os.environ, PATH=str(scratch) + os.pathsep + os.environ['PATH'],
-                       THINKTHEN_SWIFT_IMAGE='sha256:' + 'a' * 64)
+            # A pm job sets JOB_LABEL_FILE; without it the runner labels the container itself.
+            env = {key: value for key, value in os.environ.items() if key != 'JOB_LABEL_FILE'}
+            env.update(PATH=str(scratch) + os.pathsep + os.environ['PATH'], THINKTHEN_SWIFT_IMAGE='sha256:' + 'a' * 64)
             command = [sys.executable, str(ROOT / 'scripts/linux-binding-gate'), '--abi-binding']
-            result = subprocess.run(command + ['swift', '--scratch', str(scratch), '--', 'swift', 'build', '--jobs', '2'],
-                                    env=env, check=True, capture_output=True, text=True)
+            swift = command + ['swift', '--scratch', str(scratch), '--', 'swift', 'build', '--jobs', '2']
+            labels = scratch / 'labels'
+            labels.write_text('pm.repo=fixture\n')
+            labelled = json.loads(subprocess.run(swift, env=dict(env, JOB_LABEL_FILE=str(labels)),
+                                                 check=True, capture_output=True, text=True).stdout)
+            self.assertEqual(labelled[labelled.index('--label-file') + 1], str(labels.resolve()))
+            self.assertFalse(any(value.startswith('pm.ticket=') for value in labelled))
+            result = subprocess.run(swift, env=env, check=True, capture_output=True, text=True)
             arguments = json.loads(result.stdout)
             self.assertIn('sha256:' + 'a' * 64, arguments)
             self.assertIn(str(scratch) + ':' + str(scratch), arguments)

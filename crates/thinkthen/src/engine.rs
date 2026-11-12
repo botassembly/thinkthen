@@ -1,11 +1,11 @@
 //! The engine: it packs records into requests, sends them on a pool of
-//! workers and hands rows back in input order.
+//! workers and hands rows back in input order. A client keeps the threads its
+//! calls ran on and gives them to its next calls.
 
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::mpsc::{Receiver, sync_channel};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
-use std::thread;
 
 use crate::core::{
     Chunk, Function, NextRound, Outcome, Packer, Record, Request, RequestAnswers, Row,
@@ -21,6 +21,9 @@ mod contract_tests;
 mod input_report;
 mod limits;
 mod reuse;
+mod threads;
+#[cfg(test)]
+mod threads_tests;
 pub(crate) use contract::RecordEvent;
 use limits::{REORDER_WINDOW, WORKERS};
 
@@ -46,6 +49,7 @@ pub struct Engine {
     policy: RetryPolicy,
     pub(crate) cancel: Cancel,
     pub(crate) name: Option<String>,
+    pub(crate) threads: Arc<threads::Threads>,
 }
 
 impl Engine {
@@ -89,6 +93,7 @@ impl Engine {
             batch: Batch::default(),
             agent: Arc::new(OnceLock::new()),
             name: None,
+            threads: Arc::default(),
         }
     }
 
@@ -155,7 +160,7 @@ impl Engine {
     }
     fn answer<F: Function>(
         &self,
-        chunk: Chunk<'_, F>,
+        chunk: Chunk<F>,
         url: &str,
         stage: BatchStage,
     ) -> Result<Vec<Row>, Error> {
@@ -261,9 +266,7 @@ fn agent(policy: RetryPolicy) -> transport::Agent {
 }
 
 /// The next request to send, or `None` once no more will come.
-fn next_job<'a, F: Function>(
-    inbox: &Mutex<Receiver<(usize, Chunk<'a, F>)>>,
-) -> Option<(usize, Chunk<'a, F>)> {
+fn next_job<F: Function>(inbox: &Mutex<Receiver<(usize, Chunk<F>)>>) -> Option<(usize, Chunk<F>)> {
     inbox
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
