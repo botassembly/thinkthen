@@ -1,12 +1,9 @@
 """Run every authored SQL block with its documented table and file fixtures."""
 import re
-import shutil
 from pathlib import Path
 
 
 def documents(root, extension, directory):
-    # Run the README's relative LOAD verbatim from its owned fixture folder.
-    shutil.copy2(extension, Path(directory) / 'thinkthen.duckdb_extension')
     result = []
     for source in ('databases/duckdb/README.md', 'docs/surfaces/duckdb.md'):
         text = (root / source).read_text()
@@ -18,6 +15,8 @@ def documents(root, extension, directory):
             # fixture before the next literal CREATE, without editing the SQL.
             for table in re.findall(r'CREATE TABLE (\w+) AS', block, re.I):
                 statements.append('DROP TABLE IF EXISTS ' + table + ';')
+            # Hardened DuckDB builds refuse a relative LOAD, so the docs show an
+            # absolute-path placeholder; point it at the extension under test.
             block = block.replace('/absolute/path/to/thinkthen.duckdb_extension', str(extension))
             block = re.sub(r"(LOAD\s+'[^']+';)", r"\1\nSET thinkthen_backend = 'stub';", block, flags=re.I)
             statements.append('-- ' + source + ' block ' + str(index) + '\n' + block)

@@ -9,8 +9,6 @@ public data class Usage(
     /** Encoded body bytes attempted. */ public val requestBodyBytes: ULong,
     /** Attempts still in progress at this snapshot. */ public val activeAttempts: ULong,
     /** Engine workers still active, including those awaiting input. */ public val activeCalls: ULong,
-    /** Cached materialized asks reused, not rows. */ public val cacheHits: ULong,
-    /** Recorded materialized asks replayed, not rows. */ public val replayHits: ULong,
     /** Provider-reported input usage. */ public val inputTokens: TokenUsage,
     /** Provider-reported output usage. */ public val outputTokens: TokenUsage,
 )
@@ -25,7 +23,6 @@ internal fun dev.thinkthen.Usage.kotlinUsage(): Usage = Usage(
     attempts().toString().toULong(), responses().toString().toULong(),
     statusRetries().toString().toULong(), connectionRetries().toString().toULong(),
     requestBodyBytes().toString().toULong(), activeAttempts().toString().toULong(), activeCalls().toString().toULong(),
-    cacheHits().toString().toULong(), replayHits().toString().toULong(),
     TokenUsage(inputTokens().reported()?.toString()?.toULong(), inputTokens().unknownAttempts().toString().toULong()),
     TokenUsage(outputTokens().reported()?.toString()?.toULong(), outputTokens().unknownAttempts().toString().toULong()),
 )

@@ -1,8 +1,8 @@
 //! Native discriminator values have one declaration per enum.
 /// The typed contract's native ABI major and minor, independent of package version.
 #[doc(hidden)]
-// Minor five adds opt-in response storage and full usage snapshots.
-pub const ABI_VERSION: u32 = (2 << 16) | 5;
+// Minor four adds client-lifetime request allowances.
+pub const ABI_VERSION: u32 = (2 << 16) | 4;
 macro_rules! discriminators {
     ($(#[$attr:meta])* pub enum $name:ident { $($(#[$vattr:meta])* $variant:ident=$value:literal),+ $(,)? }) => {
         $(#[$attr])* #[repr(u32)] pub enum $name {$($(#[$vattr])* $variant=$value,)+}

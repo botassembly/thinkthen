@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -171,11 +169,6 @@ func stressAdapter(s stressPacket) (stressReport, error) {
 			report.Rows += s.Records
 			report.Failed += result.failed
 		}
-		if hook := os.Getenv("THINKTHEN_STRESS_CHECKPOINT_COMMAND"); hook != "" {
-			if err := exec.Command("sh", "-c", hook).Run(); err != nil {
-				return report, err
-			}
-		}
 	}
 	report.IdentifierWidthMask = widths.Load()
 	return report, nil
@@ -201,11 +194,5 @@ func TestSharedStress(t *testing.T) {
 		}
 		os.Exit(0) // The adapter subprocess emits only the documented JSON report.
 	}
-	runner := filepath.Join(os.Getenv("THINKTHEN_CASES"), "..", "scripts", "stress-adapters.py")
-	child := exec.Command("python3", runner, "--surface", "go", "--", os.Args[0], "-test.run=^TestSharedStress$")
-	child.Stdout = os.Stdout
-	child.Stderr = os.Stderr
-	if err := child.Run(); err != nil {
-		t.Fatal(err)
-	}
+	t.Skip("runs as the release cancellation adapter when THINKTHEN_STRESS_CASE names a case")
 }

@@ -12,14 +12,12 @@ mod memory;
 #[cfg(test)]
 mod memory_prefix_tests;
 mod original;
-mod response_store;
 #[cfg(test)]
 mod reuse_tests;
 mod row;
 mod single;
 mod sql;
 mod usage;
-pub use response_store::*;
 mod values;
 pub use builders::*;
 pub use direct::*;

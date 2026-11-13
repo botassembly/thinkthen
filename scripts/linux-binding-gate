@@ -133,12 +133,7 @@ def swift():
         environment = {name: os.environ[name] for name in names}
         environment.update(THINKTHEN_LOOPBACK=loopback, THINKTHEN_SWIFT_PACKAGE=stage)
         environment['THINKTHEN_GATE_STRICT'] = os.environ.get('THINKTHEN_GATE_STRICT', '0')
-        environment['THINKTHEN_STRESS_FULL'] = os.environ.get('THINKTHEN_STRESS_FULL', '')
         mounts = [Path(temporary), Path(loopback).parent]
-        if os.environ.get('THINKTHEN_SOAK_FOLDER'):
-            environment['THINKTHEN_SOAK_FOLDER'] = os.environ['THINKTHEN_SOAK_FOLDER']
-            environment.update({name: os.environ[name] for name in ('THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS') if name in os.environ})
-            mounts.append(Path(os.environ['THINKTHEN_SOAK_FOLDER']))
         swift_command(['scripts/swift-gate'], tuple(mounts), environment)
 
 
@@ -193,7 +188,7 @@ def cli():
     metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--offline', '--locked', '--no-deps', '--format-version=1'], text=True))
     package = next(row for row in metadata['packages'] if row['name'] == 'thinkthen')
     tests = [row['name'] for row in package['targets'] if row['kind'] == ['test'] and
-             (row['name'].startswith('cli_') or row['name'] == 'canonical_cli')]
+             row['name'].startswith('cli_')]
     run('cargo', 'test', '--offline', '--locked', '-p', 'thinkthen',
         *(argument for name in tests for argument in ('--test', name)))
 

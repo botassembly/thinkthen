@@ -1,8 +1,8 @@
 """Cancel one installed SDK call on a held answer and prove the call ended.
 
 Usage: cancel.py --surface NAME [--native] [--interrupt] -- ADAPTER [ARG ...]
-ADAPTER is an SDK's stress adapter (scripts/stress-adapters.py states the contract).
---native passes the case as arguments, as sdk/c/tests/stress.py does. --interrupt
+ADAPTER is an SDK's stress adapter: it reads the case named by THINKTHEN_STRESS_CASE.
+--native passes the case as arguments instead, as the C-family adapters expect. --interrupt
 sends the console interrupt for an SDK whose cancel is its host's interrupt.
 THINKTHEN_LOOPBACK names the prepared loopback executable.
 """

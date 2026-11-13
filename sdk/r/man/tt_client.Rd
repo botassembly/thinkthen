@@ -2,7 +2,6 @@
 \alias{tt_client}
 \alias{tt_close}
 \alias{tt_usage}
-\alias{tt_response_store}
 \alias{local_tt_client}
 \alias{with_tt_client}
 \alias{tt_retry}
@@ -10,11 +9,9 @@
 \description{Clients hold engine settings. Scoped defaults restore the previous client on exit and do not close the borrowed client.}
 \usage{
 tt_client(backend = NULL, ..., api_key = NULL, url = NULL,
-                      model = NULL, batch = NULL, max_requests = NULL, response_store = NULL, retry = NULL)
+                      model = NULL, batch = NULL, max_requests = NULL, retry = NULL)
 tt_close(client)
 tt_usage(client)
-tt_response_store(path, mode, namespace, model_generation, max_bytes = NULL,
-                  max_entries = NULL, max_age = NULL, busy_timeout_ms = NULL)
 local_tt_client(client, .env = parent.frame())
 with_tt_client(client, code)
 tt_retry(..., max_retries = NULL, initial_backoff_ms = NULL,
@@ -28,15 +25,6 @@ tt_retry(..., max_retries = NULL, initial_backoff_ms = NULL,
 \item{model}{Optional model name.}
 \item{batch}{Optional whole integer batch size.}
 \item{max_requests}{Optional exact whole send allowance; NULL is unlimited and zero forbids sends. Numeric values must fit the exact R integer range.}
-\item{response_store}{Explicit configuration from tt_response_store, or NULL for no retention.}
-\item{path}{Private local store directory.}
-\item{mode}{cache, record or strict replay.}
-\item{namespace}{Explicit nonsecret namespace.}
-\item{model_generation}{Explicit nonsecret model invalidation label.}
-\item{max_bytes}{Optional positive whole logical byte bound.}
-\item{max_entries}{Optional positive whole eligible-ask bound.}
-\item{max_age}{Optional positive whole cache age in seconds.}
-\item{busy_timeout_ms}{Optional positive whole busy timeout in milliseconds.}
 \item{retry}{Retry settings returned by \code{tt_retry()}.}
 \item{client}{A client from \code{tt_client()}.}
 \item{.env}{The scope whose exit restores the previous default client.}

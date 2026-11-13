@@ -5,7 +5,7 @@ import {
 } from "../index.js";
 
 // Feature: required lists and native TypeScript inference.
-const client = new ThinkThen({ responseStore: null, backend: "openai", apiKey: "test-only", batch: 3,
+const client = new ThinkThen({ backend: "openai", apiKey: "test-only", batch: 3,
   retry: { maxRetries: 1, initialBackoffMs: 1, attemptTimeoutMs: 500 } });
 const selected = await choose("Team?", "Refund", { choices: ["billing", "shipping"] }).row();
 const exact: ChooseRow<"billing" | "shipping"> = selected;

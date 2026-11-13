@@ -1168,36 +1168,6 @@
           "const": "local.request-limit"
         },
         {
-          "description": "local.response-store",
-          "type": "string",
-          "const": "local.response-store"
-        },
-        {
-          "description": "local.store-corrupt",
-          "type": "string",
-          "const": "local.store-corrupt"
-        },
-        {
-          "description": "local.store-format",
-          "type": "string",
-          "const": "local.store-format"
-        },
-        {
-          "description": "local.store-answer",
-          "type": "string",
-          "const": "local.store-answer"
-        },
-        {
-          "description": "local.replay-miss",
-          "type": "string",
-          "const": "local.replay-miss"
-        },
-        {
-          "description": "local.store-quota",
-          "type": "string",
-          "const": "local.store-quota"
-        },
-        {
           "description": "internal.bug",
           "type": "string",
           "const": "internal.bug"

@@ -1,8 +1,0 @@
-#!/bin/sh
-# Check the release helpers touched by Python's offline runtime dependency.
-set -eu
-cd "$(dirname "$0")/../.."
-. scripts/native-tools-env
-for check in release-script-test release-preparation-test release-staging-test release-platform-test release-package-text-test; do
-    python3 -W error::SyntaxWarning "scripts/$check"
-done

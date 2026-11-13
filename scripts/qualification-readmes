@@ -214,7 +214,7 @@ if __name__ == '__main__':
                         run('sqlite3', '-bail', ':memory:', '.read ' + script.as_posix())
                     else:
                         extension = installed / 'thinkthen.duckdb_extension'
-                        sql = blocks[0].replace('./thinkthen.duckdb_extension', extension.as_posix())
+                        sql = blocks[0].replace('/absolute/path/to/thinkthen.duckdb_extension', extension.as_posix())
                         executable = PACKAGE / 'prerequisites/duckdb/duckdb'
                         if WINDOWS: executable = Path(shutil.which('duckdb'))
                         run(executable, '-unsigned', ':memory:', '-c', sql)

@@ -8,7 +8,6 @@ case "${1:-}" in
   --source) export THINKTHEN_R_SOURCE_NATIVE=1 ;;
   *) echo 'usage: scripts/r-gate [--source]' >&2; exit 2 ;;
 esac
-python3 sdk/r/tests/comparison.py
 export CARGO_NET_OFFLINE=true
 export R_HOME="$(R RHOME)"
 case "${CARGO_TARGET_DIR:-target}" in

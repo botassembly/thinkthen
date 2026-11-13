@@ -15,13 +15,12 @@ public final class Client: Sendable {
   /// Open a client, reading THINKTHEN_BACKEND when no backend is passed.
   public convenience init(
     backend: Backend? = nil, url: URL? = nil, model: String? = nil,
-    apiKey: APIKey? = nil, batch: Int? = nil, maxRequests: UInt64? = nil,
-    responseStore: ResponseStore? = nil, retry: Retry? = nil
+    apiKey: APIKey? = nil, batch: Int? = nil, maxRequests: UInt64? = nil, retry: Retry? = nil
   ) throws {
     try self.init(
       Settings(
         backend: backend, url: url, model: model, apiKey: apiKey, batch: batch,
-        maxRequests: maxRequests, responseStore: responseStore, retry: retry)
+        maxRequests: maxRequests, retry: retry)
     )
   }
   func open(_ request: Data, name: String?, records: [Record]?) throws -> NativeHandle {

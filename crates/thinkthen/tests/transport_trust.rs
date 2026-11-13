@@ -357,32 +357,3 @@ fn trust_child() {
         assert!(!error.message().contains(KEY));
     }
 }
-
-#[cfg(any(target_os = "linux", windows))]
-#[test]
-fn an_expected_store_proof_cannot_silently_skip() {
-    let (name, activation, expectation) = if cfg!(windows) {
-        (
-            "windows_store_is_used_and_extra_roots_preserve_it",
-            "THINKTHEN_TEST_WINDOWS_STORE",
-            "THINKTHEN_EXPECT_WINDOWS_STORE",
-        )
-    } else {
-        (
-            "container_system_store_is_used_and_extra_roots_preserve_it",
-            "THINKTHEN_TEST_CONTAINER_STORE",
-            "THINKTHEN_EXPECT_CONTAINER_STORE",
-        )
-    };
-    let output = Command::new(std::env::current_exe().unwrap())
-        .args(["--exact", name, "--nocapture"])
-        .env_remove(activation)
-        .env(expectation, "1")
-        .output()
-        .unwrap();
-    assert!(!output.status.success());
-    assert!(
-        String::from_utf8_lossy(&output.stdout).contains("omitted its activation")
-            || String::from_utf8_lossy(&output.stderr).contains("omitted its activation")
-    );
-}

@@ -1,6 +1,5 @@
 #![cfg(test)]
-//! Approved command contract expectations. These cases deliberately await the
-//! typed engine and command implementation; none are ignored or gated on it.
+//! The command contract: grammar, exit codes, settings precedence and typed rows.
 #![cfg(feature = "command")]
 
 #[path = "../../loopback/src/lib.rs"]

@@ -22,6 +22,7 @@ for block in blocks:
         (consumer / 'toolbox.json').write_text(block[2] + '\n')
     if block[1] == 'text' and block[2].startswith('{"id":'):
         (consumer / 'records.jsonl').write_text(block[2] + '\n')
+collection = None
 for page in ('sdk/typescript/README.md', 'docs/surfaces/typescript.md'):
     text = (ROOT / page).read_text()
     for index, block in enumerate(re.finditer(r'```([^\n]*)\n(.*?)\n```', text, re.S), 1):
@@ -33,6 +34,10 @@ for page in ('sdk/typescript/README.md', 'docs/surfaces/typescript.md'):
         typed = source.with_suffix('.mts')
         typed.write_text(source.read_text())
         sources.append(str(typed))
+        if collection is None and 'records.jsonl' in block[2] and page.startswith('docs/'):
+            # scripts/surface-example runs the collection example and checks its rows.
+            collection = label
+            continue
         result = subprocess.run(['node', str(source)], cwd=consumer, env=environment,
                                 text=True, capture_output=True, check=False)
         print(f'--- {page} block {index} (exit {result.returncode}) ---', flush=True)

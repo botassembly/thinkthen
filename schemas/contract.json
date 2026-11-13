@@ -1,5 +1,5 @@
 {
-  "abi_version": 131077,
+  "abi_version": 131076,
   "backends": [
     {
       "name": "systemone",
@@ -224,42 +224,6 @@
       "name": "local.request-limit",
       "record": false,
       "value": 4005
-    },
-    {
-      "family": "local",
-      "name": "local.response-store",
-      "record": false,
-      "value": 4006
-    },
-    {
-      "family": "local",
-      "name": "local.store-corrupt",
-      "record": false,
-      "value": 4007
-    },
-    {
-      "family": "local",
-      "name": "local.store-format",
-      "record": false,
-      "value": 4008
-    },
-    {
-      "family": "local",
-      "name": "local.store-answer",
-      "record": false,
-      "value": 4009
-    },
-    {
-      "family": "local",
-      "name": "local.replay-miss",
-      "record": false,
-      "value": 4010
-    },
-    {
-      "family": "local",
-      "name": "local.store-quota",
-      "record": false,
-      "value": 4011
     },
     {
       "family": "internal",

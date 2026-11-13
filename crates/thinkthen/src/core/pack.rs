@@ -235,7 +235,6 @@ type Entry = (
 struct EncodedAsk {
     state: std::sync::Arc<str>,
     body: Box<RawValue>,
-    ask: Ask,
 }
 
 /// An ordered record group and the distinct questions in its current round.
@@ -290,7 +289,6 @@ impl<F: Function> Chunk<F> {
                             self.questions.push(EncodedAsk {
                                 state: ask.shared_state(),
                                 body: question,
-                                ask: ask.clone(),
                             });
                             self.questions.len() - 1
                         });
@@ -513,50 +511,6 @@ impl<'a> Request<'a> {
 
     fn slots(&self) -> Vec<usize> {
         self.questions.iter().map(|(slot, _)| *slot).collect()
-    }
-
-    /// The exact rendered asks, before a request assigns their wire slots.
-    pub(crate) fn materialized(&self) -> impl Iterator<Item = (&Ask, &str)> {
-        self.questions
-            .iter()
-            .map(|(_, question)| (&question.ask, question.body.get()))
-    }
-    pub(crate) fn state(&self) -> &str {
-        self.state
-    }
-    pub(crate) fn wire(&self) -> &str {
-        self.adapter.path()
-    }
-
-    /// Repack selected misses without changing their original round slots.
-    pub(crate) fn select(&self, positions: &[usize]) -> Self {
-        Self {
-            adapter: self.adapter,
-            model: self.model,
-            state: self.state,
-            questions: positions
-                .iter()
-                .filter_map(|position| self.questions.get(*position).copied())
-                .collect(),
-        }
-    }
-
-    /// Admit every answer before an exchange becomes reusable. A partial reply fails.
-    pub(crate) fn validated(&self, body: &[u8]) -> Result<Vec<AskAnswer>, Error> {
-        let reply = self.adapter.decode(body, self.questions.len())?;
-        self.questions
-            .iter()
-            .enumerate()
-            .map(|(index, (_, question))| reply.read(index, &question.ask, &[0; 32]))
-            .collect()
-    }
-
-    /// Attach already validated answers to this request's current round slots.
-    pub(crate) fn saved(&self, answers: Vec<AskAnswer>) -> RequestAnswers {
-        RequestAnswers {
-            slots: self.slots(),
-            reply: Ok(Reply::Saved(answers)),
-        }
     }
 }
 

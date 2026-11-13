@@ -3,7 +3,7 @@
 namespace ThinkThen;
 internal static class Contract
 {
-    internal const uint AbiVersion = 131077;
+    internal const uint AbiVersion = 131076;
     internal const string AbiCode = "usage.abi";
     internal const string AbiMessage = "the native ABI is incompatible";
     internal const string LibraryVariable = "THINKTHEN_LIBRARY";
@@ -97,12 +97,6 @@ internal static class Contract
         4003 => "local.toolbox",
         4004 => "local.accounting",
         4005 => "local.request-limit",
-        4006 => "local.response-store",
-        4007 => "local.store-corrupt",
-        4008 => "local.store-format",
-        4009 => "local.store-answer",
-        4010 => "local.replay-miss",
-        4011 => "local.store-quota",
         5001 => "internal.bug",
         _ => null
     };
@@ -182,18 +176,6 @@ public enum ErrorCode
     LocalAccounting = 4004,
     /// <summary>The shared `local.request-limit` error.</summary>
     LocalRequestLimit = 4005,
-    /// <summary>The shared `local.response-store` error.</summary>
-    LocalResponseStore = 4006,
-    /// <summary>The shared `local.store-corrupt` error.</summary>
-    LocalStoreCorrupt = 4007,
-    /// <summary>The shared `local.store-format` error.</summary>
-    LocalStoreFormat = 4008,
-    /// <summary>The shared `local.store-answer` error.</summary>
-    LocalStoreAnswer = 4009,
-    /// <summary>The shared `local.replay-miss` error.</summary>
-    LocalReplayMiss = 4010,
-    /// <summary>The shared `local.store-quota` error.</summary>
-    LocalStoreQuota = 4011,
     /// <summary>The shared `internal.bug` error.</summary>
     InternalBug = 5001,
 }

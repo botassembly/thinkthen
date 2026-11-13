@@ -8,8 +8,6 @@ import subprocess
 import sys
 import tempfile
 
-from process_diagnostics import run
-
 prefix, fixture_manifest = map(Path, sys.argv[1:])
 manifest = json.loads(fixture_manifest.read_text())
 with tempfile.TemporaryDirectory() as directory:
@@ -46,7 +44,7 @@ target_link_libraries(consumer PRIVATE ThinkThen::Cpp)
             assert result.returncode != 0 and case["missing"] in result.stderr, (case["name"], result)
         else:
             for first in ("client", "key", "question", "threshold"):
-                result = run([str(build / "consumer"), first])
+                result = subprocess.run([str(build / "consumer"), first], capture_output=True, text=True)
                 expected = "accepted" if case["accept"] else "usage.abi"
                 assert result.returncode == 0 and result.stdout.strip() == expected, (case["name"], first, result)
         print(f'installed C++ ABI: {case["name"]} passed')

@@ -11,8 +11,7 @@ import release_windows
 SCRIPTS = Path(__file__).resolve().parent
 PLAIN = {'TemporaryDirectory', 'rmtree'}
 # Windows-run scripts that only another script starts.
-CHILDREN = {'installer-test', 'qualification-readmes', 'release-windows-replay', 'source-install-check',
-            'swift-windows-consumer-check', 'windows-cli-check', 'windows-readme-input-probe'}
+CHILDREN = {'installer-test', 'qualification-readmes', 'source-install-check', 'windows-cli-check'}
 # A plain use stays only where npm, Go, Swift and Zig never write, or where Windows never reaches it.
 ALLOWED = {
     ('installer-test', "tempfile.TemporaryDirectory(prefix='thinkthen-installer-test-')"):
@@ -31,10 +30,6 @@ ALLOWED = {
         'Holds the unpacked command.',
     ('release_metadata.py', "tempfile.TemporaryDirectory(prefix='thinkthen-cmake-version-')"):
         'Holds one CMake script and its output.',
-    ('release_native.py', "tempfile.TemporaryDirectory(prefix='publish-', dir=destination.parent)"):
-        'Python copies built files here, and they move out before cleanup.',
-    ('release_native.py', 'shutil.rmtree(destination)'):
-        'Replaces the built files an earlier run published.',
     ('release_registry.py', "shutil.rmtree(base / 'package' / NOTICE, ignore_errors=True)"):
         'Only the Linux bundle job stages registries.',
     ('release_registry.py', "tempfile.TemporaryDirectory(prefix='thinkthen-registry-')"):
@@ -57,10 +52,6 @@ ALLOWED = {
         'Removes unpacked SDK source before any tool runs.',
     ('windows-cli-check', "tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-')"):
         'Only the command and PowerShell write here.',
-    ('windows-native-proof', 'shutil.rmtree(package)'):
-        'Removes the SDK copy just zipped, before Go runs.',
-    ('windows-readme-input-probe', "tempfile.TemporaryDirectory(prefix='readme-input-probe-')"):
-        'Only PowerShell and the command write here.',
     ('windows_caller_process.py', "tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-')"):
         'Holds the child log.',
     ('windows_caller_process.py', "tempfile.TemporaryDirectory(prefix='thinkthen-owner-probe-')"):

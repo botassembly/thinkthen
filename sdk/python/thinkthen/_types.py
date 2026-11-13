@@ -56,8 +56,6 @@ class Usage:
     request_body_bytes: int
     active_attempts: int
     active_calls: int
-    cache_hits: int
-    replay_hits: int
     input_tokens: TokenUsage
     output_tokens: TokenUsage
 
@@ -127,20 +125,6 @@ class RetryPolicy:
 
 
 @dataclass(frozen=True, slots=True)
-class ResponseStore:
-    """Explicit local response storage; shared engine settings own admission."""
-
-    path: str
-    mode: Literal["cache", "record", "replay"]
-    namespace: str
-    model_generation: str
-    max_bytes: int | None = None
-    max_entries: int | None = None
-    max_age: int | None = None
-    busy_timeout_ms: int | None = None
-
-
-@dataclass(frozen=True, slots=True)
 class ClientSettings:
     backend: Backend
     model: str
@@ -148,7 +132,6 @@ class ClientSettings:
     batch: int
     retry: RetryPolicy
     max_requests: int | None = None
-    response_store: ResponseStore | None = None
 
 
 class ThinkThenError(Exception):
@@ -691,7 +674,6 @@ __all__ = [
     "RelationDetail",
     "RelationName",
     "RelationRule",
-    "ResponseStore",
     "RetryPolicy",
     "RowError",
     "ScoreOutcome",

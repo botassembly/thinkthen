@@ -54,10 +54,6 @@ pub const ApiKey = t.ApiKey;
 pub const Retry = t.Retry;
 /// Client settings.
 pub const Settings = t.Settings;
-/// Explicit local response-store configuration.
-pub const ResponseStore = t.ResponseStore;
-/// Local response-store execution mode.
-pub const ResponseMode = t.ResponseMode;
 /// One record.
 pub const Record = t.Record;
 /// Records pulled one at a time.
@@ -166,8 +162,6 @@ pub const Usage = struct {
     request_body_bytes: u64,
     active_attempts: u64,
     active_calls: u64,
-    cache_hits: u64,
-    replay_hits: u64,
     input_tokens: TokenUsage,
     output_tokens: TokenUsage,
 };
@@ -192,7 +186,7 @@ pub const Client = struct {
         const a = fallback.allocator();
         // The engine admits the environment's backend name, so an unknown name fails as usage.backend.
         const backend: ?[]const u8 = if (settings.backend) |value| @tagName(value) else if (std.c.getenv("THINKTHEN_BACKEND")) |name| std.mem.span(name) else null;
-        const encoded = try std.json.Stringify.valueAlloc(a, .{ .backend = backend, .model = settings.model, .url = settings.url, .batch = settings.batch, .max_requests = settings.max_requests, .response_store = settings.response_store, .retry = settings.retry }, .{ .emit_null_optional_fields = false });
+        const encoded = try std.json.Stringify.valueAlloc(a, .{ .backend = backend, .model = settings.model, .url = settings.url, .batch = settings.batch, .max_requests = settings.max_requests, .retry = settings.retry }, .{ .emit_null_optional_fields = false });
         defer a.free(encoded);
         var builder: ?*c.thinkthen_settings = null;
         var err = d.emptyError();

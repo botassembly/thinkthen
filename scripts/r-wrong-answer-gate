@@ -1,6 +1,0 @@
-#!/bin/sh
-# Reuse a verified Rust archive; install and exercise only the changed R facade.
-set -eu
-cd "$(dirname "$0")/.."
-. scripts/native-tools-env
-exec python3 sdk/r/tests/wrong-answers.py "$@"

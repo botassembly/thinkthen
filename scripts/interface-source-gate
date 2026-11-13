@@ -1,8 +1,8 @@
 #!/bin/sh
-# Source landing recipe for the engine/command/C ABI/SQL/Python interface batch.
-# Review this explicit slice list against every later batch before reusing it.
-# Release native-pair production and whole-release qualification follow the last
-# interface landing; this command neither imports nor registers release assets.
+# The one gate: every landing runs it, and with --shared-abi it is also the
+# release's source gate on Linux (pm job) and macOS (hosted qualification).
+# It builds the engine from this checkout; it neither imports nor registers
+# release native assets.
 set -eu
 cd "$(dirname "$0")/.."
 case "$*" in
@@ -10,10 +10,10 @@ case "$*" in
     --shared-abi) shared_abi=1 ;;
     *) echo 'usage: scripts/interface-source-gate [--shared-abi]' >&2; exit 2 ;;
 esac
-if [ "$shared_abi" = 1 ] && [ "$(uname -s)" != Linux ]; then
-    echo 'shared ABI source checks require Linux for the PostgreSQL slice' >&2
-    exit 2
-fi
+case "$(uname -s)" in
+    Linux|Darwin) ;;
+    *) echo 'source gate requires Linux or macOS' >&2; exit 2 ;;
+esac
 . scripts/native-tools-env
 # Child checks may run outside this checkout; retain its pinned toolchain.
 RUSTUP_TOOLCHAIN=$(python3 - <<'TOOLCHAIN'
@@ -58,9 +58,11 @@ args.remove('--offline')
 subprocess.run(['uv', 'run', *args, '--', 'python', '--version'], check=True)
 PY
 if [ "$shared_abi" = 1 ]; then
-    scripts/source-linux-tools
-    PATH="$PWD/target/source-tools/bin:$PATH"
-    export PATH
+    if [ "$(uname -s)" = Linux ]; then
+        scripts/source-linux-tools
+        PATH="$PWD/target/source-tools/bin:$PATH"
+        export PATH
+    fi
     scripts/jvm-prepare
     # A new nuget.org advisory must not stop every lane on code nobody changed.
     scripts/csharp-prepare --advisories-warn
@@ -102,6 +104,9 @@ stage() {
     fi
 }
 stage rust-format cargo fmt --all --check
+stage release-metadata python3 scripts/release_metadata.py
+stage release-workflow-check ruby scripts/release-workflow-check
+stage notices scripts/notices --check
 stage rust-dependencies scripts/rust-dependencies
 stage rust-advisories scripts/rust-advisories
 stage core-check scripts/core-check
@@ -110,6 +115,7 @@ stage contract-schema-check scripts/contract-schema-check
 stage rust-clippy cargo clippy --workspace --all-targets --features thinkthen/stream --locked --keep-going -- -D warnings
 # c-gate builds the current tree's library and external consumers. Workspace
 # integration tests execute those consumers and cover the shared SQL engine.
+stage header-contract-test python3 scripts/header-contract-test
 stage c-gate scripts/c-gate
 stage rust-tests cargo test --workspace --features thinkthen/stream --locked --no-fail-fast
 stage loopback cargo build -p loopback --bin loopback --locked
@@ -120,7 +126,6 @@ stage bash-guide scripts/bash-guide
 case "$(uname -s)" in
     Linux) THINKTHEN_NATIVE_LIBRARY="$build_target/debug/libthinkthen_ffi.so" ;;
     Darwin) THINKTHEN_NATIVE_LIBRARY="$build_target/debug/libthinkthen_ffi.dylib" ;;
-    *) echo 'source gate requires Linux or macOS' >&2; exit 2 ;;
 esac
 THINKTHEN_LOOPBACK="$build_target/debug/loopback"
 export THINKTHEN_NATIVE_LIBRARY THINKTHEN_LOOPBACK
@@ -129,13 +134,9 @@ stage sql-bridge-gate scripts/sql-bridge-gate
 # fresh environment, then runs Python conformance, typing, lint and pytest.
 stage python-gate scripts/python-gate
 stage python-offline sdk/python/check-offline
-# The prepared Linux floor supplies R and its dependencies. Its Docker socket
-# route also lets the installer helper run the prepared fish shell checks.
-case "$(uname -s)" in
-    Linux) stage python-release-helpers env THINKTHEN_DOCKER_IN_FLOOR=1 scripts/runtime-floor-build sdk/python/check-release ;;
-    *) stage python-release-helpers sdk/python/check-release ;;
-esac
 if [ "$shared_abi" = 1 ]; then
+    stage fixture-routing-check scripts/fixture-routing-check
+    stage crate-package-test scripts/crate-package-test
     source_scratch=$(mktemp -d)
     # Ordinary consumers keep the feature-free library. SQL loopback fixtures
     # compile separately so their test interface never enters ordinary assets.
@@ -165,7 +166,12 @@ if [ "$shared_abi" = 1 ]; then
     host_rid=$(python3 scripts/native_platform.py rid)
     mkdir -p "$source_scratch/assets/$host_rid"
     cp "$THINKTHEN_NATIVE_LIBRARY" "$source_scratch/assets/$host_rid/"
-    stage swift-gate scripts/linux-binding-gate --abi-binding swift --scratch "$source_scratch" -- \
+    # Linux builds Swift in the prepared Swift image; macOS uses the host toolchain.
+    swift_runner=
+    if [ "$(uname -s)" = Linux ]; then
+        swift_runner="scripts/linux-binding-gate --abi-binding swift --scratch $source_scratch --"
+    fi
+    stage swift-gate $swift_runner \
         env THINKTHEN_SWIFT_NATIVE_ASSETS="$source_scratch/assets" THINKTHEN_LOOPBACK="$THINKTHEN_LOOPBACK" \
         THINKTHEN_NATIVE_FIXTURES="$THINKTHEN_NATIVE_FIXTURES" CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}" scripts/swift-gate
     stage r-gate scripts/runtime-floor-build scripts/r-gate --source
@@ -173,12 +179,16 @@ if [ "$shared_abi" = 1 ]; then
     stage c-sdk-gate env THINKTHEN_C_SOURCE_NATIVE=1 scripts/c-sdk-gate
     stage cpp-sdk-gate env THINKTHEN_C_SOURCE_NATIVE=1 scripts/cpp-sdk-gate
     stage zig-gate env THINKTHEN_ZIG_NATIVE_FILE="$THINKTHEN_NATIVE_LIBRARY" scripts/zig-sdk-gate
-    stage abi-minor-bindings env THINKTHEN_SDK_GATE_RUNNER=scripts/linux-binding-gate \
+    # Linux runs Swift and Ruby ABI consumers with their prepared Linux tools.
+    abi_runner=
+    if [ "$(uname -s)" = Linux ]; then abi_runner=scripts/linux-binding-gate; fi
+    stage abi-minor-bindings env THINKTHEN_SDK_GATE_RUNNER="$abi_runner" \
         scripts/abi-minor-check --native "$THINKTHEN_NATIVE_LIBRARY" --bindings-only
     THINKTHEN_LOOPBACK="$fixture_target/debug/loopback"
     export THINKTHEN_LOOPBACK
     stage sqlite-gate scripts/sqlite-gate
-    stage postgres-gate scripts/postgres-gate
+    # The PostgreSQL package targets Linux only.
+    if [ "$(uname -s)" = Linux ]; then stage postgres-gate scripts/postgres-gate; fi
     stage duckdb-gate scripts/duckdb-gate
 fi
 stage words scripts/words

@@ -30,7 +30,7 @@ func TestUsageCopiesCountersAndSurvivesClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.CacheHits != 0 || after.ReplayHits != 0 || after.Attempts != 0 || after.OutputTokens.Reported == nil || *after.OutputTokens.Reported != 0 {
+	if after.Attempts != 0 || after.OutputTokens.Reported == nil || *after.OutputTokens.Reported != 0 {
 		t.Fatalf("wrong closed usage: %+v", after)
 	}
 	*after.OutputTokens.Reported = 999
@@ -59,15 +59,5 @@ func TestZeroRequestAllowanceProjection(t *testing.T) {
 	usage, usageErr := client.Usage()
 	if usageErr != nil || usage.Attempts != 0 {
 		t.Fatalf("zero allowance sent work: %+v %v", usage, usageErr)
-	}
-}
-
-func TestResponseStoreProjectsExplicitZero(t *testing.T) {
-	var zero uint64
-	_, err := tt.New(tt.Config{Backend: tt.OpenAI, ResponseStore: &tt.ResponseStoreConfig{
-		Path: t.TempDir(), Mode: tt.ResponseCache, Namespace: "sdk-test", ModelGeneration: "generation", MaxEntries: &zero,
-	}})
-	if err == nil {
-		t.Fatal("response-store zero limit was ignored")
 	}
 }

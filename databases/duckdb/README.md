@@ -20,7 +20,7 @@ The extension is not signed, so `-unsigned` lets DuckDB load it; load only a fil
 Load the extension from the folder you downloaded it to, make a table of support messages, and ask whether the first three request a refund:
 
 ```sql
-LOAD './thinkthen.duckdb_extension';
+LOAD '/absolute/path/to/thinkthen.duckdb_extension';
 CREATE TABLE messages (msg_id INTEGER, body VARCHAR);
 INSERT INTO messages VALUES
   (1, 'Please refund my order.'),

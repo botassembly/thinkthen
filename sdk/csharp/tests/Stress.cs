@@ -1,36 +1,9 @@
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ThinkThen;
 
 internal static partial class Program
 {
-    // Feature: installed C# streams retain every stress position under tasks and cancellation.
-    private static async Task StressCases(string directory)
-    {
-        var start = new ProcessStartInfo("python3") { UseShellExecute = false };
-        start.ArgumentList.Add(Path.Combine(directory, "..", "scripts", "stress-adapters.py"));
-        start.ArgumentList.Add("--surface");
-        start.ArgumentList.Add("csharp");
-        start.ArgumentList.Add("--");
-        start.ArgumentList.Add(Environment.ProcessPath!);
-        if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "dotnet")
-            start.ArgumentList.Add(Environment.GetCommandLineArgs()[0]);
-        start.ArgumentList.Add("--stress-adapter");
-        // Runtime threads come and go with load, so hold them still for the short check's count:
-        // the pool starts above its peak, keeps its workers, and no background compiler runs.
-        // Soaks stay on default .NET, because they detect leaks of blocked pool threads.
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("THINKTHEN_STRESS_FULL")))
-        {
-            start.Environment["DOTNET_TieredCompilation"] = "0";
-            start.Environment["DOTNET_ThreadPool_ThreadTimeoutMs"] = "-1";
-            start.Environment["THINKTHEN_STRESS_POOL_WORKERS"] = "16";
-        }
-        using var process = Process.Start(start)!;
-        await process.WaitForExitAsync();
-        Check(process.ExitCode == 0, "shared C# stress adapter failed");
-    }
-
     private static async Task<int> StressConsume(ThinkThenClient client, JsonNode sample, int call, System.Collections.Concurrent.ConcurrentDictionary<int, byte> widths)
     {
         int count = sample["records"]!.GetValue<int>(), received = 0, failed = 0;
@@ -60,18 +33,8 @@ internal static partial class Program
         return failed;
     }
 
-    private static async Task StartPoolWorkers(int workers)
-    {
-        ThreadPool.GetMinThreads(out _, out int completion);
-        ThreadPool.SetMinThreads(workers, completion);
-        using var together = new Barrier(workers);
-        await Task.WhenAll(Enumerable.Range(0, workers).Select(_ => Task.Run(() => together.SignalAndWait())));
-    }
-
     private static async Task StressAdapter()
     {
-        if (Environment.GetEnvironmentVariable("THINKTHEN_STRESS_POOL_WORKERS") is string workers)
-            await StartPoolWorkers(int.Parse(workers));
         JsonNode sample = JsonNode.Parse(await File.ReadAllTextAsync(Environment.GetEnvironmentVariable("THINKTHEN_STRESS_CASE")!))!;
         ThinkThenOptions options = sample["client"]!.Deserialize<ThinkThenOptions>(JsonOptions)!;
         options.ApiKey = ApiKey.From(sample["client"]!["api_key"]!.GetValue<string>());
@@ -93,14 +56,6 @@ internal static partial class Program
         {
             var results = await Task.WhenAll(Enumerable.Range(0, sample["concurrency"]!.GetValue<int>()).Select(index => StressConsume(client, sample, round * sample["concurrency"]!.GetValue<int>() + index, widths)));
             foreach (int result in results) { calls++; rows += sample["records"]!.GetValue<int>(); failed += result; }
-            if (Environment.GetEnvironmentVariable("THINKTHEN_STRESS_CHECKPOINT_COMMAND") is string hook)
-            {
-                var checkpoint = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
-                checkpoint.ArgumentList.Add("-c"); checkpoint.ArgumentList.Add(hook);
-                using var process = Process.Start(checkpoint)!;
-                await process.WaitForExitAsync();
-                Check(process.ExitCode == 0, "resource checkpoint failed");
-            }
         }
         Console.WriteLine(JsonSerializer.Serialize(new { calls, rows, failed, cancelled = cancel, identifier_width_mask = widths.Keys.Aggregate(0L, (mask, width) => mask | (1L << width)) }));
     }

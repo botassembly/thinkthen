@@ -207,7 +207,6 @@ private fun redaction() {
 }
 
 fun main(args: Array<String>) = runBlocking {
-    stressCases(Path.of(args.single()))
     serialization()
     identifiers()
     toolboxes()

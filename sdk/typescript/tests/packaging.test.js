@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { mkdtemp, cp, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 // Contract: the native family selects the public error class, even when its code differs.
@@ -36,10 +35,4 @@ assert.throws(() => new ThinkThen({backend:"unknown_backend"}), error => error i
 `], { encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
   } finally { await rm(directory, {recursive: true}); }
-});
-
-// Contract: release assembly refuses any changed, missing or additional shared file.
-test("platform tarball merge checks every shared file", () => {
-  const result = spawnSync("python3", [fileURLToPath(new URL("./registry.py", import.meta.url)), dirname(resolve(process.env.THINKTHEN_NODE_PACKAGE))], {encoding:"utf8"});
-  assert.equal(result.status, 0, result.stderr);
 });

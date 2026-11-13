@@ -13,10 +13,8 @@ public sealed record TokenUsage(ulong? Reported, ulong UnknownAttempts);
 /// <param name="RequestBodyBytes">Attempted encoded request bytes.</param>
 /// <param name="ActiveAttempts">Attempts not yet finished.</param>
 /// <param name="ActiveCalls">Engine workers not yet settled.</param>
-/// <param name="CacheHits">Answers reused from the local cache.</param>
-/// <param name="ReplayHits">Answers returned by strict replay.</param>
 /// <param name="InputTokens">Reported input usage.</param>
 /// <param name="OutputTokens">Reported output usage.</param>
 public sealed record Usage(ulong Attempts, ulong Responses, ulong StatusRetries,
-    ulong ConnectionRetries, ulong RequestBodyBytes, ulong ActiveAttempts, ulong ActiveCalls, ulong CacheHits, ulong ReplayHits,
+    ulong ConnectionRetries, ulong RequestBodyBytes, ulong ActiveAttempts, ulong ActiveCalls,
     TokenUsage InputTokens, TokenUsage OutputTokens);

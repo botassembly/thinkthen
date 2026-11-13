@@ -187,9 +187,6 @@ from ._types import (
     RelationRule as RelationRule,
 )
 from ._types import (
-    ResponseStore as ResponseStore,
-)
-from ._types import (
     RetryPolicy as RetryPolicy,
 )
 from ._types import (
@@ -863,7 +860,6 @@ __all__ = [
     "RelationDetail",
     "RelationName",
     "RelationRule",
-    "ResponseStore",
     "RetryPolicy",
     "RowError",
     "RowStream",

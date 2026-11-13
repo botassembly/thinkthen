@@ -29,6 +29,8 @@ def main(python):
     blocks = re.findall(r'```(python|json)\n(.*?)\n```', text, re.S)
     toolbox = next(body for kind, body in blocks if kind == 'json' and '"entries"' in body)
     examples = [body for kind, body in blocks if kind == 'python']
+    # scripts/surface-example owns the collection example and checks its rows.
+    examples.remove(next(body for body in examples if 'records.jsonl' in body))
     shared = next(body for body in examples if re.search(r'^questions = ', body, re.M))
     environment = {name: value for name, value in os.environ.items()
                    if name not in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL')}

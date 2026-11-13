@@ -7,7 +7,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-include = ["build.rs", "LICENSE", "README.md", "src/**", "examples/**", "test-support/server/**", "tests/support/**", "tests/cli_transport_logging.rs", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
+include = ["LICENSE", "README.md", "src/**", "examples/**", "test-support/server/**", "tests/support/**", "tests/cli_transport_logging.rs", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
 keywords = ["text", "classification", "language-model", "decision"]
 categories = ["text-processing", "science"]
 
@@ -25,13 +25,9 @@ required-features = ["command"]
 default = ["command"]
 native = []
 stream = ["dep:futures-core"]
-command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
-
-[build-dependencies]
-sha2.workspace = true
+command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile", "dep:windows-sys"]
 
 [dependencies]
-rusqlite = { version = "=0.40.2", features = ["bundled", "limits"] }
 httpdate = "1.0.3"
 futures-core = { version = "0.3", optional = true }
 sha2.workspace = true
@@ -55,11 +51,8 @@ ureq.workspace = true
 rustls = { version = "0.23", default-features = false, features = ["std", "ring"] }
 rustls-platform-verifier = { version = "0.7.1", default-features = false }
 
-[target.'cfg(unix)'.dependencies]
-rustix = { version = "=1.1.5", features = ["process"] }
-
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_SystemServices"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem"], optional = true }
 
 [dev-dependencies]
 rcgen = "=0.13.2"

@@ -143,10 +143,7 @@ fn c_cancel_and_free_return_while_the_loopback_reply_is_still_held() {
         )
         .unwrap();
         for backend in ["systemone", "openai"] {
-            for mode in ["cancel", "free-held", "workload"] {
-                if mode == "workload" && function != "decide" {
-                    continue;
-                }
+            for mode in ["cancel", "free-held"] {
                 let (arrived, request) = mpsc::channel();
                 let (release, held) = mpsc::channel();
                 let held = Arc::new(Mutex::new(held));
@@ -171,11 +168,7 @@ fn c_cancel_and_free_return_while_the_loopback_reply_is_still_held() {
                     .stderr(Stdio::piped());
                 let mut child = process.spawn().unwrap();
                 let mut input = child.stdin.take().unwrap();
-                let parameters = if mode == "workload" {
-                    "1 1 1 1 0 0 0.9 -".to_owned()
-                } else {
-                    case["request"].to_string()
-                };
+                let parameters = case["request"].to_string();
                 writeln!(
                     input,
                     "{}\n{}",
@@ -194,11 +187,6 @@ fn c_cancel_and_free_return_while_the_loopback_reply_is_still_held() {
                 if mode == "cancel" {
                     assert_eq!(output.len(), 1, "{output:?}");
                     assert_eq!(output[0]["error"]["code"], "local.cancelled");
-                } else if mode == "workload" {
-                    assert_eq!(
-                        output,
-                        [json!({"calls":1,"rows":0,"failed":0,"cancelled":true})]
-                    );
                 } else {
                     assert_eq!(output.len(), 1);
                     assert_eq!(output[0]["freed"], true);

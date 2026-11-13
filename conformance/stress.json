@@ -1,9 +1,8 @@
 {
   "format": 1,
   "client": {"model":"stress-model", "batch":32, "retry":{"max_retries":2,"initial_backoff_ms":1,"attempt_timeout_ms":60000}},
-  "records": {"smoke":65,"full":100000,"soak_rounds":20,"identifier_base":10000000},
+  "records": {"smoke":65,"identifier_base":10000000},
   "replies": [{"probability":0.9}],
-  "slow_replies": {"name":"slow-replies", "records":500, "attempt_timeout_ms":10000, "faults":[{"kind":"slow","delay_ms":2000,"repeat":1000000}], "status":"answered"},
   "scenarios": [
     {"name":"healthy", "faults":[], "status":"answered"},
     {"name":"rate-limit", "faults":[{"kind":"status","status":429,"retry_after":"0","repeat":1}], "status":"answered"},

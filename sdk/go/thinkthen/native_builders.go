@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"os"
 	"time"
-	"unicode/utf8"
 )
 
 func nativeError() C.thinkthen_error {
@@ -29,14 +28,6 @@ func newNative(cfg Config) (nativeClient, error) {
 	var settings *C.thinkthen_settings
 	e := nativeError()
 	fields := map[string]any{}
-	if store := cfg.ResponseStore; store != nil {
-		for _, text := range []string{store.Path, string(store.Mode), store.Namespace, store.ModelGeneration} {
-			if !utf8.ValidString(text) {
-				return nativeClient{}, conversionError(true)
-			}
-		}
-		fields["response_store"] = store
-	}
 	backend, present := os.LookupEnv("THINKTHEN_BACKEND")
 	if cfg.Backend == 0 && present {
 		fields["backend"] = backend

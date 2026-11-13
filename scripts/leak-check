@@ -104,6 +104,8 @@ def main():
         # The floor mounts this checkout, not the caller's report folder.
         inside = ROOT / 'target/leak-check/report.json'
         inside.unlink(missing_ok=True)
+        # The floor build is offline, so fetch the locked dependencies first.
+        subprocess.run(['cargo', 'fetch', '--locked'], cwd=ROOT, check=True)
         status = subprocess.run([sys.executable, str(ROOT / 'scripts/runtime-floor-build'), str(Path(__file__).resolve()),
                                  str(inside), '--reachable-allowance', str(options.reachable_allowance),
                                  '--fixture', options.fixture], cwd=ROOT).returncode

@@ -256,7 +256,6 @@ public final class ConformanceCases {
             return;
         }
         admissionCases(Path.of(args[0]).getParent());
-        StressCases.check(Path.of(args[0]).getParent());
         Path directory = Path.of(args[0]); savedToolbox(directory.getParent().resolve("toolbox")); var manifest = ConsumerCases.JSON.readTree(directory.resolve("manifest.json").toFile()); int count=0; int notApplicable=0;
         for (var backend : manifest.get("backends")) for (var name : manifest.get("cases")) {
             var file = directory.resolve(name.asText()); var sample = ConsumerCases.JSON.readTree(file.toFile());

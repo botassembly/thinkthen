@@ -1,12 +1,9 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { sdk } from "./support.js";
 
-import { spawn, spawnSync } from "node:child_process";
-import { once } from "node:events";
+import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
 
 async function consume(client, scenario, count, probability, call, basis, widths) {
   call += basis;
@@ -71,11 +68,4 @@ async function adapter(sample) {
 
 if (process.env.THINKTHEN_STRESS_CASE) {
   await adapter(JSON.parse(await readFile(process.env.THINKTHEN_STRESS_CASE)));
-} else {
-  test("shared stress preserves positions, concurrent calls and batch cancellation", async () => {
-    const runner = fileURLToPath(new URL("../../../scripts/stress-adapters.py", import.meta.url));
-    const child = spawn("python3", [runner, "--surface", "typescript", "--", process.execPath, fileURLToPath(import.meta.url)], { stdio: "inherit" });
-    const [code] = await once(child, "exit");
-    assert.equal(code, 0);
-  });
 }

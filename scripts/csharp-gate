@@ -67,21 +67,23 @@ python3 "$root/scripts/csharp_consumers.py" abi "$stage"
 dotnet "$stage/bin/Consumer.dll" --interface-only
 THINKTHEN_LOOPBACK="$native/loopback" THINKTHEN_BACKEND= dotnet "$stage/bin/Consumer.dll" --backend-empty
 THINKTHEN_LOOPBACK="$native/loopback" dotnet "$stage/bin/Consumer.dll" --surface-interface
-if [ "$(uname -s)" = Darwin ]; then sdk/csharp/check-sdk-fixes "$engine" "$native/loopback"; fi
+# macOS: count live native owners through a shim that re-exports the packaged engine.
+if [ "$(uname -s)" = Darwin ]; then
+  cp "$engine" "$stage/real-engine.dylib"
+  cc -Wl,-headerpad_max_install_names -std=c11 -Wall -Wextra -Werror -dynamiclib sdk/csharp/tests/handle-counts.c \
+    -I crates/thinkthen-ffi/include -Wl,-reexport_library,"$stage/real-engine.dylib" -o "$stage/counts.dylib"
+  install_name_tool -change "$(otool -D "$stage/real-engine.dylib" | tail -n 1)" "$stage/real-engine.dylib" "$stage/counts.dylib"
+  # Replace by rename, never in place, so macOS does not reuse a cached signature.
+  cp "$stage/counts.dylib" "$engine.counts" && mv "$engine.counts" "$engine"
+  THINKTHEN_TEST_ENGINE="$stage/real-engine.dylib" dotnet "$stage/bin/Consumer.dll" --handle-counts
+  cp "$stage/real-engine.dylib" "$engine.real" && mv "$engine.real" "$engine"
+fi
 cd "$stage"
 export THINKTHEN_API_KEY=construction-only THINKTHEN_LOOPBACK="$native/loopback"
 dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$native/loopback"
 dotnet publish "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/single" -p:PublishSingleFile=true -p:SelfContained=false
 "$stage/single/Consumer" "$root/construction/stub.json" --stub-only
 python3 "$root/scripts/csharp_consumers.py" metadata "$stage"
-if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
-  soak_status=0
-  for backend in systemone openai; do
-    THINKTHEN_LOOPBACK="$native/loopback" python3 "$root/scripts/stress-adapters.py" --surface csharp --rounds 60 --backend "$backend" \
-      --evidence-path "$THINKTHEN_SOAK_FOLDER/csharp-$backend.jsonl" -- dotnet "$stage/bin/Consumer.dll" --stress-adapter || soak_status=1
-  done
-  [ "$soak_status" = 0 ]
-fi
 if [ -n "${THINKTHEN_CSHARP_OUTPUT:-}" ]; then
   mkdir -p "$THINKTHEN_CSHARP_OUTPUT"
   cp "$stage/feed/Botassembly.ThinkThen.$version.nupkg" "$THINKTHEN_CSHARP_OUTPUT/"

@@ -385,30 +385,3 @@ The command writes current typed rows to stdout and a JSON summary to stderr. Th
 Use `--recovery PATH` to choose a new artifact explicitly, including for JSONL enrichment with `--into` or table input on stdin. Use `--no-recovery` to disable retention. These choices conflict, and an existing artifact is never overwritten. Ordinary streams already emit completed rows and do not accept these file-retention options.
 
 Recovery exports completed rows; it does not resume work, refund requests, retain unfinished dependent asks, or recover rank scores before final rank rows exist. Ordinary completion, error and first-interrupt cleanup synchronize complete frames; there is no power-loss or forced-second-interrupt durability guarantee. A plain rerun still makes new requests. Treat recovery artifacts as private source data and remove them when no longer needed.
-
-## Record, cache and replay responses
-
-Response storage is off by default. Select a private directory on a local filesystem and supply all four options together: `--response-store DIR`, `--response-mode cache|record|replay`, `--response-namespace NAME`, and `--model-generation NAME`. No environment variable enables retention.
-
-Record one invocation with your ordinary backend credentials:
-
-```sh
-printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does this request a refund?' --response-store ./refund-responses --response-mode record --response-namespace support-test --model-generation deployed-2026-11-10 --json --usage
-```
-
-Then unset provider credentials and repeat the same question, record, backend, endpoint, model, namespace and generation with `--response-mode replay`:
-
-```sh
-unset THINKTHEN_API_KEY OPENAI_API_KEY
-printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does this request a refund?' --response-store ./refund-responses --response-mode replay --response-namespace support-test --model-generation deployed-2026-11-10 --json --usage
-```
-
-Replay opens the existing recording before credential or network setup. An unavailable ask ends with `local.replay-miss` and exit 5; it never falls back to a live request. Earlier emitted rows remain valid, but a miss is not successful completion.
-
-`record` appends fully valid exchanges, including repeated samples, and refuses its byte quota rather than deleting recordings. `cache` reuses eligible validated asks and sends only misses; changing batch neighbors or thresholds does not by itself prevent reuse. `replay` uses the most recently recorded answer for an exact ask as of client construction, including later dependent rounds. It ignores cache age and does not replay a sequence of stochastic samples or backend failures.
-
-Optional positive-integer limits are `--response-max-bytes` (default 67108864 logical payload bytes), `--response-max-entries` (4096 eligible asks), and `--response-max-age` (86400 seconds for cache eligibility). SQLite allocation and journals can exceed the logical byte bound. Local filesystems only are supported; do not put the store on a network filesystem. Storage failures, quota exhaustion, corruption and busy timeouts stop the invocation rather than silently omitting a recording or making an unexpected paid call.
-
-The store retains input and output text without encryption at rest. Protect it like the source data. Use a nonsecret namespace and generation label; never derive them from a credential. Change the generation label when a mutable model alias changes or when you want a fresh sample. The label is caller-supplied, not proof of an immutable provider model revision.
-
-`--usage` separates `cache_hits` and `replay_hits` from new remote attempts and tokens. Hits count materialized asks, not rows; historical recording tokens are not new usage. Recovery artifacts are separate: `thinkthen recover FILE` exports completed rows, while a response store supplies validated raw answers to current function interpretation. Neither promises exactly-once billing, automatic resume or a checkpoint for SQL transactions. SQL refuses `response_store`.

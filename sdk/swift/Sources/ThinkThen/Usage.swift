@@ -19,10 +19,6 @@ public struct Usage: Codable, Sendable {
   public let requestBodyBytes: UInt64
   public let activeAttempts: UInt64
   public let activeCalls: UInt64
-  /// Materialized asks reused from live cache eligibility.
-  public let cacheHits: UInt64
-  /// Materialized asks reproduced from recorded exchanges.
-  public let replayHits: UInt64
   public let inputTokens: TokenUsage
   public let outputTokens: TokenUsage
   enum CodingKeys: String, CodingKey {
@@ -32,8 +28,6 @@ public struct Usage: Codable, Sendable {
     case requestBodyBytes = "request_body_bytes"
     case activeAttempts = "active_attempts"
     case activeCalls = "active_calls"
-    case cacheHits = "cache_hits"
-    case replayHits = "replay_hits"
     case inputTokens = "input_tokens"
     case outputTokens = "output_tokens"
   }

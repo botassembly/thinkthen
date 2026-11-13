@@ -26,7 +26,6 @@ def isolated_environment(
         if name.startswith(("THINKTHEN_", "OPENAI_")) and name not in {
             "THINKTHEN_CASES",
             "THINKTHEN_LOOPBACK",
-            "THINKTHEN_STRESS_FULL",
             "THINKTHEN_GATE_STRICT",
         }:
             monkeypatch.delenv(name)

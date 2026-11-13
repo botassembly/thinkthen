@@ -11,11 +11,6 @@ fun main() = runBlocking {
     ThinkThen { backend = Backend.STUB; maxRequests = ULong.MAX_VALUE }.use { client ->
         check(client.settings.saved().contains("\"max_requests\":18446744073709551615"))
     }
-    val store = ResponseStore("unused-private-store", ResponseMode.REPLAY, "tests", "model-v1", maxBytes = ULong.MAX_VALUE)
-    try {
-        ThinkThen { backend = Backend.STUB; responseStore = store }.close()
-        error("store settings disappeared before shared admission")
-    } catch (failure: ThinkThenException) { check(failure.code.wireName == "usage.settings") }
     engineSettingsErrors()
     detailStrings()
     usageOwnership()

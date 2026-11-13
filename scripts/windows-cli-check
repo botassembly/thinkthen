@@ -114,16 +114,8 @@ def answer_backend(probability=None):
             worker.join()
 
 
-def usage_summary(result):
-    records = [json.loads(line) for line in result.stderr.decode('utf-8').splitlines()
-               if line.startswith('{')]
-    summaries = [record for record in records if record.get('kind') == 'thinkthen.usage/1']
-    assert len(summaries) == 1, result.stderr
-    return summaries[0]['usage']
-
-
 def private_response_state(path, environment):
-    """Inspect the actual store/journal; DLL cache privacy is a different claim."""
+    """Inspect the actual journal; DLL cache privacy is a different claim."""
     from release_windows_cache import _control, STATE_FUNCTION
     measured = json.loads(_control(environment, STATE_FUNCTION + """$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
 $caller = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;
@@ -138,7 +130,6 @@ $other = @($a.Access | Where-Object {
     return measured['state']
 
 
-
 def access_environment(folder, environment):
     """PowerShell's private profile lives outside the checked operation folder."""
     from release_windows_cache import cache_environment
@@ -146,80 +137,6 @@ def access_environment(folder, environment):
     (profile / 'roaming').mkdir(parents=True)
     return cache_environment(profile / 'local', dict(environment, HOME=str(profile),
         USERPROFILE=str(profile), APPDATA=str(profile / 'roaming')))
-
-
-def response_store(binary, folder, environment, target=None):
-    """Installed record/cache/replay and actual Windows store ACL/owner refusal."""
-    from release_windows_cache import _control, _state, restore_cache
-    environment = access_environment(folder, environment)
-    store = folder / 'responses'
-    keyless = {key: value for key, value in environment.items()
-               if key.upper() not in {'THINKTHEN_API_KEY', 'OPENAI_API_KEY'}}
-    with answer_backend() as backend:
-        def invoke(mode, *, code=0):
-            env = keyless if mode == 'replay' else dict(keyless, THINKTHEN_API_KEY='synthetic-loopback-key')
-            return run_case(binary, folder, env, 'decide', 'Ready?', '--backend', 'systemone',
-                '--url', backend.url, '--json', '--usage', '--response-store', store,
-                '--response-mode', mode, '--response-namespace', 'installed-windows',
-                '--model-generation', 'fixture-v1', '--max-requests', '1' if mode == 'record' else '0',
-                payload=b'paid record', code=code)
-        recorded = invoke('record')
-        row = json.loads(recorded.stdout)
-        assert row['status'] == 'answered' and row['answer'] is True, row
-        assert len(backend.requests) == 1
-        assert usage_summary(recorded)['attempts'] == 1
-        cached = invoke('cache')
-        replayed = invoke('replay')
-        assert cached.stdout == recorded.stdout == replayed.stdout
-        for result, metric in [(cached, 'cache_hits'), (replayed, 'replay_hits')]:
-            usage = usage_summary(result)
-            assert usage['attempts'] == 0 and usage[metric] == 1, usage
-            assert usage['input_tokens']['reported'] == usage['output_tokens']['reported'] == 0, usage
-        assert len(backend.requests) == 1, 'reuse or keyless replay made another request'
-        if target is None:
-            return
-        database = store / 'responses.sqlite3'
-        before = hashlib.sha256(database.read_bytes()).hexdigest()
-        files = sorted(path.name for path in store.iterdir())
-        system = Path(environment['SYSTEMROOT']) / 'System32'
-        for path in (store if target == 'directory' else database,):
-            saved = private_response_state(path, environment)
-            for control in ('everyone-modify', 'distinct-owner'):
-                try:
-                    arguments = ('/grant', '*S-1-1-0:(M)') if control == 'everyone-modify' else ('/setowner', '*S-1-5-19')
-                    subprocess.run([system / 'icacls.exe', path, *arguments], env=environment,
-                        capture_output=True, text=True, check=True, timeout=30)
-                    if control == 'everyone-modify':
-                        installed = _control(environment, """$a = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
-@($a.Access | Where-Object {
-  $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq 'S-1-1-0' -and
-  $_.AccessControlType -eq 'Allow' -and
-  ($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify) -eq [System.Security.AccessControl.FileSystemRights]::Modify
-}).Count""", path)
-                        assert int(installed) > 0, 'Everyone Modify control was not installed'
-                    else:
-                        assert _state(environment, path)['owner'] == 'S-1-5-19', 'distinct owner control was not installed'
-                    refused = invoke('replay', code=5)
-                    assert not refused.stdout and b'local.response-store' in refused.stderr, refused
-                    assert len(backend.requests) == 1, 'unsafe store caused a backend request'
-                    assert hashlib.sha256(database.read_bytes()).hexdigest() == before
-                    assert sorted(item.name for item in store.iterdir()) == files
-                finally:
-                    restore_cache(path, saved, environment)
-                # restore_cache verifies exact saved private owner/access state.
-                assert invoke('replay').stdout == recorded.stdout, 'restored store did not replay'
-                print(f'Windows response store: {path.name}: {control} refused and restored', flush=True)
-        assert len(backend.requests) == 1
-        assert hashlib.sha256(database.read_bytes()).hexdigest() == before
-
-
-def response_directory(binary, folder, environment):
-    response_store(binary, folder, environment, 'directory')
-
-
-def response_database(binary, folder, environment):
-    response_store(binary, folder, environment, 'database')
-
 
 
 def recovery_probability(question):
@@ -638,9 +555,7 @@ def watchdog(name, *, child=False, deadline=None):
 CASES = [('saved-run', pipeline, False), ('xlsx', spreadsheet, False),
          ('powershell-unicode', powershell, False), ('powershell-default', default_pipes, False),
          ('ctrl-break', interrupt, False), ('ctrl-c', ctrl_c, False), ('stream', stream, False),
-         ('forced-exit', forced_exit, False), ('response-store', response_store, True),
-         ('response-directory', response_directory, True), ('response-database', response_database, True),
-         ('recovery', recovery, True)]
+         ('forced-exit', forced_exit, False), ('recovery', recovery, True)]
 CALLER_CASES = tuple(name for name, _case, caller_owned in CASES if caller_owned)
 
 

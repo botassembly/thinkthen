@@ -175,12 +175,3 @@ pub fn main(_: std.process.Init) !void {
 ```
 
 The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
-
-## Local response storage
-
-Explicitly select `cache`, `record`, or `replay` storage; leaving it unset retains no text. For an existing recording:
-
-Set `.response_store = .{ .path = "./answers", .mode = .replay, .namespace = "example", .model_generation = "model-v1" }` in the settings passed to `tt.Client.init`. Read the copied `replay_hits` field returned by `client.usage(allocator, &diag)`. This assumes that `./answers` already contains a matching recording.
-
-
-Store paths must name private local directories. This opt-in feature retains input and output text without encryption. Namespace and model generation are explicit nonsecret labels; change the generation when the provider's model binding changes. Replay opens existing recorded answers without credentials or network fallback, and a missing answer fails with `local.replay-miss`. Cache/replay hit counters count materialized asks, not output rows, and do not add historical token usage to current spending. Optional limits use the engine defaults: 64 MiB logical payload, 4096 eligible asks, 86400 seconds cache age, and 5000 ms busy timeout. Recordings do not expire or get evicted to continue a recording. Filesystem allocation may exceed the logical payload limit. No environment variable enables retention.

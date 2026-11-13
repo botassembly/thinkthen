@@ -261,7 +261,6 @@ struct usage_snapshot {
     const std::uint64_t attempts, responses, status_retries, connection_retries;
     const std::uint64_t request_body_bytes, active_attempts, active_calls;
     const token_usage input_tokens, output_tokens;
-    const std::uint64_t cache_hits, replay_hits;
 };
 /// An owned native client; calls opened from it keep their own native state.
 class client {
@@ -309,35 +308,20 @@ public:
             detail::invoke(thinkthen_settings_set_retry, s.get(), r.max_retries,
                 static_cast<std::uint64_t>(r.initial_backoff.count()), static_cast<std::uint64_t>(r.attempt_timeout.count()));
         }
-        if (settings.response_store) {
-            const auto& store = *settings.response_store;
-            thinkthen_response_store_config config{};
-            config.struct_size = sizeof config;
-            config.path = detail::view(store.path);
-            config.mode = static_cast<std::uint32_t>(store.mode);
-            config.namespace_name = detail::view(store.namespace_name);
-            config.model_generation = detail::view(store.model_generation);
-            config.max_bytes = store.max_bytes ? &*store.max_bytes : nullptr;
-            config.max_entries = store.max_entries ? &*store.max_entries : nullptr;
-            config.max_age = store.max_age ? &*store.max_age : nullptr;
-            config.busy_timeout_ms = store.busy_timeout_ms ? &*store.busy_timeout_ms : nullptr;
-            detail::invoke(thinkthen_settings_set_response_store, s.get(), &config);
-        }
         value_.reset(detail::get<thinkthen_client*>(thinkthen_client_open, s.get()));
     }
     /// Copy cumulative usage. Existing calls may still send after this snapshot.
     [[nodiscard]] usage_snapshot usage() const {
         live();
-        thinkthen_usage_v2 snapshot{};
-        snapshot.struct_size = sizeof snapshot;
-        detail::invoke(thinkthen_client_usage_v2_values, value_.get(), &snapshot);
-        const auto& value = snapshot.usage;
+        thinkthen_usage value{};
+        value.struct_size = sizeof value;
+        detail::invoke(thinkthen_client_usage_values, value_.get(), &value);
         const auto tokens = [](const thinkthen_token_usage& token) -> token_usage {
             return {token.reported_known ? std::optional<std::uint64_t>{token.reported} : std::nullopt, token.unknown_attempts};
         };
         return {value.attempts, value.responses, value.status_retries, value.connection_retries,
             value.request_body_bytes, value.active_attempts, value.active_calls,
-            tokens(value.input_tokens), tokens(value.output_tokens), snapshot.cache_hits, snapshot.replay_hits};
+            tokens(value.input_tokens), tokens(value.output_tokens)};
     }
     client(const client&) = delete;
     client& operator=(const client&) = delete;

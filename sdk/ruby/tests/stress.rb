@@ -3,35 +3,6 @@ require "json"
 require "thinkthen"
 # Feature: Ruby callers retain positions in independent streams on one client.
 
-# glibc's bytes in use for each soak checkpoint, which RSS cannot separate from the free
-# storage glibc keeps: small blocks in use plus the large blocks glibc maps on their own.
-# Its mapped storage, arena plus those blocks, bounds what glibc can be holding.
-# glibc 2.28 has mallinfo, not mallinfo2; its int fields fit this soak.
-module AllocatorInUse
-  extend FFI::Library
-  ffi_lib FFI::Library::LIBC
-  class Info < FFI::Struct
-    layout(*%i[arena ordblks smblks hblks hblkhd usmblks fsmblks uordblks fordblks keepcost].flat_map { |name| [name, :int] })
-  end
-  begin
-    attach_function :mallinfo, [], Info.by_value
-  rescue FFI::NotFoundError
-    nil
-  end
-  def self.bytes
-    return nil unless respond_to?(:mallinfo)
-    info = mallinfo
-    field = ->(name) { info[name] & 0xffffffff }
-    [field.(:uordblks) + field.(:hblkhd), field.(:arena) + field.(:hblkhd)]
-  end
-end
-
-# Ruby's live object slots, whose heap pages Ruby maps outside malloc. Each live slot
-# counts at the smallest slot size, so a retained object adds at least that much.
-module RuntimeHeap
-  SLOT = GC::INTERNAL_CONSTANTS.fetch(:BASE_SLOT_SIZE) { GC::INTERNAL_CONSTANTS.fetch(:RVALUE_SIZE) }
-  def self.bytes = GC.stat(:heap_live_slots) * SLOT
-end
 test = JSON.parse(File.read(ENV.fetch("THINKTHEN_STRESS_CASE")))
 settings = test.fetch("client").transform_keys(&:to_sym)
 settings[:backend] = settings.fetch(:backend).to_sym
@@ -90,13 +61,6 @@ ThinkThen::Client.open(**settings) do |client|
       end
       workers.each(&:value)
       if (hook = ENV["THINKTHEN_STRESS_CHECKPOINT_COMMAND"])
-        # A full collection first, so both series count what is still reachable, not garbage
-        # waiting for the collector.
-        GC.start
-        in_use, mapped = AllocatorInUse.bytes
-        ENV["THINKTHEN_STRESS_ALLOCATOR_IN_USE"] = in_use.to_s if in_use
-        ENV["THINKTHEN_STRESS_ALLOCATOR_MAPPED"] = mapped.to_s if mapped
-        ENV["THINKTHEN_STRESS_RUNTIME_HEAP"] = RuntimeHeap.bytes.to_s
         raise "resource checkpoint failed" unless system(hook)
       end
     end

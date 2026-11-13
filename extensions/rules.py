@@ -8,7 +8,7 @@ REQUEST = json.loads((ROOT / 'schemas/request.schema.json').read_text())
 FUNCTIONS = {row['properties']['function']['const']: row
              for row in REQUEST['$defs']['RawQuestion']['oneOf']}
 SETTINGS = {key: (False, value) for key, value in CLIENT['properties'].items()
-            if key not in ('api_key', 'url', 'retry', 'max_requests', 'response_store')}
+            if key not in ('api_key', 'url', 'retry', 'max_requests')}
 SETTINGS.update({key: (True, value) for key, value in CLIENT['$defs']['Retry']['properties'].items()})
 
 

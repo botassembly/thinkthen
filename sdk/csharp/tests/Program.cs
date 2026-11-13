@@ -53,7 +53,7 @@ internal static partial class Program
             catch (Exception error) { Console.Error.WriteLine(error.Message); Environment.ExitCode = 1; }
             return;
         }
-        if (args is ["--sdk-fixes", var registry]) { await SdkFixes(registry); return; }
+        if (args is ["--handle-counts"]) { await HandleCountCases(); return; }
         if (args is ["--stress-adapter"]) { await StressAdapter(); return; }
         if (args.Length >= 1 && args[0] == "--malformed-row")
         {
@@ -97,7 +97,6 @@ internal static partial class Program
         await EncoderCauses();
         await LifetimeCases(args[2]);
         await StreamThreads();
-        await StressCases(args[1]);
         await Registry(Path.Combine(Path.GetDirectoryName(args[1])!, "schemas", "contract.json"));
         Console.WriteLine("Installed C# public API consumer completed.");
     }

@@ -13,19 +13,16 @@ module ThinkThen
       end
     end
     # Open the native engine with optional backend settings and a Retry policy.
-    def initialize(backend: nil, model: nil, url: nil, api_key: nil, batch: nil, max_requests: nil, response_store: nil, retry: nil)
+    def initialize(backend: nil, model: nil, url: nil, api_key: nil, batch: nil, max_requests: nil, retry: nil)
       @mutex, @streams = Mutex.new, []
       @pid = Process.pid
       ThinkThen.send(:native)
       key = api_key.nil? || api_key.is_a?(RedactedKey) ? api_key : RedactedKey.new(api_key)
       @api_key = key
-      unless response_store.nil? || response_store.is_a?(ResponseStore)
-        Native.checked { |error| Native.thinkthen_settings_conversion_error(error) }
-      end
       policy = binding.local_variable_get(:retry)
       raise UsageError.new("retry must be a Retry", code: :"usage.settings") unless policy.nil? || policy.is_a?(Retry)
       raise UsageError.new("backend must be a Symbol", code: :"usage.backend") unless backend.nil? || backend.is_a?(Symbol)
-      raw_settings = {backend: backend, model: model, url: url, batch: batch, max_requests: max_requests, response_store: response_store&.to_h, retry: policy&.to_h}.reject { |_, value| value.nil? }
+      raw_settings = {backend: backend, model: model, url: url, batch: batch, max_requests: max_requests, retry: policy&.to_h}.reject { |_, value| value.nil? }
       output = FFI::MemoryPointer.new(:pointer)
       Native.bytes(Native.context_dump(raw_settings, :settings)) do |bytes, length|
         Native.checked { |error| Native.thinkthen_settings_from_json(bytes, length, output, error) }

@@ -105,7 +105,6 @@ pub(crate) fn post(
     policy: RetryPolicy,
     cancel: &Cancel,
     account: &crate::usage::Account,
-    response_limit: Option<u64>,
 ) -> Result<Vec<u8>, Refused> {
     let key = backend.key.as_ref().ok_or_else(|| Refused {
         error: Error::new(
@@ -182,27 +181,14 @@ pub(crate) fn post(
         };
         let status = response.status().as_u16();
         if (200..300).contains(&status) {
-            let body = match response_limit {
-                Some(limit) => response.body_mut().with_config().limit(limit).read_to_vec(),
-                None => response.body_mut().read_to_vec(),
-            };
+            let body = response.body_mut().read_to_vec();
             if let Ok(bytes) = &body {
                 attempt.response(bytes, true);
             }
             return if cancel.is_cancelled() {
                 Err(Refused::cancelled())
             } else {
-                body.map_err(|error| {
-                    if response_limit.is_some() && matches!(error, ureq::Error::BodyExceedsLimit(_))
-                    {
-                        Refused {
-                            error: crate::response_store::error(crate::Code::LocalStoreQuota),
-                            too_large: false,
-                        }
-                    } else {
-                        Refused::transport(error, name)
-                    }
-                })
+                body.map_err(|error| Refused::transport(error, name))
             };
         }
         let (body, complete) = excerpt::capture(response.body_mut());

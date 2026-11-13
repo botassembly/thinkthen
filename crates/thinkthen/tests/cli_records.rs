@@ -292,49 +292,6 @@ fn record_failures_keep_their_codes_and_exit_six() {
 }
 
 #[test]
-fn the_batch_option_beats_the_variable() {
-    let cases = [
-        (Some("2"), Some("0"), 2),
-        (None, Some("1"), 1),
-        (None, Some("3"), 3),
-    ];
-    for (flag, variable, batch) in cases {
-        let server = Loopback::noul(0.9).unwrap();
-        let mut args = vec!["--from", "lines", "--json"];
-        if let Some(flag) = flag {
-            args.extend(["--batch", flag]);
-        }
-        let output = run(&server, &args, variable, b"a\nb\nc\nd\ne\nf\n");
-        assert_eq!(output.status.code(), Some(0));
-        let actual = rows(&output);
-        assert_eq!(actual.len(), 6);
-        assert_eq!(
-            actual
-                .iter()
-                .map(|row| row["position"].as_u64().unwrap())
-                .collect::<Vec<_>>(),
-            (1..=6).collect::<Vec<_>>()
-        );
-        let sizes: Vec<_> = server
-            .requests()
-            .iter()
-            .map(|request| {
-                request.json().unwrap()["questions"]
-                    .as_object()
-                    .unwrap()
-                    .len()
-            })
-            .collect();
-        assert_eq!(sizes.iter().sum::<usize>(), 6);
-        assert_eq!(sizes.len(), 6_usize.div_ceil(batch));
-        assert!(
-            sizes.iter().all(|size| *size <= batch),
-            "{flag:?} {variable:?}: {sizes:?}"
-        );
-    }
-}
-
-#[test]
 fn a_usage_error_exits_2_and_sends_nothing() {
     // (arguments, the code reported, or None when the argument parser refuses)
     let cases: [(&[&str], Option<&str>); 3] = [
@@ -434,7 +391,7 @@ fn record_byte_limit_returns_before_the_input_pipe_closes() {
 }
 
 #[test]
-fn field_selects_records_and_the_previous_option_is_not_an_alias() {
+fn field_selects_records() {
     let server = Loopback::noul(0.9).unwrap();
     let input = b"{\"body\":\"refund\",\"evidence\":\"unrelated user data\"}\n";
     let output = run(
@@ -448,18 +405,10 @@ fn field_selects_records_and_the_previous_option_is_not_an_alias() {
     let sent = server.requests()[0].json().unwrap();
     assert!(sent.to_string().contains("refund"));
     assert!(!sent.to_string().contains("unrelated user data"));
-    let old = run(
-        &server,
-        &["--from", "jsonl", "--evidence", "/body"],
-        None,
-        input,
-    );
-    assert_eq!(old.status.code(), Some(2), "{old:?}");
-    assert_eq!(server.count(), 1, "the old option must not call a backend");
 }
 
 #[test]
-fn field_environment_selects_records_and_the_previous_setting_is_ignored() {
+fn field_environment_selects_records() {
     let file = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(
         file.path(),
@@ -473,8 +422,7 @@ fn field_environment_selects_records_and_the_previous_setting_is_ignored() {
             .args(["decide", "Ready?", "--from", "jsonl", "--json"])
             .arg(file.path())
             .env("THINKTHEN_BASE_URL", server.base())
-            .env("THINKTHEN_API_KEY", KEY)
-            .env("THINKTHEN_EVIDENCE", "invalid old pointer");
+            .env("THINKTHEN_API_KEY", KEY);
         if selected {
             command.env("THINKTHEN_FIELD", "/body");
         }

@@ -89,9 +89,3 @@ const client = new ThinkThen({maxRequests: 100});
 The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
 
 `maxRequests` accepts exact JavaScript safe integers; unsupported precision is rejected rather than rounded.
-
-### Local response storage
-
-`new ThinkThen({responseStore: {path, mode: "record", namespace, modelGeneration}})` explicitly enables local recording. Modes `"cache"` and `"replay"` select eligible reuse or strict offline playback without credentials. Optional `maxBytes`, `maxEntries`, `maxAge` (seconds), and `busyTimeoutMs` use engine defaults when omitted. `client.usage().cacheHits` and `replayHits` are exact `bigint` counters.
-
-Storage is disabled unless configured. Local recordings retain question and record text; use a private local path and a nonsecret namespace/model-generation label. The shared engine owns limits, identity and concurrency policy. Replay misses fail locally rather than making a model call.

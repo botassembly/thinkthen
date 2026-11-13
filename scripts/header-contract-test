@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Check when the shared header build is reused, cleaned and locked."""
+import errno
+import json
+import os
+from pathlib import Path
+import runpy
+import sys
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+class HeaderContract(unittest.TestCase):
+    def setUp(self):
+        self.check = runpy.run_path(str(ROOT / 'scripts/header_contract.py'))['check']
+        self.tree = 'a' * 40
+        self.dirty = ''
+
+    def output(self, arguments, **options):
+        if arguments[0] == 'rustc':
+            return 'rustc pinned\nhost: x86_64-unknown-linux-gnu\n'
+        if 'metadata' in arguments:
+            return json.dumps({'packages': [{'name': 'thinkthen'}, {'name': 'thinkthen-ffi'}]})
+        return self.dirty if 'status' in arguments else self.tree
+
+    def calls(self, home, root):
+        with patch.object(Path, 'home', return_value=home), patch('subprocess.check_output', self.output), \
+                patch('subprocess.run') as run:
+            self.check(root)
+        return [call.args[0][:2] for call in run.call_args_list]
+
+    def test_clean_tree_reuses_the_build_until_the_commit_changes(self):
+        clean, generate = ['cargo', 'clean'], ['cargo', 'run']
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            self.assertEqual(self.calls(home, home / 'first'), [clean, generate])
+            # The same checkout and tree already passed: nothing runs.
+            self.assertEqual(self.calls(home, home / 'first'), [])
+            # Another checkout of the same commit shares the build without cleaning it.
+            self.assertEqual(self.calls(home, home / 'second'), [generate])
+            # A new commit compiles the workspace crates afresh.
+            self.tree = 'b' * 40
+            self.assertEqual(self.calls(home, home / 'second'), [clean, generate])
+            # A dirty tree always cleans and never records a pass.
+            self.dirty = ' M source'
+            self.assertEqual(self.calls(home, home / 'second'), [clean, generate])
+            self.assertEqual(self.calls(home, home / 'second'), [clean, generate])
+
+    def test_windows_lock_keeps_waiting_after_lk_lock_gives_up(self):
+        attempts = []
+
+        def locking(descriptor, mode, size):
+            attempts.append(mode)
+            if len(attempts) <= 2:
+                raise OSError((errno.EACCES, errno.EDEADLK)[len(attempts) - 1], 'locked')
+
+        windows = SimpleNamespace(name='nt', environ={}, fsencode=os.fsencode)
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(self.check.__globals__, os=windows), \
+                    patch.dict(sys.modules, msvcrt=SimpleNamespace(LK_LOCK=1, locking=locking)):
+                with self.check.__globals__['locked'](Path(directory) / 'build.lock'):
+                    pass
+        self.assertEqual(attempts, [1, 1, 1])
+
+
+if __name__ == '__main__':
+    unittest.main()

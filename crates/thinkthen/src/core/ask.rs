@@ -40,14 +40,6 @@ pub(crate) enum Ask {
 pub(crate) const DEFAULT_STATE: &str = "Each question quotes the text it asks about.";
 
 impl Ask {
-    pub(crate) fn variant(&self) -> &'static str {
-        match self {
-            Self::WithState { question, .. } => question.variant(),
-            Self::Choice { .. } => "choice",
-            Self::YesNo { .. } => "yes-no",
-            Self::Scale { .. } => "scale",
-        }
-    }
     pub(crate) fn with_state(self, state: std::sync::Arc<str>) -> Self {
         Self::WithState {
             state,
@@ -88,39 +80,6 @@ pub(crate) struct AskAnswer {
 }
 
 impl AskAnswer {
-    /// Serialize admitted probabilities without thresholding or normalization.
-    pub(crate) fn stored(&self) -> Result<Vec<u8>, crate::core::Error> {
-        serde_json::to_vec(&self.probabilities).map_err(|_| {
-            crate::core::Error::from_contract(
-                crate::core::Code::LocalStoreAnswer,
-                "the stored answer cannot be encoded",
-            )
-        })
-    }
-
-    /// Admit a persisted answer against the exact materialized ask again.
-    pub(crate) fn restore(ask: &Ask, body: &[u8]) -> Result<Self, crate::core::Error> {
-        let bad = || {
-            crate::core::Error::from_contract(
-                crate::core::Code::LocalStoreAnswer,
-                "the stored answer has an invalid shape or probability",
-            )
-        };
-        if let Ask::WithState { question, .. } = ask {
-            return Self::restore(question, body);
-        }
-        let probabilities: Vec<Probability> = serde_json::from_slice(body).map_err(|_| bad())?;
-        match ask {
-            Ask::YesNo { .. } if probabilities.len() == 1 => Ok(Self::choice(probabilities)),
-            Ask::Choice { options, .. } if probabilities.len() == options.len() => {
-                Ok(Self::choice(probabilities))
-            }
-            Ask::Scale { levels, .. } if probabilities.len() == levels.len() => {
-                Self::scale(probabilities).map_err(|_| bad())
-            }
-            _ => Err(bad()),
-        }
-    }
     pub(crate) fn choice(probabilities: Vec<Probability>) -> Self {
         Self { probabilities }
     }

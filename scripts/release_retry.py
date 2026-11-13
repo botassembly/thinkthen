@@ -15,7 +15,7 @@ CHECKS = frozenset({
     '.github/workflows/release-prepare.yml', '.github/workflows/native-qualification.yml',
     'scripts/header_contract.py', 'scripts/qualification-recipe-test',
     'scripts/qualification-continuation-test', 'scripts/release-script-test',
-    'scripts/release_retry.py', 'scripts/release-retry-test',
+    'scripts/release_retry.py',
     'scripts/release_windows_sdks.py', 'scripts/release_windows_check.py',
     'scripts/qualification-windows-prepare', 'scripts/release-windows-replay',
 })

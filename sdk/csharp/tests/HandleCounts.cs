@@ -5,11 +5,9 @@ using ThinkThen;
 
 internal static partial class Program
 {
-    private static async Task SdkFixes(string registry)
+    // macOS only: csharp-gate swaps in handle-counts.c to count live native owners.
+    private static async Task HandleCountCases()
     {
-        await RegistrationAndSecrets();
-        await Registry(registry);
-        await EncoderCauses();
         using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
         using var question = DecideQuestion.Create("Ready?");
         int before = HandleCounts.Live();
@@ -43,7 +41,7 @@ internal static partial class Program
         // The user question remains independent of the disposed client.
         using var other = new ThinkThenClient(new() { Backend = Backend.Stub });
         Successful(await other.DecideAsync(question, "another client"));
-        Console.WriteLine("C# disposal, ownership, handle counts, encoder causes and enum contracts passed.");
+        Console.WriteLine("C# disposal, ownership and handle counts passed.");
     }
     // Feature: ordinary installed consumers reject invalid typed options.
     private static async Task SdkUsageErrors()

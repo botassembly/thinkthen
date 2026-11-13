@@ -162,12 +162,9 @@ static void concurrent(void) {
     puts("{\"concurrent\":true,\"rows\":32}");
 }
 
-#include "workload.h"
-
 int main(int argc, char **argv) {
     assert(argc == 2);
     assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()));
-    if (strcmp(argv[1], "workload") == 0) { workload(); return 0; }
     if (strcmp(argv[1], "concurrent") == 0) { concurrent(); return 0; }
     if (strcmp(argv[1], "ownership") == 0) { ownership(); return 0; }
     char *settings = line();

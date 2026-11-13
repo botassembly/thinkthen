@@ -89,14 +89,6 @@ public final class ThinkThen implements AutoCloseable {
          * @return the batch result
          */
         public Builder batch(int value) { settings.put("batch",value); return this; }
-        /** Select explicit local response storage; null disables retention.
-         * @param value caller-owned store configuration
-         * @return this builder
-         */
-        public Builder responseStore(@Nullable ResponseStore value) {
-            if (value == null) settings.remove("response_store"); else settings.put("response_store", value.values());
-            return this;
-        }
         /** Set the client send allowance; zero forbids sends, absence is unlimited.
          * @param value the allowance, admitted by the shared engine
          * @return this builder

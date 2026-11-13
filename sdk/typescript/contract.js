@@ -1,5 +1,5 @@
 // Generated native requirement. Do not edit.
-export const ABI_VERSION = 131077;
+export const ABI_VERSION = 131076;
 export const ABI_VERSION_EXPORT = "abiVersion";
 export const ABI_CODE = "usage.abi";
 export const ABI_MESSAGE = "the native ABI is incompatible";
@@ -87,11 +87,5 @@ export const CODE_NAMES = Object.freeze({
     "4003": "local.toolbox",
     "4004": "local.accounting",
     "4005": "local.request-limit",
-    "4006": "local.response-store",
-    "4007": "local.store-corrupt",
-    "4008": "local.store-format",
-    "4009": "local.store-answer",
-    "4010": "local.replay-miss",
-    "4011": "local.store-quota",
     "5001": "internal.bug",
 });

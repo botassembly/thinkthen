@@ -61,35 +61,6 @@ pub(super) fn command() -> Command {
         };
         command = command.arg(arg);
     }
-    for (name, help) in [
-        (
-            "response-store",
-            "Private local response directory; retention is off unless selected",
-        ),
-        (
-            "response-mode",
-            "Explicit response policy: cache, record or replay",
-        ),
-        (
-            "response-namespace",
-            "Caller-owned nonsecret response namespace",
-        ),
-        (
-            "model-generation",
-            "Explicit model-generation label for response identity",
-        ),
-        (
-            "response-max-bytes",
-            "Maximum logical retained response payload bytes",
-        ),
-        ("response-max-entries", "Maximum eligible stored asks"),
-        (
-            "response-max-age",
-            "Maximum live-cache age in whole seconds",
-        ),
-    ] {
-        command = command.arg(option(name, help).global(true));
-    }
     for (name, short, help) in [
         (
             "usage",

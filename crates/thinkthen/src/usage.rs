@@ -47,12 +47,6 @@ pub struct Usage {
     pub active_calls: u64,
     /// Attempts not yet finished; their tokens are still unresolved.
     pub active_attempts: u64,
-    /// Distinct materialized asks served from the local TTL cache.
-    #[serde(default)]
-    pub cache_hits: u64,
-    /// Distinct materialized asks served from an immutable recording snapshot.
-    #[serde(default)]
-    pub replay_hits: u64,
     /// Observed input tokens.
     pub input_tokens: TokenUsage,
     /// Observed output tokens.
@@ -133,21 +127,6 @@ impl Account {
         let mut usage = *self.usage.lock().unwrap_or_else(PoisonError::into_inner);
         usage.active_calls = *calls;
         usage
-    }
-    pub(crate) fn reused(&self, count: usize, replay: bool) -> Result<(), Error> {
-        let mut usage = self.usage.lock().unwrap_or_else(PoisonError::into_inner);
-        let counter = if replay {
-            &mut usage.replay_hits
-        } else {
-            &mut usage.cache_hits
-        };
-        *counter = counter.checked_add(count as u64).ok_or_else(|| {
-            Error::from_contract(
-                Code::LocalAccounting,
-                "client reuse accounting exceeded its supported range",
-            )
-        })?;
-        Ok(())
     }
     pub(crate) fn begin(&self, bytes: usize, reason: Reason) -> Result<Attempt, Error> {
         let mut usage = self.usage.lock().unwrap_or_else(PoisonError::into_inner);

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { cp, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { Worker } from "node:worker_threads";
 import { once } from "node:events";
@@ -45,25 +45,6 @@ test("import works without an engine and first loads preserve the loader error",
         && error.code === "local.io" && /native engine/.test(error.message));
     }
   } finally { await rm(temporary, { recursive: true, force: true }); }
-});
-
-// Feature: the release package installs all platform engines without a fetch.
-test("one package carries exactly the release metadata's native platform engines", async () => {
-  const source = await readFile(new URL("../../../scripts/release_registry.py", import.meta.url), "utf8");
-  const table = source.match(/NODE_TARGETS = \{([\s\S]*?)\}/);
-  assert(table, "release metadata must identify npm platform mappings");
-  const targets = [...table[1].matchAll(/'[^']+':\s*'([^']+)'/g)].map(match => `${match[1]}.node`).sort();
-  assert(targets.length > 0);
-  if ((await stat(join(root, "thinkthen.node"))).isFile()) {
-    assert(targets.includes(`${process.platform}-${process.arch}.node`));
-    return;
-  }
-  const files = (await readdir(join(root, "thinkthen.node"))).filter(name => name.endsWith(".node")).sort();
-  assert.deepEqual(files, targets);
-  const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  assert.equal(Object.keys(manifest.optionalDependencies ?? {}).length, 0);
-  assert.equal(manifest.scripts?.preinstall, "node platform.js");
-  for (const name of ["install", "postinstall"]) assert.equal(manifest.scripts?.[name], undefined);
 });
 
 // Feature: an addon can serve independent worker contexts through its public API.

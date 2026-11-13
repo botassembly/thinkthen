@@ -2,10 +2,8 @@
 import os
 import json
 import math
-from pathlib import Path
 import queue
 import subprocess
-import sys
 import threading
 import time
 
@@ -153,18 +151,3 @@ def arrived_or_exited(fixture, process, arrivals=1, *, timeout=30):
         raise RuntimeError(f'adapter stopped before request arrival: {kind} {value}; '
                            f'last_observed_received={received} required={arrivals} '
                            f'elapsed_seconds={time.monotonic() - started:.3f} budget_seconds={timeout:g}')
-
-
-def soak(surface, command, environment, **options):
-    """Run a surface's 60-round soak on both backends when the extended soak names a folder."""
-    folder = os.environ.get('THINKTHEN_SOAK_FOLDER')
-    if not folder:
-        return
-    runner = Path(__file__).with_name('stress-adapters.py')
-    failed = [backend for backend in ('systemone', 'openai') if subprocess.run(
-        [sys.executable, str(runner), '--surface', surface, '--rounds', '60', '--backend', backend,
-         '--evidence-path', str(Path(folder) / f'{surface}-{backend}.jsonl'), '--', *command],
-        env=dict(environment, **{name: os.environ[name] for name in ('THINKTHEN_SOAK_ROUNDS', 'THINKTHEN_SOAK_RECORDS')
-                                 if name in os.environ}), **options).returncode]
-    if failed:
-        raise SystemExit(f'{surface} 60-round soak failed on: {", ".join(failed)}')

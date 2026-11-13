@@ -20,21 +20,8 @@ export type RecordInput = null | undefined | boolean | number | string | {
 export type Records<T extends RecordInput = RecordInput> = (Iterable<T> | AsyncIterable<T>) & object;
 /** JSON object keys or array indices used to select field. */
 export type KeyPath = readonly (string | number)[];
-/** Explicit local response storage, admitted by the shared engine. */
-export interface ResponseStoreOptions {
-  readonly path: string;
-  readonly mode: "cache" | "record" | "replay";
-  readonly namespace: string;
-  readonly modelGeneration: string;
-  readonly maxBytes?: number;
-  readonly maxEntries?: number;
-  readonly maxAge?: number;
-  readonly busyTimeoutMs?: number;
-}
 /** Backend settings admitted once when the client is constructed. */
 export interface ClientOptions {
-  /** Local storage is disabled unless explicitly configured. */
-  readonly responseStore?: ResponseStoreOptions | null;
   /** Select the service backend; otherwise use THINKTHEN_BACKEND, then systemone. */
   readonly backend?: Backend;
   /** Override the selected backend model. */
@@ -470,8 +457,6 @@ export interface Usage {
   readonly requestBodyBytes: bigint;
   readonly activeAttempts: bigint;
   readonly activeCalls: bigint;
-  readonly cacheHits: bigint;
-  readonly replayHits: bigint;
   readonly inputTokens: TokenUsage;
   readonly outputTokens: TokenUsage;
 }

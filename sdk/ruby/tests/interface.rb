@@ -184,12 +184,6 @@ def ruby_usage
   client = ThinkThen::Client.new(backend: :stub, max_requests: 0)
   before = client.usage
   equal(0, before.attempts, "stub has no remote attempts")
-  equal(0, before.cache_hits, "cache metrics translate independently")
-  equal(0, before.replay_hits, "replay metrics translate independently")
-  store = ThinkThen::ResponseStore.new(path: "unused-private-store", mode: :replay, namespace: "tests", model_generation: "v1")
-  assert(store.frozen?, "response-store configuration is immutable")
-  assert(!store.to_h.key?("max_bytes"), "unspecified bounds remain absent")
-  raises(ThinkThen::UsageError) { ThinkThen::Client.new(backend: :stub, response_store: store) }
   equal(0, before.active_calls, "new client has no active calls")
   equal(0, before.input_tokens.reported, "stub input usage is known zero")
   assert(before.frozen? && before.input_tokens.frozen?, "snapshot values are immutable")

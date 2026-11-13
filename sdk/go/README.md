@@ -107,9 +107,3 @@ client, err := thinkthen.New(thinkthen.Config{MaxRequests: &limit})
 ```
 
 The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
-
-### Local response storage
-
-`Config.ResponseStore` accepts a `*ResponseStoreConfig` with `Path`, `Mode` (`ResponseCache`, `ResponseRecord`, `ResponseReplay`), `Namespace` and `ModelGeneration`. Optional pointer limits `MaxBytes`, `MaxEntries`, `MaxAge` (seconds), and `BusyTimeoutMS` preserve explicit zero for shared rejection; nil uses defaults. Replay needs no credential. Usage snapshots expose `CacheHits` and `ReplayHits`.
-
-Storage is disabled unless configured. Local recordings retain question and record text; use a private local path and a nonsecret namespace/model-generation label. The shared engine owns limits, identity and concurrency policy. Replay misses fail locally rather than making a model call.

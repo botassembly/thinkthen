@@ -43,7 +43,6 @@ from ._types import (
     Record,
     RelateRow,
     RelationRule,
-    ResponseStore,
     RetryPolicy,
     ScoreRow,
     Strings,
@@ -67,7 +66,6 @@ class AsyncClient:
         batch: int | None = None,
         max_requests: int | None = None,
         retry: RetryPolicy | None = None,
-        response_store: ResponseStore | None = None,
     ) -> None:
         self._client = Client(
             backend=backend,
@@ -77,7 +75,6 @@ class AsyncClient:
             batch=batch,
             max_requests=max_requests,
             retry=retry,
-            response_store=response_store,
         )
         self._active: WeakSet[AsyncRowStream[Any]] = WeakSet()
 

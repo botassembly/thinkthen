@@ -105,7 +105,6 @@ pub struct Settings {
     batch: Option<Batch>,
     max_requests: Option<u64>,
     retry: Retry,
-    response_store: Option<crate::ResponseStore>,
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -138,8 +137,6 @@ struct Input {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "crate::core::diagnostic::max_requests")]
     max_requests: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    response_store: Option<crate::ResponseStore>,
 }
 impl Settings {
     /// Copy only the explicit key from another snapshot without exposing bytes.
@@ -156,7 +153,6 @@ impl Settings {
         batch: Batch,
         retry: Retry,
         max_requests: Option<u64>,
-        response_store: Option<crate::ResponseStore>,
     ) -> Self {
         Self {
             backend: Some(backend),
@@ -166,7 +162,6 @@ impl Settings {
             batch: Some(batch),
             max_requests,
             retry,
-            response_store,
         }
     }
     /// Admit canonical settings without resolving environment variables.
@@ -264,12 +259,6 @@ impl Settings {
         }
         Ok(self)
     }
-    /// Explicitly enable local retention, or disable it with `None`.
-    #[must_use]
-    pub fn response_store(mut self, store: Option<crate::ResponseStore>) -> Self {
-        self.response_store = store;
-        self
-    }
     /// Select a validated retry policy.
     #[must_use]
     pub fn retry(mut self, retry: Retry) -> Self {
@@ -307,17 +296,7 @@ impl Settings {
             self.model.as_deref(),
             &variable,
         )?;
-        let store = self
-            .response_store
-            .as_ref()
-            .map(|config| {
-                crate::response_store::validate_route(&backend)?;
-                crate::response_store::Store::open(config.clone()).map(std::sync::Arc::new)
-            })
-            .transpose()?;
-        if !store.as_ref().is_some_and(|store| store.replay()) {
-            table.authorize(&mut backend, self.api_key.as_ref(), &variable)?;
-        }
+        table.authorize(&mut backend, self.api_key.as_ref(), &variable)?;
         let batch = match self.batch {
             Some(batch) => batch,
             None if selected == BackendName::Stub => Batch::default(),
@@ -327,7 +306,6 @@ impl Settings {
             .batch(batch)
             .retry_policy(self.retry.policy()?);
         engine.account = crate::usage::Account::new(self.max_requests);
-        engine.store = store;
         Ok(engine)
     }
 }
@@ -360,7 +338,6 @@ impl TryFrom<Input> for Settings {
                 .transpose()?,
             retry: value.retry,
             max_requests: value.max_requests,
-            response_store: value.response_store,
         })
     }
 }
@@ -376,7 +353,6 @@ impl From<Settings> for Input {
                 .map(|batch| serde_json::Number::from(batch.get().get())),
             retry: value.retry,
             max_requests: value.max_requests,
-            response_store: value.response_store,
         }
     }
 }

@@ -99,18 +99,13 @@ export class ThinkThen {
   constructor(options = {}) {
     const native = loadNative();
     const settings = conversion(() => {
-      const { apiKey, retry, maxRequests, responseStore, ...fields } = /** @type {import('./index.d.ts').ClientOptions} */(snapshot(options));
+      const { apiKey, retry, maxRequests, ...fields } = /** @type {import('./index.d.ts').ClientOptions} */(snapshot(options));
       if (fields.backend === undefined && process.env.THINKTHEN_BACKEND !== undefined) {
         fields.backend = /** @type {import('./index.d.ts').Backend} */(process.env.THINKTHEN_BACKEND);
       }
       const names = { maxRetries: "max_retries", initialBackoffMs: "initial_backoff_ms", attemptTimeoutMs: "attempt_timeout_ms" };
       if (typeof maxRequests === "number" && Math.abs(maxRequests) > Number.MAX_SAFE_INTEGER) throw new TypeError();
-      if (responseStore != null) {
-        for (const value of [responseStore.maxBytes, responseStore.maxEntries, responseStore.maxAge, responseStore.busyTimeoutMs]) {
-          if (typeof value === "number" && Math.abs(value) > Number.MAX_SAFE_INTEGER) throw new TypeError();
-        }
-      }
-      return encode({ ...fields, ...(responseStore === undefined ? {} : {response_store: responseStore === null ? null : rename(responseStore, {modelGeneration: "model_generation", maxBytes: "max_bytes", maxEntries: "max_entries", maxAge: "max_age", busyTimeoutMs: "busy_timeout_ms"})}), ...(maxRequests == null ? {} : {max_requests: maxRequests}), ...(apiKey === undefined ? {} : {api_key: apiKey}),
+      return encode({ ...fields, ...(maxRequests == null ? {} : {max_requests: maxRequests}), ...(apiKey === undefined ? {} : {api_key: apiKey}),
         ...(retry === undefined ? {} : {retry: rename(retry, names)}) });
     }, () => native.rejectSettingsConversion());
     try { this.#client = new native.Client(settings); }
@@ -139,9 +134,9 @@ export class ThinkThen {
     try {
       /** @type {unknown} */
       const decoded = JSON.parse(json);
-      const value = /** @type {{attempts: string, responses: string, status_retries: string, connection_retries: string, request_body_bytes: string, active_attempts: string, active_calls: string, cache_hits: string, replay_hits: string, input_tokens: {reported: string | null, unknown_attempts: string}, output_tokens: {reported: string | null, unknown_attempts: string}}} */ (decoded);
+      const value = /** @type {{attempts: string, responses: string, status_retries: string, connection_retries: string, request_body_bytes: string, active_attempts: string, active_calls: string, input_tokens: {reported: string | null, unknown_attempts: string}, output_tokens: {reported: string | null, unknown_attempts: string}}} */ (decoded);
       const tokens = (/** @type {{reported: string | null, unknown_attempts: string}} */ token) => Object.freeze({reported: token.reported === null ? null : BigInt(token.reported), unknownAttempts: BigInt(token.unknown_attempts)});
-      return Object.freeze({attempts: BigInt(value.attempts), responses: BigInt(value.responses), statusRetries: BigInt(value.status_retries), connectionRetries: BigInt(value.connection_retries), requestBodyBytes: BigInt(value.request_body_bytes), activeAttempts: BigInt(value.active_attempts), activeCalls: BigInt(value.active_calls), cacheHits: BigInt(value.cache_hits), replayHits: BigInt(value.replay_hits), inputTokens: tokens(value.input_tokens), outputTokens: tokens(value.output_tokens)});
+      return Object.freeze({attempts: BigInt(value.attempts), responses: BigInt(value.responses), statusRetries: BigInt(value.status_retries), connectionRetries: BigInt(value.connection_retries), requestBodyBytes: BigInt(value.request_body_bytes), activeAttempts: BigInt(value.active_attempts), activeCalls: BigInt(value.active_calls), inputTokens: tokens(value.input_tokens), outputTokens: tokens(value.output_tokens)});
     } catch (error) { throw nativeError(error); }
   }
   async [Symbol.asyncDispose]() { await this.close(); }

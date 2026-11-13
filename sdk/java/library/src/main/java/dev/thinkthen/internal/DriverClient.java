@@ -126,7 +126,7 @@ public final class DriverClient implements AutoCloseable {
                 return new dev.thinkthen.Usage(value.path("attempts").bigIntegerValue(),
                     value.path("responses").bigIntegerValue(),value.path("status_retries").bigIntegerValue(),
                     value.path("connection_retries").bigIntegerValue(),value.path("request_body_bytes").bigIntegerValue(),
-                    value.path("active_attempts").bigIntegerValue(),value.path("active_calls").bigIntegerValue(),tokens(value.path("input_tokens")),tokens(value.path("output_tokens")),value.path("cache_hits").bigIntegerValue(),value.path("replay_hits").bigIntegerValue());
+                    value.path("active_attempts").bigIntegerValue(),value.path("active_calls").bigIntegerValue(),tokens(value.path("input_tokens")),tokens(value.path("output_tokens")));
             } finally { Native.call("buffer_free",out); }
         } catch (RuntimeException error) { throw translate(error); }
     }

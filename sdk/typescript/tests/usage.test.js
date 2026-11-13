@@ -17,16 +17,8 @@ test("client usage copies exact counters and survives awaited close", async () =
   await client.close();
   const after = client.usage();
   assert.equal(after.attempts, 0n);
-  assert.equal(after.cacheHits, 0n);
-  assert.equal(after.replayHits, 0n);
   assert.equal(after.activeCalls, 0n);
   assert.equal(after.outputTokens.reported, 0n);
   assert.equal(before.attempts, 0n);
   await assert.rejects(client.decide("Ready?", "yes").row(), {code: "usage.closed"});
-});
-
-test("response storage projects names and explicit zero to shared admission", () => {
-  assert.throws(() => new sdk.ThinkThen({backend: "openai", responseStore: {
-    path: "unused-responses", mode: "cache", namespace: "sdk-test", modelGeneration: "generation", maxEntries: 0,
-  }}), {code: "usage.settings"});
 });

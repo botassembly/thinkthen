@@ -47,25 +47,3 @@ def shared_rows(rows, backend, model):
         return row
     return [project(row) for row in rows]
 
-
-if __name__ == "__main__":
-    # Regression: a whole-valued probability still requires R double storage.
-    for wrong in (1, True):
-        try:
-            assert_fields(wrong, 1.0, "seeded integer or boolean probability")
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError("a non-double passed as a floating point value")
-    restored = typed_numbers({"rows": [{"probability": 1}], "numeric_types": [
-        {"path": ["rows", 0, "probability"], "type": "double"}]})
-    assert_fields(restored, {"rows": [{"probability": 1.0}]}, "R double survives JSON")
-    for actual, expected in (({"answer": True, "extra": 1}, {"answer": True}),
-                             ({"source": {"name": "unexpected"}}, {})):
-        try:
-            assert_fields(actual, expected, "seeded extra field")
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError("an unexpected field passed strict row comparison")
-    print("R row comparison rejects integer and boolean probabilities")

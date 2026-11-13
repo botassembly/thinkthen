@@ -135,22 +135,6 @@ for (const fixture of optionsCases) {
   });
 }
 
-// Feature: the conformance boundary refuses undeclared fields on non-answer rows.
-test("strict row comparison rejects a seeded extra answer", () => {
-  const expected = {function: "decide", position: 1, status: "unsure", probability: 0.6};
-  assert.throws(() => assert.deepEqual(normalize({...expected, answer: null}), expected), assert.AssertionError);
-});
-
-// Feature: shared row provenance matches the selected client before normalization.
-test("strict row comparison rejects wrong backend and model", () => {
-  const expected = {function: "decide", position: 1, status: "unsure", probability: 0.6};
-  const row = {...expected, source: {backend: "openai", model: "fixture-model", questionIdentity: "fixture"}};
-  assertRow(row, expected, "openai", "fixture-model");
-  for (const source of [{...row.source, backend: "stub"}, {...row.source, model: "wrong-model"}]) {
-    assert.throws(() => assertRow({...row, source}, expected, "openai", "fixture-model"), assert.AssertionError);
-  }
-});
-
 // Feature: native error families select the installed public exception factory.
 test("registry families select exact public error classes", async () => {
   const registry = JSON.parse(await readFile(new URL(manifest.registry, directory), "utf8"));

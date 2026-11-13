@@ -19,8 +19,6 @@ type Usage struct {
 	RequestBodyBytes  uint64     `json:"request_body_bytes"`
 	ActiveAttempts    uint64     `json:"active_attempts"`
 	ActiveCalls       uint64     `json:"active_calls"`
-	CacheHits         uint64     `json:"cache_hits"`
-	ReplayHits        uint64     `json:"replay_hits"`
 	InputTokens       TokenUsage `json:"input_tokens"`
 	OutputTokens      TokenUsage `json:"output_tokens"`
 }

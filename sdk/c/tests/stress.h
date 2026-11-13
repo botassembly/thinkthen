@@ -13,12 +13,6 @@ static int stress_start(stress_thread *thread, unsigned(__stdcall *entry)(void *
 static int stress_join(stress_thread thread) {
     return WaitForSingleObject(thread, INFINITE) != WAIT_OBJECT_0 || !CloseHandle(thread);
 }
-/* MSVC's headers deprecate getenv, and these consumers build with warnings as errors. */
-static const char *stress_env(const char *name) {
-    char *value = NULL;
-    size_t size = 0;
-    return _dupenv_s(&value, &size, name) == 0 ? value : NULL;
-}
 #else
 #include <pthread.h>
 typedef pthread_t stress_thread;
@@ -27,7 +21,6 @@ static int stress_start(stress_thread *thread, void *(*entry)(void *), void *wor
     return pthread_create(thread, NULL, entry, work);
 }
 static int stress_join(stress_thread thread) { return pthread_join(thread, NULL); }
-static const char *stress_env(const char *name) { return getenv(name); }
 #endif
 
 typedef struct {
@@ -125,8 +118,6 @@ static int stress_main(int argc, char **argv) {
             widths |= work[i].identifier_width_mask;
             thinkthen_call_free(work[i].call);
         }
-        const char *hook = stress_env("THINKTHEN_STRESS_CHECKPOINT_COMMAND");
-        if (hook != NULL) assert(system(hook) == 0);
     }
     thinkthen_client_free(client);
     thinkthen_error_free(&error);

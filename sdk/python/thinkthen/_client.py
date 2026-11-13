@@ -52,7 +52,6 @@ from ._types import (
     Record,
     RelateRow,
     RelationRule,
-    ResponseStore,
     RetryPolicy,
     ScoreRow,
     Strings,
@@ -89,7 +88,6 @@ class Client:
         batch: int | None = None,
         max_requests: int | None = None,
         retry: RetryPolicy | None = None,
-        response_store: ResponseStore | None = None,
     ) -> None:
         """Open a client.
 
@@ -126,14 +124,6 @@ class Client:
                         binding(_native.reject_settings_conversion)
                     policy[name + "_ms"] = _milliseconds(value)
             values["retry"] = policy
-        if response_store is not None:
-            if not isinstance(response_store, ResponseStore):
-                binding(_native.reject_settings_conversion)
-            values["response_store"] = {
-                field.name: getattr(response_store, field.name)
-                for field in fields(response_store)
-                if getattr(response_store, field.name) is not None
-            }
         settings = encode(values, _native.reject_settings_conversion)
         self._native: _native.NativeEngine | None = binding(
             lambda: _native.NativeEngine(settings)
@@ -162,9 +152,6 @@ class Client:
                 retry["attempt_timeout_ms"] / 1000,
             ),
             value.get("max_requests"),
-            ResponseStore(**value["response_store"])
-            if value.get("response_store") is not None
-            else None,
         )
 
     @property

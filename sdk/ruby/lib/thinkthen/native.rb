@@ -285,7 +285,6 @@ module ThinkThen
                 status_retries: fields.fetch(:status_retries), connection_retries: fields.fetch(:connection_retries),
                 request_body_bytes: fields.fetch(:request_body_bytes), active_attempts: fields.fetch(:active_attempts),
                 active_calls: fields.fetch(:active_calls),
-                cache_hits: fields.fetch(:cache_hits), replay_hits: fields.fetch(:replay_hits),
                 input_tokens: TokenUsage.new(reported: input.fetch(:reported), unknown_attempts: input.fetch(:unknown_attempts)),
                 output_tokens: TokenUsage.new(reported: output_tokens.fetch(:reported), unknown_attempts: output_tokens.fetch(:unknown_attempts)))
     ensure

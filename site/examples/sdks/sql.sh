@@ -35,10 +35,12 @@ trap cleanup EXIT
 
 case $database in
 duckdb)
-    # The reader starts DuckDB in the folder the archive was extracted into.
+    # Hardened DuckDB builds refuse a relative LOAD, so the page shows an
+    # absolute-path placeholder; point it at the staged extension.
     cp "$packages/duckdb/thinkthen.duckdb_extension" "$scratch/"
     cd "$scratch"
-    session | "$packages/bin/duckdb" -unsigned -bail
+    session | sed "s|/absolute/path/to/thinkthen.duckdb_extension|$scratch/thinkthen.duckdb_extension|" |
+        "$packages/bin/duckdb" -unsigned -bail
     ;;
 sqlite)
     cp "$packages/sqlite/thinkthen_sqlite.so" "$scratch/"

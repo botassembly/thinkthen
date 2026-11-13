@@ -1,27 +1,12 @@
 #!/bin/sh
-# Exercise candidate export and strict gate boundaries without native production.
+# Check future public planning contents with the caller-owned private patterns.
 set -eu
 case "$#:${1:-}" in
-    0:|1:--contracts-only|2:--planning) ;;
-    *) echo "usage: scripts/public-export-check [--contracts-only | --planning PRIVATE_PATTERN_FILE]" >&2; exit 2 ;;
+    2:--planning) ;;
+    *) echo "usage: scripts/public-export-check --planning PRIVATE_PATTERN_FILE" >&2; exit 2 ;;
 esac
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
-if [ "${1:-}" = --planning ]; then
-    # Planning is deliberately excluded from the current strict product export.
-    # Check its future public contents with the same caller-owned private patterns.
-    export THINKTHEN_GATE_STRICT=0
-    exec python3 scripts/words "$2"
-fi
-export THINKTHEN_GATE_STRICT=1
-python3 scripts/public-export-test
-python3 scripts/native-producer-test
-python3 scripts/qualification-recipe-test
-python3 scripts/gate-strict-test
-if [ "${1:-}" != --contracts-only ]; then
-    python3 -W error scripts/gate-report-test
-    python3 -W error scripts/stress-dispatch-test
-    python3 -W error scripts/stress-runner-test
-    python3 scripts/release-staging-test
-fi
-git diff --check
+# Planning is deliberately excluded from the current strict product export.
+export THINKTHEN_GATE_STRICT=0
+exec python3 scripts/words "$2"

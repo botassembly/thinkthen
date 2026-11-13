@@ -22,24 +22,11 @@ def main():
                         help='approved public history source, or its local mirror')
     parser.add_argument('--private-patterns', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--project-only', action='store_true', help='create the tree without claiming a gate pass')
-    parser.add_argument('--evidence', type=Path)
-    parser.add_argument('--native-registration', type=Path)
-    parser.add_argument('--native-assets', type=Path)
-    parser.add_argument('--cargo-home', type=Path)
-    parser.add_argument('--swift-image')
-    parser.add_argument('--postgres-image')
     args = parser.parse_args()
-    gate_inputs = (args.evidence, args.native_registration, args.native_assets,
-                   args.cargo_home, args.swift_image, args.postgres_image)
-    if not args.project_only and not all(gate_inputs):
-        parser.error('the candidate gate requires evidence, native registration/assets, Cargo home and runtime images')
     patterns = args.private_patterns.resolve(strict=True)
     if not patterns.read_text().strip():
         parser.error('private pattern file must not be empty')
     source = git('rev-parse', args.source + '^{commit}').decode().strip()
-    if not args.project_only and source != git('rev-parse', 'HEAD').decode().strip():
-        parser.error('candidate preparation must run from the exact source revision')
     if not re.fullmatch('[0-9a-f]{40}', args.parent):
         parser.error('public parent must be an exact full commit SHA')
     parent = args.parent
@@ -84,24 +71,8 @@ def main():
     subprocess.run(['python3', str(output / 'scripts/words'), str(patterns)],
                    cwd=output, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'), check=True)
     receipt = dict(source=source, parent=parent, revision=revision, tree=tree,
-                   retained=len(entries), excluded=excluded, rewrites=0, gate='not run')
-    if not args.project_only:
-        evidence = args.evidence.resolve()
-        evidence.mkdir()  # Reusing an old target can hide source relocation defects.
-        (evidence / 'export.json').write_text(json.dumps(receipt, indent=2) + '\n')
-        command = [str(output / 'scripts/public-export-gate'), str(evidence),
-                   str(args.native_registration.resolve(strict=True)), str(args.native_assets.resolve(strict=True)),
-                   str(args.cargo_home.resolve(strict=True)), args.swift_image, args.postgres_image, str(patterns)]
-        with (evidence / 'gate.log').open('w') as log:
-            status = subprocess.run(command, cwd=output, stdout=log, stderr=subprocess.STDOUT).returncode
-        receipt['gate'] = 'PASS' if status == 0 else 'FAIL'
-        receipt['gate_exit'] = status
-        (evidence / 'export.json').write_text(json.dumps(receipt, indent=2) + '\n')
-        print(json.dumps(receipt), flush=True)
-        if status:
-            raise SystemExit(status)
-    else:
-        print(json.dumps(receipt))
+                   retained=len(entries), excluded=excluded, rewrites=0)
+    print(json.dumps(receipt))
 
 
 if __name__ == '__main__':

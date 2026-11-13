@@ -1,5 +1,5 @@
 # Generated native requirement. Do not edit.
-.tt_abi_version <- 131077L
+.tt_abi_version <- 131076L
 .tt_abi_version_export <- "wrap__r_abi_version"
 .tt_abi_code <- "usage.abi"
 .tt_abi_message <- "the native ABI is incompatible"
@@ -80,11 +80,5 @@
     "4003" = "local.toolbox",
     "4004" = "local.accounting",
     "4005" = "local.request-limit",
-    "4006" = "local.response-store",
-    "4007" = "local.store-corrupt",
-    "4008" = "local.store-format",
-    "4009" = "local.store-answer",
-    "4010" = "local.replay-miss",
-    "4011" = "local.store-quota",
     "5001" = "internal.bug"
 )

@@ -14,14 +14,6 @@ import java.util.concurrent.Future;
 public final class StressCases {
     private StressCases() {}
 
-    static void check(Path directory) throws Exception {
-        var command = new ArrayList<String>();
-        command.add("python3"); command.add(directory.resolve("../scripts/stress-adapters.py").normalize().toString()); command.add("--surface"); command.add("java"); command.add("--");
-        command.add(Path.of(System.getProperty("java.home"),"bin","java").toString());
-        command.add("-Duser.home="+System.getProperty("user.home"));
-        command.add("--enable-native-access=ALL-UNNAMED"); command.add("-cp"); command.add(System.getProperty("java.class.path")); command.add("StressCases");
-        ConsumerCases.check(new ProcessBuilder(command).inheritIO().start().waitFor() == 0,"Java stress adapter failed");
-    }
     private static Iterable<JsonValue> records(int count, int call, int basis) {
         return () -> new Iterator<>() {
             private int next;
@@ -82,8 +74,6 @@ public final class StressCases {
                         results.add(pool.submit(() -> consume(client,sample,call,widths)));
                     }
                     for(var result:results) { failed+=result.get();calls++;rows+=sample.get("records").intValue(); }
-                    var hook=System.getenv("THINKTHEN_STRESS_CHECKPOINT_COMMAND");
-                    if(hook != null) ConsumerCases.check(new ProcessBuilder("sh","-c",hook).inheritIO().start().waitFor()==0,"resource checkpoint failed");
                 }
             }
         }

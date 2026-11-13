@@ -327,7 +327,6 @@ module ThinkThen
     attr_accessor url: String?
     attr_accessor batch: Integer?
     attr_accessor max_requests: Integer?
-    attr_accessor response_store: ResponseStore?
     attr_accessor retry: Retry?
     attr_reader api_key: RedactedKey?
     def api_key=: (String | RedactedKey | nil) -> (String | RedactedKey | nil)
@@ -375,20 +374,6 @@ module ThinkThen
   class AnnotateQuestion < Question
     def initialize: (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], ?field: field?) -> void
   end
-  class ResponseStore < Data
-    include WireValue
-    attr_reader path: String
-    attr_reader mode: Symbol
-    attr_reader namespace: String
-    attr_reader model_generation: String
-    attr_reader max_bytes: Integer?
-    attr_reader max_entries: Integer?
-    attr_reader max_age: Integer?
-    attr_reader busy_timeout_ms: Integer?
-    def self.new: (path: String, mode: Symbol, namespace: String, model_generation: String, ?max_bytes: Integer?, ?max_entries: Integer?, ?max_age: Integer?, ?busy_timeout_ms: Integer?) -> ResponseStore
-    def initialize: (path: String, mode: Symbol, namespace: String, model_generation: String, ?max_bytes: Integer?, ?max_entries: Integer?, ?max_age: Integer?, ?busy_timeout_ms: Integer?) -> void
-    def to_h: () -> Hash[String, json]
-  end
   class TokenUsage < Data
     attr_reader reported: Integer?
     attr_reader unknown_attempts: Integer
@@ -402,18 +387,16 @@ module ThinkThen
     attr_reader request_body_bytes: Integer
     attr_reader active_attempts: Integer
     attr_reader active_calls: Integer
-    attr_reader cache_hits: Integer
-    attr_reader replay_hits: Integer
     attr_reader input_tokens: TokenUsage
     attr_reader output_tokens: TokenUsage
-    def self.new: (attempts: Integer, responses: Integer, status_retries: Integer, connection_retries: Integer, request_body_bytes: Integer, active_attempts: Integer, active_calls: Integer, cache_hits: Integer, replay_hits: Integer, input_tokens: TokenUsage, output_tokens: TokenUsage) -> Usage
+    def self.new: (attempts: Integer, responses: Integer, status_retries: Integer, connection_retries: Integer, request_body_bytes: Integer, active_attempts: Integer, active_calls: Integer, input_tokens: TokenUsage, output_tokens: TokenUsage) -> Usage
   end
   class Client
     def usage: () -> Usage
     def decide?: (String | DecideQuestion, json, **untyped) -> bool
-    def initialize: (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?max_requests: Integer?, ?response_store: ResponseStore?, ?retry: Retry?) -> void
+    def initialize: (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?max_requests: Integer?, ?retry: Retry?) -> void
     def self.open: (**untyped) -> Client
-                       | [R] (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?max_requests: Integer?, ?response_store: ResponseStore?, ?retry: Retry?) { (Client) -> R } -> R
+                       | [R] (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?max_requests: Integer?, ?retry: Retry?) { (Client) -> R } -> R
     def close: () -> nil
     def closed?: () -> bool
     attr_reader api_key: RedactedKey?

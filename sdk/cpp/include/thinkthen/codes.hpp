@@ -76,18 +76,6 @@ enum class errc : std::int32_t {
     local_accounting = THINKTHEN_CODE_LOCAL_ACCOUNTING,
     /** local.request-limit: The client request allowance is exhausted; no further request was sent. */
     local_request_limit = THINKTHEN_CODE_LOCAL_REQUEST_LIMIT,
-    /** local.response-store:  */
-    local_response_store = THINKTHEN_CODE_LOCAL_RESPONSE_STORE,
-    /** local.store-corrupt:  */
-    local_store_corrupt = THINKTHEN_CODE_LOCAL_STORE_CORRUPT,
-    /** local.store-format:  */
-    local_store_format = THINKTHEN_CODE_LOCAL_STORE_FORMAT,
-    /** local.store-answer:  */
-    local_store_answer = THINKTHEN_CODE_LOCAL_STORE_ANSWER,
-    /** local.replay-miss:  */
-    local_replay_miss = THINKTHEN_CODE_LOCAL_REPLAY_MISS,
-    /** local.store-quota:  */
-    local_store_quota = THINKTHEN_CODE_LOCAL_STORE_QUOTA,
     /** internal.bug: A bug in this library; please report it. */
     internal_bug = THINKTHEN_CODE_INTERNAL_BUG,
 };
@@ -129,12 +117,6 @@ inline bool known_code(std::int32_t value) noexcept {
         case THINKTHEN_CODE_LOCAL_TOOLBOX: return true;
         case THINKTHEN_CODE_LOCAL_ACCOUNTING: return true;
         case THINKTHEN_CODE_LOCAL_REQUEST_LIMIT: return true;
-        case THINKTHEN_CODE_LOCAL_RESPONSE_STORE: return true;
-        case THINKTHEN_CODE_LOCAL_STORE_CORRUPT: return true;
-        case THINKTHEN_CODE_LOCAL_STORE_FORMAT: return true;
-        case THINKTHEN_CODE_LOCAL_STORE_ANSWER: return true;
-        case THINKTHEN_CODE_LOCAL_REPLAY_MISS: return true;
-        case THINKTHEN_CODE_LOCAL_STORE_QUOTA: return true;
         case THINKTHEN_CODE_INTERNAL_BUG: return true;
         default: return false;
     }

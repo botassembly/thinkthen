@@ -1,4 +1,4 @@
-LOAD './thinkthen.duckdb_extension';
+LOAD '/absolute/path/to/thinkthen.duckdb_extension';
 CREATE TABLE messages (msg_id INTEGER, body VARCHAR);
 INSERT INTO messages VALUES
   (1, 'Please refund my order.'),

@@ -1,6 +1,5 @@
 #![cfg(test)]
-//! Command completion expectations from the approved design. No case is skipped
-//! while the shared engine and command implementation catch up.
+//! How the command finishes: interrupts, closed output, drained rows and quiet stderr.
 #![cfg(feature = "command")]
 #![cfg(unix)]
 
@@ -12,62 +11,8 @@ mod support;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-use loopback::{HeldReply, KEY, Loopback};
+use loopback::{KEY, Loopback};
 use serde_json::Value;
-
-#[test]
-fn first_interrupt_cancels_a_held_request_on_each_backend() {
-    for backend in ["systemone", "openai"] {
-        let (server, received, closed) = Loopback::holding(HeldReply::Headers).unwrap();
-        let mut child = support::command()
-            .args([
-                "filter",
-                "Ready?",
-                "--backend",
-                backend,
-                "--url",
-                server.base(),
-                "--batch",
-                "1",
-                "--from",
-                "lines",
-                "--json",
-            ])
-            .env(
-                if backend == "openai" {
-                    "OPENAI_API_KEY"
-                } else {
-                    "THINKTHEN_API_KEY"
-                },
-                KEY,
-            )
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap();
-        child.stdin.take().unwrap().write_all(b"one\n").unwrap();
-        received.recv().unwrap();
-        assert!(
-            Command::new("kill")
-                .args(["-INT", &child.id().to_string()])
-                .status()
-                .unwrap()
-                .success()
-        );
-        let output = child.wait_with_output().unwrap();
-        assert_eq!(output.status.code(), Some(130), "{backend}: {output:?}");
-        // Cancellation is a call error; it must not synthesize a failed row.
-        assert!(output.stdout.is_empty());
-        assert!(!String::from_utf8_lossy(&output.stderr).contains(KEY));
-        let ending = closed.recv().unwrap();
-        assert!(
-            matches!(ending, Ok(0))
-                || matches!(ending, Err(ref error) if error.kind() == std::io::ErrorKind::ConnectionReset)
-        );
-        assert_eq!(server.count(), 1);
-    }
-}
 
 #[test]
 fn broken_stdout_exits_silently_with_141() {

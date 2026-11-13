@@ -1,7 +1,0 @@
-{
-  "format": 1,
-  "soaks": {
-    "ruby-openai": {"allocator": "glibc", "limits": "docs/resource-observations.md",
-                    "row": "Ruby memory (System One and OpenAI client paths, local stub)"}
-  }
-}

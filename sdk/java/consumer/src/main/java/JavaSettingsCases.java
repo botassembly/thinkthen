@@ -16,11 +16,6 @@ public final class JavaSettingsCases {
             ThinkThen.builder().backend(Backend.STUB).maxRequests(new java.math.BigInteger("18446744073709551616")).build().close();
             throw new AssertionError("request allowance did not reach shared admission");
         } catch (ThinkThenException failure) { JavaApiCases.equal(failure.code(), ErrorCode.USAGE_SETTINGS, "allowance admission"); }
-        var store = new ResponseStore(Path.of("unused-private-store"), ResponseStore.Mode.REPLAY, "tests", "model-v1");
-        try {
-            ThinkThen.builder().backend(Backend.STUB).responseStore(store).build().close();
-            throw new AssertionError("store settings disappeared before shared admission");
-        } catch (ThinkThenException failure) { JavaApiCases.equal(failure.code(), ErrorCode.USAGE_SETTINGS, "unsupported stub store retains shared code"); }
         var choices = new ArrayList<>(List.of("a","b"));
         var question = ChooseQuestion.of("Which?",choices,ChooseOptions.builder().name("named").build());
         choices.clear();

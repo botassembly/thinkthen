@@ -35,18 +35,8 @@ public sealed class ThinkThenOptionsConverter : JsonConverter<ThinkThenOptions>
                 InitialBackoff = Duration(retry, "initial_backoff_ms"),
                 AttemptTimeout = Duration(retry, "attempt_timeout_ms")
             };
-        if (value.TryGetProperty("response_store", out var store) && store.ValueKind != JsonValueKind.Null)
-            admitted.ResponseStore = new ResponseStoreOptions(store.GetProperty("path").GetString()!,
-                Enum.Parse<ResponseStoreMode>(store.GetProperty("mode").GetString()!, true),
-                store.GetProperty("namespace").GetString()!, store.GetProperty("model_generation").GetString()!)
-            {
-                MaxBytes = Limit(store, "max_bytes"), MaxEntries = Limit(store, "max_entries"),
-                MaxAge = Limit(store, "max_age"), BusyTimeoutMs = Limit(store, "busy_timeout_ms")
-            };
         return admitted;
     }
-    private static ulong? Limit(JsonElement value, string field) =>
-        value.TryGetProperty(field, out var number) ? number.GetUInt64() : null;
     private static int Integer(JsonElement value)
     {
         try { return value.GetInt32(); }
@@ -81,21 +71,6 @@ public sealed class ThinkThenOptionsConverter : JsonConverter<ThinkThenOptions>
             if (retry.InitialBackoff is TimeSpan initial) policy["initial_backoff_ms"] = Milliseconds(initial);
             if (retry.AttemptTimeout is TimeSpan attempt) policy["attempt_timeout_ms"] = Milliseconds(attempt);
             settings["retry"] = policy;
-        }
-        if (options.ResponseStore is ResponseStoreOptions store)
-        {
-            JsonObject config = new()
-            {
-                ["path"] = Json.HostText(store.Path, true),
-                ["mode"] = store.Mode.ToString().ToLowerInvariant(),
-                ["namespace"] = Json.HostText(store.Namespace, true),
-                ["model_generation"] = Json.HostText(store.ModelGeneration, true)
-            };
-            if (store.MaxBytes is ulong bytes) config["max_bytes"] = bytes;
-            if (store.MaxEntries is ulong entries) config["max_entries"] = entries;
-            if (store.MaxAge is ulong age) config["max_age"] = age;
-            if (store.BusyTimeoutMs is ulong busy) config["busy_timeout_ms"] = busy;
-            settings["response_store"] = config;
         }
         return settings;
     }

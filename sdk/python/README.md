@@ -87,12 +87,6 @@ client = Client(max_requests=100)
 
 The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
 
-### Local response storage
-
-`Client(response_store=tt.ResponseStore(path, "record", namespace, model_generation))` explicitly enables local recording; use `"cache"` for eligible reuse or `"replay"` for offline playback without credentials. `AsyncClient` accepts the same option. Optional `max_bytes`, `max_entries`, `max_age` (seconds), and `busy_timeout_ms` use engine defaults when omitted. `client.settings.response_store` returns admitted values. Usage snapshots include `cache_hits` and `replay_hits`.
-
-Storage is disabled unless configured. Local recordings retain question and record text; use a private local path and a nonsecret namespace/model-generation label. The shared engine owns limits, identity and concurrency policy. Replay misses fail locally rather than making a model call.
-
 ## Next
 
 The [Python SDK page](https://thinkthen.dev/sdks/python/) shows all ten functions, with pandas and Polars, async calls with `thinkthen.aio`, and when to make a client of your own. The [Python guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/python/thinkthen/__init__.py) cover every option.

@@ -6,6 +6,9 @@ blocks <- lapply(starts, function(start) {
   paste(lines[(start + 1L):(end - 1L)], collapse = "\n")
 })
 stopifnot(length(blocks) > 0L)
+# scripts/surface-example runs the guide's collection example and checks its rows.
+collection <- which(vapply(blocks, grepl, logical(1), pattern = "records.jsonl", fixed = TRUE))
+if (length(collection)) blocks <- blocks[-collection[[1L]]]
 scope <- new.env(parent = globalenv())
 for (block in blocks) {
   expressions <- parse(text = block)

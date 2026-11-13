@@ -15,13 +15,7 @@ pub fn sql_settings(text: &str) -> Result<Settings, Error> {
             crate::core::diagnostic::context("settings", &error.to_string()),
         )
     })?;
-    for field in [
-        "url",
-        "api_key",
-        "key_source",
-        "max_requests",
-        "response_store",
-    ] {
+    for field in ["url", "api_key", "key_source", "max_requests"] {
         if fields
             .as_object()
             .is_some_and(|fields| fields.contains_key(field))
@@ -31,7 +25,7 @@ pub fn sql_settings(text: &str) -> Result<Settings, Error> {
                 crate::core::diagnostic::requirement(
                     &format!("settings.{field}"),
                     "settings selected by backend name",
-                    if matches!(field, "max_requests" | "response_store") {
+                    if field == "max_requests" {
                         "client-owned state unsupported in SQL settings"
                     } else {
                         "a forbidden SQL credential or address field"

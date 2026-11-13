@@ -657,11 +657,3 @@ test "request allowance serialization preserves explicit zero" {
     defer testing.allocator.free(encoded);
     try testing.expect(std.mem.indexOf(u8, encoded, "\"max_requests\":0") != null);
 }
-
-test "response storage settings preserve modes, exact bounds and absence" {
-    const store: tt.ResponseStore = .{ .path = "unused-private-store", .mode = .replay, .namespace = "tests", .model_generation = "v1", .max_entries = std.math.maxInt(u64) };
-    const encoded = try std.json.Stringify.valueAlloc(testing.allocator, store, .{});
-    defer testing.allocator.free(encoded);
-    try testing.expect(std.mem.indexOf(u8, encoded, "\"max_entries\":18446744073709551615") != null);
-    try testing.expect(std.mem.indexOf(u8, encoded, "max_bytes") == null);
-}

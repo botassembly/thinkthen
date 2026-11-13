@@ -8,15 +8,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 import kotlin.time.Duration.Companion.milliseconds
 
-// Feature: the installed Kotlin API preserves stress positions across coroutines and cancellation.
-internal suspend fun stressCases(directory: Path) = withContext(Dispatchers.IO) {
-    val command = listOf("python3", directory.resolve("../scripts/stress-adapters.py").normalize().toString(), "--surface", "kotlin", "--",
-        Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-        "-Duser.home=${System.getProperty("user.home")}", "--enable-native-access=ALL-UNNAMED",
-        "-cp", System.getProperty("java.class.path"), "consumer.StressCasesKt")
-    check(ProcessBuilder(command).inheritIO().start().waitFor() == 0) { "Kotlin stress adapter failed" }
-}
-
 private fun stressRecords(count: Int, call: Int, basis: Int = 0) = flow {
     repeat(count) { i -> emit(buildJsonObject { put("id", "call-${basis + call}-record-${basis + i}"); put("body", "record $i") }) }
 }

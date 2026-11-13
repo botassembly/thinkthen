@@ -47,15 +47,6 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     cp "$GEM_HOME"/gems/thinkthen-*/lib/thinkthen/libthinkthen_ffi.* "$build_target/ruby-installed/"
 fi
 ruby -w "$root/sdk/ruby/tests/run.rb"
-python3 "$root/scripts/stress-adapters.py" --surface ruby ${THINKTHEN_STRESS_FULL:+--full} -- ruby "$root/sdk/ruby/tests/stress.rb"
-if [ -n "${THINKTHEN_SOAK_FOLDER:-}" ]; then
-    soak_status=0
-    for backend in systemone openai; do
-        python3 "$root/scripts/stress-adapters.py" --surface ruby --rounds 60 --backend "$backend" \
-            --evidence-path "$THINKTHEN_SOAK_FOLDER/ruby-$backend.jsonl" -- ruby "$root/sdk/ruby/tests/stress.rb" || soak_status=1
-    done
-    [ "$soak_status" = 0 ]
-fi
 if [ -n "${THINKTHEN_RUBY_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_RUBY_ARTIFACT_DIR"
     cp "$scratch/packages"/*.gem "$THINKTHEN_RUBY_ARTIFACT_DIR/"

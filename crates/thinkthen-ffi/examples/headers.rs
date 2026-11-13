@@ -219,7 +219,11 @@ fn value_meaning(kind: &str, name: &str) -> &'static str {
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let check = std::env::args().nth(1).as_deref() == Some("--check");
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR"));
+    // Read the source folder at run time: a build shared across checkouts must check this one.
+    let directory = std::path::PathBuf::from(
+        std::env::var_os("CARGO_MANIFEST_DIR").ok_or("run the headers example through cargo")?,
+    );
+    let directory = directory.as_path();
     let mut config = cbindgen::Config::from_file(directory.join("cbindgen.toml"))?;
     let mut header =
         String::from("/* Generated from Rust exports and contract registries. Do not edit. */\n");

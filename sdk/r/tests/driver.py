@@ -19,7 +19,7 @@ parser.add_argument("--interrupt-only", action="store_true")
 parser.add_argument("--native-module", type=pathlib.Path)
 args = parser.parse_args()
 sys.path.insert(0, str(args.root / "scripts"))
-from test_control import read_line, soak
+from test_control import read_line
 families = {entry["name"]: entry["family"] for entry in
             json.loads((args.root / "schemas/contract.json").read_text())["codes"]}
 if args.module_abi_only and args.native_module is None:
@@ -263,6 +263,4 @@ with socket.socket() as reservation:
 from interrupts import check as check_interrupts
 check_interrupts(args.root, args.scratch, environment)
 print("R unreachable code and held-request interrupt passed", flush=True)
-subprocess.run([sys.executable, str(args.root / "scripts/stress-adapters.py"), "--surface", "r", "--sequential", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(args.root / "sdk/c/tests/stress.py"), "r", "Rscript", "--vanilla", str(args.root / "sdk/r/tests/stress.R")], env=environment | {"THINKTHEN_GATE_STRICT": os.environ.get("THINKTHEN_GATE_STRICT", "0")}, cwd=args.scratch, check=True)
-soak("r", [sys.executable, str(args.root / "sdk/c/tests/stress.py"), "r", "Rscript", "--vanilla", str(args.root / "sdk/r/tests/stress.R")], environment, cwd=args.scratch)
 assert not count_failures, ("shared push-input request counts", count_failures)

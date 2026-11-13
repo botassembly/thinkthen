@@ -2,7 +2,7 @@
 # Build only the SQLite adapter against an explicitly selected engine archive.
 set -eu
 . scripts/native-tools-env
-if [ "${1:-}" = --examples-only ] || [ "${1:-}" = --stress-only ]; then
+if [ "${1:-}" = --examples-only ]; then
     : "${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the already built fixture engine archive}"
     : "${THINKTHEN_LOOPBACK:?Provide the matching fixture loopback}"
     printf 'SQLite development source: %s\n' "$(git rev-parse HEAD)"
@@ -45,8 +45,6 @@ if [ "${1:-}" = --unknown-only ]; then
     python3 databases/unknown-code-check.py sqlite "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix"
 elif [ "${1:-}" = --examples-only ]; then
     python3 extensions/sqlite/tests/live.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix" extensions/sqlite/examples/all-ten.sql --stub
-elif [ "${1:-}" = --stress-only ]; then
-    python3 scripts/stress-adapters.py --surface sqlite -- python3 extensions/sqlite/tests/stress.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix"
 else
     python3 extensions/sqlite/tests/docs.py "$scratch/thinkthen_sqlite.$suffix"
     python3 extensions/sqlite/tests/run.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix" "$THINKTHEN_LOOPBACK" "$PWD"

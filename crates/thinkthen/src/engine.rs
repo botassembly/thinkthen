@@ -20,7 +20,6 @@ mod contract;
 mod contract_tests;
 mod input_report;
 mod limits;
-mod reuse;
 mod threads;
 #[cfg(test)]
 mod threads_tests;
@@ -42,7 +41,6 @@ enum Split {
 #[derive(Clone)]
 pub struct Engine {
     backend: Backend,
-    pub(crate) store: Option<Arc<crate::response_store::Store>>,
     pub(crate) account: crate::usage::Account,
     batch: Batch,
     agent: Arc<OnceLock<transport::Agent>>,
@@ -77,7 +75,6 @@ impl Engine {
             self.batch,
             self.policy.into(),
             self.account.limit(),
-            self.store.as_ref().map(|store| store.config().clone()),
         )
     }
     /// An engine that sends to `backend` at the default batch.
@@ -86,7 +83,6 @@ impl Engine {
         let policy = RetryPolicy::default();
         Self {
             policy,
-            store: None,
             account: crate::usage::Account::default(),
             cancel: Cancel::default(),
             backend,
@@ -196,15 +192,12 @@ impl Engine {
             .map(|rounds| rounds.into_iter().flatten().collect())
     }
 
-    fn send_live(
+    fn send(
         &self,
         request: Request<'_>,
         url: &str,
         split: Split,
     ) -> Result<Vec<RequestAnswers>, Error> {
-        if self.store.as_ref().is_some_and(|store| store.replay()) {
-            return Err(crate::response_store::error(crate::Code::LocalReplayMiss));
-        }
         let Some(remote) = self.backend.remote() else {
             return Ok(vec![if self.cancel.is_cancelled() {
                 request.answered(Err(transport::Refused::cancelled().error))
@@ -221,15 +214,12 @@ impl Engine {
             self.policy,
             &self.cancel,
             &self.account,
-            self.store.as_ref().map(|store| store.body_limit()),
         );
         match reply {
             Err(refused)
                 if matches!(
                     refused.error.code(),
-                    crate::Code::LocalAccounting
-                        | crate::Code::LocalRequestLimit
-                        | crate::Code::LocalStoreQuota
+                    crate::Code::LocalAccounting | crate::Code::LocalRequestLimit
                 ) =>
             {
                 Err(refused.error)
@@ -239,14 +229,13 @@ impl Engine {
             }
             Err(refused) if refused.too_large && matches!(split, Split::Allowed) => {
                 if let Some((left, right)) = request.split() {
-                    let mut answers = self.send_live(left, url, Split::Spent)?;
-                    answers.extend(self.send_live(right, url, Split::Spent)?);
+                    let mut answers = self.send(left, url, Split::Spent)?;
+                    answers.extend(self.send(right, url, Split::Spent)?);
                     Ok(answers)
                 } else {
                     Ok(vec![request.answered(Err(refused.error))])
                 }
             }
-            Ok(body) if self.store.is_some() => self.retain(request, url, body),
             reply => Ok(vec![
                 request.answered(reply.map_err(|refused| refused.error)),
             ]),

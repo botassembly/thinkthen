@@ -37,12 +37,6 @@ class ErrorCode(StringEnum):
     LOCAL_TOOLBOX = "local.toolbox"
     LOCAL_ACCOUNTING = "local.accounting"
     LOCAL_REQUEST_LIMIT = "local.request-limit"
-    LOCAL_RESPONSE_STORE = "local.response-store"
-    LOCAL_STORE_CORRUPT = "local.store-corrupt"
-    LOCAL_STORE_FORMAT = "local.store-format"
-    LOCAL_STORE_ANSWER = "local.store-answer"
-    LOCAL_REPLAY_MISS = "local.replay-miss"
-    LOCAL_STORE_QUOTA = "local.store-quota"
     INTERNAL_BUG = "internal.bug"
 
 __all__ = ["ErrorCode"]

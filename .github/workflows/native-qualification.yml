@@ -154,8 +154,6 @@ jobs:
         run: python3 scripts/qualification-summary
 
   gate:
-    needs: native-gate-inputs
-    if: always()
     runs-on: macos-15
     timeout-minutes: 180
     permissions: {contents: read}
@@ -191,57 +189,13 @@ jobs:
         id: prepare-offline-gate-dependencies
         if: always()
         run: scripts/qualification-gate-prepare
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        id: download-artifact-gate-linux-x86-64
-        if: always()
-        with:
-          name: gate-linux-x86_64
-          path: ${{ runner.temp }}/gate-assets
-      - name: Import the Linux native pair
-        id: import-the-linux-native-pair
-        if: always()
-        run: |
-          . scripts/native-tools-env
-          scripts/native-pair import "$RUNNER_TEMP/gate-assets/pair.json" "$RUNNER_TEMP/gate-assets/assets"
-          THINKTHEN_FLOOR_IMAGE=$(scripts/native-pair image)
-          echo "THINKTHEN_FLOOR_IMAGE=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_ENV"
-      - name: Prepare the host native pair
-        id: prepare-the-host-native-pair
-        if: always()
-        run: |
-          . scripts/native-tools-env
-          scripts/native-prepare >/dev/null
-      - name: Prepare native test assets
-        id: prepare-native-test-assets
-        if: always()
-        run: |
-          . scripts/native-tools-env
-          scripts/native-test-assets prepare
-      - name: Prepare native ABI assets
-        id: prepare-native-abi-assets
-        if: always()
-        run: |
-          . scripts/native-tools-env
-          scripts/native-abi-assets prepare
-      - name: Run the full declared gate
-        id: run-the-full-declared-gate
+      - name: Run the landing gate with every SDK
+        id: run-the-landing-gate
         if: always()
         # The previous preparation took 22m22 of this job's 180m budget.
-        # This leaves about seven minutes for diagnostics at that preparation time.
-        # The gate has a 45m per-stage watchdog: local Mac gate 1014s, SDKs 615s, Rust tests 217s.
+        # The gate bounds each stage at one hour; landing gates on a local Mac took 630 to 1690 s.
         timeout-minutes: 150
-        env:
-          THINKTHEN_GATE_DIAGNOSTICS: ${{ runner.temp }}/gate-diagnostics
-        run: scripts/hosted-gate
-      - name: Preserve gate stage times and running output
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: gate-diagnostics-macos-arm64
-          path: ${{ runner.temp }}/gate-diagnostics/
-          if-no-files-found: warn
-          retention-days: 7
-
+        run: scripts/interface-source-gate --shared-abi
 
       - name: Report every qualification failure
         if: always()

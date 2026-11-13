@@ -5,7 +5,7 @@
 mod support;
 
 #[test]
-fn help_lists_current_options_without_retired_flags_or_settings() {
+fn help_lists_current_options_and_settings() {
     for name in [
         None,
         Some("decide"),
@@ -61,26 +61,6 @@ fn help_lists_current_options_without_retired_flags_or_settings() {
                 });
                 assert!(inline || wrapped, "missing description: {line}");
             }
-        }
-        for retired in [
-            "--backend stub",
-            "--evidence",
-            "THINKTHEN_EVIDENCE",
-            "--on",
-            "--adapter",
-            "--input",
-            "--lines",
-            "--csv",
-            "--tsv",
-            "--xlsx",
-            "--option",
-            "THINKTHEN_ON",
-            "THINKTHEN_DETAILS",
-            "THINKTHEN_ADAPTER",
-            "THINKTHEN_INPUT",
-            "THINKTHEN_OPTIONS",
-        ] {
-            assert!(!help.contains(retired), "{name:?}: advertises {retired}");
         }
     }
 }

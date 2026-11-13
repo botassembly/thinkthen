@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run literal quickstarts using the SDK gate's installed dependencies and isolated home."""
+"""Run the Kotlin README quickstart and the Ruby guide with the SDK gate's installed dependencies."""
 import os
 from pathlib import Path
 import re
@@ -29,10 +29,6 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-quickstarts-') as folder:
         environment['THINKTHEN_BACKEND'] = 'stub'
         classpath, repository, home = sys.argv[2:]
         classpath = os.pathsep.join(str(Path(p).resolve()) for p in classpath.split(os.pathsep))
-        source = scratch / 'Example.java'
-        source.write_text(block(ROOT / 'sdk/java/README.md', 'java'))
-        run('javac', '-J-Duser.home=' + home, '-cp', classpath, source, cwd=scratch, env=environment)
-        run('java', '-Duser.home=' + home, '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch) + os.pathsep + classpath, 'Example', cwd=scratch, env=environment)
         source = scratch / 'Quickstart.kt'
         source.write_text(block(ROOT / 'sdk/kotlin/README.md', 'kotlin'))
         compiler = compiler_classpath(repository)
@@ -46,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-quickstarts-') as folder:
         # The guide names one client scope and shared records for its remaining snippets.
         scoped = 'require "thinkthen"\nThinkThen::Client.open do |client|\n' + '\n'.join(examples[2:]) + '\nend\n'
         (scratch / 'toolbox.json').write_text(re.findall(r'```json\n(.*?)\n```', guide, re.S)[0])
-        for source_text in (block(ROOT / 'sdk/ruby/README.md', 'ruby'), *examples[:2], scoped):
+        for source_text in (*examples[:2], scoped):
             source = scratch / 'example.rb'
             source.write_text(source_text)
             # The examples open a default client; the gate selects the stub through the environment.
