@@ -90,7 +90,8 @@ static int free_buffer(thinkthen_buffer *out) {
 
 
 def projection_flags():
-    return shlex.split(subprocess.check_output(['pkg-config', '--cflags', '--libs', 'jansson'], text=True))
+    return shlex.split(subprocess.check_output([os.environ.get('PKG_CONFIG', 'pkg-config'),
+                                              '--cflags', '--libs', 'jansson'], text=True))
 
 
 def fixture(engine, output, rows=False, children=False):

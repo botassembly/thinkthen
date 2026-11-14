@@ -21,6 +21,31 @@ HOST_PINS = {'node': re.search(r'node-v([0-9.]+)-linux-x64', IMAGE)[1],
              'ruby': re.search(r'ruby-([0-9.]+)\.tar.gz', IMAGE)[1]}
 
 
+def python_source_tools(*, refresh=False):
+    """Warm the Python gate's environment and expose only its prepared Ruff."""
+    text = (ROOT / 'scripts/python-gate').read_text().replace('\\\n', '')
+    arguments = shlex.split(text.split('exec uv run ', 1)[1].split("<<'CHECKS'", 1)[0])
+    arguments = arguments[:arguments.index('--')]
+    arguments.remove('--offline')
+    if refresh:
+        arguments.insert(0, '--refresh')
+    inspect = ('import json,shutil,sys; print(json.dumps({"python":sys.version.splitlines()[0],'
+               '"ruff":shutil.which("ruff")}))')
+    selected = json.loads(prepared('uv', 'run', *arguments, '--', 'python', '-c', inspect,
+                                  capture_output=True, text=True).stdout)
+    ruff = Path(selected['ruff'] or '')
+    if not selected['ruff'] or not ruff.is_absolute() or not ruff.is_file() or not os.access(ruff, os.X_OK):
+        raise ValueError('Python gate preparation did not provide an executable Ruff')
+    commands = TOOLS / 'source-checkers/ruff/bin'
+    commands.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.ruff-', dir=commands) as staging:
+        command = Path(staging) / 'ruff'
+        command.write_text('#!/bin/sh\nexec ' + shlex.quote(str(ruff)) + ' "$@"\n')
+        command.chmod(0o755)
+        command.replace(commands / 'ruff')
+    print('prepared Python source checkers: ' + selected['python'], flush=True)
+
+
 def host_tools():
     if not shutil.which('uv'):
         run(sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'uv==' + PINS['uv'])

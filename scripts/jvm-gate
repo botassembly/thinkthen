@@ -61,6 +61,18 @@ if [ -n "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ] && [ -z "${LLVM_PROFILE_FILE:-}" ];
 fi
 export THINKTHEN_LOOPBACK="$native_target/debug/loopback"
 export THINKTHEN_API_KEY=sk-test-0123456789
+# Decoder fixtures use a prepared build tool; Java's runtime PATH stays isolated.
+PKG_CONFIG=$("$jvm_python" - <<'PYTHON'
+import os
+from pathlib import Path
+import shutil
+selected = shutil.which(os.environ.get('PKG_CONFIG', 'pkg-config'))
+if selected is None:
+    raise SystemExit('prepare pkg-config before the JVM gate')
+print(Path(selected).resolve())
+PYTHON
+)
+export PKG_CONFIG
 PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:/usr/bin:/bin"
 export PATH
 cd "$scratch"

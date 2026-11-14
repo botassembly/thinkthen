@@ -23,21 +23,13 @@ python3 - <<'PY'
 import platform
 from pathlib import Path
 import re
-import shlex
-import subprocess
 import sys
 import tarfile
 sys.path.insert(0, 'scripts')
 from release_prepare_common import TOOLS, fetch
+from release_host_tools import python_source_tools
 
-# The SDK gate owns its dependency list; preparation only warms that same uv run.
-text = Path('scripts/python-gate').read_text()
-text = text.replace("\\" + "\n", "")
-args = shlex.split(text.split('exec uv run ', 1)[1].split("<<'CHECKS'", 1)[0])
-args = args[:args.index('--')]
-args.remove('--offline')
-args.insert(0, '--refresh')
-subprocess.run(['uv', 'run', *args, '--', 'python', '--version'], check=True)
+python_source_tools(refresh=True)
 
 version = re.search(r'gitleaks/([0-9.]+)/', Path('scripts/secrets').read_text())[1]
 folder = TOOLS / 'gitleaks' / version

@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 root=$PWD
 unset THINKTHEN_LIBRARY
 python3 scripts/swift-consumer-staging-test
-ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/swift-consumer-stage scripts/swift-consumer-staging-test scripts/release/swift.py sdk/c/tests/admission.py
+ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/swift-consumer-stage scripts/swift-consumer-staging-test scripts/release/swift.py scripts/release/filter_contract.py sdk/c/tests/admission.py
 swift format lint --strict --recursive sdk/swift
 export CARGO_NET_OFFLINE=true
 if [ -z "${THINKTHEN_LOOPBACK:-}" ]; then cargo build --locked -p loopback; fi

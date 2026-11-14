@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -26,6 +28,108 @@ class PreparedWindows(Exception):
 
 
 class ToolInstallation(unittest.TestCase):
+    @unittest.skipUnless(sys.platform in ('darwin', 'linux'), 'JVM source gate runs on macOS and Linux')
+    def test_decoder_fixture_tool_survives_the_actual_jvm_path_restriction(self):
+        producer = host.ROOT / 'scripts/abi-minor-check'
+        text = (host.ROOT / 'scripts/jvm-gate').read_text()
+        start = text.index('PKG_CONFIG=$(')
+        end = text.index('export PATH', start) + len('export PATH')
+        restriction = text[text.index('PATH="$JAVA_HOME/bin:', start):end]
+        with tempfile.TemporaryDirectory(prefix='decoder tool ') as temporary:
+            root = Path(temporary)
+            tool = root / 'fixture-pkg-config'
+            calls = root / 'calls'
+            engine = os.environ.get('THINKTHEN_NATIVE_LIBRARY')
+            if engine:
+                selected = shutil.which('pkg-config')
+                self.assertTrue(selected, 'prepare pkg-config before native decoder checks')
+                prefix = subprocess.check_output([selected, '--variable=prefix', 'jansson'], text=True).strip()
+                self.assertEqual(Path(prefix).resolve(), Path(os.environ['THINKTHEN_JANSSON_ROOT']).resolve())
+                action = 'exec ' + shlex.quote(selected) + ' "$@"\n'
+            else:
+                action = "printf '%s\\n' '-I/fixture/include -ljansson'\n"
+            tool.write_text('#!/bin/sh\nprintf "PATH=%s\\nARGS=%s\\n" "$PATH" "$*" >> '
+                            + shlex.quote(str(calls)) + '\n' + action)
+            tool.chmod(0o755)
+            probe = root / 'decoder.py'
+            probe.write_text('''import json,os,runpy,sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]).parent))
+producer=runpy.run_path(sys.argv[1])
+flags=producer['projection_flags']()
+engine=os.environ.get('THINKTHEN_NATIVE_LIBRARY')
+kinds=sorted(producer['decoder_fixtures'](Path(engine),Path(sys.argv[2]))) if engine else []
+print(json.dumps({'flags':flags,'kinds':kinds}))
+''')
+            environment = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'],
+                               PKG_CONFIG='fixture-pkg-config', jvm_python=sys.executable)
+            command = 'exec "$jvm_python" "$1" "$2" "$3"\n'
+            arguments = ['decoder-tool', str(probe), str(producer), str(root / 'fixtures')]
+            broken = subprocess.run(['sh', '-eu', '-c', '. scripts/jvm-env\n' + restriction + '\n' + command,
+                *arguments], cwd=host.ROOT, env=environment, capture_output=True, text=True)
+            self.assertNotEqual(broken.returncode, 0)
+            self.assertIn('FileNotFoundError', broken.stderr)
+            self.assertIn('fixture-pkg-config', broken.stderr)
+            fixed = subprocess.check_output(['sh', '-eu', '-c', '. scripts/jvm-env\n'
+                + text[start:end] + '\n' + command, *arguments], cwd=host.ROOT, env=environment, text=True)
+            result = json.loads(fixed)
+            paths = [line.removeprefix('PATH=') for line in calls.read_text().splitlines() if line.startswith('PATH=')]
+            self.assertTrue(paths)
+            self.assertTrue(all(str(root) not in path and '/opt/homebrew' not in path and '/opt/zerobrew' not in path for path in paths))
+            self.assertIn('ARGS=--cflags --libs jansson', calls.read_text().splitlines())
+            if engine:
+                self.assertEqual(len(result['kinds']), 7)
+            else:
+                self.assertEqual(result['flags'], ['-I/fixture/include', '-ljansson'])
+            print('isolated decoder tool: ' + json.dumps(result), flush=True)
+
+    def test_python_checker_launcher_uses_current_authority_and_cached_tool_before_ambient_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'source/scripts'
+            source.mkdir(parents=True)
+            gate = (host.ROOT / 'scripts/python-gate').read_text()
+            original = re.search(r"'(ruff[^']+)'", gate)[1]
+            ambient = root / 'ambient'
+            ambient.mkdir()
+            global_ruff = ambient / 'ruff'
+            global_ruff.write_text('#!/bin/sh\nexit 77\n')
+            global_ruff.chmod(0o755)
+            environment = dict(os.environ, HOME=str(root), PATH=str(ambient) + os.pathsep + os.environ['PATH'])
+            # Select the source environment before preparation creates its launcher.
+            selected_path = subprocess.check_output(['scripts/native-tools-env', 'sh', '-eu', '-c',
+                'printf "%s" "$PATH"'], cwd=host.ROOT, env=environment, text=True)
+            tools = root / '.local/share/thinkthen-build-tools'
+            for index, requirement in enumerate(('ruff==0.0.1', 'ruff==0.0.2')):
+                (source / 'python-gate').write_text(gate.replace(original, requirement))
+                cached = root / f'cached Python tools {index}'
+                ruff = cached / 'bin/ruff'
+                ruff.parent.mkdir(parents=True)
+                ruff.write_text('#!/bin/sh\nprintf "%s\\n" "' + requirement + '"\n')
+                ruff.chmod(0o755)
+
+                def prepared(*arguments, **options):
+                    self.assertEqual(arguments[:2], ('uv', 'run'))
+                    self.assertIn(requirement, arguments)
+                    self.assertNotIn(original, arguments)
+                    self.assertNotIn('--offline', arguments)
+                    self.assertEqual('--refresh' in arguments, index == 1)
+                    return subprocess.CompletedProcess(arguments, 0, json.dumps({
+                        'python': 'prepared Python', 'ruff': str(ruff)}), '')
+
+                with patch.object(host, 'ROOT', source.parent), patch.object(host, 'TOOLS', tools), \
+                        patch.object(host, 'prepared', side_effect=prepared):
+                    host.python_source_tools(refresh=index == 1)
+                output = subprocess.check_output(['ruff', '--version'],
+                    env=dict(environment, PATH=selected_path), text=True)
+                self.assertEqual(output.strip(), requirement)
+                self.assertEqual(global_ruff.read_text(), '#!/bin/sh\nexit 77\n')
+            with patch.object(host, 'ROOT', source.parent), patch.object(host, 'TOOLS', tools), \
+                    patch.object(host, 'prepared', return_value=subprocess.CompletedProcess([], 0,
+                        json.dumps({'python': 'prepared Python', 'ruff': None}), '')):
+                with self.assertRaisesRegex(ValueError, 'did not provide an executable Ruff'):
+                    host.python_source_tools()
+
     def test_prepared_macos_cpp_reaches_default_and_explicit_compilers_without_replacing_c(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

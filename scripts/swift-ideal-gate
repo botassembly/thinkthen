@@ -56,11 +56,11 @@ python3 scripts/swift-consumer-stage "$swift_ideal_scratch/consumer"
 swift build --package-path "$swift_ideal_scratch/consumer" --disable-sandbox --jobs "${CARGO_BUILD_JOBS:-2}" -Xswiftc -warnings-as-errors
 if [ "${1:-}" = --compile-only ]; then exit 0; fi
 if [ "${1:-}" = --dispatch-check ]; then
-    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift-dispatch-check scripts/swift_guide_examples.py sdk/swift/tests/*.py
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift-dispatch-check scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/release/filter_contract.py
     exec python3 scripts/swift-dispatch-check "$swift_ideal_scratch/consumer"
 fi
 if [ "${1:-}" = --tail-check ]; then
-    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/swift-consumer-stage scripts/swift-consumer-staging-test scripts/release/swift.py sdk/c/tests/admission.py
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/swift-consumer-stage scripts/swift-consumer-staging-test scripts/release/swift.py scripts/release/filter_contract.py sdk/c/tests/admission.py
     scripts/native-fixtures --engine "$THINKTHEN_SWIFT_SOURCE_ENGINE" --output "$swift_ideal_scratch/abi"
     THINKTHEN_NATIVE_FIXTURES="$swift_ideal_scratch/abi" python3 sdk/swift/tests/abi.py "$swift_ideal_scratch/consumer/.build/debug/Consumer"
     exec python3 sdk/swift/tests/review_probes.py "$swift_ideal_scratch/consumer/.build/debug/Consumer"

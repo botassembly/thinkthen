@@ -46,16 +46,10 @@ scripts/rust-dependencies --prepare
 scripts/rust-advisories --prepare
 rustup component add rustfmt clippy
 python3 - <<'PY'
-from pathlib import Path
-import shlex
-import subprocess
-
-# The Python slice owns its tool versions and optional dependency list.
-text = Path('scripts/python-gate').read_text().replace('\\\n', '')
-args = shlex.split(text.split('exec uv run ', 1)[1].split("<<'CHECKS'", 1)[0])
-args = args[:args.index('--')]
-args.remove('--offline')
-subprocess.run(['uv', 'run', *args, '--', 'python', '--version'], check=True)
+import sys
+sys.path.insert(0, 'scripts')
+from release_host_tools import python_source_tools
+python_source_tools()
 PY
 if [ "$shared_abi" = 1 ]; then
     # The Go slice verifies the declared source-checker identity offline below.
