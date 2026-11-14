@@ -11,4 +11,4 @@ FROM thinkthen.rank(
   'SELECT msg_id AS id, body AS record FROM messages ORDER BY msg_id',
   'How urgent is the request?',
   levels => ARRAY['routine', 'urgent'])
-ORDER BY urgency_rank;
+ORDER BY urgency_rank NULLS LAST;

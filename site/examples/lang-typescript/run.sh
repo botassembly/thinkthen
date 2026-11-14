@@ -16,7 +16,22 @@ printf '%s' '{"compilerOptions": {"strict": true, "noEmitOnError": true, "target
   "moduleResolution": "nodenext", "outDir": "out"}, "files": ["show.ts"]}' > "$work/tsconfig.json"
 cp show.ts "$work/"
 "$root/site/node_modules/.bin/tsc" -p "$work"
-cat > "$work/run.sh" <<'RUN'
+cat > "$work/program.sh" <<'RUN'
 exec node "$(dirname "$0")/out/show.js"
 RUN
+if [ -n "${SITE_FUNCTION_NORMALIZER:-}" ]; then
+  cp "$SITE_FUNCTION_NORMALIZER" "$work/normalize.sh"
+  cat > "$work/run.sh" <<'NORMALIZED'
+#!/bin/sh
+set -eu
+entry=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+work=$(mktemp -d)
+trap 'status=$?; trap - EXIT; set +e; rm -rf "$work"; exit "$status"' EXIT
+bash "$entry/program.sh" > "$work/output.txt"
+cat "$work/output.txt"
+bash "$entry/normalize.sh" "$work/output.txt"
+NORMALIZED
+else
+  cp "$work/program.sh" "$work/run.sh"
+fi
 if [ "${1:-}" != --prepare ]; then bash "$work/run.sh" > "$work/output.txt"; cat "$work/output.txt"; fi

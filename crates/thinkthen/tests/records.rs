@@ -415,7 +415,10 @@ fn a_json_record_gives_its_id_and_the_evidence_its_pointer_names() {
             .unwrap()
             .field(pointer.parse().unwrap());
         let row = engine(&server, None)
-            .run(&question, Record::from_json(line))
+            .rows(&question, [Record::from_json(line)])
+            .unwrap()
+            .next()
+            .unwrap()
             .unwrap();
         let value = serde_json::to_value(&row).unwrap();
         assert_eq!(row.position(), 1);

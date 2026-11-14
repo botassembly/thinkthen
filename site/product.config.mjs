@@ -23,6 +23,8 @@ export default {
   exampleTimeoutMs: 300000,
   // Examples run with the stub backend. The runner removes every key variable.
   exampleEnv: { THINKTHEN_BACKEND: 'stub' },
+  // The hash stub reaches this documented refusal; real capture still requires its published pass.
+  exampleRoutineResults: { 'howto-ci-pass': { exit: 1, stdout: 'not sure: a reviewer must read the test plan\n', stderr: '' } },
   // These commands finish locally; capture checks their exit and documented error code.
   exampleLocalCaptures: localCaptures,
   exampleLocalCaptureCodes: { ...localCodes, ...Object.fromEntries(sdkLocalFailures.map((id) => [id, 'record.empty'])), 'ref-json-failed': 'record.missing', 'ans-field-piped': 'record.json', 'ans-field-piped-missing': 'record.missing', 'ans-json-on-table': 'usage.option' },

@@ -4,8 +4,12 @@
   result <- .Call(paste0("wrap__", name), ..., PACKAGE = "thinkthen")
   if (!is.null(result$error)) {
     error <- result$error
+    family <- error$family
+    if (error$code %in% c("usage.key-missing", .tt_abi_code) ||
+        (name == "r_client" && identical(error$code, "local.io"))) family <- "setup"
+    if (name == "r_question") family <- "usage"
     rlang::abort(error$message,
-      class = c(paste0("thinkthen_", error$family, "_error"),
+      class = c(paste0("thinkthen_", family, "_error"),
                 if (identical(error$code, "local.cancelled")) "thinkthen_cancelled_error",
                 "thinkthen_error"),
       code = error$code, http_status = error$http_status, call = rlang::caller_env(),
@@ -183,7 +187,10 @@ tt_retry <- function(..., max_retries = NULL, initial_backoff_ms = NULL,
   selected <- .tt_restore(x, selected)
   attr(selected, ".thinkthen_function") <- NULL
   # An index restored from the input describes the input's rows, not this subset's.
-  if (inherits(selected, "data.table")) attr(selected, "index") <- NULL
+  if (inherits(selected, "data.table")) {
+    attr(selected, "index") <- NULL
+    selected <- data.table::setalloccol(selected)
+  }
   selected
 }
 

@@ -1,13 +1,12 @@
-import { ThinkThen } from "thinkthen";
+import { Client } from "thinkthen";
 
-const tt = new ThinkThen();
+const tt = new Client();
 try {
-  // await throws RecordError on failure.
   const names = await tt.recognize(
-    ["person", "organization"],
     "Morgan works for Example Group.",
+    { kinds: ["person", "organization"] },
   );
-  for (const name of names) console.log(name.kind, name.text);
+  for (const name of names.answer) console.log(name.kind, name.text);
 } finally {
   await tt.close();
 }

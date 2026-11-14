@@ -1,5 +1,4 @@
 const tt = @import("thinkthen");
 pub fn main() void {
-    const invalid: tt.AnnotationQuestion = .{ .rank = .{ .question = "Rank?", .levels = &.{} } };
-    _ = invalid;
+    _ = tt.annotate(.{ .rank = tt.Rank(enum { low, high }){ .question = "Rank?" } });
 }

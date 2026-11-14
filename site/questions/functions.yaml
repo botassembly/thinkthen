@@ -95,11 +95,11 @@
   reference_title: Result rows
   reader: A developer who wants a person to review the cases the model is not sure about
   answer: |
-    Give the question a band with `--low` and `--high`, write JSON Lines with `--json`, and select the rows whose `status` is `unsure`. Each of those records goes to a person; the rest carry a `true` or `false` answer your code can act on. This works with ThinkThen {version}'s decide, filter and choose.
+    Use decide with `--low` and `--high`, write JSON Lines with `--json`, and send results whose `status` is `unsure` to a person. Handle `failed` results separately; read a boolean answer only when the status is `answered`. Filter takes one bar, and choose returns a label using its single `--threshold`.
   why: |
-    Inside the band, ThinkThen returns the row with `"status":"unsure"`, its probability, and no answer. Below `--low` the answer is `false`; at or above `--high` it is `true`. `jq` keeps the ids of the not sure rows.
+    For decide, a probability between the bars produces `"status":"unsure"`, its probability, and no answer. Below `--low` the answer is `false`; at or above `--high` it is `true`. Failed results carry their error instead of an answer. `jq` keeps the ids of the not-sure results.
   limits: |
-    Tag, find, recognize and relate take a single cut, not a band. In a spreadsheet, a not sure row's answer cell is empty, or `#N/A` in xlsx; add `--details` for a `_status` column that reads `unsure`, and filter that column instead of using `jq`. The model puts the records it finds hard into the band, and how many depends on the model and on where you set `--low` and `--high`. A band does not make a model calibrated: check where its answers fall on your own labeled sample.
+    Choose, tag, find, recognize and relate use a single bar; choose answers with a label rather than a boolean. In a spreadsheet, a not sure row's answer cell is empty, or `#N/A` in xlsx; add `--details` for a `_status` column that reads `unsure`, and filter that column instead of using `jq`. How many results fall between the bars depends on the model and where you set `--low` and `--high`. A band does not make a model calibrated: check where its answers fall on your own labeled sample.
   examples:
     - id: ans-notsure-queue
       says: "Ask with a band from 0.2 to 0.8 and print the id of each not sure row:"
@@ -117,11 +117,11 @@
   reference_title: Result rows
   reader: A developer or analyst who needs a count of yes answers
   answer: |
-    Run filter with `--json` so every record gets a row, then count the rows whose `answer` is `true`. One ThinkThen {version} command and one `jq` call give the total and the yes count.
+    Run decide with `--json` so every record gets a row, then count the rows whose `answer` is `true`. One ThinkThen {version} command and one `jq` call give the total and the yes count.
   why: |
     `--json` writes one row per record, including the no, not sure and failed ones, so the total is the number of rows. `jq -s` reads every row into one array, and `select(.answer == true)` keeps the yes rows.
   limits: |
-    Text output of filter prints only the yes records, so `wc -l` on it counts yes answers but hides failures. Count `status` values too when some rows may have failed or been not sure. The yes count is the model's judgment of each record; check it on a sample before you report it.
+    Filter prints only the kept input, so `wc -l` counts kept messages; a failed message still makes the command exit 6 and produces a diagnostic. Count `status` values too when some rows may have failed or been not sure. The yes count is the model's judgment of each record; check it on a sample before you report it.
   examples:
     - id: ans-count-yes
       says: "Judge three messages and count the rows and the yes answers:"

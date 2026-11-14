@@ -15,7 +15,7 @@ use thinkthen::{
     results::{AnyRow, Status},
 };
 
-/// Run one admitted record through the shared driver and return its row.
+/// Run one admitted record, promoting only its own failure at the call.
 pub(crate) fn evaluate(
     client: &Engine,
     question: Question,
@@ -34,6 +34,9 @@ pub(crate) fn evaluate(
     if !matches!(call.next_event()?, Event::Finished) {
         return Err(native::internal_error());
     }
+    if let Some(error) = row.error() {
+        return Err(error.clone());
+    }
     Ok(row)
 }
 
@@ -48,13 +51,10 @@ pub(crate) fn status(row: &AnyRow) -> Result<i32, Error> {
 
 /// Answer one question about one record and write its whole row to *out.
 ///
-/// Returns THINKTHEN_OK when the record is answered, THINKTHEN_UNSURE when the model is not
-/// sure, or a negative thinkthen_code: the record's own code when it fails (for example
-/// -THINKTHEN_CODE_RECORD_EMPTY for blank text, which is never sent), a backend code when
-/// the backend fails, or a usage code for a bad argument. Read row.answer_bool, row.number
-/// or row.rank only after THINKTHEN_OK. The row is written in every case except a usage
-/// error. Passing the same row again frees what it held, so a reused row leaks nothing;
-/// free it with thinkthen_row_free after its last use.
+/// Returns THINKTHEN_OK with an answered or unsure row. A failed parent returns its
+/// negative code with the output empty; answered forms keep failed entries. Read an
+/// unsure row with thinkthen_row_answer_* to get THINKTHEN_UNSURE. Filter and rank
+/// require a many-record call and are refused with usage.function.
 /// # Safety
 /// Any thread may call this, and threads may share the client and the question while no
 /// thread changes the question. data points to len readable bytes (or a NUL-terminated
@@ -79,17 +79,18 @@ pub unsafe extern "C" fn thinkthen_run_one(
             HostRow::clear(out);
             let record = crate::finite::admit_record(data, len, kind)?;
             let question = live(question)?.build()?;
-            let filter = question.function() == thinkthen::FunctionName::Filter;
-            let row = evaluate(&live(client)?.0, question, record)?;
-            let status = status(&row);
-            let mut result = HostRow::from_row(size, row)?;
-            if filter {
-                result
-                    .source
-                    .attach_original(crate::original::input(data, len, kind)?);
+            if matches!(
+                question.function(),
+                thinkthen::FunctionName::Filter | thinkthen::FunctionName::Rank
+            ) {
+                return Err(native::argument_error(thinkthen::Code::UsageFunction));
             }
+            let domain = std::sync::Arc::new(crate::row::Domain::from_question(&question));
+            let row = evaluate(&live(client)?.0, question, record)?;
+            let result =
+                HostRow::from_value(size, crate::values::ValueHandle::from_any(row), domain)?;
             result.write(out);
-            status
+            Ok(THINKTHEN_OK)
         })
     }
 }

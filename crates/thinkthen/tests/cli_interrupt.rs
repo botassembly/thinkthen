@@ -167,7 +167,7 @@ fn completion_cancellation_precedes_a_later_broken_stdout() {
             command.args(["run", "--allow-shell"]).arg(&entry);
         } else {
             command.args([
-                "filter", "Keep?", "--from", "jsonl", "--json", "--field", "/body",
+                "decide", "Keep?", "--from", "jsonl", "--json", "--field", "/body",
             ]);
         }
         let mut child = command

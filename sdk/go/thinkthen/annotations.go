@@ -14,25 +14,36 @@ import (
 type Annotation interface {
 	Function() Function
 	annotation()
+	canonicalRow(json.RawMessage) Annotation
 }
 
 // Annotations holds child outcomes by question name.
-type Annotations struct{ entries map[string]Annotation }
+type Annotations struct {
+	entries   map[string]Annotation
+	canonical map[string]json.RawMessage
+}
 
 // String displays annotation names and their typed answers in name order.
 func (a Annotations) String() string {
 	var entries []string
 	for _, name := range a.Names() {
-		entries = append(entries, fmt.Sprintf("%s: %v", name, a.entries[name]))
+		value, _ := a.Get(name)
+		entries = append(entries, fmt.Sprintf("%s=%v", printLeaf(name), value))
 	}
-	return "{" + strings.Join(entries, ", ") + "}"
+	return strings.Join(entries, "\t")
 }
 
 // GoString provides the same concise representation as String.
 func (a Annotations) GoString() string { return a.String() }
 
 // Get returns the named annotation, if present.
-func (a Annotations) Get(name string) (Annotation, bool) { v, ok := a.entries[name]; return v, ok }
+func (a Annotations) Get(name string) (Annotation, bool) {
+	v, ok := a.entries[name]
+	if ok && len(a.canonical[name]) > 0 {
+		v = v.canonicalRow(a.canonical[name])
+	}
+	return v, ok
+}
 
 // Names returns annotation names in sorted order.
 func (a Annotations) Names() []string {
@@ -53,20 +64,20 @@ func (DecideAnnotation) annotation() {}
 func (DecideAnnotation) Function() Function { return FunctionDecide }
 
 // ChooseAnnotation is a typed choose child outcome.
-type ChooseAnnotation struct{ Entry[string, LabelsDetail] }
+type ChooseAnnotation[C ~string] struct{ Entry[C, LabelsDetail] }
 
-func (ChooseAnnotation) annotation() {}
+func (ChooseAnnotation[C]) annotation() {}
 
 // Function returns the annotation function.
-func (ChooseAnnotation) Function() Function { return FunctionChoose }
+func (ChooseAnnotation[C]) Function() Function { return FunctionChoose }
 
 // TagAnnotation is a typed tag child outcome.
-type TagAnnotation struct{ Entry[[]string, LabelsDetail] }
+type TagAnnotation[C ~string] struct{ Entry[[]C, LabelsDetail] }
 
-func (TagAnnotation) annotation() {}
+func (TagAnnotation[C]) annotation() {}
 
 // Function returns the annotation function.
-func (TagAnnotation) Function() Function { return FunctionTag }
+func (TagAnnotation[C]) Function() Function { return FunctionTag }
 
 // ScoreAnnotation is a typed score child outcome.
 type ScoreAnnotation struct{ Entry[float64, LevelsDetail] }
@@ -100,14 +111,6 @@ func (RelateAnnotation) annotation() {}
 // Function returns the annotation function.
 func (RelateAnnotation) Function() Function { return FunctionRelate }
 
-// FilterAnnotation is a typed filter child outcome.
-type FilterAnnotation struct{ Entry[bool, NoDetail] }
-
-func (FilterAnnotation) annotation() {}
-
-// Function returns the annotation function.
-func (FilterAnnotation) Function() Function { return FunctionFilter }
-
 // UnmarshalJSON decodes typed annotation child outcomes from engine JSON.
 func (a *Annotations) UnmarshalJSON(data []byte) error {
 	var entries map[string]struct {
@@ -132,57 +135,58 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 			if !ok {
 				return abiError()
 			}
-			r.failure = &Error{code: code, message: value.Error.Message, httpStatus: value.Error.HTTPStatus}
+			r.failure = &Error{code: code, message: value.Error.Message, httpStatus: value.Error.HTTPStatus, noAnswer: true}
 		}
 		switch value.Function {
 		case "decide":
+			r.function = uint32(FunctionDecide)
 			entry, err := typedEntry[bool, NoDetail](r)
 			if err != nil {
 				return err
 			}
 			a.entries[name] = DecideAnnotation{entry}
 		case "choose":
+			r.function = uint32(FunctionChoose)
 			entry, err := typedEntry[string, LabelsDetail](r)
 			if err != nil {
 				return err
 			}
-			a.entries[name] = ChooseAnnotation{entry}
+			a.entries[name] = ChooseAnnotation[string]{entry}
 		case "tag":
+			r.function = uint32(FunctionTag)
 			entry, err := typedEntry[[]string, LabelsDetail](r)
 			if err != nil {
 				return err
 			}
-			a.entries[name] = TagAnnotation{entry}
+			a.entries[name] = TagAnnotation[string]{entry}
 		case "score":
+			r.function = uint32(FunctionScore)
 			entry, err := typedEntry[float64, LevelsDetail](r)
 			if err != nil {
 				return err
 			}
 			a.entries[name] = ScoreAnnotation{entry}
 		case "find":
+			r.function = uint32(FunctionFind)
 			entry, err := typedEntry[*Span, NoDetail](r)
 			if err != nil {
 				return err
 			}
 			a.entries[name] = FindAnnotation{entry}
 		case "recognize":
+			r.function = uint32(FunctionRecognize)
 			entry, err := typedEntry[[]Name, RecognizeDetail](r)
 			if err != nil {
 				return err
 			}
 			a.entries[name] = RecognizeAnnotation{entry}
 		case "relate":
+			r.function = uint32(FunctionRelate)
 			entry, err := typedEntry[[]Relation, PairsDetail](r)
 			if err != nil {
 				return err
 			}
 			a.entries[name] = RelateAnnotation{entry}
-		case "filter":
-			entry, err := typedEntry[bool, NoDetail](r)
-			if err != nil {
-				return err
-			}
-			a.entries[name] = FilterAnnotation{entry}
 		default:
 			return abiError()
 		}
@@ -194,9 +198,66 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 func (a Annotations) All() iter.Seq2[string, Annotation] {
 	return func(yield func(string, Annotation) bool) {
 		for _, name := range a.Names() {
-			if !yield(name, a.entries[name]) {
+			value, _ := a.Get(name)
+			if !yield(name, value) {
 				return
 			}
 		}
 	}
 }
+
+func (e DecideAnnotation) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+func (e ChooseAnnotation[C]) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+func (e TagAnnotation[C]) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+func (e ScoreAnnotation) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+func (e FindAnnotation) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+func (e RecognizeAnnotation) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+func (e RelateAnnotation) canonicalRow(data json.RawMessage) Annotation {
+	e.row.canonical = data
+	return e
+}
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e DecideAnnotation) Equal(other DecideAnnotation) bool { return e.Entry.Equal(other.Entry) }
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e ChooseAnnotation[C]) Equal(other ChooseAnnotation[C]) bool { return e.Entry.Equal(other.Entry) }
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e TagAnnotation[C]) Equal(other TagAnnotation[C]) bool { return e.Entry.Equal(other.Entry) }
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e ScoreAnnotation) Equal(other ScoreAnnotation) bool { return e.Entry.Equal(other.Entry) }
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e FindAnnotation) Equal(other FindAnnotation) bool { return e.Entry.Equal(other.Entry) }
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e RecognizeAnnotation) Equal(other RecognizeAnnotation) bool { return e.Entry.Equal(other.Entry) }
+
+// Equal compares the admitted result fields, excluding the caller's record.
+func (e RelateAnnotation) Equal(other RelateAnnotation) bool { return e.Entry.Equal(other.Entry) }

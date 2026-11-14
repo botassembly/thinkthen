@@ -1,14 +1,13 @@
-import { ThinkThen } from "thinkthen";
+import { Client } from "thinkthen";
 
 const messages = [
   "Please refund my order.",
   "Where is my parcel?",
   "I was charged twice for one invoice.",
 ];
-const tt = new ThinkThen();
+const tt = new Client();
 try {
-  // Only the messages answered yes. Not sure is left out; a failed
-  // message throws one RecordError after the kept messages.
+  // One bar keeps answered yeses; failures are reported after the kept messages.
   const refundRequests = await tt.filter(
     "Does the customer request a refund?",
     messages,

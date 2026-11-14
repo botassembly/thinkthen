@@ -168,13 +168,18 @@ int main(int argc, char **argv) {
         }
         std::atomic<idx_t> source_rows{0};
         bool read_ahead = argc > 2 && string(argv[2]) == "--read-ahead";
-        if (read_ahead) {
+        {
             ScalarFunction mark("record_read", {LogicalType::BIGINT}, LogicalType::BIGINT,
                 [&](DataChunk &input, ExpressionState &, Vector &output) {
                     source_rows += input.size();
                     output.Reference(input.data[0]);
                 });
             CreateScalarFunctionInfo info(mark); connection.context->RegisterFunction(info);
+            ScalarFunction reads("record_reads", {}, LogicalType::BIGINT,
+                [&](DataChunk &input, ExpressionState &, Vector &output) {
+                    output.Reference(Value::BIGINT(source_rows.load()), count_t(input.size()));
+                });
+            CreateScalarFunctionInfo reads_info(reads); connection.context->RegisterFunction(reads_info);
         }
         if (argc > 2) {
             std::thread work([&] { auto result = connection.Query(argc > 3 ? argv[3] : "SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?')"); Print(*result); });

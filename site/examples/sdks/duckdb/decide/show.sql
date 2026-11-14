@@ -1,4 +1,4 @@
-SELECT msg_id, answer AS is_refund, probability
+SELECT msg_id, answer AS is_refund, status, probability
 FROM thinkthen_decide(
   (SELECT msg_id, body FROM messages WHERE msg_id <= 3),
   'Does the customer request a refund?',

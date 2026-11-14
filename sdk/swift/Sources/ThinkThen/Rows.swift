@@ -1,51 +1,62 @@
 import Foundation
 import Synchronization
 
-// Preserve the source sequence's laziness without requiring its iterator to be Sendable.
-struct TextRecords<Base: Sequence & Sendable>: Sequence, Sendable where Base.Element == String {
-  let base: Base
-  init(_ base: Base) { self.base = base }
-  struct Iterator: IteratorProtocol {
-    var base: Base.Iterator
-    mutating func next() -> Record? { base.next().map(Record.text) }
+enum InputPayload: Sendable {
+  case text(String)
+  case json(Data)
+  case missing, invalid
+}
+struct InputRecord: Sendable {
+  let payload: InputPayload
+  let item: any Sendable
+  init<T: Encodable & Sendable>(_ item: T) {
+    self.item = item
+    if let value = item as? String {
+      payload = .text(value)
+    } else if let value = item as? Record {
+      switch value {
+      case .text(let text): payload = .text(text)
+      case .missing: payload = .missing
+      case .json(let json): payload = Self.jsonPayload(json)
+      }
+    } else {
+      payload = Self.jsonPayload(item)
+    }
   }
-  func makeIterator() -> Iterator { Iterator(base: base.makeIterator()) }
+  private static func jsonPayload<T: Encodable>(_ value: T) -> InputPayload {
+    do { return .json(try JSONEncoder().encode(value)) } catch { return .invalid }
+  }
 }
-
 protocol RecordSource: Sendable {
-  var finiteRecords: [Record]? { get }
-  func next() async throws -> Record?
+  func next() async throws -> InputRecord?
 }
-extension RecordSource { var finiteRecords: [Record]? { nil } }
-private actor SequenceSource<S: AsyncSequence & Sendable>: RecordSource where S.Element == Record {
-  private let source: S
+private actor SequenceSource<S: AsyncSequence & Sendable>: RecordSource
+where S.Element: Encodable & Sendable {
+  let source: S
   var iterator: S.AsyncIterator?
   init(_ source: S) { self.source = source }
-  func next() async throws -> Record? {
+  func next() async throws -> InputRecord? {
     var current = iterator ?? source.makeAsyncIterator()
     iterator = nil
     defer { iterator = current }
-    return try await current.next(isolation: self)
+    return try await current.next(isolation: self).map { InputRecord($0) }
   }
 }
-private actor SynchronousSource<S: Sequence & Sendable>: RecordSource where S.Element == Record {
+private actor SynchronousSource<S: Sequence & Sendable>: RecordSource
+where S.Element: Encodable & Sendable {
   let source: S
-  nonisolated var finiteRecords: [Record]? { source as? [Record] }
   var iterator: S.Iterator?
   init(_ source: S) { self.source = source }
-  func next() -> Record? {
+  func next() throws -> InputRecord? {
     var current = iterator ?? source.makeIterator()
-    let value = current.next()
-    iterator = current
-    return value
+    defer { iterator = current }
+    return current.next().map { InputRecord($0) }
   }
 }
-func source<S: AsyncSequence & Sendable>(_ input: S) -> any RecordSource where S.Element == Record {
-  SequenceSource(input)
-}
-func source<S: Sequence & Sendable>(_ input: S) -> any RecordSource where S.Element == Record {
-  SynchronousSource(input)
-}
+func source<S: Sequence & Sendable>(_ input: S) -> any RecordSource
+where S.Element: Encodable & Sendable { SynchronousSource(input) }
+func source<S: AsyncSequence & Sendable>(_ input: S) -> any RecordSource
+where S.Element: Encodable & Sendable { SequenceSource(input) }
 
 final class Driver<A: Sendable>: Sendable {
   private struct State: Sendable {
@@ -53,18 +64,18 @@ final class Driver<A: Sendable>: Sendable {
     var call: NativeCall?
     var pump: InputPump?
     var inputPending = false
-    var items: [UInt64: Record] = [:]
+    var items: [UInt64: any Sendable] = [:]
     var accepted: UInt64 = 0
   }
   private let state = Mutex(State())
   private let client: Client, request: Result<Data, any Error>, source: any RecordSource
   private let name: String?
   private let retainItems: Bool
-  private let decode: @Sendable (WireRow, Record?) throws -> A
+  private let decode: @Sendable (WireRow, (any Sendable)?) throws -> A
   init(
     client: Client, request: Result<Data, any Error>, name: String?, source: any RecordSource,
     retainItems: Bool,
-    decode: @escaping @Sendable (WireRow, Record?) throws -> A
+    decode: @escaping @Sendable (WireRow, (any Sendable)?) throws -> A
   ) {
     self.name = name
     self.retainItems = retainItems
@@ -74,11 +85,12 @@ final class Driver<A: Sendable>: Sendable {
     self.decode = decode
   }
   func cancel() {
-    state.withLock { state in
+    let (call, pump) = state.withLock { state in
       state.cancelled = true
-      state.call?.cancel()
-      state.pump?.cancel()
+      return (state.call, state.pump)
     }
+    call?.cancel()
+    pump?.cancel()
   }
   func close() async {
     cancel()
@@ -87,7 +99,7 @@ final class Driver<A: Sendable>: Sendable {
   }
   func next() async throws -> A? {
     let proceed = try state.withLock { state -> Bool in
-      guard !state.busy else { throw ThinkThenError.iteration(.concurrentNext) }
+      guard !state.busy else { throw CallError.iteration(.concurrentNext) }
       if state.finished { return false }
       state.busy = true
       return true
@@ -103,16 +115,8 @@ final class Driver<A: Sendable>: Sendable {
         } else {
           let bytes: Data
           do { bytes = try request.get() } catch {
-            throw ThinkThenError.encoding(message: String(describing: error))
-          }
-          let records = source.finiteRecords
-          if retainItems, let records {
-            state.withLock {
-              $0.items = Dictionary(
-                uniqueKeysWithValues: records.enumerated().map {
-                  (UInt64($0.offset + 1), $0.element)
-                })
-            }
+            if error is any ThinkThenError { throw error }
+            throw CallError.encoding(message: String(describing: error))
           }
           let opened: NativeCall = try await withCheckedThrowingContinuation { continuation in
             let client = client
@@ -121,14 +125,15 @@ final class Driver<A: Sendable>: Sendable {
               do {
                 continuation.resume(
                   returning: try NativeCall(
-                    client: client, request: bytes, name: name, records: records))
+                    client: client, request: bytes, name: name))
               } catch { continuation.resume(throwing: error) }
             }
           }
-          state.withLock {
+          let cancelled = state.withLock {
             $0.call = opened
-            if $0.cancelled { opened.cancel() }
+            return $0.cancelled
           }
+          if cancelled { opened.cancel() }
           native = opened
         }
         while true {
@@ -140,11 +145,11 @@ final class Driver<A: Sendable>: Sendable {
               guard case .input = event else { return event }
               let pump = state.withLock { state in
                 if let pump = state.pump { return pump }
-                let pump = InputPump(source: source) { [native] in native.wake() }
+                let pump = InputPump(source: source) { [weak native] in native?.wake() }
                 state.pump = pump
-                if state.cancelled { pump.cancel() }
                 return pump
               }
+              if state.withLock({ $0.cancelled }) { pump.cancel() }
               let request = state.withLock { state -> Bool in
                 if state.inputPending { return false }
                 state.inputPending = true
@@ -158,10 +163,10 @@ final class Driver<A: Sendable>: Sendable {
                   if retainItems {
                     state.withLock {
                       $0.accepted += 1
-                      $0.items[$0.accepted] = record
+                      $0.items[$0.accepted] = record.item
                     }
                   }
-                  try library.send(handle, record)
+                  try library.send(handle, record.payload)
                 } else {
                   library.end(handle)
                 }
@@ -181,7 +186,8 @@ final class Driver<A: Sendable>: Sendable {
               state.finished = true
               state.items.removeAll()
             }
-            state.withLock { $0.pump?.cancel() }
+            let pump = state.withLock { $0.pump }
+            pump?.cancel()
             await native.close()
             return nil
           }
@@ -200,10 +206,9 @@ final class Driver<A: Sendable>: Sendable {
     }
   }
   deinit {
-    state.withLock {
-      $0.pump?.cancel()
-      $0.call?.cancel()
-    }
+    let (call, pump) = state.withLock { ($0.call, $0.pump) }
+    call?.cancel()
+    pump?.cancel()
   }
 }
 
@@ -217,20 +222,22 @@ private final class Traversal<A: Sendable>: Sendable {
   let make: @Sendable () -> Driver<A>
   init(_ make: @escaping @Sendable () -> Driver<A>) { self.make = make }
   func claim() -> Driver<A>? {
-    state.withLock { state in
-      guard !state.claimed else { return nil }
+    let (driver, cancelled) = state.withLock { state -> (Driver<A>?, Bool) in
+      guard !state.claimed else { return (nil, false) }
       state.claimed = true
       let driver = make()
       state.driver = driver
-      if state.cancelled { driver.cancel() }
-      return driver
+      return (driver, state.cancelled)
     }
+    if cancelled { driver?.cancel() }
+    return driver
   }
   func cancel() {
-    state.withLock {
+    let driver = state.withLock {
       $0.cancelled = true
-      $0.driver?.cancel()
+      return $0.driver
     }
+    driver?.cancel()
   }
 }
 /// A lazy, single-pass stream. Releasing its iterator stops native work.
@@ -256,7 +263,7 @@ public final class Rows<Element: Sendable>: AsyncSequence, Sendable {
     private let cancellation: @Sendable () -> Void
     fileprivate init(_ driver: Driver<Element>?) {
       advance = {
-        guard let driver else { throw ThinkThenError.iteration(.alreadyIterated) }
+        guard let driver else { throw CallError.iteration(.alreadyIterated) }
         return try await driver.next()
       }
       cancellation = { driver?.cancel() }

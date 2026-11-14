@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
@@ -23,12 +24,12 @@ func main() {
 	defer client.Close()
 
 	// Only the messages that answer yes. A failed message arrives as an error.
-	refundQuestion := tt.NewFilter("Does the customer request a refund?")
-	for refund, err := range client.FilterAll(
-		context.Background(), refundQuestion, tt.Texts(messages...)) {
+	refundQuestion := tt.FilterQuestion{Question: "Does the customer request a refund?"}
+	for refund, err := range client.Filter(
+		context.Background(), refundQuestion, slices.Values(messages)) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(refund.Item())
+		fmt.Println(refund)
 	}
 }

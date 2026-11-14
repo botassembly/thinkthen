@@ -1,0 +1,28 @@
+#!/bin/sh
+# Focused C++20 source SDK and literal-guide checks.
+set -eu
+cd "$(dirname "$0")/.."
+compiler=${CXX:-c++}
+case "${1:-}" in
+    --compile-only)
+        "$compiler" --version
+        failed=0
+        for source in sdk/cpp/tests/*.cpp; do
+            "$compiler" -std=c++20 -Wall -Wextra -Werror -UNDEBUG -fsyntax-only -Isdk/cpp/include -Icrates/thinkthen-ffi/include -I"$HOME/.local/share/thinkthen-build-tools/nlohmann-json/3.11.3/include" "$source" || failed=1
+        done
+        exit "$failed"
+        ;;
+    ""|--consumers|--all|--parent-bridge)
+        cargo build --locked -p thinkthen-ffi
+        cargo build --locked -p loopback --bin loopback
+        if [ "${1:-}" = --consumers ]; then exec python3 scripts/cpp-consumer-examples; fi
+        if [ "${1:-}" = --parent-bridge ]; then
+            python3 scripts/guide-examples --surface cpp --inventory
+            python3 scripts/cpp-guide-examples --contract-only
+            exec python3 scripts/cpp-consumer-examples
+        fi
+        python3 scripts/cpp-guide-examples
+        if [ "${1:-}" = --all ]; then exec python3 scripts/cpp-consumer-examples; fi
+        ;;
+    *) echo 'usage: scripts/cpp-ideal-gate [--compile-only|--consumers|--all|--parent-bridge]' >&2; exit 2 ;;
+esac

@@ -5,7 +5,7 @@ case <- commandArgs(TRUE)[[1]]
 if (case == "rank") {
   # Feature: rank vectors attach each answer to its original input, including top.
   input <- c("alpha", "bravo", "charlie")
-  rows <- tt_rank_rows(input, "How much?", c("low", "medium", "high"), client = stub)
+  rows <- tt_rank(details = TRUE, input, "How much?", c("low", "medium", "high"), client = stub)
   cat("rank fixture positions:", rows$position, "answers:", rows$answer, "\n")
   ranks <- tt_rank(input, "How much?", c("low", "medium", "high"), client = stub)
   stopifnot(identical(ranks, c(3, 1, 2)))
@@ -21,21 +21,21 @@ if (case == "rank") {
   with_tt_client(NULL, {
     (function() {
       local_tt_client(stub)
-      stopifnot(identical(as.character(tt_decide_rows("text", "Ready?")$source[[1]]$backend), "stub"))
+      stopifnot(identical(as.character(tt_decide(details = TRUE, "text", "Ready?")$source[[1]]$backend), "stub"))
     })()
   })
   tt_close(previous)
   with_tt_client(previous, {
     (function() {
       local_tt_client(stub)
-      stopifnot(identical(as.character(tt_decide_rows("text", "Ready?")$source[[1]]$backend), "stub"))
+      stopifnot(identical(as.character(tt_decide(details = TRUE, "text", "Ready?")$source[[1]]$backend), "stub"))
       tryCatch((function() {
         local_tt_client(previous)
         stop("scope exit")
       })(), error = function(e) NULL)
-      stopifnot(identical(as.character(tt_decide_rows("text", "Ready?")$source[[1]]$backend), "stub"))
+      stopifnot(identical(as.character(tt_decide(details = TRUE, "text", "Ready?")$source[[1]]$backend), "stub"))
     })()
-    condition(tt_decide_rows("text", "Ready?"), "thinkthen_usage_error", "usage.closed")
+    condition(tt_decide(details = TRUE, "text", "Ready?"), "thinkthen_usage_error", "usage.closed")
   })
   tt_close(previous)
 } else stop("Unknown wrong-answer case")

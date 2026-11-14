@@ -58,6 +58,15 @@ args.remove('--offline')
 subprocess.run(['uv', 'run', *args, '--', 'python', '--version'], check=True)
 PY
 if [ "$shared_abi" = 1 ]; then
+    # The Go slice verifies the declared source-checker identity offline below.
+    python3 - <<'GO_TOOLS'
+import sys
+sys.path.insert(0, 'scripts')
+from release_go import prepare
+from release_host_tools import source_tools
+prepare()
+source_tools()
+GO_TOOLS
     if [ "$(uname -s)" = Linux ]; then
         scripts/source-linux-tools
         PATH="$PWD/target/source-tools/bin:$PATH"
@@ -123,6 +132,10 @@ build_target=${CARGO_TARGET_DIR:-$PWD/target}
 case "$build_target" in /*) ;; *) build_target="$PWD/$build_target" ;; esac
 # Workspace CLI integration tests build the current command used by the guide.
 stage bash-guide scripts/bash-guide
+stage c-ideal-guide scripts/c-guide-examples
+stage rust-ideal-guide scripts/rust-guide-examples
+stage service-ideal-guide scripts/service-guide-examples
+stage guide-registration scripts/guide-examples --inventory --require-all
 case "$(uname -s)" in
     Linux) THINKTHEN_NATIVE_LIBRARY="$build_target/debug/libthinkthen_ffi.so" ;;
     Darwin) THINKTHEN_NATIVE_LIBRARY="$build_target/debug/libthinkthen_ffi.dylib" ;;

@@ -4,6 +4,6 @@ import dev.thinkthen.kotlin.*
 
 // Feature: AskRejectsList. A typed one-record ask refuses many records when the code is compiled.
 suspend fun rejectedAskRejectsList(client: ThinkThen) {
-// Expect: pass many records to askStream
-    client.ask(Decide("Ready?"), listOf("alpha", "beta"))
+// Expect: use decideStream
+    client.decide(DecideQuestion("Ready?"), listOf("alpha", "beta"))
 }

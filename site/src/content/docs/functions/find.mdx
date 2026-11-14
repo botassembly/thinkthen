@@ -1,94 +1,45 @@
 ---
 title: find
 description: find prints the line of a text that answers your question, prints nothing when no line does, and says not sure when the winning line or none outcome falls short of the bar.
-goal: A newcomer with a text of several lines leaves able to get the line that answers a question, read no line and not sure, see the chance of the line, move the bar, branch a script on the line, and find a line in every row of a CSV file.
+goal: A newcomer with a text of several lines leaves able to get the line that answers a question, read no line and not sure, see the chance of the line, move the bar, branch a script on the line, and find a line in every result of a CSV file.
 reader: Someone at the command line who needs the one line of a text that answers a question
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "find: the line that answers a question"
 ---
 import Example from '../../../components/Example.astro';
-import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
 
-find reads a text line by line and prints the one line that answers your question. It prints nothing when no line answers, and says not sure (`unsure`) when the winning line or none outcome falls short of the bar.
+find asks a bounded question about text and returns an answered, not-sure or failed result.
 
-<Example id="find-shell" />
+<Example id="functions/find/command" />
 
-<ExampleFile id="find-shell" file="message.txt" />
+<ExampleFile id="functions/find/command" file="message.txt" />
 
-The second line asks for a refund, so find prints it.
+find points to the one line that answers.
 
-## No line
+```bash
+message=$'Morgan works for Example Group.\nPlease refund my order.'
 
-<Example id="find-none" />
+status=0
+action=$(thinkthen find --check \
+  'Which line states the requested action?' \
+  --text "$message") || status=$?
 
-Nothing: the text says who Morgan works for, and asks for nothing.
+case $status in
+  3) echo "a person reads it" ;;
+  1) echo "no line answers" ;;
+  0) echo "$action" ;;
+  *) exit "$status" ;;
+esac
+```
 
-## See why
+With `--check`, find exits 0 when it found a line, 1 when no line answers, and 3 when it was not sure. Like choose, find can be not sure with no bar set.
 
-<details class="example-disclosure">
-<summary>See why</summary>
-
-`--json` prints the details. This `jq` keeps the line and its chance.
-
-<Example id="find-why" />
-
-`probability` is the model's estimate that this line answers the question. 0.77 reaches the bar of 0.5, so find prints the line. [JSON output](/reference/json-output/) lists every field, including where the line starts and ends.
-
-</details>
-
-## Move the bar
-
-
-Raise the bar to 0.9 and find is not sure, because the line has 0.77.
-
-<Example id="find-bar" />
-
-Send not sure to a person. Never treat it as no line. The same bar applies when none wins: a weak no-match estimate is unsure. The default bar is 0.5. See [interpreting probability](/reference/json-output/#interpreting-probability) before choosing a bar.
-
-
-## Use the answer in a script
-
-<details class="example-disclosure">
-<summary>Use the answer in a script</summary>
-
-`--check` turns the answer into the exit code, and the line still prints.
-
-<Example id="find-script" />
-
-| Answer | Exit code with `--check` |
-|---|---|
-| a line | 0 |
-| no line | 1 |
-| `unsure` | 3 |
-
-Without `--check`, find exits 0 whenever it answers. [Exit codes](/command-line/exit-codes/) lists every code.
-
-</details>
-
-## Find a line in every row of a CSV file
-
-<details class="example-disclosure">
-<summary>Find a line in every row of a CSV file</summary>
-
-Each cell can hold several lines, inside quotes.
-
-<ExampleFile id="find-into" file="messages.csv" />
-
-<Example id="find-into" />
-
-`--column` names the column to read, and `--into` names the new answer column. A row with no line gets an empty cell. [File types](/command-line/file-types/) covers TSV, Excel and other files.
-
-</details>
-
-## Migrating a 0.1 candidate list
-
-In 0.1, find selected one input from the whole collection. In 0.2, each input is a separate document and find selects a line inside it. Put one complete candidate set in one document and keep a map from Unicode-scalar spans to original candidate IDs. Duplicate text needs that map; text equality alone cannot identify the winner. Blank or multiline candidates need a single-line encoding rather than a plain newline join. The [command guide's migration example](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/bash.md#migrating-candidate-set-find-calls) shows the document, offsets and ID map.
-
-None is always available in 0.2 and must reach the same bar as a selected line. This presentation change needs fresh evaluation on your labeled cases; an old threshold or quality result does not establish the same behavior.
+Without `--json`, find prints the line it found. With `--json`, the answer has `text`, `start` and `end`, or is `null` when no line answers. The offsets count characters, so `${message:start:end-start}` is the line.
 
 ## Options
 
@@ -98,9 +49,3 @@ None is always available in 0.2 and must reach the same bar as a selected line. 
 <FunctionOptions name="find" />
 
 </details>
-
-If find can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#find) · [TypeScript](/sdks/typescript/#find) · [Go](/sdks/go/#find) · [Java](/sdks/java/#find) · [Kotlin](/sdks/kotlin/#find) · [C#](/sdks/csharp/#find) · [R](/sdks/r/#find) · [Ruby](/sdks/ruby/#find) · [Rust](/sdks/rust/#find) · [Swift](/sdks/swift/#find) · [Zig](/sdks/zig/#find) · [C](/sdks/c/#find) · [C++](/sdks/cpp/#find) · [DuckDB](/sdks/duckdb/#find) · [SQLite](/sdks/sqlite/#find) · [PostgreSQL](/sdks/postgresql/#find)
-
-Next: [recognize](/functions/recognize/) picks out the names of people, companies and other kinds in a text.

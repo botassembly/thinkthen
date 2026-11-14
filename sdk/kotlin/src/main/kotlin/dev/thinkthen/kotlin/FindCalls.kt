@@ -1,42 +1,45 @@
 package dev.thinkthen.kotlin
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlin.reflect.KClass
 
-/**
- * Finds the line of one [record] that answers [question]. The answer is its [Span], or null when no line answers.
- *
- * Throws [ThinkThenException] with `record.empty` for blank text, before any backend call. A missing record (null) gives a failed row. The row's `answer()` throws on not sure or failure. Pass many records to [findStream].
- */
-public suspend inline fun <reified T> ThinkThen.find(question: String, record: T?, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, Nothing> =
-    single(Find(question, threshold, field, name), record, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend inline fun <reified T> ThinkThen.find(question: String, record: T, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, T> =
+    single(FindQuestion(question, threshold, field, name), record, { recordSerializer<T>() })
 
-/** The same as the other `find`, encoding [record] with [serializer]. */
-public suspend fun <T> ThinkThen.find(question: String, record: T?, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, Nothing> =
-    single(Find(question, threshold, field, name), record, serializer)
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend fun ThinkThen.find(question: String, record: Nothing?, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, Nothing?> =
+    single(FindQuestion(question, threshold, field, name), record, { JsonElement.serializer() })
 
-/** The same as the other `find`, for a missing record written as `null`. It returns a failed `record.missing` row. */
-public suspend fun ThinkThen.find(question: String, record: Nothing?, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, Nothing> =
-    single(Find(question, threshold, field, name), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.findStream(question: String, records: Flow<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<Span?, T>> =
+    stream(FindQuestion(question, threshold, field, name), records, { recordSerializer<T>() })
 
-/** The same as the other `find`, for one JSON array record. A JSON array is one record, not many records. */
-public suspend fun ThinkThen.find(question: String, record: JsonArray, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, Nothing> =
-    single(Find(question, threshold, field, name), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.findStream(question: String, records: Iterable<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<Span?, T>> =
+    iterable(FindQuestion(question, threshold, field, name), records, { recordSerializer<T>() })
 
-/** Many records as a cold flow of rows in input order. Each collection makes its own call; a failed record gives a failed row and the rest continue. */
-public inline fun <reified T> ThinkThen.findStream(question: String, records: Flow<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<Span?, Nothing>> =
-    stream(Find(question, threshold, field, name), records, recordSerializer<T>())
+/** Ask an immutable typed question. */
+public suspend inline fun <reified T> ThinkThen.find(question: FindQuestion, record: T): Row<Span?, T> =
+    single(question, record, { recordSerializer<T>() })
 
-/** The same as the other `findStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.findStream(question: String, records: Flow<T?>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<Span?, Nothing>> =
-    stream(Find(question, threshold, field, name), records, serializer)
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.findStream(question: FindQuestion, records: Iterable<T>): Flow<Row<Span?, T>> =
+    iterable(question, records, { recordSerializer<T>() })
 
-/** Many records from a collection, as a cold flow of rows in input order. */
-public inline fun <reified T> ThinkThen.findStream(question: String, records: Iterable<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<Span?, Nothing>> =
-    iterable(Find(question, threshold, field, name), records, recordSerializer<T>())
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.findStream(question: FindQuestion, records: Flow<T>): Flow<Row<Span?, T>> =
+    stream(question, records, { recordSerializer<T>() })
 
-/** The same as the other `findStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.findStream(question: String, records: Iterable<T?>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<Span?, Nothing>> =
-    iterable(Find(question, threshold, field, name), records, serializer)
+/** One JSON array is one record. */
+public suspend fun ThinkThen.find(question: String, record: kotlinx.serialization.json.JsonArray, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<Span?, kotlinx.serialization.json.JsonArray> =
+    single(FindQuestion(question, threshold, field, name), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun ThinkThen.find(question: FindQuestion, record: kotlinx.serialization.json.JsonArray): Row<Span?, kotlinx.serialization.json.JsonArray> =
+    single(question, record, { JsonElement.serializer() })
+
+/** A missing record retains null as its original item. */
+public suspend fun ThinkThen.find(question: FindQuestion, record: Nothing?): Row<Span?, Nothing?> =
+    single(question, record, { JsonElement.serializer() })

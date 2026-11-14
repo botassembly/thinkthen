@@ -60,17 +60,19 @@ fn the_command_prints_each_matching_label_and_always_exits_zero() {
 
 #[test]
 fn details_and_record_streams_print_json_rows_without_a_scalar_probability() {
-    for (args, input, count) in [
-        (vec!["--json"], "message", 1),
+    for (args, input, count, item) in [
+        (vec!["--json"], "message", 1, None),
         (
             vec!["--from", "lines", "--json", "--threshold", "0.8"],
             "first\nsecond\n",
             2,
+            Some(json!("first")),
         ),
         (
             vec!["--from", "jsonl", "--json", "--field", "/body"],
             "{\"body\":\"message\"}\n",
             1,
+            Some(json!({"body":"message"})),
         ),
     ] {
         let server = Loopback::noul(0.8).unwrap();
@@ -86,11 +88,12 @@ fn details_and_record_streams_print_json_rows_without_a_scalar_probability() {
             })
             .collect();
         assert_eq!(rows.len(), count);
-        assert_eq!(
-            rows[0],
-            json!({"function":"tag","position": 1, "status": "answered", "answer": ["billing", "shipping"],
-            "detail": {"labels":{"billing": 0.8, "shipping": 0.8}}})
-        );
+        let mut expected = json!({"function":"tag","position": 1, "status": "answered", "answer": ["billing", "shipping"],
+            "detail": {"labels":{"billing": 0.8, "shipping": 0.8}}});
+        if let Some(item) = item {
+            expected["item"] = item;
+        }
+        assert_eq!(rows[0], expected);
     }
 }
 

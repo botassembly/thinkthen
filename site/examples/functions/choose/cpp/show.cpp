@@ -1,17 +1,25 @@
-#include <iostream>
 #include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
+
+enum class Topic { billing, shipping, other };
+template<>
+inline constexpr std::array<std::pair<Topic, std::string_view>, 3> thinkthen::words<Topic>{{
+    {Topic::billing, "billing"},
+    {Topic::shipping, "shipping"},
+    {Topic::other, "other"},
+}};
 
 int main() try {
-    thinkthen::client client;
-    const thinkthen::choose about{"What is the message about?",
-                                  {"billing", "shipping", "other"}};
-    const std::string topic =
-        client.choose(about, "Please refund my order.").value();
-    std::cout << topic << '\n';
-} catch (const thinkthen::unsure&) {
-    std::cerr << "not sure: a person should read it\n";
-    return 1;
-} catch (const thinkthen::error& failure) {
-    std::cerr << failure.code().message() << ": " << failure.what() << '\n';
+    tt::client client;
+    const tt::choose<Topic> asks_topic{"What is the message about?"};
+    const auto topic = client.choose(asks_topic, "Please refund my order.");
+    std::cout << tt::word(topic.answer()) << '\n';
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
     return 1;
 }

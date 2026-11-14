@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"context"
-	"errors"
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 	"reflect"
 	"testing"
@@ -12,24 +11,24 @@ import (
 func TestToolboxSelectionDoesNotNameExecution(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
-	q := tt.NewChoose("Which?", []string{"red", "green"})
+	q := tt.ChooseQuestion[string]{Question: "Which?", Choices: []string{"red", "green"}}
 	box := tt.NewToolbox(map[string]tt.Question{"route": q})
-	selected, ok := box.Choose("route")
-	if !ok {
+	selected, selectionErr := box.Choose[string]("route")
+	if selectionErr != nil {
 		t.Fatal("typed selection failed")
 	}
-	inline, err := c.Choose(ctx, q, tt.Text("evidence"))
+	inline, err := c.Choose(ctx, q, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fromBox, err := c.Choose(ctx, selected, tt.Text("evidence"))
+	fromBox, err := c.Choose(ctx, selected, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(inline, fromBox) || fromBox.Source().Name != nil {
 		t.Fatal("toolbox selection changed execution identity")
 	}
-	named, err := c.Choose(ctx, q.WithName("run"), tt.Text("evidence"))
+	named, err := c.Choose(ctx, tt.ChooseQuestion[string]{Question: q.Question, Choices: q.Choices, Name: "run"}, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +42,7 @@ func TestToolboxSelectionDoesNotNameExecution(t *testing.T) {
 	if *named.Source().Name != "run" {
 		t.Fatal("source name escaped row ownership")
 	}
-	if _, err = c.Choose(ctx, q.WithName(""), tt.Text("evidence")); !errors.Is(err, tt.CodeUsageName) {
+	if _, err = c.Choose(ctx, tt.ChooseQuestion[string]{Question: q.Question, Choices: q.Choices}, "evidence"); err != nil {
 		t.Fatal("explicit empty execution name bypassed admission")
 	}
 }

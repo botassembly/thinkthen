@@ -1,7 +1,14 @@
 #!/bin/sh
 # Compile the PostgreSQL adapter and run its bounded ownership contracts.
 set -eu
-: "${THINKTHEN_SQL_TEST_ARCHIVE:?Select the compatible fixture archive}"
+[ "$(uname -s)" = Linux ] || { echo 'PostgreSQL adapter proof needs Linux' >&2; exit 77; }
+. scripts/native-tools-env
+scope=${1:-adapter}
+case "$scope" in adapter|ideal|migration) ;; *) echo 'usage: development.sh [adapter|ideal|migration]' >&2; exit 2 ;; esac
+if [ -z "${THINKTHEN_SQL_TEST_ARCHIVE:-}" ]; then
+    scripts/native-test-assets prepare
+    eval "$(scripts/native-test-assets env)"
+fi
 : "${THINKTHEN_LOOPBACK:?Select its matching loopback}"
 job=${PM_JOB:-local}
 set --
@@ -26,7 +33,7 @@ docker run "$@" --pull=never --rm --network none -v "$PWD:/src:ro" -v "$scratch:
         chown -R "$1:$2" /work
         setpriv --reuid "$1" --regid "$2" --clear-groups env HOME=/work/home \
             THINKTHEN_PG_CFLAGS= THINKTHEN_SQL_TEST_BUILD=ON sh /src/extensions/postgres/package.sh
-    ' sh "$(id -u)" "$(id -g)"
+    ' sh "$(id -u)" "$(id -g)" "$scope"
 # The prepared test image owns Python's PostgreSQL driver.
 docker run "$@" --pull=never --rm --network none -v "$PWD:/src:ro" -v "$scratch:/work" \
     -v "$THINKTHEN_LOOPBACK:/loopback:ro" \
@@ -39,7 +46,7 @@ docker run "$@" --pull=never --rm --network none -v "$PWD:/src:ro" -v "$scratch:
         fi
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/home \
             PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin LANG=C.UTF-8 \
-            python3 /src/extensions/postgres/tests/typed_api.py /loopback --group adapter \
+            python3 /src/extensions/postgres/tests/typed_api.py /loopback --group "$3" \
             --abi-mismatch-extension /work/build/thinkthen_postgres_mismatch.so \
             --systemone-url-env THINKTHEN_TEST_LOOPBACK_URL --openai-url-env THINKTHEN_TEST_LOOPBACK_URL
-    ' sh "$(id -u)" "$(id -g)"
+    ' sh "$(id -u)" "$(id -g)" "$scope"

@@ -3,7 +3,7 @@ require "thinkthen"
 # Feature: call failures from a newer engine preserve unknown raw codes and messages.
 if ARGV[1] == "child"
   ThinkThen::Client.open(backend: :stub) do |client|
-    questions = ThinkThen::AnnotationQuestions.new(questions: {"future" => ThinkThen::DecideQuestion.new("Ready?")})
+    questions = ThinkThen::AnnotationQuestions.new(**{"future" => ThinkThen::DecideQuestion.new("Ready?")})
     row = client.annotate(questions, "record")
     error = row.answer.fetch("future").error
     abort "lost child name" unless error.code == :unknown && error.raw_name == "future.problem" && error.raw_code.nil?
@@ -13,7 +13,7 @@ if ARGV[1] == "child"
 end
 if ARGV[1] == "row"
   ThinkThen::Client.open(backend: :stub) do |client|
-    row = client.decide("Ready?", nil)
+    row = client.decide_each("Ready?", [nil]).first
     abort "lost raw row code" unless row.error.code == :unknown && row.error.raw_code == 2147483647
     abort "lost row message" unless row.error.message == ARGV.fetch(0)
   end

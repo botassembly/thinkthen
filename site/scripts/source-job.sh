@@ -2,10 +2,16 @@
 # Build source inputs and run docs consumers in one job, from the certified tree.
 set -eu
 cd "$(dirname "$0")/../.."
-. scripts/native-tools-env
 mode=${1:-routine}
 shift || true
-case "$mode" in routine|capture|replay|reference|stage|stage-check|stage-check-r|prepare-examples|bundle-runtimes) ;; *) echo 'Use routine, capture, replay, reference, stage, stage-check, stage-check-r, prepare-examples or bundle-runtimes, then arguments' >&2; exit 2 ;; esac
+case "$mode" in routine|capture|replay|reference|stage|stage-check|stage-check-r|prepare-examples|bundle-runtimes|guide-check) ;; *) echo 'Use routine, capture, replay, reference, stage, stage-check, stage-check-r, prepare-examples or bundle-runtimes or guide-check, then arguments' >&2; exit 2 ;; esac
+if [ -n "${SITE_RUNTIME_BUNDLE:-}" ]; then
+  case "$mode" in capture|replay|routine)
+    exec python3 -B site/scripts/runtime-examples.py "$mode" "$@" ;;
+    *) echo 'A runtime bundle executes routine, capture or replay only' >&2; exit 2 ;;
+  esac
+fi
+. scripts/native-tools-env
 if [ "$mode" = prepare-examples ]; then
   prepared_out=$1; shift
   case "$prepared_out" in /*) ;; *) echo 'Use an absolute owned example bundle path' >&2; exit 2 ;; esac
@@ -82,6 +88,15 @@ else
   SITE_BIN_DIR=$build/debug
 fi
 export SITE_BIN_DIR
+if [ "$mode" = guide-check ]; then
+  cargo build --locked -p loopback --bin loopback
+  status=0
+  scripts/bash-guide || status=1
+  scripts/service-guide-examples || status=1
+  scripts/day-one-docs-test || status=1
+  scripts/guide-examples --inventory --require-all || status=1
+  exit "$status"
+fi
 selected_languages=
 case "$mode" in routine|capture|replay|prepare-examples)
   if [ "$#" -gt 0 ]; then

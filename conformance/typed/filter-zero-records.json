@@ -4,10 +4,7 @@
     "question": {
       "function": "filter",
       "question": "Ready?",
-      "threshold": {
-        "low": 0.2,
-        "high": 0.8
-      }
+      "threshold": 0.8
     },
     "records": []
   },

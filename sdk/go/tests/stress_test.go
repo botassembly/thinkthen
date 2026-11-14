@@ -41,15 +41,15 @@ type stressReport struct {
 
 func stressConsume(c *tt.Client, s stressPacket, call int, widths *atomic.Uint64) (int, error) {
 	call += s.IdentifierBase
-	input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
+	input := func(yield func(any) bool) {
 		for i := 0; i < s.Records; i++ {
-			if !yield(tt.RawJSON([]byte(fmt.Sprintf(`{"id":"call-%d-record-%d","body":"record %d"}`, call, s.IdentifierBase+i, i))), nil) {
+			if !yield(json.RawMessage([]byte(fmt.Sprintf(`{"id":"call-%d-record-%d","body":"record %d"}`, call, s.IdentifierBase+i, i)))) {
 				return
 			}
 		}
-	})
+	}
 	received, failed := 0, 0
-	for row, err := range c.DecideAll(context.Background(), tt.NewDecide("Ready?"), input) {
+	for row, err := range c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, input) {
 		if err != nil {
 			return failed, err
 		}
@@ -100,15 +100,15 @@ func stressAdapter(s stressPacket) (stressReport, error) {
 		defer cancel()
 		done := make(chan error, 1)
 		go func() {
-			input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
+			input := func(yield func(any) bool) {
 				for i := 0; i < s.Records; i++ {
-					if !yield(tt.Text("body"), nil) {
+					if !yield("body") {
 						return
 					}
 				}
-			})
+			}
 			terminal := 0
-			for _, err := range c.DecideAll(ctx, tt.NewDecide("Ready?"), input) {
+			for _, err := range c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, input) {
 				if !errors.Is(err, context.Canceled) {
 					done <- fmt.Errorf("expected cancellation: %v", err)
 					return

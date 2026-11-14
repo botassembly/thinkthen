@@ -20,6 +20,9 @@ struct NativeClient(RefCell<Option<Engine>>, RefCell<Option<thinkthen::Usage>>);
 #[derive(Debug)]
 struct NativeCall(RefCell<Option<Call>>);
 
+#[derive(Debug)]
+struct NativeRequest(Request);
+
 fn failure(error: thinkthen::Error) -> List {
     let http_status = error
         .http_status()
@@ -153,15 +156,42 @@ fn r_prepare_record(value: &str, kind: i32, id: Robj) -> List {
         )))))
     )
 }
+
+/// Admit a call and the actual table columns before a client or request is opened.
+#[extendr]
+fn r_prepare_request(value: &str, columns: Vec<String>, suffixes: Vec<String>) -> List {
+    let result = (|| {
+        let request = Request::from_json(value)?;
+        if let thinkthen::Question::Annotate(question) = request.question() {
+            let columns = columns.iter().map(String::as_str).collect::<Vec<_>>();
+            let suffixes = suffixes.iter().map(String::as_str).collect::<Vec<_>>();
+            question.validate_table_columns(&columns, &suffixes)?;
+        }
+        let definition = serde_json::to_string(request.question())
+            .map_err(|_| thinkthen::native::internal_error())?;
+        Ok((request, definition))
+    })();
+    match result {
+        Ok((request, definition)) => list!(
+            value = ExternalPtr::new(NativeRequest(request)),
+            definition = definition
+        ),
+        Err(error) => failure(error),
+    }
+}
+
 /// Transfer a finite collection before the worker starts, preserving batch boundaries.
 #[extendr]
-fn r_open_finite(client: ExternalPtr<NativeClient>, request: &str, records: List) -> List {
+fn r_open_finite(
+    client: ExternalPtr<NativeClient>,
+    request: ExternalPtr<NativeRequest>,
+    records: List,
+) -> List {
     let engine = client.0.borrow();
     let Some(engine) = engine.as_ref() else {
         return failure(thinkthen::native::closed_client_error());
     };
     let result = (|| {
-        let request = Request::from_json(request)?;
         let mut initial = Vec::with_capacity(records.len());
         for record in records.values() {
             let record = ExternalPtr::<NativeRecord>::try_from(record)
@@ -174,10 +204,33 @@ fn r_open_finite(client: ExternalPtr<NativeClient>, request: &str, records: List
                     .ok_or_else(thinkthen::native::abi_error)?,
             );
         }
-        Call::open_records(engine, &request, initial, OffsetUnit::CodePointsInclusive)
+        Call::open_records(engine, &request.0, initial, OffsetUnit::CodePointsInclusive)
     })();
     match result {
         Ok(call) => list!(value = ExternalPtr::new(NativeCall(RefCell::new(Some(call))))),
+        Err(error) => failure(error),
+    }
+}
+
+/// Validate the canonical saved shape while keeping exact identifiers out of R doubles.
+#[extendr]
+fn r_saved_row(value: &str, id: Robj) -> List {
+    let result = (|| {
+        let invalid = || thinkthen::native::argument_error(thinkthen::Code::UsageArgument);
+        let mut value: serde_json::Value = serde_json::from_str(value).map_err(|_| invalid())?;
+        if !id.is_null() {
+            let id = ExternalPtr::<NativeId>::try_from(id).map_err(|_| invalid())?;
+            value.as_object_mut().ok_or_else(invalid)?.insert(
+                "id".into(),
+                serde_json::to_value(&id.0).map_err(|_| thinkthen::native::internal_error())?,
+            );
+        }
+        let row: thinkthen::results::AnyRow =
+            serde_json::from_value(value).map_err(|_| invalid())?;
+        serde_json::to_string(&row).map_err(|_| thinkthen::native::internal_error())
+    })();
+    match result {
+        Ok(value) => list!(value = value),
         Err(error) => failure(error),
     }
 }
@@ -208,10 +261,11 @@ fn r_poll(call: ExternalPtr<NativeCall>) -> List {
                     }
                 },
             );
-            match serde_json::to_string(&row) {
+            match thinkthen::native::host_row_json(&row).map(|(value, _)| value.to_string()) {
                 Ok(json) => list!(
                     kept = match &row {
-                        thinkthen::results::AnyRow::Filter(row) => Some(row.kept()),
+                        thinkthen::results::AnyRow::Filter(row) =>
+                            Some(row.answer().is_ok_and(|answer| answer)),
                         _ => None,
                     },
                     event = "row",
@@ -327,6 +381,8 @@ extendr_module! {
     fn r_client;
     fn r_open_finite;
     fn r_prepare_record;
+    fn r_prepare_request;
+    fn r_saved_row;
     fn r_poll;
     fn r_close;
 }

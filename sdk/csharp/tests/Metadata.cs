@@ -8,25 +8,28 @@ internal static partial class Program
     private static async Task MetadataCalls(ThinkThenClient client, Message message)
     {
         var metadata = ConsumerJson.Default.Message;
-        Successful(await client.DecideWithMetadataAsync("Ready?", message, metadata));
+        var decision=await client.DecideWithMetadataAsync("Ready?",message,metadata);
+        Successful(decision);
         Successful(await client.ChooseWithMetadataAsync("Which team?", message, ["billing", "shipping"], metadata));
         Successful(await client.TagWithMetadataAsync("Which labels?", message, ["billing"], metadata));
         Successful(await client.ScoreWithMetadataAsync("How urgent?", message, ["routine", "urgent"], metadata));
         Successful(await client.FindWithMetadataAsync("Which line?", message, metadata));
         Successful(await client.RecognizeWithMetadataAsync(message, ["person"], metadata));
         Successful(await client.RelateWithMetadataAsync(message,
-            [new RelationRule { Source = "person", Target = "company", Name = "works_for" }], metadata));
+            [new RelationRule { Source = "person", Target = "company", Relation = "works_for" }], metadata));
         int streamed = 0;
         await foreach (var row in client.DecideStreamWithMetadataAsync("Ready?", Records(new[] { message }), metadata))
         {
-            Check(row.Position == 1 && row.Status != RowStatus.Failed, "metadata stream lost input position");
+            Check(row.Position == 1 && row.Status != Status.Failed, "metadata stream lost input position");
             streamed++;
         }
         Check(streamed == 1, "metadata stream dropped the record");
+        await using var yes=await Fixture.Start(Environment.GetEnvironmentVariable("THINKTHEN_LOOPBACK")!,"--guide-scenario","yes");
+        await using var positive=new ThinkThenClient(new(){Backend=Backend.SystemOne,Url=new Uri(yes.Url),ApiKey=ApiKey.From("synthetic-loopback-key")});
         int filtered = 0;
-        await foreach (var row in client.FilterStreamWithMetadataAsync("Ready?", Records(new[] { message }), metadata))
+        await foreach (var row in positive.FilterWithMetadataAsync("Ready?", Records(new[] { message }), metadata))
         {
-            Check(ReferenceEquals(row.Item, message) && row.Row.Status != RowStatus.Failed, "metadata filter lost original item");
+            Check(ReferenceEquals(row, message), "metadata filter lost original item");
             filtered++;
         }
         Check(filtered == 1, "metadata filter dropped a row");
@@ -34,7 +37,7 @@ internal static partial class Program
         await foreach (var row in client.RankWithMetadataAsync("How urgent?", Records(new[] { message }),
             ["routine", "urgent"], metadata))
         {
-            Check(row.Item == message && !ReferenceEquals(row.Item, message) && row.Row.Status != RowStatus.Failed, "metadata rank lost original item");
+            Check(row.Item == message && !ReferenceEquals(row, message), "metadata rank lost original item");
             ranked++;
         }
         Check(ranked == 1, "metadata rank dropped the record");
@@ -44,13 +47,13 @@ internal static partial class Program
         int annotated = 0;
         await foreach (var row in client.Toolbox(toolbox).AnnotateStreamWithMetadataAsync(Records(new[] { message }), metadata))
         {
-            Check(row.Position == 1 && row.Status != RowStatus.Failed, "metadata toolbox stream lost position");
+            Check(row.Position == 1 && row.Status != Status.Failed, "metadata toolbox stream lost position");
             annotated++;
         }
         Check(annotated == 1, "metadata toolbox stream dropped the record");
     }
     private static void Successful<A, D>(Row<A, D> row) =>
-        Check(row.Status != RowStatus.Failed, "explicit record metadata produced a failed row");
+        Check(row.Status != Status.Failed, "explicit record metadata produced a failed row");
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

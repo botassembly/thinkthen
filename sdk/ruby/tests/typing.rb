@@ -1,25 +1,23 @@
 # frozen_string_literal: true
-
 require "thinkthen"
 
 ThinkThen::Client.open(backend: :stub) do |client|
-  row = client.choose("Which team?", "refund", choices: %w[billing shipping])
-  if row.is_a?(ThinkThen::Answered)
-    # @type var answer: String
-    answer = row.answer
-    puts answer
-  end
-  questions = ThinkThen::AnnotationQuestions.new(questions: {"refund" => ThinkThen::DecideQuestion.new("Refund?")})
+  row = client.choose("Which team?", "refund", choices: %i[billing shipping])
+  # @type var answer: String | Symbol
+  answer = row.answer
+  puts answer
+  question = ThinkThen::DecideQuestion.new("Ready?", threshold: 0.2..0.8)
+  questions = ThinkThen::AnnotationQuestions.new(refund: question)
   client.annotate(questions, "refund")
-  rows = client.filter_each("Ready?", ["first", nil])
-  rows.each { |value| puts value.position }
-  rows.close
-  case client.decide("Ready?", "record")
-  in ThinkThen::Answered[answer:, probability:]
-    puts answer, probability
-  in ThinkThen::Unsure
-    puts "unsure"
-  in ThinkThen::Failed[error:]
-    puts error.code
+  client.decide_each(question, ["first", nil]) do |value|
+    puts value.yes? if value.answered?
+  end
+  choice = ThinkThen::Toolbox.new(questions: {topic: ThinkThen::ChooseQuestion.new("Team?", choices: %i[billing shipping])})
+  client.choose(choice.choose(:topic), "refund")
+  result = client.decide("Ready?", "record")
+  case result.status
+  in :answered then puts result.answer
+  in :unsure then puts "unsure"
+  in :failed then puts result.error&.code
   end
 end

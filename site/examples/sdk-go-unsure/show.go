@@ -17,10 +17,8 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	refundQuestion := tt.NewDecide(
-		"Does the customer request a refund?",
-	).WithThreshold(tt.Band(0.2, 0.8))
-	message := tt.Text("I was charged twice for one invoice.")
+	refundQuestion := tt.DecideQuestion{Question: "Does the customer request a refund?", Threshold: tt.Band(0.2, 0.8)}
+	message := "I was charged twice for one invoice."
 	isRefund, err := tt.Answer(
 		client.Decide(ctx, refundQuestion, message))
 	switch {

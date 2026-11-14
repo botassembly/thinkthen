@@ -33,29 +33,31 @@ fn broken_stdout_exits_silently_with_141() {
 }
 
 #[test]
-fn filter_check_drains_every_row_and_reduces_kept_unsure_and_empty_results() {
-    for (probability, input, expected, status) in [
-        (0.9, "one\ntwo\n", 0, "answered"),
-        (0.1, "one\ntwo\n", 1, "answered"),
-        (0.5, "one\ntwo\n", 3, "unsure"),
-        (0.9, "", 1, "answered"),
+fn decide_and_filter_checks_drain_every_row_and_reduce_results() {
+    for (function, probability, input, expected, kept) in [
+        ("filter", 0.9, "one\ntwo\n", 0, "one\ntwo\n"),
+        ("filter", 0.1, "one\ntwo\n", 1, ""),
+        ("filter", 0.5, "one\ntwo\n", 1, ""),
+        ("filter", 0.9, "", 1, ""),
+        ("decide", 0.5, "one\n", 3, ""),
     ] {
         let server = Loopback::noul(probability).unwrap();
+        let threshold = if function == "filter" {
+            vec!["--threshold", "0.8", "--from", "lines"]
+        } else {
+            vec!["--low", "0.2", "--high", "0.8", "--json"]
+        };
         let mut child = support::command()
             .args([
-                "filter",
+                function,
                 "Ready?",
                 "--url",
                 server.base(),
                 "--check",
-                "--json",
-                "--low",
-                "0.2",
-                "--high",
-                "0.8",
                 "--batch",
                 "1",
             ])
+            .args(threshold)
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -70,18 +72,15 @@ fn filter_check_drains_every_row_and_reduces_kept_unsure_and_empty_results() {
             .unwrap();
         let output = child.wait_with_output().unwrap();
         assert_eq!(output.status.code(), Some(expected), "{output:?}");
-        let actual: Vec<Value> = String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .map(|line| serde_json::from_str(line).unwrap())
-            .collect();
-        assert_eq!(actual.len(), input.lines().count());
-        for row in actual {
-            assert_eq!(row["status"], status);
-            assert_eq!(row["kept"], probability > 0.8);
-            if status == "unsure" {
-                assert!(row.get("answer").is_none());
-            }
+        if function == "filter" {
+            assert_eq!(output.stdout, kept.as_bytes());
+        } else {
+            let row: Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(row["status"], "unsure");
+            assert_eq!(row["probability"], 0.5);
+            assert!(row.get("answer").is_none());
         }
+        assert_eq!(server.count(), input.lines().count());
     }
 }
 

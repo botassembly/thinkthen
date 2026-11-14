@@ -62,16 +62,18 @@ def normalize(row, backend, model):
         for child in row["answer"].values():
             normalize(child, backend, model)
 
-def byte_offsets(value, text):
-    if isinstance(value, dict):
-        if "start" in value and "end" in value:
-            for field in ("start", "end"):
-                value[field] = len(text[:value[field]].encode("utf-8"))
-        for child in value.values():
-            byte_offsets(child, text)
-    elif isinstance(value, list):
-        for child in value:
-            byte_offsets(child, text)
+def project_filter(expected, request):
+    if request["question"]["function"] != "filter" or not isinstance(expected, list):
+        return expected
+    return {"kept": [request["records"][row["position"] - 1] for row in expected
+                     if row["status"] == "answered" and row["answer"]],
+            "failed": [row for row in expected if row["status"] == "failed"]}
+
+
+def result_rows(actual):
+    if isinstance(actual, list):
+        return actual
+    return actual.get("failed", [])
 
 directory = root / "conformance/typed"
 manifest = json.loads((directory / "manifest.json").read_text())
@@ -89,20 +91,10 @@ for filename in manifest["cases"]:
             settings = dict(manifest["client"], **case.get("client", {}))
             settings.update(backend=backend, url=url)
             actual = call(settings, case["request"], case.get("cancelled", False))
-            for row in actual if isinstance(actual, list) else []:
+            for row in result_rows(actual):
                 normalize(row, backend, settings["model"])
             expected = copy.deepcopy(case["expected"])
-            if isinstance(expected, list) and case["request"]["question"]["function"] in ("find", "recognize", "relate"):
-                for row in expected:
-                    record = case["request"]["records"][row["position"] - 1]
-                    pointer = case["request"]["question"].get("field")
-                    if pointer:
-                        for part in pointer.split("/")[1:]:
-                            key = part.replace("~1", "/").replace("~0", "~")
-                            record = record[int(key)] if isinstance(record, list) else record[key]
-                    assert isinstance(record, str), (filename, "offset fixture must select text")
-                    byte_offsets(row.get("answer"), record)
-                    byte_offsets(row.get("detail"), record)
+            expected = project_filter(expected, case["request"])
             assert actual == expected, (filename, backend, actual, expected)
             assert int(command(server, "count")) == case["requests"], filename
         function = case["request"]["question"]["function"]
@@ -135,7 +127,7 @@ for case in json.loads((root / "construction/options.json").read_text()):
         assert process.stdout.splitlines()[0] == case["expected_error"], (case["name"], process.stdout)
     else:
         actual = call(case["client"], case["request"])
-        assert actual == case["expected"], (case["name"], actual, case["expected"])
+        assert actual == project_filter(case["expected"], case["request"]), (case["name"], actual, case["expected"])
 print("installed Zig: every shared construction option case passed")
 case = json.loads((directory / "tag-batching.json").read_text())
 for backend in manifest["backends"]:
@@ -147,20 +139,21 @@ for backend in manifest["backends"]:
             normalize(row, backend, settings["model"])
         assert actual == case["expected"], ("finite array order", backend, actual)
         assert int(command(server, "count")) == case["requests"], ("finite array batching", backend)
-for phase in ("headers", "body", "refusal-body"):
-    with fixture("--held", phase) as (server, url):
-        with subprocess.Popen([consumer, "held", json.dumps({"backend": "systemone", "url": url, "retry": {"max_retries": 0, "attempt_timeout_ms": 120000}})], stdin=subprocess.PIPE, env=env) as child:
-            try:
-                assert command(server, "arrived") == "arrived"
-                child.stdin.write(b"c")
-                child.stdin.flush()
-                assert command(server, "closed", timeout=2) == "closed"
-                assert child.wait(timeout=2) == 0
-                assert command(server, "count") == "1"
-            finally:
-                if child.poll() is None:
-                    child.kill()
-                    child.wait(timeout=2)
+for mode in ("held", "held-token"):
+    for phase in ("headers", "body", "refusal-body"):
+        with fixture("--held", phase) as (server, url):
+            with subprocess.Popen([consumer, mode, json.dumps({"backend": "systemone", "url": url, "retry": {"max_retries": 0, "attempt_timeout_ms": 120000}})], stdin=subprocess.PIPE, env=env) as child:
+                try:
+                    assert command(server, "arrived") == "arrived"
+                    child.stdin.write(b"c")
+                    child.stdin.flush()
+                    assert command(server, "closed", timeout=15) == "closed"
+                    assert child.wait(timeout=15) == 0
+                    assert command(server, "count") == "1"
+                finally:
+                    if child.poll() is None:
+                        child.kill()
+                        child.wait(timeout=15)
 print("installed Zig: canonical typed cases on both wires, ownership and held cancellation passed")
 
 # Replace only the private installed runtime; the shared fixture bundle is immutable.

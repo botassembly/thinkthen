@@ -1,1 +1,1 @@
-{"status":"answered","answer":true,"probability":0.7}
+{"status":"answered","answer":true,"probability":0.71}

@@ -1,0 +1,592 @@
+---
+title: pandas SDK
+description: "Answer questions about text in pandas columns."
+goal: Learn the tested table calls and result handling.
+reader: A pandas user
+kind: reference
+verified: 2026-11-14
+---
+import Example from '../../../components/Example.astro';
+
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and gives you a pandas column with one answer per input message.
+
+<Example id="functions/decide/pandas" />
+
+Use Python 3.10 or later. Run `python -m pip install 'thinkthen[pandas]'`. The extra includes pandas; the Python SDK includes the engine. Set `THINKTHEN_API_KEY` in the environment first. Import `thinkthen.pandas` to register the `.thinkthen` accessor on Series and DataFrames.
+
+Each answer has one of three states:
+
+- **answered**: there is an answer in the column.
+- **not sure**: the model's number fell between your two bars, or no choice was likely enough. The answer cell is missing.
+- **failed**: the input could not be judged, or the service did not respond.
+
+Three rules hold throughout this page.
+
+1. **A plain call raises for failures after collecting every outcome.** It raises one `tt.Failed`, with the details DataFrame on `failure.outcomes`. Not sure stays a native missing value; it never becomes false, zero or empty text.
+2. **Details retain the state beside each answer.** `details=True` returns a DataFrame, including failed results and failed form entries, without raising or warning for those failures. Check its status columns before using its answer cells.
+3. **These are pandas values.** Printing a Series or DataFrame is ordinary pandas printing. There is no table `.answer` or `.raise_if_failed()` accessor. Use native cells and columns.
+
+Every table call remains a many-input operation, even with one input message. The scalar Python call's failure rule does not change the table interface.
+
+<span id="the-ten-functions"></span>
+
+## decide
+
+### The simplest if
+
+A decide answer column uses pandas' nullable `boolean` type. Read one cell to branch on one message.
+
+```python
+import pandas as pd
+import thinkthen as tt
+import thinkthen.pandas
+
+messages = pd.Series(["Please refund my order."], name="message")
+is_refund = messages.thinkthen.decide("Does the customer request a refund?")
+
+if is_refund.iloc[0]:
+    print("refund queue")
+else:
+    print("inbox")
+```
+
+With one bar, every successfully judged message answers yes or no. If a message failed, the call raises `tt.Failed` before this branch. An entire Series cannot be used in an `if`: pandas refuses its ambiguous truth value.
+
+### Yes, no, or not sure
+
+```python
+messages = pd.Series(["Where is my parcel?"], name="message")
+is_refund = messages.thinkthen.decide(
+    "Does the customer request a refund?", threshold=(0.2, 0.8)
+)
+
+answer = is_refund.iloc[0]
+if pd.isna(answer):
+    print("a person reads it")
+elif answer:
+    print("refund queue")
+else:
+    print("inbox")
+```
+
+The missing boolean is `pd.NA`; its truth value raises `TypeError`. A failed input still raises from the plain call. Do not use `fillna(False)` to make a mask: that would turn not sure into no. pandas selection with a nullable boolean mask drops missing entries, so route missing answers explicitly, or use details when their states matter.
+
+### Did the call work
+
+```python
+try:
+    is_refund = messages.thinkthen.decide("Does the customer request a refund?")
+except tt.Failed as failure:
+    print("could not judge it:", failure)
+    print(failure.outcomes[["position", "status", "error_code"]])
+except tt.ThinkThenError as failure:
+    print("the call did not complete:", failure)
+else:
+    print(is_refund)
+```
+
+`tt.Failed` reports failed judgements. It does not replace usage, setup, authentication or cancellation errors. Not sure is a successful judgement and does not raise from a plain table call. Details retain failed judgements as results instead; they do not suppress errors in the call itself.
+
+### Both bars and the probability
+
+```python
+is_refund = messages.thinkthen.decide(
+    "Does the customer request a refund?",
+    threshold=(0.2, 0.8),
+    details=True,
+)
+print(is_refund[["status", "answer", "probability"]])
+```
+
+- No `threshold`: one bar at 0.5, giving yes or no.
+- `threshold=0.7`: yes at 0.7 or above, otherwise no.
+- `threshold=(0.2, 0.8)`: no below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`probability` is the model's probability of yes, not confidence in whichever answer was chosen. A confident no can have probability `0.05`. It is present for an unsure decide answer and missing for a failed one. It uses nullable `Float64`.
+
+To choose bars for your own data, run already-labelled examples with details, retain the probabilities, and compare them with your labels. The model's number alone does not establish accuracy.
+
+<span id="choose"></span>
+
+## choose with your own choices
+
+An Enum defines the choices. The pandas column is an ordered categorical whose categories are the Enum's text values, in declaration order. Its cells contain those values, rather than Enum members.
+
+```python
+from enum import Enum
+
+
+class Topic(Enum):
+    BILLING = "billing"
+    SHIPPING = "shipping"
+    OTHER = "other"
+
+
+def team_for(topic: Topic) -> str:
+    match topic:
+        case Topic.BILLING:
+            return "billing team"
+        case Topic.SHIPPING:
+            return "warehouse"
+        case Topic.OTHER:
+            return "front desk"
+
+
+messages = pd.Series(["I was charged twice for one invoice."], name="message")
+topic = messages.thinkthen.choose("What is the message about?", choices=Topic)
+
+answer = topic.iloc[0]
+if pd.isna(answer):
+    print("a person reads it")
+else:
+    print(team_for(Topic(answer)))
+```
+
+Converting a checked cell back to `Topic` lets your own typed function match its members. A type checker can flag a missing case in that function; pandas does not check a string comparison against your Enum. Add a member and update your routing function.
+
+choose can be not sure without an explicit bar: its default bar is 0.5 on the best choice, and every choice can fall below it. `threshold=0.3` moves that bar. Missing categorical cells are detected with `pd.isna()`, not compared with a missing sentinel. A choose cell does not belong in a boolean `if`: a nonempty string is true regardless of which choice it names.
+
+The values `billing`, `shipping` and `other` are what the model reads. Use plain words or short phrases. A list of strings also works and still supplies the categorical domain.
+
+<span id="many-records"></span>
+
+## Many messages
+
+Give the accessor a whole Series or DataFrame so ThinkThen can batch the inputs. Do not call once per input with `apply()`.
+
+```python
+messages = pd.Series(
+    [
+        "Please refund my order.",
+        "Where is my parcel?",
+        "I was charged twice for one invoice.",
+    ],
+    index=["same", "same", "last"],
+    name="message",
+)
+refund_checks = messages.thinkthen.decide(
+    "Does the customer request a refund?", threshold=(0.2, 0.8), details=True
+)
+print(refund_checks[["position", "status", "answer", "item"]])
+```
+
+The answers and details preserve input order and the original index, including duplicate labels. `position` starts at 1 and distinguishes inputs even when their index labels are equal. `item` holds the input value; a DataFrame input contributes a dictionary of input columns for each message. A result's explicit `id` is separate from its pandas index.
+
+A plain call already supplies the raise-if-failed behavior after all inputs have been judged. Its attached `outcomes` keeps successful answers as well as failed and unsure results. Details are the alternative for inspecting all states without that aggregate failure.
+
+## Many-result not sure or failed
+
+```python
+for _, is_refund in refund_checks.iterrows():
+    if is_refund["status"] == "unsure":
+        print("a person reads it:", is_refund["item"])
+    elif is_refund["status"] == "failed":
+        print("try again later:", is_refund["item"], is_refund["error_code"])
+    elif is_refund["answer"]:
+        print("refund queue:", is_refund["item"])
+    else:
+        print("inbox:", is_refund["item"])
+```
+
+`status` is a categorical column with `answered`, `unsure` and `failed`. Both yes and no are answered; unsure and failed have missing answer cells. Checking status, probability or error columns does not read an answer. Printing the details does not raise for a missing answer.
+
+For a reusable route, name every state and reject an unknown one:
+
+```python
+def where_it_goes(is_refund: pd.Series) -> str:
+    status = is_refund["status"]
+    if status == "answered":
+        return "refund queue" if is_refund["answer"] else "inbox"
+    if status == "unsure":
+        return "a person reads it"
+    if status == "failed":
+        return "try again later"
+    raise ValueError(f"no route for: {status}")
+
+
+for _, is_refund in refund_checks.iterrows():
+    print(where_it_goes(is_refund), is_refund["item"])
+```
+
+pandas does not give a type checker an exhaustive status union for each result. The last branch catches a forgotten state at runtime.
+
+## filter
+
+filter means "give me the yeses". It returns your original Series or DataFrame entries, in their original order and with their index.
+
+```python
+refund_requests = messages.thinkthen.filter("Does the customer request a refund?")
+for refund_request in refund_requests:
+    print("refund queue:", refund_request)
+```
+
+It takes one bar; `threshold=0.7` moves it. Two bars raise `tt.UsageError` before requests: use `decide(..., details=True)` when you need not sure. filter accepts neither `details=True` nor `errors="coerce"`; those arguments raise `TypeError`.
+
+If any input failed, filter raises one `tt.Failed` after judging all inputs. It returns no partial filtered object. `failure.outcomes` contains every outcome, including the yeses. The same frame's `item` and `position` let you recover the kept inputs deliberately:
+
+```python
+try:
+    refund_requests = messages.thinkthen.filter("Does the customer request a refund?")
+except tt.Failed as failure:
+    outcomes = failure.outcomes
+    answered = outcomes.loc[outcomes["status"] == "answered"]
+    kept = answered.loc[answered["answer"]]
+    print(kept[["position", "item"]])
+    print(outcomes.loc[outcomes["status"] == "failed", ["position", "error_code"]])
+```
+
+Here the status check selects answered results before the boolean mask is applied. For filtering a full DataFrame, call its accessor rather than a selected text column's accessor.
+
+## tag
+
+tag gives an object Series with a list of label values in each answered cell. An empty list is an answered result.
+
+```python
+messages_with_topics = pd.Series(
+    ["I was charged twice and my parcel is late again."], name="message"
+)
+topics = messages_with_topics.thinkthen.tag(
+    "Which topics appear?", labels=[Topic.BILLING, Topic.SHIPPING], details=True
+)
+
+for _, row in topics.iterrows():
+    if row["status"] == "failed":
+        print("try again later:", row["error_code"])
+    else:
+        if Topic.BILLING.value in row["answer"]:
+            print("billing team")
+        for topic in row["answer"]:
+            print(topic)
+```
+
+tag is never not sure. `threshold=0.7` sets how likely each label must be to count. Use the list in the checked cell, not the entire Series, for membership.
+
+## score
+
+Levels name a scale, lowest first. An Enum supplies its declaration order; its text values do not sort the scale.
+
+```python
+class Urgency(Enum):
+    ROUTINE = "routine"
+    URGENT = "urgent"
+
+
+urgency = pd.Series(["Please refund my order."], name="message").thinkthen.score(
+    "How urgent is the request?", levels=Urgency
+)
+for answer in urgency:
+    if answer > 0.5:
+        print("answer today")
+    print(round(answer, 2))
+```
+
+The answer column uses nullable `Float64` and holds positions from 0 to 1 along the scale, not members of `Urgency`. score is never not sure. This plain call raises if any input failed, so every cell used above is answered. For exactly one level, use choose.
+
+## rank
+
+rank judges the collection along your levels and gives each input its rank, starting at 1 for the highest.
+
+```python
+ranked = messages.thinkthen.rank(
+    "How urgent is the request?", levels=Urgency, details=True
+)
+for _, row in ranked.sort_values("answer").iterrows():
+    if row["status"] == "failed":
+        print("try again later:", row["item"])
+    else:
+        print(row["answer"], row["item"])
+```
+
+Both plain ranks and details arrive in input-position order. Sort explicitly to display rank order, as above; missing ranks sort last by default. A plain rank column uses nullable `Int64` and lines up with the input index.
+
+rank waits until the collection has been judged. `top=5` selects the five highest-ranked inputs after judging the collection. The plain column still has input length, with missing ranks below the top. Details contain selected ranks and failed inputs, retaining their original positions and indexes; successful inputs below the top have no details result. rank is never not sure, so these missing non-top ranks are not unsure judgements.
+
+## find
+
+find points to the line that answers. Use details to distinguish an answered no-match from an unsure or failed input.
+
+```python
+message = "Morgan works for Example Group.\nPlease refund my order."
+action = pd.Series([message], name="message").thinkthen.find(
+    "Which line states the requested action?", details=True
+)
+
+for _, row in action.iterrows():
+    if row["status"] == "unsure":
+        print("a person reads it")
+    elif row["status"] == "failed":
+        print("try again later:", row["error_code"])
+    else:
+        span = row["answer"]
+        if span is None:
+            print("no line answers")
+        else:
+            print(span.text)
+            assert message[span.start:span.end] == span.text
+```
+
+The object cell contains a `tt.Span` with `text`, `start` and `end`, or `None` for an answered no-match. The offsets count Python characters from 0, with the end excluded. Like choose, find can be not sure without an explicit bar. Its plain missing cell alone cannot distinguish no-match from not sure; check status before inspecting fields.
+
+## recognize
+
+```python
+names = pd.Series(["Morgan works for Example Group."], name="message").thinkthen.recognize(
+    kinds=["person", "organization"], details=True
+)
+
+for _, row in names.iterrows():
+    if row["status"] == "failed":
+        print("try again later:", row["error_code"])
+    else:
+        for name in row["answer"]:
+            print(name.kind, name.text)
+```
+
+The object cell contains a list of name objects. Each has `kind`, `text`, `start`, `end` and `probability`. An empty list is answered; recognize is never not sure.
+
+## relate
+
+```python
+rules = [tt.RelationRule(source="person", target="organization", relation="works_for")]
+relations = pd.Series([message], name="message").thinkthen.relate(
+    rules=rules, details=True
+)
+
+for _, row in relations.iterrows():
+    if row["status"] == "failed":
+        print("try again later:", row["error_code"])
+    else:
+        for relation in row["answer"]:
+            print(relation.source.text, relation.relation, relation.target.text)
+        print([name.text for name in row["detail"].names])
+```
+
+Each object cell holds a list of relations, each with `source`, `target`, `relation`, `probability` and `either`. `detail.names` holds all names found, including names in no relation. The rule order is source kind, target kind, relation. An empty list is answered; relate is never not sure.
+
+## annotate
+
+annotate asks several questions per input. Plain output has one answer column per question. Details add the parent state and each question's own flat status, probability, detail and error columns.
+
+```python
+questions = tt.AnnotationQuestions({
+    "refund": tt.DecideQuestion(
+        "Does the customer request a refund?", threshold=(0.2, 0.8)
+    ),
+    "topic": tt.ChooseQuestion("What is the message about?", choices=Topic),
+    "urgency": tt.ScoreQuestion("How urgent is the request?", levels=Urgency),
+})
+forms = messages.thinkthen.annotate(questions, details=True)
+
+for _, form in forms.iterrows():
+    if form["status"] == "failed":
+        print("try again later:", form["item"])
+        continue
+    states = [form[name + "_status"] for name in ("refund", "topic", "urgency")]
+    if "failed" in states:
+        print("try again later:", form["item"])
+    elif "unsure" in states:
+        print("a person reads it:", form["item"])
+    elif all(state == "answered" for state in states) and form["refund"]:
+        print("refund queue:", form["topic"], round(form["urgency"], 2))
+    else:
+        print("inbox:", form["item"])
+```
+
+An answered parent can contain failed entries. The branch checks every entry it consumes, including topic and urgency before the refund branch reads them. One, several or all entries may fail independently. An unsure entry is not a failure. `details=True` retains both failed parents and failed children without raising or warning, including for a one-result input.
+
+Without details, a failed parent or any failed entry raises one `tt.Failed` after collection, with all details on `.outcomes`. Unsure entries remain missing in their typed answer columns. The returned answer columns are not automatically attached to your input frame.
+
+Question names cannot collide with generated columns: `position`, `id`, `function`, `status`, `probability`, `source`, `detail`, `item`, `error_code`, `error_message` and `error_http_status`. Nor can one question's name collide with another's generated suffix columns: `_status`, `_probability`, `_detail`, `_error_code`, `_error_message` and `_error_http_status`. For example, `refund` beside `refund_status` is refused. The call raises `tt.UsageError` naming the clash before any paid request, for both plain and details output.
+
+Only actual collisions are refused: `refund_status` alone is allowed, and `answer` is allowed because annotate has no outer answer column. A question named `status` is refused even in the plain form, so requesting details does not change valid names.
+
+## Say what each answer means
+
+Use question objects to keep the wording and meanings together.
+
+```python
+asks_refund = tt.DecideQuestion(
+    "Does the customer request a refund?",
+    yes_means="the customer wants money back, including for a duplicate charge",
+    no_means="the customer wants anything else",
+)
+is_refund = messages.thinkthen.decide(asks_refund)
+
+asks_topic = tt.ChooseQuestion(
+    "What is the message about?",
+    choices=Topic,
+    descriptions={
+        Topic.BILLING: "charges, invoices and refunds",
+        Topic.SHIPPING: "parcels and delivery",
+    },
+)
+topic = messages.thinkthen.choose(asks_topic)
+```
+
+decide and filter questions take `yes_means` and `no_means`. choose, tag, score and rank questions take `descriptions` keyed by choices, labels or levels. Use the corresponding question class, such as `tt.FilterQuestion` or `tt.ScoreQuestion`.
+
+<span id="records-and-fields"></span>
+
+## Messages and fields
+
+A Series supplies one input per element. A DataFrame supplies one dictionary per input. Without `field`, ThinkThen judges the whole input. `field="/text"` picks a text field. An explicit `id` comes back in details; the pandas index is preserved separately.
+
+```python
+frame = pd.DataFrame(
+    {"id": ["a1", "a2"], "text": ["Please refund my order.", "Where is my parcel?"]},
+    index=["same", "same"],
+)
+checks = frame.thinkthen.decide(
+    "Does the customer request a refund?",
+    field="/text",
+    threshold=(0.2, 0.8),
+    details=True,
+)
+enriched = frame.copy()
+enriched["is_refund"] = checks["answer"].array
+enriched["refund_status"] = checks["status"].array
+print(enriched)
+```
+
+Assigning arrays here attaches columns by position, preserving the duplicate index. A join on duplicate index labels can multiply results; use positions when attaching answers from the same call. Do not assume a top-limited rank details frame has one result per input: use its `position` to align that subset.
+
+Missing Series elements such as `None`, `pd.NA`, NaN and `pd.NaT` fail with `record.missing`. Blank text fails with `record.empty`. Neither sends that input to the service. Invalid inputs remain failed results with their own error. A one-result table follows the same details/plain/coerce rules as any larger table.
+
+## Tables
+
+### Column types and details
+
+| Function | Plain output | Missing answer |
+| --- | --- | --- |
+| decide | Series, nullable `boolean` | `pd.NA` |
+| choose | Series, ordered categorical of choice values | pandas categorical missing value |
+| score | Series, nullable `Float64` | `pd.NA` |
+| rank | Series, nullable `Int64` | `pd.NA`, also below `top` |
+| tag, recognize, relate | Object Series of lists | `None` |
+| find | Object Series of spans or answered `None` | `None`; details distinguish the state |
+| annotate | DataFrame, one typed column per question | The question column's missing value |
+| filter | Original Series or DataFrame subset | Failed input raises; no missing-answer output |
+
+Use `pd.isna()` for scalar missing cells. Do not apply its boolean test to a list-valued answer; first check the details status. Empty lists are answers, not missing cells.
+
+The details form has `position`, `id`, `function`, `status`, `answer`, `probability`, `source`, `detail`, `item`, `error_code`, `error_message` and `error_http_status`. Status and error code are categorical; position and HTTP status use nullable `Int64`. Error message uses pandas string type. `id`, `source`, `detail` and `item` are object columns. Answer dtype follows the function above. A probability value is available only for functions that have one, and never for a failed judgement; otherwise its column is missing-valued.
+
+Annotation details replace the outer `answer` column with the named question columns and their suffix columns. The remaining parent metadata stays. Object cells hold Python objects, not Polars structs or JSON dictionaries. pandas equality and missing-value operations apply; these tables do not provide scalar result equality or hashing.
+
+To expand list answers without losing empty lists or failures, explode a details frame and keep its metadata:
+
+```python
+expanded = topics[["position", "id", "status", "answer"]].explode("answer")
+for _, row in expanded.iterrows():
+    if row["status"] == "failed":
+        print(row["position"], "try again later")
+    elif pd.isna(row["answer"]):
+        print(row["position"], "no labels")
+    else:
+        print(row["position"], row["answer"])
+```
+
+pandas `explode` retains an empty or missing list as one result. Use the same pattern for names and relations, testing status and the missing expanded cell before reading an object's fields. Keep `position`, `id` and `status`; do not discard the results with no list item.
+
+### Keeping failures as missing values
+
+`errors="coerce"` is the explicit alternative to a plain call's aggregate failure. It keeps failed answers missing and emits one `tt.FailedRowsWarning` when there are failures. Unsure answers remain missing without being counted as failures.
+
+```python
+answers = messages.thinkthen.decide(
+    "Does the customer request a refund?",
+    threshold=(0.2, 0.8),
+    errors="coerce",
+)
+failures = answers.thinkthen.failures()
+print(failures)
+```
+
+Read `.thinkthen.failures()` on the exact returned Series or DataFrame before copying, assigning, joining or transforming it. The failure list is attached to that object; pandas transformations are not promised to preserve it. A zero-result failure list on a transformed object does not prove the call had no failures.
+
+The list has `position`, `id`, `question`, `error_code`, `error_message` and `error_http_status`. `question` names a failed annotate entry and is missing for a parent or ordinary function failure. Prefer details when every branch needs the state. Details already retain failures without a warning; adding coerce is unnecessary.
+
+### Saving outcomes
+
+pandas output methods save pandas tables. They do not by themselves produce ThinkThen shared JSON results: object cells and flat annotation columns need different serialization. This accessor has no shared-result writer. If you need results for `thinkthen audit` or `thinkthen diff`, use the Python guide's stream results and serialize each result's `to_dict()` as JSON lines. Do not feed `DataFrame.to_json()` output to those commands as though it were that format.
+
+## Async
+
+The eager pandas accessors are synchronous. For the Python async client and stream conversion, see the [Python guide](/sdks/python/); it is a separate interface, not an async pandas accessor.
+
+## Saved questions
+
+Pass a question object in place of text to reuse its settings, including its field:
+
+```python
+asks_refund = tt.DecideQuestion(
+    "Does the customer request a refund?", threshold=(0.2, 0.8), field="/text"
+)
+checks = frame.thinkthen.decide(asks_refund, details=True)
+
+toolbox = tt.Toolbox.load("toolbox.json")
+topic = frame.thinkthen.choose(toolbox.choose("topic"), details=True)
+```
+
+The toolbox's `topic` question must select the intended field if it should judge only that field. A missing toolbox name is a usage error. Saved filter questions still refuse two bars, and saved annotate questions still undergo column-collision validation before requests.
+
+## Settings
+
+Without `client=`, accessors share the default client, which reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND`. Pass a client to choose settings:
+
+```python
+with tt.Client(batch=16, retry=tt.RetryPolicy(max_retries=5)) as client:
+    checks = frame.thinkthen.decide(asks_refund, details=True, client=client)
+```
+
+Client settings include `backend`, `url`, `model`, `api_key`, `batch` and `retry`. Retry times are seconds. Keep the key in the environment. Reusing materialized columns makes no new request; calling the accessor again does.
+
+## Usage
+
+```python
+with tt.Client() as client:
+    checks = frame.thinkthen.decide(asks_refund, details=True, client=client)
+    usage = client.usage
+    print(usage.attempts, usage.input_tokens.reported, usage.output_tokens.reported)
+```
+
+Usage is cumulative for that client and includes attempts, responses, retries, bytes and reported input/output tokens.
+
+## Cancel
+
+```python
+stop = tt.Cancel()
+checks = messages.thinkthen.decide(
+    "Does the customer request a refund?", details=True, cancel=stop
+)
+```
+
+Calling `stop.cancel()` from another thread cancels the operation and raises `tt.Cancelled`. Ctrl-C also cancels it.
+
+## Errors
+
+| What happened | Plain output | Details output |
+| --- | --- | --- |
+| A failed input or service judgement | One `tt.Failed` after collection; `.outcomes` retains all details | A failed result, without raising or warning |
+| A failed annotate parent or entry | One `tt.Failed` after collection | Parent and child status/error columns retained |
+| Not sure | Native missing cell; no failure or warning | `status="unsure"`, with missing answer |
+| Bad question, threshold or generated-column collision | `tt.UsageError` before paid requests | Same |
+| Wrong Python arguments, including details/coerce on filter | `TypeError` | Same |
+| Client cannot start | `tt.SetupError` | Same |
+| Cancelled | `tt.Cancelled` | Same |
+| Printing a returned table or inspecting state | Ordinary pandas operation | Ordinary pandas operation |
+
+`tt.Failed` is a `tt.ThinkThenError` and a `tt.NoAnswer`. It retains the failure's `code`, `http_status` and failed `rows`, with the accessor's full details frame attached as `outcomes`. Other call errors keep their classifications. Wire codes such as `record.empty` do not change. A missing table cell does not raise `tt.Unsure` on access: native pandas missing-value rules apply.
+
+## Upgrading from 0.1
+
+The baseline is the Python guide's [published Python 0.1.2](https://pypi.org/project/thinkthen/0.1.2/).
+
+| Before | Now |
+| --- | --- |
+| `tt.decide(q, series).value` | Import `thinkthen.pandas`, then `series.thinkthen.decide(q)` |
+| Read a wrapped scalar result for a table call | Read native Series cells; request `details=True` for states |
+| `true=`, `false=`, `options=` | Question objects use `yes_means=`, `no_means=`, `choices=` |
+| Inspect `.facts` on an engine | Pass `client=tt.Client(...)` and read `client.usage` |
+
+Keep `thinkthen[pandas]`; there is no separate pandas SDK. Missing answers remain missing rather than turning into no. Explicitly route unsure results, and check every consumed annotate entry.

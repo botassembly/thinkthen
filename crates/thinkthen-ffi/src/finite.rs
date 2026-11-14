@@ -116,16 +116,9 @@ unsafe fn open(
         .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
     /* SAFETY: the caller lends counted inputs, a live client and an exclusive output. */
     unsafe {
-        let (initial, originals) = admit_records(
-            records,
-            count,
-            record_stride,
-            request.question().function() == thinkthen::FunctionName::Filter,
-        )?;
+        let initial = admit_records(records, count, record_stride)?;
         let call = native::Call::open_records(&live(client)?.0, request, initial, offsets)?;
-        out.write(Box::into_raw(Box::new(CallHandle::new(
-            call, request, originals,
-        ))));
+        out.write(Box::into_raw(Box::new(CallHandle::new(call, request))));
     }
     Ok(THINKTHEN_OK)
 }
@@ -134,8 +127,7 @@ unsafe fn admit_records(
     records: *const RecordInput,
     count: usize,
     record_stride: usize,
-    retain: bool,
-) -> Result<(Vec<Record>, Vec<crate::original::Original>), Error> {
+) -> Result<Vec<Record>, Error> {
     /* SAFETY: callers lend count readable descriptors and their byte views. */
     unsafe {
         if count > 0
@@ -146,7 +138,6 @@ unsafe fn admit_records(
             return Err(native::abi_error());
         }
         let mut initial = Vec::with_capacity(count);
-        let mut originals = Vec::new();
         for index in 0..count {
             let input = records.cast::<u8>().add(index * record_stride);
             let size = ptr::read_unaligned(input.cast::<u32>()) as usize;
@@ -155,11 +146,8 @@ unsafe fn admit_records(
             }
             let input = ptr::read_unaligned(input.cast::<RecordInput>());
             initial.push(admit_record(input.data, input.len, input.kind)?);
-            if retain {
-                originals.push(crate::original::input(input.data, input.len, input.kind)?);
-            }
         }
-        Ok((initial, originals))
+        Ok(initial)
     }
 }
 
@@ -207,5 +195,38 @@ pub unsafe extern "C" fn thinkthen_call_open_records_question(
                 out,
             )
         })
+    }
+}
+
+/// Open a C collection call. Filter calls are read only with thinkthen_call_next_kept.
+/// # Safety
+/// client and question are live; records holds count readable inputs. out is writable;
+/// error is NULL or initialized. The records and question are copied before return.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_open(
+    client: *const ClientHandle,
+    question: *const crate::QuestionHandle,
+    records: *const RecordInput,
+    count: usize,
+    out: *mut *mut CallHandle,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the ordinary finite opener admits all inputs and owns the resulting call.
+    unsafe {
+        let rc = thinkthen_call_open_records_question(
+            client,
+            question,
+            ptr::null(),
+            records,
+            count,
+            size_of::<RecordInput>(),
+            OffsetUnit::Utf8.abi(),
+            out,
+            error,
+        );
+        if rc == THINKTHEN_OK {
+            (*(*out)).c_surface = true;
+        }
+        rc
     }
 }

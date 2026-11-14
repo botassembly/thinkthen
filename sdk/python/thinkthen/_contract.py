@@ -1,18 +1,18 @@
 """Generated native requirement. Do not edit."""
-ABI_VERSION = 131076
+ABI_VERSION = 327681
 ABI_VERSION_EXPORT = "ABI_VERSION"
 ABI_CODE = "usage.abi"
 ABI_MESSAGE = "the native ABI is incompatible"
-ABI_EXPORTS = ["ABI_VERSION","ERROR_CODES","Error","NativeCancel","NativeCancel.cancel","NativeCancel.child","NativeEngine","NativeEngine.settings","NativeEngine.start","NativeEngine.start_finite","NativeEngine.usage","NativeEngine.usage_settled","NativeQuestion","NativeQuestion.definition","NativeQuestion.function","NativeStream","NativeStream.cancel","NativeStream.close","NativeStream.receive","NativeToolbox","NativeToolbox.definition","NativeToolbox.from_json","NativeToolbox.question","NativeToolbox.to_json","reject_cancelled","reject_closed_client","reject_question_conversion","reject_settings_conversion","seconds_to_millis"]
+ABI_EXPORTS = ["ABI_VERSION","ERROR_CODES","Error","NativeCancel","NativeCancel.cancel","NativeCancel.child","NativeEngine","NativeEngine.settings","NativeEngine.start","NativeEngine.start_finite","NativeEngine.usage","NativeEngine.usage_settled","NativeQuestion","NativeQuestion.definition","NativeQuestion.function","NativeQuestion.validate_table_columns","NativeStream","NativeStream.cancel","NativeStream.close","NativeStream.receive","NativeToolbox","NativeToolbox.definition","NativeToolbox.from_json","NativeToolbox.question","NativeToolbox.to_json","reject_cancelled","reject_closed_client","reject_question_conversion","reject_settings_conversion","seconds_to_millis"]
 FUNCTION_NAMES: dict[int, str] = {
     1: "decide",
     2: "choose",
     3: "tag",
     4: "score",
-    5: "filter",
     7: "find",
     8: "recognize",
     9: "relate",
+    5: "filter",
     6: "rank",
     10: "annotate",
 }

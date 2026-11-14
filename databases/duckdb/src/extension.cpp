@@ -24,8 +24,14 @@ using namespace duckdb;
 using namespace duckdb_yyjson;
 using ClientOwner = std::shared_ptr<thinkthen_client>;
 using CallOwner = std::unique_ptr<thinkthen_sql_call, decltype(&thinkthen_sql_call_free)>;
+using Document = std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)>;
+struct BufferOwner {
+    thinkthen_buffer value{};
+    ~BufferOwner(){thinkthen_buffer_free(&value);}
+};
 struct RowOwner {
     thinkthen_row value{};
+    Document projection{nullptr,yyjson_doc_free};
     RowOwner() { value.struct_size = sizeof(value); }
     ~RowOwner() { thinkthen_row_free(&value); }
 };
@@ -34,8 +40,6 @@ struct ErrorOwner {
     ErrorOwner() { value.struct_size = sizeof(value); }
     ~ErrorOwner() { thinkthen_error_free(&value); }
 };
-using Document = std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)>;
-
 const char *Bytes(const string &value) { return value.data(); }
 string Text(const thinkthen_buffer &value) { return string(reinterpret_cast<const char *>(value.data), value.len); }
 #include "values.hpp"
@@ -83,14 +87,14 @@ struct Session : ClientContextState {
     }
 };
 template <int Option> void Configure(ClientContext &context, SetScope scope, Value &value) {
-    if (scope == SetScope::GLOBAL) throw InvalidInputException("ThinkThen settings are session-only");
+    if (scope == SetScope::GLOBAL) throw InvalidInputException("usage.option: ThinkThen settings are session-only");
     context.registered_state->GetOrCreate<Session>("thinkthen")->Configure(SettingKey(Option), value);
 }
 using QuestionOwner = std::shared_ptr<thinkthen_question>;
 struct PipelineCount { idx_t value = 1; };
 struct Binding : FunctionData {
     string function, identity, name;
-    bool json, has_name = false, failure_rows = false;
+    bool json, has_name = false, raise_if_failed = false;
     idx_t record;
     std::shared_ptr<PipelineCount> pipelines = std::make_shared<PipelineCount>();
     vector<LogicalType> types;
@@ -115,8 +119,6 @@ struct Invocation : GlobalTableFunctionState {
     CallOwner call{nullptr, thinkthen_sql_call_free};
     bool ended = false;
     uint64_t position = 0;
-    uint64_t answered = 0, unsure = 0, failed = 0, backend_failed = 0;
-    string first_code, first_message;
     std::map<uint64_t, RetainedChunk> retained;
     ColumnDataScanState ranked_scan;
     DataChunk ranked_chunk;
@@ -133,13 +135,17 @@ unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFunctionI
     thinkthen_text name{Bytes(bind.name), bind.name.size()};
     Checked(thinkthen_sql_call_open_question(client.get(), bind.question.get(), bind.has_name ? &name : nullptr, &call, &error.value), error);
     state->call.reset(call);
+    Checked(thinkthen_sql_call_set_raise_if_failed(call, bind.raise_if_failed, &error.value), error);
     return state;
 }
 uint8_t Interrupted(void *context) { return static_cast<ClientContext *>(context)->IsInterrupted() ? 1 : 0; }
 void CheckInterrupt(ClientContext &context, Invocation &state) {
     if (context.IsInterrupted()) { state.call.reset(); throw InterruptException(); }
 }
-void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &state, const Binding &bind) {
+void Emit(DataChunk &output, idx_t index, const RowOwner &owner, Invocation &state, const Binding &bind) {
+    const auto &row=owner.value;
+    auto root=yyjson_doc_get_root(owner.projection.get());
+    auto field=[&](const char *name){return yyjson_obj_get(root,name);};
     auto original = state.retained.lower_bound(row.position);
     if (original == state.retained.end()) throw InvalidInputException("usage.abi: unknown row position");
     auto &retained = original->second;
@@ -171,37 +177,25 @@ void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &
     if (--retained.remaining == 0) state.retained.erase(original);
     auto put = [&](Value value) { output.data[col++].Append(value); };
     put(Value::BIGINT(static_cast<int64_t>(row.position)));
-    put(Project(LogicalType::JSON(), row.id));
-    put(bind.function == "annotate" ? AnnotationAnswer(bind.types[col], row.answer) : Project(bind.types[col], row.answer));
+    put(Project(LogicalType::JSON(), field("id")));
+    put(bind.function == "annotate" ? AnnotationAnswer(bind.types[col], field("answer")) : Project(bind.types[col], field("answer")));
     put(std::isnan(row.probability) ? Value(LogicalTypeId::DOUBLE) : Value::DOUBLE(row.probability));
     const char *status = row.status == THINKTHEN_STATUS_ANSWERED ? "answered" : row.status == THINKTHEN_STATUS_UNSURE ? "unsure" : row.status == THINKTHEN_STATUS_FAILED ? "failed" : nullptr;
     if (!status) throw InvalidInputException("usage.abi: unknown engine status");
     put(Value(status).DefaultCastAs(StatusType()));
     if (row.error_code) put(EngineCode(row.error_code));
     else put(Value(CodeType()));
-    auto error = row.error.data ? Parse(Text(row.error)) : Document(nullptr, yyjson_doc_free);
-    auto root = error ? yyjson_doc_get_root(error.get()) : nullptr;
-    put(Project(LogicalTypeId::VARCHAR, root ? yyjson_obj_get(root, "message") : nullptr));
-    put(Project(LogicalTypeId::BIGINT, root ? yyjson_obj_get(root, "http_status") : nullptr));
-    put(Project(SourceType(), row.source));
-    put(Project(bind.types[col], bind.function == "annotate" ? row.answer : row.detail));
+    auto error=field("error");
+    put(Project(LogicalTypeId::VARCHAR,error ? yyjson_obj_get(error,"message") : nullptr));
+    put(Project(LogicalTypeId::BIGINT,error ? yyjson_obj_get(error,"http_status") : nullptr));
+    put(Project(SourceType(),field("source")));
+    put(Project(bind.types[col],field(bind.function=="annotate" ? "answer" : "detail")));
 }
-bool Select(const thinkthen_row &row, Invocation &state, const Binding &bind) {
-    if (row.status == THINKTHEN_STATUS_ANSWERED) ++state.answered;
-    else if (row.status == THINKTHEN_STATUS_UNSURE) ++state.unsure;
-    else if (row.status == THINKTHEN_STATUS_FAILED) {
-        if (++state.failed == 1) {
-            state.first_code = EngineCode(row.error_code).ToString();
-            auto error = Parse(Text(row.error));
-            auto message = yyjson_obj_get(yyjson_doc_get_root(error.get()), "message");
-            state.first_message = string(yyjson_get_str(message), yyjson_get_len(message));
-        }
-        const char *family = thinkthen_code_family(row.error_code);
-        if (family && string(family) == "backend") ++state.backend_failed;
-    }
-    bool selected = bind.function != "filter" ||
-        (row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool) ||
-        (row.status == THINKTHEN_STATUS_FAILED && bind.failure_rows);
+bool Select(const RowOwner &owner, Invocation &state, const Binding &bind) {
+    const auto &row=owner.value;
+    auto root=yyjson_doc_get_root(owner.projection.get());
+    bool selected=bind.function!="filter" ||
+        (row.status==THINKTHEN_STATUS_ANSWERED && yyjson_is_true(yyjson_obj_get(root,"answer")));
     if (!selected) {
         auto original = state.retained.lower_bound(row.position);
         if (original == state.retained.end()) throw InvalidInputException("usage.abi: unknown row position");
@@ -209,18 +203,16 @@ bool Select(const thinkthen_row &row, Invocation &state, const Binding &bind) {
     }
     return selected;
 }
-void Complete(const Invocation &state, const Binding &bind) {
-    if (state.failed && !state.answered && !state.unsure && state.backend_failed == state.failed)
-        throw InvalidInputException("%s: %s", state.first_code, state.first_message);
-    if (bind.function == "filter" && state.failed && !bind.failure_rows)
-        throw InvalidInputException("%s: %llu records failed; %s", state.first_code,
-                                    static_cast<unsigned long long>(state.failed), state.first_message);
-}
 int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row, uint32_t timeout) {
     ErrorOwner error;
     auto result = thinkthen_sql_call_poll(state.call.get(), timeout, Interrupted, &context, &row.value, &error.value);
     CheckInterrupt(context, state);
     Checked(result, error);
+    if(result==THINKTHEN_OK){
+        BufferOwner json;
+        Checked(thinkthen_row_host_json(&row.value,&json.value,&error.value),error);
+        row.projection=Parse(Text(json.value));
+    }
     return result;
 }
 OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, DataChunk &input, DataChunk &output) {
@@ -232,7 +224,7 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
         auto result = Poll(context.client, state, row, count ? 0 : 20);
-        if (result == THINKTHEN_OK) { if (Select(row.value, state, bind)) Emit(output, count++, row.value, state, bind); }
+        if (result == THINKTHEN_OK) { if (Select(row, state, bind)) Emit(output, count++, row, state, bind); }
         else if (result == THINKTHEN_PENDING && count) {
             output.CheckCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT;
         }
@@ -266,7 +258,6 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
             local.submitted = true;
         } else if (result == THINKTHEN_END) {
             if (count) { output.CheckCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT; }
-            Complete(state, bind);
             output.CheckCardinality(count); return OperatorResultType::FINISHED;
         }
     }
@@ -288,13 +279,12 @@ OperatorFinalizeResultType Final(ExecutionContext &context, TableFunctionInput &
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
         auto result = Poll(context.client, state, row, count ? 0 : 20);
-        if (result == THINKTHEN_OK) { if (Select(row.value, state, bind)) Emit(output, count++, row.value, state, bind); }
+        if (result == THINKTHEN_OK) { if (Select(row, state, bind)) Emit(output, count++, row, state, bind); }
         else if (result == THINKTHEN_PENDING && count) {
             output.CheckCardinality(count); return OperatorFinalizeResultType::HAVE_MORE_OUTPUT;
         }
         else if (result == THINKTHEN_END) {
             if (count) { output.CheckCardinality(count); return OperatorFinalizeResultType::HAVE_MORE_OUTPUT; }
-            Complete(state, bind);
             output.CheckCardinality(count); return OperatorFinalizeResultType::FINISHED;
         }
     }

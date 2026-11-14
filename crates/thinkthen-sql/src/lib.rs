@@ -13,6 +13,7 @@ use thinkthen::{Engine, Error, OffsetUnit, Request};
 
 pub use thinkthen::results::AnyRow;
 
+mod failures;
 mod request;
 pub use request::{client, client_with_policy, request};
 
@@ -58,6 +59,9 @@ pub struct SqlCall {
     needs_chunk: bool,
     ended: bool,
     error: Option<Error>,
+    failures: failures::Failures,
+    raise_if_failed: bool,
+    filter: bool,
 }
 
 impl SqlCall {
@@ -67,12 +71,16 @@ impl SqlCall {
     /// # Errors
     /// Returns the shared library's request admission error.
     pub fn open(client: &Engine, request: &Request) -> Result<Self, Error> {
+        request::validate_table(request)?;
         Ok(Self {
             call: Call::open(client, request, OffsetUnit::CodePoints)?,
             chunk: Vec::new().into_iter(),
             needs_chunk: false,
             ended: false,
             error: None,
+            failures: failures::Failures::new(request.records().len() as u64),
+            raise_if_failed: false,
+            filter: matches!(request.question(), thinkthen::Question::Filter(_)),
         })
     }
 
@@ -112,7 +120,41 @@ impl SqlCall {
     pub fn poll(
         &mut self,
         timeout: Duration,
+        interrupted: impl FnMut() -> bool,
+    ) -> Result<Option<SqlEvent>, Error> {
+        self.poll_row(timeout, interrupted, false)
+    }
+
+    /// Poll after applying PostgreSQL's text and JSON representation rules.
+    /// Failure inspection sees the converted row, including a failed form entry.
+    /// # Errors
+    /// Returns the shared library's send or representation error.
+    pub fn poll_postgres(
+        &mut self,
+        timeout: Duration,
+        interrupted: impl FnMut() -> bool,
+    ) -> Result<Option<SqlEvent>, Error> {
+        self.poll_row(timeout, interrupted, true)
+    }
+
+    /// Ask completion to report failed records. Filter always reports them.
+    pub fn set_raise_if_failed(&mut self, enabled: bool) {
+        self.raise_if_failed = enabled;
+    }
+
+    /// Account for a host conversion that failed the most recently emitted row.
+    /// Call before polling another row. Replacing a failed row counts it once.
+    /// # Errors
+    /// Returns usage.abi for another position or a non-record failure.
+    pub fn observe_row_failure(&mut self, position: u64, error: &Error) -> Result<(), Error> {
+        self.failures.replace(position, error)
+    }
+
+    fn poll_row(
+        &mut self,
+        timeout: Duration,
         mut interrupted: impl FnMut() -> bool,
+        postgres: bool,
     ) -> Result<Option<SqlEvent>, Error> {
         if interrupted() {
             self.call.cancel();
@@ -150,11 +192,23 @@ impl SqlCall {
                     Some(SqlEvent::NeedsChunk)
                 }
             },
-            Some(Event::Row(row)) => Some(SqlEvent::Row(row)),
+            Some(Event::Row(row)) => {
+                let row = if postgres {
+                    thinkthen::native::sql_postgres_row(row)?
+                } else {
+                    row
+                };
+                self.failures.observe(&row);
+                Some(SqlEvent::Row(row))
+            }
             Some(Event::Finished) => {
                 self.chunk = Vec::new().into_iter();
                 self.needs_chunk = false;
                 self.ended = true;
+                self.failures.finish();
+                if self.error.is_none() && (self.filter || self.raise_if_failed) {
+                    self.error = self.failures.error();
+                }
                 Some(SqlEvent::Finished)
             }
             Some(_) => return Err(thinkthen::native::abi_error()),
@@ -170,7 +224,9 @@ impl SqlCall {
             SqlRecord::PostgresJson(json) => thinkthen::native::sql_postgres_record(&json),
             SqlRecord::Missing => Record::missing(),
             SqlRecord::Invalid => Record::invalid(),
-        })
+        })?;
+        self.failures.sent();
+        Ok(())
     }
 
     /// Request cancellation without waiting for the backend worker.

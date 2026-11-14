@@ -54,16 +54,16 @@ fn rows(output: &Output) -> Vec<Value> {
         .collect()
 }
 
-fn yes(id: Value) -> Value {
+fn yes(id: Value, item: Value) -> Value {
     if id.is_string() {
-        json!({"function":"decide","position":1,"id":id,"status":"answered","answer":true,"probability":0.9})
+        json!({"function":"decide","position":1,"id":id,"status":"answered","answer":true,"probability":0.9,"item":item})
     } else {
-        json!({"function":"decide","position":id,"status":"answered","answer":true,"probability":0.9})
+        json!({"function":"decide","position":id,"status":"answered","answer":true,"probability":0.9,"item":item})
     }
 }
 
-fn no(id: Value) -> Value {
-    json!({"function":"decide","position":id,"status":"answered","answer":false,"probability":0.1})
+fn no(id: Value, item: Value) -> Value {
+    json!({"function":"decide","position":id,"status":"answered","answer":false,"probability":0.1,"item":item})
 }
 
 #[test]
@@ -157,7 +157,13 @@ fn a_stream_preamble_is_not_judged_but_record_characters_are() {
         None,
         b"",
     );
-    assert_eq!(rows(&output), vec![yes(json!(1)), yes(json!(2))]);
+    assert_eq!(
+        rows(&output),
+        vec![
+            yes(json!(1), json!("refund")),
+            yes(json!(2), json!("refund"))
+        ]
+    );
     assert_eq!(output.status.code(), Some(0));
     for request in server.requests() {
         for question in request.json().unwrap()["questions"]
@@ -186,19 +192,26 @@ fn each_record_prints_one_row() {
         (
             &["--from", "lines", "--json"],
             b"refund one\r\nparcel two\n\n  \nrefund three",
-            vec![yes(json!(1)), no(json!(2)), yes(json!(3))],
+            vec![
+                yes(json!(1), json!("refund one")),
+                no(json!(2), json!("parcel two")),
+                yes(json!(3), json!("refund three")),
+            ],
             &["refund one", "parcel two", "refund three"],
         ),
         (
             &["--from", "jsonl", "--json", "--field", "/body"],
             b"{\"id\":\"a\",\"body\":\"refund\"}\r\n{\"body\":\"parcel\"}\n",
-            vec![yes(json!("a")), no(json!(2))],
+            vec![
+                yes(json!("a"), json!({"id":"a","body":"refund"})),
+                no(json!(2), json!({"body":"parcel"})),
+            ],
             &["refund", "parcel"],
         ),
         (
             &["--from", "jsonl", "--json"],
             b"\"refund\"\n",
-            vec![yes(json!(1))],
+            vec![yes(json!(1), json!("refund"))],
             &["refund"],
         ),
         (&["--from", "lines", "--json"], b"", vec![], &[]),
@@ -331,9 +344,9 @@ fn a_line_that_is_not_utf8_ends_the_stream_with_exit_5() {
     assert_eq!(output.status.code(), Some(6));
     let actual = rows(&output);
     assert_eq!(actual.len(), 3);
-    assert_eq!(actual[0], yes(json!(1)));
+    assert_eq!(actual[0], yes(json!(1), json!("refund")));
     assert_eq!(actual[1]["error"]["code"], "record.invalid");
-    assert_eq!(actual[2], yes(json!(3)));
+    assert_eq!(actual[2], yes(json!(3), json!("more")));
 }
 
 #[test]

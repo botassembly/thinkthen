@@ -1,154 +1,357 @@
-# ThinkThen in Bash
+# A shell command that answers questions about text
 
-The one-line installer adds its command folder to your shell profiles for new terminals. Set `THINKTHEN_NO_MODIFY_PATH=1` for print-only PATH instructions; the receipt lists any profile changes.
+ThinkThen is a classifier you run like any other command. It reads text, answers one bounded question, and hands back a word you can read and an exit code you can branch on.
 
-[Where record text goes](service.md) describes keys, service selection, connection settings and [relation rule fields](service.md#relation-rule-fields).
+Use Bash. Run `curl -fsSL https://thinkthen.dev/install.sh | sh`, or `brew install botassembly/thinkthen/thinkthen`. Set `THINKTHEN_API_KEY` in the environment first. A few examples also use `jq` to read JSON.
 
-A whole JSON null record, a record without the selected field, or a selected field containing JSON null, such as `{"text":null}` with `/text`, returns a failed `record.missing` row locally and sends no HTTP request for that record. An empty or blank selected value, such as `""`, `{}` or `[]`, returns a failed `record.empty` row the same way. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
+Every result is in exactly one of three states:
 
-ThinkThen judges text with ten functions. Use Bash and install the command with `curl -fsSL https://thinkthen.dev/install.sh | sh`, or run `brew install botassembly/thinkthen/thinkthen`. See the [release downloads](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) for other platforms and runtime requirements.
+- **answered**: there is an answer, and the command prints it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the record could not be judged, or the service did not respond.
 
-A normal call uses the default backend and reads its key from `THINKTHEN_API_KEY`. Supply the key through your environment or secret manager. Keep it out of scripts, output and reports.
+Every result prints as one line:
 
-Create `records.jsonl` with one JSON value per line. For example, put `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}` on separate lines. Add `null`, `{"id":"a4"}` and `{"id":"a6","text":null}` on separate lines to compare the null cases. The example first judges `["first", "second"]` as one JSON array record, then reads the file as a collection of separate records. Keep every collection outcome, including answered false and failed rows.
+| Result | What is printed |
+| --- | --- |
+| yes | `true` |
+| no | `false` |
+| one of your choices | the choice, such as `billing` |
+| tag's labels | the labels that fit, with a tab between them, such as `billing	shipping`. An empty line when none fit |
+| a score | the number, such as `0.62` |
+| a rank | the rank, such as `1` |
+| the line find found | the line's text, such as `Please refund my order.`. An empty line when no line answers |
+| recognize's names | each name as its kind, `: `, its text and its offsets, with a tab between names, such as `person: Morgan (0..6)	organization: Example Group (17..30)`. An empty line when there are none |
+| relate's relations | each relation as `source --relation--> target`, with a tab between relations, such as `Morgan --works_for--> Example Group`. An empty line when there are none |
+| a form | each entry as its name, `=`, and the entry as it prints, with a tab between entries, in the order of their names, such as `refund=true	topic=unsure	urgency=0.74` |
+| not sure | `unsure` |
+| failed | `failed: ` then the error code, `: `, and the message, such as `failed: record.missing: the record holds nothing at /text` |
 
-```bash
-printf '%s\n' '["first","second"]' |
-  thinkthen decide --from jsonl --json 'Does the customer request a refund?'
-thinkthen decide --from jsonl --field /text --json \
-  'Does the customer request a refund?' records.jsonl
-```
+Every ThinkThen library prints a result in these same words. Two things differ in the command itself, because it prints records and not results there: `thinkthen filter` prints your kept records, and `thinkthen rank` prints your records in rank order. Use `--json` to see each rank. For one record with no line, `thinkthen find` prints nothing at all.
 
-Every function can read one record or a record stream. `--from text` reads one whole text per file; `--from jsonl` reads one record per nonblank line. `--json` writes one result row per record. The command closes its files and exits when processing finishes. A pipeline ends its input when its producer closes standard output.
+Three rules hold for every function on this page.
 
-## Input and results
+1. **Branch on the exit code, never on the printed word.** Add `--check` and the exit code is 0 for yes, 1 for no, 3 for not sure and 6 for failed. A missing answer never exits 0 or 1, so it never reads as "yes" or "no".
+2. **Asking never loses a result.** `--json` writes one row for every record in every state, with its `status`, and its `probability` or its `error`.
+3. **Printing never fails.** Every result prints: the answer, `unsure`, or `failed:` with the reason.
 
-Write `thinkthen FUNCTION QUESTION FILE`. Quote the question. Omit `FILE` to read standard input, or use `-` among file arguments to select standard input. Question arguments are literal text. `recognize` and `relate` have no question argument; `annotate` takes a toolbox filename.
+The scripts on this page start with `set -euo pipefail`. Under it, a result that failed stops the script unless you catch its exit code.
 
-Use `--from text` for one whole text per file, `--from lines` for one record per nonblank line, or `--from jsonl` for one JSON value per nonblank line. A `.jsonl`, `.csv`, `.tsv` or `.xlsx` filename selects its own format. Otherwise filter, rank and annotate default to lines; other functions default to text. `run` defaults to JSON Lines. State `--from` when a pipeline's format matters.
+## decide
 
-JSON records can carry a string or integer `id`. A JSON array on one JSON Lines line is one record. Use `--field /text` to judge only the `text` field. The selector is a JSON Pointer: `/` separates keys, `~1` means a literal slash, and `~0` means a literal tilde. Without a selector, ThinkThen uses the whole record.
+### The simplest if
 
-```bash
-printf '%s\n' '{"id":"a1","text":"Please refund my order."}' |
-  thinkthen decide --from jsonl --field /text --json \
-    'Does the customer request a refund?'
-```
-
-`--json` emits one typed result per line. Rows carry `function`, `position`, optional `id`, `source`, and `status`. A position starts at 1. An `answered` row has `answer`. An `unsure` row has no answer. A `failed` row has `error.code` and `error.message`. `probability` appears where the function provides one. `source` identifies the exact question execution. `detail` contains additional function data when available.
-
-A rank row's `answer` is its rank and `position` is its input order.
-
-Text output prints a bare answer for one text input. Streams prefix each answer with its ID or position and a tab; several text files use the file path. Filter prints original kept records, and rank prints original records in rank order, adding a final newline when needed. An unsure answer prints `unsure`. Find prints nothing for one input with no matching line, and an empty answer after the key in a stream. Failed records print no text answer; their diagnostics go to standard error. `-q` suppresses standard output. Use JSON output to retain every filter outcome and to inspect ranks, failures and probabilities. False and unsure answers do not fail an ordinary command. Empty or blank input from a single text source exits 2 before any request; a blank record in a stream fails with `record.empty`, and the other records continue.
-
-A raw text file has no record ID. If your source gives that text an ID, keep it in a JSON envelope. The `jq` command reads the text without changing line breaks and writes the envelope. The following command judges that record:
-
-```bash
-jq -n -c --arg id 'a1' --rawfile text message.txt '{id: $id, text: $text}' > message.jsonl
-thinkthen decide 'Does the customer request a refund?' message.jsonl --field /text --json
-```
-
-Read command JSON output as JSON Lines. Each nonblank line is a separate row; the file is not one JSON array. This example saves every result, counts rows and displays their IDs without another ThinkThen call:
+A decide call with `--check` goes straight into an `if`. `-q` keeps the word off the screen, as with `grep -q`.
 
 ```bash
-thinkthen decide 'Does the customer request a refund?' messages.jsonl \
-  --from jsonl --field /text --json > outcomes.jsonl
-jq -s 'length' outcomes.jsonl
-jq -c '{id, status, answer, error}' outcomes.jsonl
+if thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Please refund my order.'; then
+  echo "refund queue"
+fi
 ```
 
-For text spanning several fields, put those fields under one object and select that object. A pointer selects one value, which can itself be an object. For example, a record can be `{"id":"a1","message":{"subject":"Invoice refund","body":"Please refund my order."}}`; `--field /message` judges both subject and body while preserving the outer ID. Use `jq -c '{id, message: {subject, body}}' source.jsonl > messages.jsonl` to build that shape from existing fields, or repeat `--field`: `--field /subject --field /body` judges an object keyed by each pointer's last name, here `subject` and `body`.
+The `then` branch runs only on a yes. If the message could not be judged, the command exits 6 and says why on standard error. It never exits 0.
 
-Use the same `{id, text}` shape for a single record and for `messages.jsonl`. Retain `id` in saved result rows and join results by it. A row's position describes one call's input order; ranking changes output order. Spreadsheet output keeps original ID columns beside its answer columns.
+Don't add a plain `else` to this `if`. In a shell, `else` runs for every exit code that is not 0: no, not sure and failed alike. To act on a no, read the exit code:
 
-## Options and services
+```bash
+status=0
+thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Please refund my order.' || status=$?
 
-`--backend NAME` or `THINKTHEN_BACKEND` chooses `systemone` (the default) or `openai`. `--model NAME` or `THINKTHEN_MODEL` chooses a model. The default models are `jev-1.13.0` for System One, `gpt-6-luna` for OpenAI. See [services and keys](service.md) for obtaining a key and choosing a service.
+case $status in
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  *) exit "$status" ;;
+esac
+```
 
-`--format text|json` chooses answer text or typed JSON Lines; `--json` selects the latter. `--name NAME` sets an optional execution identity for a function call. `--verbose` (`-v`) prints a one-line row summary on standard error; `--quiet` (`-q`) prints no answers, rows, notices or progress, and errors still reach standard error. Run `thinkthen --help` and `thinkthen FUNCTION --help` for the complete current options. `thinkthen completions bash` writes shell completions without calling a backend; the other supported shells are listed by `thinkthen completions --help`.
+### Yes, no, or something else
 
-## The ten functions
+Set two bars and decide can also be not sure. Exit codes 0 and 1 are the yes and the no. Codes 3 and 6 both mean there is no answer to read.
 
-These commands assume a text file `message.txt` and a JSON Lines file `messages.jsonl` whose objects have `id` and `text` fields. Each command makes a separate call. The shell settings below stop this script when a command or pipeline fails. Use the JSON envelope above when these text files have source IDs.
+```bash
+status=0
+thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Where is my parcel?' --low 0.2 --high 0.8 || status=$?
+
+case $status in
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  3 | 6) echo "a person reads it" ;;
+  *) exit "$status" ;;
+esac
+```
+
+`3 | 6` covers both not sure and failed. The last branch is for a mistake in the call itself, such as a misspelled option, which exits 2.
+
+### Not sure or failed
+
+Replace `-q` with `--json` to keep the result as well as the exit code.
+
+```bash
+status=0
+is_refund=$(thinkthen decide --check --json \
+  'Does the customer request a refund?' \
+  --text 'Where is my parcel?' --low 0.2 --high 0.8) || status=$?
+
+case $status in
+  3) echo "a person reads it" \
+    "$(jq -r '.probability' <<< "$is_refund")" ;;
+  6) echo "try again later" "$(jq -r '.error.code' <<< "$is_refund")" ;;
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  *) exit "$status" ;;
+esac
+```
+
+Yes and no are the two answers. Not sure and failed are the two ways of having none. Bash can't check that a `case` names every state, so end each one with a `*)` branch that stops the script.
+
+The row's `status` field holds the same state as a word: `answered`, `unsure` or `failed`.
+
+### Did it work
+
+Without `--check`, the exit code answers only "did it work". It is 0 for yes, no and not sure, and 6 when the result failed.
+
+```bash
+if ! is_refund=$(thinkthen decide \
+  'Does the customer request a refund?' \
+  --text 'Please refund my order.'); then
+  echo "could not judge it: $is_refund"
+fi
+```
+
+When the service cannot judge the record, this reports the failure and its reason. Not sure counts as working: ThinkThen did its job, and the answer was "not sure".
+
+### Raise if it failed
 
 ```bash
 set -euo pipefail
 
-# Boolean answer.
-thinkthen decide 'Does the customer request a refund?' message.txt --json
-
-# Keep matching original records in text output.
-thinkthen filter 'Does the customer request a refund?' messages.jsonl --field /text
-
-# Exactly one choice, or unsure.
-thinkthen choose 'What is the message about?' message.txt --json \
-  --choice billing --choice shipping --choice other \
-  --describe 'billing=About charges or payments'
-
-# Every applicable label, possibly an empty list.
-thinkthen tag 'Which topics appear?' message.txt --json \
-  --label billing --label shipping --describe 'billing=About charges or payments'
-
-# A number from 0 to 1 on a scale ordered from low to high.
-thinkthen score 'How urgent is the request?' message.txt --json \
-  --level routine --level urgent
-
-# Highest scores first; answer is the rank starting at 1.
-thinkthen rank 'How urgent is the request?' messages.jsonl --field /text --json \
-  --level routine --level urgent --top 5
-
-# The single nonblank line that best answers the question, or null.
-thinkthen find 'Which line states the requested action?' message.txt --json
-
-# Named spans grouped by the requested kinds.
-thinkthen recognize message.txt --json --kind person --kind organization
-
-# Named entities and directed relationships between their kinds.
-thinkthen relate message.txt --json --rule works_for person organization
-
-# Several named questions for each record; see the toolbox below.
-thinkthen annotate questions.json messages.jsonl --json
+is_refund=$(thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.')
 ```
 
-Choose requires distinct choices. Score and rank require distinct levels ordered from lowest to highest. A score is the probability-weighted position on that scale. Rank judges the whole input before it emits ranked answers. `--top` limits answered ranks; it does not hide failed records. Find selects a whole nonblank line, so preserve line breaks in its field. Find and recognize spans use Unicode character offsets with an inclusive `start` and exclusive `end`. Relate returns `source` and `target` spans, `relation`, `probability` and optional `either`. Add `--either` when a relation has no direction.
+Under `set -e` this line stops the script at once when the result failed, with the command's exit code. Otherwise the script goes on, and `$is_refund` holds the printed word.
 
-For choose and tag, `--describe LABEL=TEXT` describes a label already named with `--choice` or `--label`. Repeat it for different labels; each label can have one description. This replaces 0.1's `--option LABEL=DESCRIPTION` and `--label LABEL=DESCRIPTION`. The label itself remains a name, and `--describe` does not apply to recognize kinds or score levels.
-
-Decide and filter accept `--threshold 0.8` for true at or above the cut and false below it. Their `--low 0.2 --high 0.8` band yields false below the lower bound, unsure inside the band and true at or above the upper bound. Choose accepts a single `--threshold` and yields unsure when the winning choice does not reach it. Tag, find, recognize and relate accept a single numeric `--threshold`. Do not combine `--threshold` with `--low` or `--high`.
-
-Write questions that name the field and the exact meaning you need. Replace an ambiguous phrase such as “currently available” with the allowed status values or the date rule you intend. Use the same wording in a command and its saved toolbox entry.
-
-## Migrating candidate-set find calls
-
-In 0.1, find selected a record from a set. In 0.2 it selects a line within each record. To ask about a candidate set, submit one record containing one candidate per line. For nonblank single-line candidates, preserve their text and retain each line's inclusive start and exclusive end offsets, counted in Unicode characters, alongside the original candidate ID. Use the offsets to identify a selected candidate: two candidates can have identical text.
-
-For example, these two candidates become one text document. The command makes one candidate-set selection:
+### Both bars and the probability
 
 ```bash
-printf 'Café\nLibrary' > candidates.txt
-thinkthen find 'Which candidate names a library?' candidates.txt --json > selection.jsonl
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Where is my parcel?' \
+  --low 0.2 --high 0.8 --json | jq '.probability'
 ```
 
-Keep this map with the document:
+- No bar option: one bar at 0.5. The answer is always yes or no.
+- `--threshold 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `--low 0.2 --high 0.8`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
 
-| Original candidate ID | Exact line text | Start | End |
-| --- | --- | --- | --- |
-| cafe | Café | 0 | 4 |
-| library | Library | 5 | 12 |
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. A row has no `probability` only when the result failed.
 
-Offsets count Unicode scalar values, not UTF-8 bytes or displayed glyphs. The newline occupies offset 4. An answered span `{"start":5,"end":12,"text":"Library"}` maps to `library`; match both offsets and the exact text against the retained map. An answered null maps to no candidate. Check `status` first: unsure, failed and missing output are separate outcomes. Preserve the command's exit status as well as its output. With several candidate sets, write one JSONL record per complete document and select its text with `--field`; do not send each candidate as its own record.
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `thinkthen decide --json`, save the rows, and compare them with your labels using `thinkthen audit`, described at the end of this page.
 
-When any candidate is blank or contains line breaks, encode every candidate in that set as a compact JSON object on one physical line, for example `{"id":"a","text":"first\nsecond"}`. Escape CR/LF inside strings, preserve candidate order and compute the offset map after serialization. Empty candidates then remain present rather than disappearing. The returned text is the selected serialized line; map its exact span to the original ID. Do not truncate a set that exceeds the backend's limits: retain its typed failure.
+## choose with your own choices
 
-This changes the model's presentation, so measure confidence again on your labeled cases. None is always an available outcome in 0.2; the threshold applies to both a candidate and none. An unsure or failed result is not none. Preserve the result status and command exit code before scoring or saving a selection.
+Name each choice with `--choice`. The answer comes back as one of them.
 
-## Toolboxes, batching and spreadsheets
+```bash
+team_for() {
+  case "$1" in
+    billing) echo "billing team" ;;
+    shipping) echo "warehouse" ;;
+    other) echo "front desk" ;;
+    *) echo "no team for: $1" >&2; return 2 ;;
+  esac
+}
 
-Save this as `questions.json`. `annotate` accepts this `questions` object, and each entry uses the same function fields as a direct question. Rank cannot be an annotation entry. An entry can override the shared `field` selector.
+status=0
+topic=$(thinkthen choose --check 'What is the message about?' \
+  --text 'I was charged twice for one invoice.' \
+  --choice billing --choice shipping --choice other) || status=$?
+
+case $status in
+  3) echo "a person reads it" ;;
+  0) team_for "$topic" ;;
+  *) exit "$status" ;;
+esac
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check for exit code 3 before reading the answer. `--threshold 0.3` moves the bar.
+
+The choices (`billing`, `shipping`, `other`) are the words the model reads, so make them plain words or short phrases, not codes.
+
+Bash has no list of choices it can check a `case` against. Add a choice and nothing points at `team_for`, so its `*)` branch fails loudly instead of guessing.
+
+With `--check`, choose exits 0 when it chose and 3 when it was not sure. That is "is there an answer", not a yes or a no, so read the code in a `case` as above and don't put a choose call in an `if`. Don't compare the printed word with `unsure` either: one of your own choices could be that word. The exit code is never ambiguous.
+
+## Many records
+
+Give any function a file of records and it gives one result per record, in order. `--from lines` reads one record per line. With `--json`, each row carries your own record as `item`.
+
+```bash
+printf '%s\n' \
+  'Please refund my order.' \
+  'Where is my parcel?' \
+  'I was charged twice for one invoice.' > messages.txt
+
+thinkthen decide \
+  'Does the customer request a refund?' messages.txt --from lines \
+  --low 0.2 --high 0.8 --json |
+  jq -r '
+    if .status == "unsure" then "a person reads it: \(.item)"
+    elif .status == "failed" then "try again later: \(.item)"
+    elif .answer then "refund queue: \(.item)"
+    else "inbox: \(.item)"
+    end'
+```
+
+Test `status` first. In `jq` a row with no answer gives `null` for `.answer`, and `null` counts as false, so a test of `.answer` alone would send not-sure and failed records to the inbox.
+
+One failed record does not stop the stream. Each row keeps its own state, with `position` counted from 1 and the record's `id` when it has one. After the last row the command exits 6 if any record failed, and 0 otherwise. Not sure never changes the exit code of a stream.
+
+Pass the whole file to one command so ThinkThen can send the records in batches. Don't start one command per record.
+
+To save every result, send the rows to a file: `--json > outcomes.jsonl`. Each line includes the state, so nothing is lost.
+
+Without `--json`, a stream prints one line per record: the record's `id` or position, a tab, and the result as it prints.
+
+
+## filter
+
+filter means "give me the yeses". It prints your own records, in order.
+
+```bash
+thinkthen filter 'Does the customer request a refund?' messages.txt |
+  while IFS= read -r refund_request; do
+    echo "refund queue: $refund_request"
+  done
+```
+
+filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `--threshold 0.7` moves the bar. `--low` and `--high` are refused with exit code 2 and a message that names `thinkthen decide`: when you want not sure, use decide over the same file, as in the section above.
+
+If a record fails, you still get every kept record. filter names each failed record on standard error, with its position and `id`, and exits 6 after the last record.
+
+```bash
+status=0
+thinkthen filter \
+  'Does the customer request a refund?' \
+  messages.txt > refunds.txt || status=$?
+
+if [ "$status" -eq 6 ]; then
+  echo "try again later: some messages could not be judged"
+fi
+```
+
+filter prints your records and nothing else, so it has no `--json`. To get each failed record back with its error code, run `thinkthen decide --json` over the same file.
+
+With `--check`, filter answers "did any record say yes", as `grep -q` does: 0 when one did, 1 when none did, 6 when a record failed.
+
+## tag
+
+Labels work as choices do. The answer is the list of labels that fit, and it can be empty.
+
+```bash
+topics=$(thinkthen tag 'Which topics appear?' \
+  --text 'I was charged twice and my parcel is late again.' \
+  --label billing --label shipping --json)
+
+if jq -e '.answer | index("billing")' <<< "$topics" > /dev/null; then
+  echo "billing team"
+fi
+jq -r '.answer[]' <<< "$topics"
+```
+
+tag is never not sure. `--threshold` sets how likely a label must be to count. Without `--json`, tag prints the labels on one line with tabs between them, and an empty line when none fit.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it.
+
+```bash
+urgency=$(thinkthen score 'How urgent is the request?' \
+  --text 'Please refund my order.' \
+  --level routine --level urgent)
+
+if awk -v urgency="$urgency" 'BEGIN { exit !(urgency > 0.5) }'; then
+  echo "answer today"
+fi
+printf '%.2f\n' "$urgency"
+```
+
+The score is a position between your levels, not one of them, so it is a number and there is nothing to put in a `case`. To get exactly one level back, ask with `thinkthen choose`. score is never not sure.
+
+## rank
+
+rank puts many records in order along your levels, highest first.
+
+```bash
+thinkthen rank 'How urgent is the request?' messages.txt \
+  --level routine --level urgent --json |
+  jq -r 'select(.status == "answered") | "\(.answer) \(.item)"'
+```
+
+`answer` is the rank, starting at 1, and `item` is your record. rank reads the whole file before it prints anything. `--top 5` selects the five highest-ranked messages after judging the collection. A failed record comes after the ranked ones, with `status` set to `failed`. Without `--json`, rank prints your records in rank order.
+
+## find
+
+find points to the one line that answers.
+
+```bash
+message=$'Morgan works for Example Group.\nPlease refund my order.'
+
+status=0
+action=$(thinkthen find --check \
+  'Which line states the requested action?' \
+  --text "$message") || status=$?
+
+case $status in
+  3) echo "a person reads it" ;;
+  1) echo "no line answers" ;;
+  0) echo "$action" ;;
+  *) exit "$status" ;;
+esac
+```
+
+With `--check`, find exits 0 when it found a line, 1 when no line answers, and 3 when it was not sure. Like choose, find can be not sure with no bar set.
+
+Without `--json`, find prints the line it found. With `--json`, the answer has `text`, `start` and `end`, or is `null` when no line answers. The offsets count characters, so `${message:start:end-start}` is the line.
+
+## recognize
+
+```bash
+thinkthen recognize --text 'Morgan works for Example Group.' \
+  --kind person --kind organization --json |
+  jq -r '
+    if .status == "failed" then
+      "failed: \(.error.code): \(.error.message)"
+    else .answer[] | "\(.kind) \(.text)" end'
+```
+
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure. Without `--json`, recognize prints the names on one line, as `person: Morgan (0..6)`, with tabs between them.
+
+## relate
+
+```bash
+message=$'Morgan works for Example Group.\nPlease refund my order.'
+
+thinkthen relate \
+  --text "$message" --rule person organization works_for --json |
+  jq -r '
+    if .status == "failed" then
+      "failed: \(.error.code): \(.error.message)"
+    else .answer[] |
+      "\(.source.text) \(.relation) \(.target.text)"
+    end'
+```
+
+A rule is the kind it starts from, then the kind it points to, then the relation name. Each relation has `source`, `target`, `relation`, `probability` and `either`. The row's `detail.names` holds every name found, including names in no relation. Without `--json`, relate prints the relations on one line, as `Morgan --works_for--> Example Group`, with tabs between them.
+
+## annotate
+
+annotate asks several questions of each record and gives back one form per record. The questions go in a file. Save this as `questions.json`:
 
 ```json
 {
-  "field": "/text",
   "questions": {
     "refund": {"function": "decide", "question": "Does the customer request a refund?"},
     "topic": {"function": "choose", "question": "What is the message about?", "choices": ["billing", "shipping", "other"]},
@@ -157,74 +360,115 @@ Save this as `questions.json`. `annotate` accepts this `questions` object, and e
 }
 ```
 
-A reusable saved question entry uses the command's `entries` envelope. Save this as `question-entries.json`:
-
-```json
-{"entries":{"ready":{"question":{"function":"filter","question":"Does the customer request a refund?","field":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"field":"/text"}}}}
+```bash
+thinkthen annotate questions.json messages.txt --json |
+  jq -r '
+    if .status == "failed" then "try again later: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | any(.status == "failed")) then
+      "try again later: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | any(.status == "unsure")) then
+      "a person reads it: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | all(.status == "answered")) then
+      if .answer.refund.answer then
+        "refund queue: \(.answer.topic.answer)" +
+        " \(.answer.urgency.answer * 100 | round / 100)"
+      else empty
+      end
+    else empty
+    end'
 ```
 
-Write `thinkthen run TOOLBOX NAME FILE...` to run one named entry. This command runs the `ready` entry over the whole JSON Lines collection:
+Each entry of a form is a result of its own function, with its own `status`. One entry can be not sure while the others answer. The example checks every entry it uses before reading any answer. The command exits 6 when a form or any entry in it failed; a not-sure entry is not a failure. Without `--json`, a form prints one tab-separated line of names and their printed result states.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
 
 ```bash
-thinkthen run question-entries.json ready records.jsonl --json
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'I was charged twice for one invoice.' \
+  --yes-means \
+    'the customer wants money back, including for a duplicate charge' \
+  --no-means 'the customer wants anything else'
+
+thinkthen choose 'What is the message about?' \
+  --text 'I was charged twice for one invoice.' \
+  --choice billing --choice shipping --choice other \
+  --describe 'billing=charges, invoices and refunds' \
+  --describe 'shipping=parcels and delivery'
 ```
 
-After a toolbox folder, or a toolbox file with several entries, the next word is the entry name. After a file that holds one entry, the next word is that entry's name or the first input file. `--entry NAME` means the same as NAME after the toolbox and leaves every other word as input. `thinkthen run NAME` finds the entry in `./thinkthen.json` or `./thinkthen/`; name the toolbox when both exist. A toolbox mistake, such as a missing file, an unknown entry name or both local toolboxes present, exits 2, and its message starts with `toolbox FILE:` to name the file.
+decide and filter take `--yes-means` and `--no-means`. choose, tag, score and rank take `--describe`, which names one of your choices, labels or levels, then `=`, then its description.
 
-The same question-only entries load in SDK toolboxes. The annotation `questions.json` above supplies an annotation map; richer command entries may also contain shell steps and runs.
+## Records and fields
 
-An answered annotation row maps each question name to its own outcome. Inspect those nested statuses and errors as well as the outer status.
+A record is a piece of text or a JSON value. `--from` says how a file is cut into records:
 
-Pass a whole record stream to one command so the engine can batch its questions. Avoid starting one process per record. `--batch` or `THINKTHEN_BATCH` controls packing; the engine also applies request size and backend limits. One row can require several backend questions. A batch is not a promise about the number of network requests. A backend error status or an unreadable reply answers a whole request, so it fails every record in that batch; a missing or out-of-range answer fails only its own record. Records that fail locally, such as `record.missing`, are never sent.
+- `--from text`: the whole file is one record.
+- `--from lines`: each line that is not blank is one record.
+- `--from jsonl`: each line is one JSON value.
 
-When a task gives you a call or request-body budget, plan before making calls. Count records and named questions, select the text columns each question needs, and consider how much text each question repeats. Use one annotate command for several questions on the same records or spreadsheet. Keep the complete text needed by find, recognize and relate. Save completed output for later analysis instead of calling again to format a report. Batching reduces request overhead; it does not remove the questions or text bytes the backend must receive. Task budgets belong to the task and do not change product limits.
+A file named `.jsonl` is read as JSON Lines. Otherwise filter, rank and annotate read lines, and every other function reads the whole file as one text. Say `--from` whenever a pipe's format matters. With no file, the command reads standard input.
 
-XLSX date and time formats become ISO 8601 text. Elapsed times become ISO 8601 durations. Date-time and clock values carry no timezone. Fractional seconds round to milliseconds. Excel’s fictitious leap day becomes `1900-02-29 (Excel fictitious leap day)`. A date-time on that day includes its time before the note. Plain numbers and percentages keep their stored values. Locale-specific built-in formats 27–36 and 50–58 keep their stored values. Their meaning depends on the spreadsheet application’s language; some describe dates and others describe times. To send an explicit date, verify its intended calendar date in your spreadsheet, add a text column with `=TEXT(A2,"yyyy-mm-dd")`, and copy that column with Paste Special → Values. Verify that the new cells contain ISO date text, save the workbook, and select that column with `--column`. Changing a cell’s display format alone does not turn its stored number into text. For clock or date-time fields, prepare and verify the corresponding ISO text instead of treating every number as a date.
+`--field /text` picks one field of a JSON record. Without it, ThinkThen judges the whole record.
 
-CSV, TSV and XLSX inputs require at least one `--column`. One column supplies its cell as the text for every function, annotate included, and replaces any field pointer a saved question or toolbox carries, so the `/text` pointer in `questions.json` gives way to `--column text`. Several columns supply an object with the column names as keys; each saved pointer must then name one of those columns, or the command exits 2 before any call. Don't pass `--field` with a single `--column`.
+```bash
+printf '%s\n' '{"id":"a1","text":"Please refund my order."}' |
+  thinkthen decide \
+    'Does the customer request a refund?' \
+    --from jsonl --field /text --json
+```
+
+Give JSON records an `id`. Each row carries it back as `id`.
+
+`--check` on decide, choose and find takes exactly one record. Given a stream of records, it is refused with exit code 2.
+
+Blank text given to a one-record call, such as `--text ''` or an empty file, exits 2, and nothing is sent to the service. A script gets a code it can act on before any work is done. A blank record inside a stream gives a failed result with code `record.empty`, and the other records go on.
+
+## Tables
+
+Give the command a CSV, TSV or Excel file and it writes a new file with an answer column.
 
 ```bash
 thinkthen decide 'Does the customer request a refund?' messages.csv \
-  --column text --into is_refund
-thinkthen annotate questions.json messages.xlsx --sheet Messages --column text \
-  --output messages-reviewed.xlsx
+  --column text --into is_refund --low 0.2 --high 0.8
 ```
 
-The first command writes `messages.thinkthen.csv` and prints its path. Table input takes no `--json`. With the table on standard input, add `--from csv` or `--from tsv`, and the new table comes back on standard output. Ordinary functions require `--into` for the answer column; annotate writes one column per question name and rejects `--into`.
+`--column` names the column to judge, and `--into` names the new answer column. The command writes `messages.thinkthen.csv` beside the source and prints its path. `--output` names another file. `--in-place` replaces the source and keeps a backup.
 
-Each question adds one answer column, holding a value a spreadsheet reads:
+You get one answer per row. Where there is no answer the cell holds the table's missing value: an empty cell in CSV and TSV, `#N/A` in Excel. Tables treat missing values their own way. An Excel formula over `#N/A` fails instead of reading the row as `FALSE`, for example.
 
-| Function | Cell |
-| --- | --- |
-| decide, filter | `TRUE` or `FALSE`; a real boolean in xlsx |
-| choose | the chosen label |
-| tag | the labels joined with `; `, such as `billing; shipping` |
-| score, rank | a number |
-| find | the text of the found line |
-| recognize | `text (kind)` for each name, joined with `; ` |
-| relate | `source relation target` for each relation, joined with `; ` |
-
-An empty list, or find with no line, leaves the cell empty. A row that is not sure or failed gets a missing value: an empty cell in CSV and TSV, and `#N/A` in xlsx. An Excel formula on `#N/A` fails instead of reading the row as FALSE. `--details` adds `_status`, `_probability`, `_error`, `_detail` and `_source` columns after each answer, such as `is_refund_status`; the error cell reads `code: message`.
+To see why an answer is missing, ask for the details:
 
 ```bash
-thinkthen filter 'Does the customer request a refund?' messages.csv \
-  --column text --into is_refund --output refunds.csv
+thinkthen decide 'Does the customer request a refund?' messages.csv \
+  --column text --into is_refund --low 0.2 --high 0.8 --details
 ```
 
-Filter writes only the kept rows to CSV and TSV, as `csvgrep` does. In xlsx it keeps every row, hides the rows it did not keep, and adds an AutoFilter on the answer column, so formulas that point at rows still work. Rows that were already hidden stay hidden even when their answers are kept. Rank attaches ranks without sorting spreadsheet rows. Output files must be new. Without `--output`, a file input produces a sibling filename with `.thinkthen` before its extension. `--in-place` replaces the source after keeping a backup. Filter with `--in-place` replaces nothing when any row fails: the source stays byte-for-byte unchanged, no backup is written, and the command exits 6 and says how many rows failed. This holds for CSV, TSV and xlsx. Table choices come only from options, never from environment variables. Use saved formula values or plain text for selected field cells.
+`--details` adds `is_refund_status`, `is_refund_probability` and `is_refund_error` beside the answer, so `is_refund_status` shows which rows need a person.
 
-A saved entry runs on a table the same way, and a single `--column` replaces its field pointer. Save this one-entry toolbox as `toolbox.json`:
+A plain column can't hold a failure. So if any row fails, the command still writes the file, names each failed row on standard error, and exits 6 after every row is judged.
+
+`thinkthen filter ... --column text --into is_refund` writes only the rows that answered yes. In Excel it hides the other rows instead of removing them, so formulas still work. Like every filter, it takes one bar. With `--in-place`, a filter that had any failed row changes nothing.
+
+`thinkthen annotate questions.json messages.xlsx --column text` writes one column per question.
+
+## Saved questions
+
+A toolbox is a JSON file of named questions, so many scripts can share one definition. Save this as `toolbox.json`:
 
 ```json
 {
   "entries": {
-    "review": {
+    "refund": {
       "question": {
-        "function": "annotate",
-        "field": "/text",
-        "questions": {
-          "refund": {"function": "decide", "question": "Does the customer request a refund?"}
-        }
+        "function": "decide",
+        "question": "Does the customer request a refund?",
+        "threshold": {"low": 0.2, "high": 0.8},
+        "field": "/text"
       }
     }
   }
@@ -232,156 +476,110 @@ A saved entry runs on a table the same way, and a single `--column` replaces its
 ```
 
 ```bash
-thinkthen run toolbox.json review messages.jsonl --json
-thinkthen run toolbox.json review messages.xlsx --sheet Messages \
-  --column text --output messages-reviewed.xlsx
+printf '%s\n' '{"id":"a1","text":"Please refund my order."}' |
+  thinkthen run toolbox.json refund --json
 ```
 
-A run can instead hold a `run` array of function entries and `{"shell":["executable","argument"]}` steps. Each step reads the previous step's output as one JSON value per line. The last step's output reaches standard output unchanged, so a final shell step may print plain text. Shell steps require explicit permission: run `thinkthen run toolbox.json review records.jsonl --allow-shell` only after inspecting the saved commands. Shell arguments are literal; add an interpreter explicitly for shell syntax. Only single-function entries accept spreadsheet framing.
+`thinkthen run TOOLBOX NAME FILE` runs one named entry over a file, with the same output and exit codes as the function it names. The same file loads as a toolbox in every ThinkThen library.
 
-Call relate alone when you need names and relations from the same field. Its JSON row's `detail.names` contains all admitted names, including names with no returned relation, and `detail.pairs` contains scored relation pairs. The `answer` contains accepted relations. Do not run recognize first for that task.
+## Settings
 
-## Failures and cancellation
-
-Read standard output for results and standard error for diagnostics. Each library diagnostic has a stable dotted code and a message. Record failures, including nested annotation failures, yield exit 6 after the stream completes. If every row failed with a backend error, the command exits 4; this also applies to table files. A `backend.transport` failure before any row is written stops the command at once with exit 4 and nothing on standard output, even with `--json`. Failed rows remain in JSON output. A table call still publishes its file when rows fail, except filter with `--in-place`, which leaves the source unchanged. Standard error names each of the first 20 failed rows by its spreadsheet row number, where the header is row 1, as `thinkthen: CODE: row N: message`, counts any more, and then says how many rows were not sure and how many failed. Add `--details` to keep each error in the table. When the backend refuses a batch after its retries, every row in that batch fails. A call-level failure or cancellation does not publish a partial spreadsheet.
-
-Stop a scripted workload after any nonzero call status. Capture output before inspecting or exporting it, and keep the failed output for diagnosis. This example stops before any later command can make another call:
+The command reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, add options to any call.
 
 ```bash
-set -euo pipefail
-if thinkthen annotate questions.json messages.jsonl --json > outcomes.jsonl; then
-  printf '%s\n' 'Completed; outcomes.jsonl contains the results.'
-else
-  status=$?
-  printf 'ThinkThen failed with exit %s; inspect outcomes.jsonl and the diagnostic.\n' "$status" >&2
-  exit "$status"
-fi
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.' \
+  --model '...' --batch 16
 ```
 
-Apart from that early transport failure, the command finishes its current stream before returning exit 4 or 6. This recipe stops subsequent work after that return. An unsure or false result is an outcome, so neither triggers this stop for an ordinary call. A failed spreadsheet can still leave an output file; a file's existence does not establish success. Do not retry the same failed call blindly.
+The options are `--backend`, `--url`, `--model` and `--batch`. Each also has an environment variable, such as `THINKTHEN_MODEL`, and an option on the command line wins. The key is read only from the environment. Keep it out of your scripts.
 
-| Exit | Meaning |
+## Usage
+
+```bash
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.' --usage
+```
+
+`--usage` prints one line of JSON on standard error when the command ends: attempts, retries, bytes sent, and tokens in and out as the service reported them. Standard output is unchanged.
+
+## Cancel
+
+Press Ctrl-C to stop a call. The command stops reading, stops asking, and exits 130. Rows already printed stay printed. From a script, `kill -INT` does the same.
+
+## Errors
+
+| What happened | Exit code | What you see |
+| --- | --- | --- |
+| It worked. With `--check`, the answer was yes | 0 | The result |
+| The answer was no, with `--check` | 1 | `false`, or nothing for find |
+| Not sure, with `--check` | 3 | `unsure` |
+| A record could not be judged, or the service failed | 6 | `failed: code: message` for that record, and a line on standard error |
+| A mistake in the call, such as a bad threshold, `--low` and `--high` on filter, or no API key | 2 | A message on standard error. Nothing is sent |
+| Blank text in a one-record call | 2 | A message on standard error. Nothing is sent |
+| The command could not read or write a file | 5 | A message on standard error |
+| The call was cancelled | 130 | |
+| The reader of a pipe closed it early, as `head -1` does | 141 | |
+
+Two groups let you branch by meaning:
+
+- `3 | 6` in a `case` covers not sure and failed: there was no answer to read.
+- Without `--check`, any exit code but 0 means it did not work. Not sure exits 0 there, because not sure is a result and not an error.
+
+In a stream, a failed record wins over everything else: the exit code is 6 whatever the other records answered. With `--check` on filter, a yes then wins over a no.
+
+Every message on standard error starts with `thinkthen:` and a code, such as `thinkthen: usage.threshold: ...`. A failed record's line also gives its position, its `id` and its file.
+
+Under `set -o pipefail`, a pipeline returns the command's exit code even when `jq` or `while` comes after it.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 crate’s command source](https://static.crates.io/crates/thinkthen/thinkthen-0.1.2.crate). Every result now prints, `--check` turns the answer into the exit code, and several options have new names. That release already has `--field` and `--backend`.
+
+| 0.1 | Now |
 | --- | --- |
-| 0 | Completed without failed rows |
-| 1 | `--check` found no positive answer |
-| 2 | Invalid arguments or setup, or blank text from a single text source |
-| 3 | `--check` found unsure and no positive answer |
-| 4 | Backend call failure, or no answered records and only backend failures |
-| 5 | Local or internal failure |
-| 6 | Failed records, except the all-backend case above |
-| 130 | Cancelled |
-| 141 | Downstream closed the output pipe |
+| `--true`, `--false` | `--yes-means`, `--no-means` |
+| `--threshold 0.2:0.8` | `--low 0.2 --high 0.8` |
+| `--lines` | `--from lines` |
+| `--details` on a plain call | `--json` |
+| `--option billing`, `--option 'billing=charges'` | `--choice billing`, and `--describe 'billing=charges'` |
+| `--label 'billing=charges'` | `--label billing`, and `--describe 'billing=charges'` |
+| find picked one record out of many | find picks one line inside each record. Send the candidates as one record, one per line |
+| Answers were cached between runs | Each run asks the service again. Save the rows to reuse them |
 
-`--check` supports decide, filter, choose and find. Decide, choose and find require one source read as text; with `--field`, that text is one JSON record. Filter can check a stream. Add `-q` to branch on the exit code alone, as with `grep -q`. A positive answer wins over unsure; any failed row wins over both. Capture the command status explicitly in Bash when false or unsure is expected. Use `--check` only when you intend to branch on a verdict; handle exits 1 and 3 explicitly rather than treating them as backend failures. With pipelines, `set -o pipefail` preserves a failed command's status. It also preserves 141: when `head` or another reader closes the pipe before ThinkThen finishes writing, `thinkthen ... | head -1` returns 141 under `pipefail`, and `set -e` stops the script. A shell step in a saved run can return its own nonzero status.
+## Check saved answers against labels
 
-Press Ctrl-C to cancel input, backend work and run children. A second Ctrl-C exits immediately. Streaming output written before a failure or interruption remains available.
-
-Each annotation child has its own status. For decide and filter, probability means the probability of yes, including when the answer is false. For choose, it means the chosen label's probability. Score and tag have no single probability; their distributions remain in detail.
-
-
-## Audit saved answers offline
-
-`thinkthen audit ROWS --manifest RUN.json --key GOLD.jsonl --bins 10` grades saved decide/filter, choose or find rows. It prints one JSON report and never reads a backend key or makes a model call. `ROWS` may be `-` for standard input. The manifest declares the complete expected inventory: a missing result remains missing rather than disappearing from the coverage denominator. Use stable IDs in the original run; string `"1"` and integer `1` are distinct. One manifest describes one question, backend, model and input representation. Separate groups before auditing; a model alias does not establish an immutable model revision.
-
-This complete synthetic example can be saved and audited without running inference. Save this as `run.json`:
-
-```json
-{
-  "version": 1,
-  "question": {
-    "function": "decide",
-    "question": "Is it ready?",
-    "threshold": 0.5
-  },
-  "name": null,
-  "question_identity": "d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0",
-  "function": "decide",
-  "backend": "openai",
-  "model": "example-model",
-  "input_representation": "text/v1",
-  "offset_unit": "utf8",
-  "expected_cases": [
-    1,
-    2,
-    3
-  ]
-}
-```
-
-Save this single line as `rows.jsonl`:
-
-```json
-{"function":"decide","position":1,"id":1,"source":{"question_identity":"d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0","backend":"openai","model":"example-model"},"status":"answered","answer":false,"probability":0.2}
-```
-
-Save this single line as `gold.jsonl`:
-
-```json
-{"case_id":1,"question_identity":"d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0","gold":false}
-```
-
-Then run `thinkthen audit rows.jsonl --manifest run.json --key gold.jsonl`. This reports one correct answered labeled case, two missing results, and answered accuracy and coverage of 1. Neither missing case has a label. Label a missing case explicitly to include it in the labeled coverage denominator. Retain the original full question, execution name and emitted question identity when preparing a real manifest; changing the threshold or name changes that identity. Copy backend/model metadata from the saved rows without guessing a model revision.
-
-An omitted `gold` field means unlabeled. For find, explicit `"gold":null` means a labeled none case. A span label is `"gold":{"start":0,"end":5}` in the manifest's declared offset convention. Alternatively supply `"gold":{"candidate_id":"a"}` with `"candidates":[{"id":"a","start":0,"end":5}]` in that same key entry; candidate IDs must be unique. Choose labels are strings; decide/filter labels are booleans. Failed and unsure results remain distinct from none. The CLI's filter `item`/`kept` envelope is accepted.
-
-Answered accuracy uses answered labeled cases. Coverage uses every labeled expected case, including missing results. Probability bins use yes probability for decide/filter, including unsure rows, and known-winner correctness for choose/find. An unsure choose/find row has no saved winner, so it is excluded explicitly. The final bin includes probability 1. Binary AUC is available only for decide/filter when both gold classes have saved probabilities; tied scores receive half credit. Unavailable measurements carry a reason rather than zero.
-
-Calibration compares predicted probabilities with observed frequencies; discrimination measures ordering, and high AUC does not establish calibration. Small or unrepresentative labeled sets do not establish a safe threshold. This command recommends no threshold or model and changes no settings. Poor accuracy still exits 0; malformed or ambiguous input exits nonzero. Inference options are rejected; `--quiet` suppresses the report. The CLI admits up to 100,000 cases and 64 MiB per input document. Rust callers can configure `analysis::AuditOptions` for their local join and document readers.
-
-## Compare saved answers offline
-
-Use the audit example above to compare the saved decide probability with a new cut:
+`thinkthen audit` grades rows you have saved against labels you trust. It reads no key and calls no model.
 
 ```bash
-thinkthen diff rows.jsonl --manifest run.json --threshold 0.8 --key gold.jsonl
+thinkthen decide 'Does the customer request a refund?' messages.jsonl \
+  --field /text --json > outcomes.jsonl
+
+thinkthen audit outcomes.jsonl --manifest run.json --key labels.jsonl
 ```
 
-For a band, replace `--threshold 0.8` with `--low 0.2 --high 0.8`. Threshold-only diff supports decide/filter and uses the engine's existing cut/band rule, including saved unsure probabilities. A nonfailed row without its probability is refused. Choose/find cannot be rethresholded from saved public rows: unsure rows do not carry a winner. There is no inference fallback. Original probabilities and input files stay unchanged; the derived right manifest carries the changed complete question and its new identity.
+`run.json` names the question, the backend, the model and every record `id` you expected. `labels.jsonl` holds one label per line, such as `{"case_id":"a1","question_identity":"...","gold":true}`. The `question_identity` is in each saved row's `source`.
 
-Compare two actual saved runs with:
+audit prints one JSON report: how many answers were right, how many records were not sure, failed or missing, and how the probabilities compare with the labels in ten bins. Not sure, failed and missing stay separate counts and are never scored as "no". It works on saved decide, choose and find rows. A poor score still exits 0, because the audit itself worked.
+
+## Compare saved answers
+
+`thinkthen diff` shows what moving a bar would change, from the probabilities you already saved. It calls no model.
+
+```bash
+thinkthen diff outcomes.jsonl --manifest run.json \
+  --threshold 0.8 --key labels.jsonl
+thinkthen diff outcomes.jsonl --manifest run.json \
+  --low 0.2 --high 0.8 --key labels.jsonl
+```
+
+This works for decide rows. To compare two real runs, such as two models, give both:
 
 ```bash
 thinkthen diff left.jsonl --left-manifest left-run.json \
-  --right right.jsonl --right-manifest right-run.json --key gold.jsonl
+  --right right.jsonl --right-manifest right-run.json --key labels.jsonl
 ```
 
-Actual-run comparison supports all four functions admitted by audit. Find runs must declare matching offset units; the report cannot translate span starts without the original source text. Labeled find runs sharing a question identity must also share their input representation: otherwise use distinct, explicitly mapped question identities with labels for each side. Without labels, literal selection differences remain available across representations. Exact case IDs pair rows regardless of order. The report retains each original outcome, one-sided and missing cases, status changes, changed selections, and per-side audit denominators. Failed or missing results never become find-none. A comparison without any matching saved cases is a usage error. Only the left rows argument may use `-` for standard input; other inputs require named files.
+The report lists each record whose state or answer changed, and with labels, which changes were for the better.
 
-Different question identities require `--question-map map.json`, whose JSON is an explicit one-to-one array such as `[{"left":"OLD_ID","right":"NEW_ID"}]`. A changed execution name or threshold also changes the identity. The report retains both models and input representations instead of implying equivalence. Mapping permits case pairing; it does not silently copy labels between different questions. Supply key entries under each question's identity to grade both sides. For a threshold-only comparison, labels are carried to the derived question because only the decision cut changes.
-
-Without `--key`, answer/status changes remain available but correctness improvement carries an unavailable reason. With labels on both sides, gained/lost counts include transitions between a correct answer and an unsure, failed or missing result; those dispositions remain separate in the saved outcomes. Cases labeled on only one side contribute only to that side's audit. Poor quality is still a completed command with exit 0; ambiguous IDs, incompatible manifests, mixed comparison modes and unsupported threshold replay exit nonzero. The command reads no backend key, sends no request and changes no settings. `--quiet` suppresses its JSON report.
-
-## Observe request and token usage
-
-Add `--usage` to print one `thinkthen.usage/1` JSON summary on standard error when the invocation finishes, fails, or completes its first-interrupt cleanup. Standard output keeps its normal answer format. `--quiet` suppresses the optional summary. A forced second interrupt cannot guarantee a final summary.
-
-```sh
-printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does the customer request a refund?' --usage
-```
-
-The summary counts actual attempts, retries, encoded request-body bytes and observed input/output tokens, including saved function steps. Token dimensions have a reported subtotal and a count of finished attempts whose usage is unknown; unknown is not zero. Counts do not estimate prices or promise a complete bill. Nothing is saved implicitly. SQL statement accounting and shell subprocess calls are outside this invocation account.
-
-## Bound request attempts before sending
-
-`--max-requests N` bounds HTTP send attempts for the whole invocation, including retries, split requests and saved function steps. It overrides `THINKTHEN_MAX_REQUESTS`. Unset is unlimited; zero prevents remote sends. Shell subprocess calls are outside this allowance.
-
-When exhausted, the command reports `local.request-limit`, explains that work is incomplete, and exits 5. `--usage` still reports the known accounting on stderr. Already reserved attempts may finish. The limit counts attempts conservatively, not invoice charges; an attempt that failed to reach the backend can still consume allowance.
-
-```sh
-printf '%s\n' 'Please refund my order.' | thinkthen decide 'Does the customer request a refund?' --max-requests 10 --usage
-```
-
-SQL statements do not admit `max_requests` or inherit this command environment cap. Bound SQL input explicitly and save completed results instead.
-### Recover completed file answers
-
-Named CSV, TSV and XLSX operations retain completed typed answers in a private recovery artifact beside the intended output until publication succeeds. If an operation is interrupted or fails, its diagnostic names that artifact. Export it without a key or any model calls:
-
-```sh
-thinkthen recover saved.recovery > completed.jsonl
-```
-
-The command writes current typed rows to stdout and a JSON summary to stderr. The summary names the admitted and committed counts, missing position ranges, and whether the operation completed. An incomplete but valid artifact exports successfully; a corrupt committed frame fails. A clearly torn trailing append is excluded and reported. Original occurrence positions distinguish repeated or absent user IDs. A completed rank with `--top N` can emit fewer rows than its admitted input; its summary reports those other positions as `unemitted_ranges`, not missing work. Before final rank rows are emitted, recovery reports zero committed rows and an incomplete operation; it does not export partial scores.
-
-Use `--recovery PATH` to choose a new artifact explicitly, including for JSONL enrichment with `--into` or table input on stdin. Use `--no-recovery` to disable retention. These choices conflict, and an existing artifact is never overwritten. Ordinary streams already emit completed rows and do not accept these file-retention options.
-
-Recovery exports completed rows; it does not resume work, refund requests, retain unfinished dependent asks, or recover rank scores before final rank rows exist. Ordinary completion, error and first-interrupt cleanup synchronize complete frames; there is no power-loss or forced-second-interrupt durability guarantee. A plain rerun still makes new requests. Treat recovery artifacts as private source data and remove them when no longer needed.
+---

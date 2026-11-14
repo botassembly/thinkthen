@@ -51,7 +51,9 @@ fn the_largest_probability_wins_with_first_option_breaking_ties() {
         let server =
             Loopback::answering(move |_| json!({"type": "choice", "probabilities": probabilities}))
                 .unwrap();
-        let question = Choose::new("Which?", labels).unwrap().threshold(threshold);
+        let question = Choose::with_strings("Which?", labels)
+            .unwrap()
+            .threshold(threshold);
         let row = engine(&server)
             .run(&question, Record::text("evidence"))
             .unwrap();
@@ -87,12 +89,15 @@ fn invalid_questions_and_threshold_bands_are_refused_at_construction() {
         (" ", vec!["a", "b"]),
     ] {
         assert_eq!(
-            Choose::new(text, labels).unwrap_err().code().as_str(),
+            Choose::with_strings(text, labels)
+                .unwrap_err()
+                .code()
+                .as_str(),
             "usage.question"
         );
     }
     assert_eq!(
-        Choose::new("Which?", [" ", "a"])
+        Choose::with_strings("Which?", [" ", "a"])
             .unwrap_err()
             .code()
             .as_str(),
@@ -107,7 +112,7 @@ fn criteria_preserve_caller_order() {
     let server =
         Loopback::answering(|_| json!({"type":"choice", "probabilities":{"z":0.9,"a":0.1}}))
             .unwrap();
-    let question = Choose::new("Which?", ["z", "a"]).unwrap();
+    let question = Choose::with_strings("Which?", ["z", "a"]).unwrap();
     engine(&server)
         .run(&question, Record::text("Say \"hi\""))
         .unwrap();
@@ -121,7 +126,7 @@ fn criteria_preserve_caller_order() {
 }
 
 #[test]
-fn malformed_choice_replies_fail_the_record() {
+fn malformed_choice_replies_fail_the_scalar_call() {
     for answer in [
         json!({"type":"choice", "probabilities":{"z":0.8,"a":0.2,"unknown":0.1}}),
         json!({"type":"choice", "probabilities":{"z":0.8}}),
@@ -130,13 +135,10 @@ fn malformed_choice_replies_fail_the_record() {
         json!({"type":"noul", "noul":0.9}),
     ] {
         let server = Loopback::answering(move |_| answer.clone()).unwrap();
-        let question = Choose::new("Which?", ["z", "a"]).unwrap();
-        let row = engine(&server)
+        let question = Choose::with_strings("Which?", ["z", "a"]).unwrap();
+        let error = engine(&server)
             .run(&question, Record::text("evidence"))
-            .unwrap();
-        match row.outcome() {
-            Outcome::Failed { error } => assert_eq!(error.code().as_str(), "backend.reply"),
-            other => panic!("expected failure, got {other:?}"),
-        }
+            .unwrap_err();
+        assert_eq!(error.code().as_str(), "backend.reply");
     }
 }

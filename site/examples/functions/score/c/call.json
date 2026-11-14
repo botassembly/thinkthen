@@ -1,5 +1,5 @@
 {
-  "anchor": "        rc = thinkthen_score(client, \"How urgent is the request?\", levels, 2,",
+  "anchor": "        rc = thinkthen_run_one(client, question, \"Please refund my order.\",",
   "before": 0,
   "after": 2
 }

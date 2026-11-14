@@ -171,55 +171,26 @@ final class Streams {
         var cleanable = CLEANER.register(spliterator,state);
         return stream.onClose(cleanable::clean);
     }
-    static <A,D extends Detail> Stream<Row<A,D>> rows(ThinkThen client,byte[] request,Iterable<?> records,RowDecoder<A,D> decoder) {
+    static <T,A,D extends Detail> Stream<Row<A,T>> rows(ThinkThen client,byte[] request,Iterable<? extends T> records,RowDecoder<A,D> decoder) {
         var question = Values.parse(new String(request,StandardCharsets.UTF_8)).get("question");
-        return stream(new State(client,request,records,null),decoder.forQuestion(question)::row);
+        var selected = decoder.forQuestion(question);
+        var state = new State(client,request,records,new HashMap<>());
+        return stream(state,packet -> {
+            @SuppressWarnings("unchecked") T item = (T) state.original(packet.position());
+            return selected.row(packet,item);
+        });
     }
     static <T> Iterable<T> input(Stream<T> records) { return records::iterator; }
-    static <T> Stream<T> kept(Stream<Filtered<T>> rows) {
-        var failures = new java.util.ArrayList<Row<?,?>>();
+    static <T> Stream<T> kept(Stream<Row<Boolean,T>> rows) {
+        var failures = new java.util.ArrayList<Failed<?,?>>();
         Stream<T> kept = rows.filter(value -> {
-            if (value.row().isFailed()) failures.add(value.row());
-            return value.kept();
-        }).map(Filtered::item);
+            if (value instanceof Failed<?,?> failed) failures.add(failed);
+            return value instanceof Answered<Boolean,T> answered && answered.answer();
+        }).map(Row::item);
         Stream<T> ending = Stream.of(0).flatMap(ignored -> {
-            if (!failures.isEmpty()) throw new ThinkThenException(((Failed<?,?>) failures.getFirst()).error(),null,failures);
+            if (!failures.isEmpty()) throw new FailedException(failures.getFirst().error(),failures);
             return Stream.empty();
         });
         return Stream.concat(kept,ending).onClose(rows::close);
-    }
-    static <T> Stream<Ranked<JsonValue>> ranked(ThinkThen client, RankQuestion question, Iterable<T> records) {
-        client.driver();
-        java.util.Objects.requireNonNull(records,"records");
-        Iterable<T> source = records::iterator;
-        var state = new State(client,ThinkThen.request(question),source,null);
-        return stream(state,packet -> {
-            var original = java.util.Objects.requireNonNull(packet.original(),"native rank original");
-            var row = Decoders.RANK.row(packet);
-            JsonValue item;
-            try {
-                item = switch (original.kindName()) {
-                    case "text" -> new JsonString(new String(original.bytes(),StandardCharsets.UTF_8));
-                    case "json" -> JsonValue.parse(new String(original.bytes(),StandardCharsets.UTF_8));
-                    default -> new JsonNull();
-                };
-            } catch (IllegalArgumentException error) {
-                if (!row.isFailed()) throw error;
-                item = new JsonNull();
-            }
-            return new Ranked<>(item,row);
-        });
-    }
-    static <T,A,D extends Detail> Stream<ItemRow<T,A,D>> items(ThinkThen client,Question<A,D> question,Iterable<? extends T> records,RowDecoder<A,D> decoder) {
-        return items(client,ThinkThen.request(question),records,decoder);
-    }
-    static <T,A,D extends Detail> Stream<ItemRow<T,A,D>> items(ThinkThen client,byte[] request,Iterable<? extends T> records,RowDecoder<A,D> decoder) {
-        client.driver();
-        final var itemDecoder = decoder.forQuestion(Values.parse(new String(request,StandardCharsets.UTF_8)).get("question"));
-        var state = new State(client,request,java.util.Objects.requireNonNull(records,"records"),new HashMap<>());
-        return stream(state,packet -> {
-            @SuppressWarnings("unchecked") T item = (T) state.original(packet.position());
-            return new ItemRow<>(item,itemDecoder.row(packet));
-        });
     }
 }

@@ -28,13 +28,6 @@ fn one(engine: &Engine, question: &Decide, text: &str) -> Row<Decide> {
     engine.run(question, Record::text(text)).unwrap()
 }
 
-fn failure_code(row: &Row<Decide>) -> &'static str {
-    match row.outcome() {
-        Outcome::Failed { error } => error.code().as_str(),
-        other => panic!("expected a failure, got {other:?}"),
-    }
-}
-
 fn cut(value: f64) -> Threshold {
     Threshold::cut(value).unwrap()
 }
@@ -119,7 +112,7 @@ fn the_request_quotes_the_text_inside_its_question() {
 }
 
 #[test]
-fn a_bad_reply_fails_the_row_with_its_code() {
+fn a_bad_reply_fails_the_scalar_call_with_its_code() {
     let cases: [(u16, serde_json::Value, &str); 7] = [
         (200, json!({"answers": {"q1": 5}}), "backend.reply"),
         (
@@ -144,7 +137,11 @@ fn a_bad_reply_fails_the_row_with_its_code() {
     for (status, body, code) in cases {
         let server = Loopback::start(move |_| Reply::json(status, &body)).unwrap();
         assert_eq!(
-            failure_code(&decide(&server, None, "text")),
+            engine(server.base())
+                .run(&Decide::new("Is it a refund request?").unwrap(), "text")
+                .unwrap_err()
+                .code()
+                .as_str(),
             code,
             "{status}"
         );
@@ -152,11 +149,13 @@ fn a_bad_reply_fails_the_row_with_its_code() {
 }
 
 #[test]
-fn an_unreachable_backend_fails_the_row() {
+fn an_unreachable_backend_fails_the_scalar_call() {
     let unavailable = UnavailableBackend::new().unwrap();
     let question = Decide::new("Is it?").unwrap();
-    let row = one(&engine(unavailable.base()), &question, "text");
-    assert_eq!(failure_code(&row), "backend.transport");
+    let error = engine(unavailable.base())
+        .run(&question, "text")
+        .unwrap_err();
+    assert_eq!(error.code().as_str(), "backend.transport");
 }
 
 #[test]

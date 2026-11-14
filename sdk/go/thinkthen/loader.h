@@ -19,8 +19,9 @@ int32_t tt_call_next(struct thinkthen_call *call, struct thinkthen_row *out, str
 void tt_call_cancel(struct thinkthen_call *call);
 void tt_call_free(struct thinkthen_call *call);
 void tt_error_free(struct thinkthen_error *error);
-int32_t tt_row_original(const thinkthen_row *,thinkthen_record_view *,thinkthen_error *);
+int32_t tt_row_to_json(const thinkthen_row *,thinkthen_buffer *,thinkthen_error *);
 void tt_row_free(struct thinkthen_row *row);
+int32_t tt_row_host_json(const thinkthen_row *,thinkthen_buffer *,thinkthen_error *);
 int32_t tt_question_to_json(const thinkthen_question *, thinkthen_buffer *, thinkthen_error *);
 int32_t tt_question_from_json(const char *, size_t, thinkthen_question **, thinkthen_error *);
 int32_t tt_question_new(uint32_t function, const char *data, size_t len, struct thinkthen_question **out, struct thinkthen_error *error);
@@ -44,9 +45,7 @@ int32_t tt_settings_set_model(struct thinkthen_settings *settings, const char *d
 int32_t tt_settings_set_url(struct thinkthen_settings *settings, const char *data, size_t len, struct thinkthen_error *error);
 int32_t tt_settings_set_max_requests(struct thinkthen_settings *, uint64_t, struct thinkthen_error *);
 int32_t tt_settings_set_batch(struct thinkthen_settings *settings, uint64_t batch, struct thinkthen_error *error);
-int32_t tt_settings_set_retry(struct thinkthen_settings *settings, uint32_t max_retries, uint64_t initial_backoff_ms, uint64_t attempt_timeout_ms, struct thinkthen_error *error);
 void tt_settings_free(struct thinkthen_settings *settings);
-int32_t tt_call_open_records_question(const thinkthen_client *, const thinkthen_question *, const thinkthen_text *, const thinkthen_record_input *, size_t, size_t, uint32_t, thinkthen_call **, thinkthen_error *);
 int32_t tt_toolbox_new(thinkthen_toolbox **, thinkthen_error *);
 int32_t tt_toolbox_insert(thinkthen_toolbox *, const char *, size_t, const thinkthen_question *, thinkthen_error *);
 int32_t tt_toolbox_from_json(const char *, size_t, thinkthen_toolbox **, thinkthen_error *);
@@ -55,3 +54,5 @@ int32_t tt_toolbox_definitions_json(const thinkthen_toolbox *, thinkthen_buffer 
 void tt_toolbox_free(thinkthen_toolbox *);
 void tt_buffer_free(thinkthen_buffer *);
 #endif
+
+int32_t tt_call_send_invalid(struct thinkthen_call *,struct thinkthen_error *);

@@ -1,5 +1,5 @@
 {
-  "anchor": "            .relate(works_for,",
+  "anchor": "    const auto relations = client.relate(finds_relations,",
   "before": 0,
   "after": 2
 }

@@ -7,16 +7,23 @@ let package = Package(
   targets: [
     .executableTarget(
       name: "Consumer", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
-      path: ".", exclude: ["Package.swift", "Readme", "Guide", "Examples"]),
+      path: ".",
+      exclude: ["Package.swift", "Readme", "Guide", "Examples", "LiteralGuide", "Refusal"]),
     .executableTarget(
       name: "Readme", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
       path: "Readme"),
     .executableTarget(
       name: "Examples", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
-      path: "Examples", exclude: ["toolbox.json"]),
+      path: "Examples"),
+    .executableTarget(
+      name: "LiteralGuide", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
+      path: "LiteralGuide"),
+    .executableTarget(
+      name: "Refusal", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
+      path: "Refusal"),
     .executableTarget(
       name: "Guide", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
-      path: "Guide", exclude: ["records.jsonl"]),
+      path: "Guide"),
   ],
   swiftLanguageModes: [.v6]
 )

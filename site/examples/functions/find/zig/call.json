@@ -1,5 +1,5 @@
 {
-  "anchor": "    const action = try (try client.find(",
+  "anchor": "    const action = try client.find(arena, asks_action,",
   "before": 0,
   "after": 2
 }

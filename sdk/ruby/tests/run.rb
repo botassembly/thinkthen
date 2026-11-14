@@ -2,6 +2,7 @@
 
 require "coverage"
 require "json"
+require "rbconfig"
 Coverage.start(lines: true, branches: true)
 require_relative "cases"
 
@@ -17,13 +18,18 @@ isolated_ruby_environment do
   require_relative "toolbox_json"
   require_relative "contracts"
   require_relative "abi"
+  require_relative "ideal"
   require_relative "readme"
   loaded = $LOADED_FEATURES.find { |path| path.end_with?("/lib/thinkthen.rb") }
   raise "source checkout was loaded" unless loaded && File.realpath(loaded).start_with?(File.realpath(ENV.fetch("GEM_HOME")) + "/")
 
+  ruby_ideal_forms
+  ruby_ideal_formats
+  ruby_ideal_refusals
+  ruby_ideal_filter_retention
   ruby_usage
   ruby_interface
-  ruby_bounded_rank
+  ruby_rank_originals
   ruby_packaging
   shared_cases
   admission_cases
@@ -57,8 +63,9 @@ isolated_ruby_environment do
   ruby_conversion_contract
   ruby_key_snapshots
   ruby_configuration
-  native_abi_cases
+  native_abi_cases unless ARGV == ["--surface-only"]
   readme_examples
+  system(RbConfig.ruby, File.expand_path("../../../scripts/release/ruby.rb", __dir__), ENV.fetch("THINKTHEN_STUB_CASES"), exception: true)
 end
 
 coverage = Coverage.result.select { |path, _| path.include?("/gems/thinkthen-") }

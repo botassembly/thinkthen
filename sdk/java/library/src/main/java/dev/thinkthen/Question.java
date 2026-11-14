@@ -5,7 +5,7 @@ package dev.thinkthen;
      * @param <A> the answer type
      * @param <D> the detail type
      */
-public sealed interface Question<A,D extends Detail> permits AnnotationQuestion, RankQuestion {
+public sealed interface Question<A,D extends Detail> permits AnnotationQuestion, FilterQuestion, RankQuestion {
     /** Return this question’s engine function.
      * @return the engine function
      */

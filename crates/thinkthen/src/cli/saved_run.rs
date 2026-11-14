@@ -57,6 +57,9 @@ pub(super) fn run(
 ) -> Result<u8, Error> {
     let entry = load(&target.directory, &target.toolbox, target.entry.as_deref())?
         .map_requests(|request| super::invocation::overrides(request, args))?;
+    if let Some(function) = entry.final_function() {
+        output.validate_function(function)?;
+    }
     let shells: Vec<_> = entry.shell_steps().collect();
     if !shells.is_empty() && !args.get_flag("allow-shell") {
         let commands = shells
@@ -146,10 +149,22 @@ pub(super) fn run(
         let row = serde_json::from_str::<crate::results::AnyRow>(&row);
         if output.json {
             if let (Ok(row @ crate::results::AnyRow::Filter(_)), Some(item)) = (&row, &item) {
-                return super::render::filter_row(row, item, cancel);
+                return super::render::item_row(row, item, cancel);
             }
             return writeln!(io::stdout().lock(), "{line}")
                 .map_err(|error| super::output_error(error, cancel));
+        }
+        if let Ok(row @ crate::results::AnyRow::Filter(_)) = &row {
+            if super::render::keeps(row) {
+                let item = item
+                    .as_ref()
+                    .ok_or_else(|| super::local("a kept record has no original item"))?;
+                let text = serde_json::from_str::<String>(item.get())
+                    .unwrap_or_else(|_| item.get().to_owned());
+                writeln!(io::stdout().lock(), "{text}")
+                    .map_err(|error| super::output_error(error, cancel))?;
+            }
+            return Ok(());
         }
         if let Ok(row) = row {
             super::render::row(&row, output.json, cancel)

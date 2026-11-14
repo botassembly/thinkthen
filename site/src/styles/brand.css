@@ -143,6 +143,17 @@
   overflow-wrap: anywhere;
 }
 
+/* Literal guide fences use the same natural flow as captured programs. Only
+   visual wrapping changes; clipboard and Markdown retain the original bytes. */
+.sl-markdown-content .expressive-code pre { max-block-size: none; }
+.sl-markdown-content .expressive-code pre > code { min-inline-size: 0; flex: 1 1 100%; }
+.sl-markdown-content .expressive-code .ec-line { grid-template-columns: auto minmax(0, 1fr); }
+.sl-markdown-content .expressive-code .ec-line .code {
+  min-inline-size: 0;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
+}
+
 /* Explicit page opt-ins keep later examples compact without hiding section links. */
 .sl-markdown-content .example-disclosure {
   margin-block: 0.75rem 1.25rem;

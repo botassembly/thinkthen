@@ -81,15 +81,17 @@ def test_missing_records_and_invalid_ids_preserve_position_without_calls(
         assert server.count() == 0
 
 
-def test_filter_rows_yields_false_and_failed_rows_as_well_as_selected_rows(
+def test_decide_stream_yields_false_and_failed_rows_as_well_as_yes_rows(
     cases: Path,
 ) -> None:
     with Loopback(cases / "filter-rows.json") as server:
         client = tt.Client(url=server.url, api_key="synthetic")
-        with client.filter_rows("Ready?", ["refund", "ordinary", None]) as stream:
+        with client.decide_stream("Ready?", ["refund", "ordinary", None]) as stream:
             rows = list(stream)
         assert len(rows) == 3 and [row.position for row in rows] == [1, 2, 3]
-        assert [row.answer for row in rows] == [True, False, None]
+        assert [row.answer for row in rows[:2]] == [True, False]
+        with pytest.raises(tt.Failed):
+            _ = rows[2].answer
         assert rows[2].error is not None and rows[2].error.code == "record.missing"
 
 

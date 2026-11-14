@@ -91,17 +91,12 @@ Value Project(const LogicalType &type, yyjson_val *value) {
     default: throw InvalidInputException("usage.abi: unexpected engine value type");
     }
 }
-Value Project(const LogicalType &type, const thinkthen_buffer &buffer) {
-    if (!buffer.data) return Value(type);
-    auto doc = Parse(Text(buffer));
-    return Project(type, yyjson_doc_get_root(doc.get()));
-}
 LogicalType AnnotationType(yyjson_val *questions, bool bare) {
     child_list_t<LogicalType> fields;
     size_t index, size; yyjson_val *key, *child;
     yyjson_obj_foreach(questions, index, size, key, child) {
         auto function = yyjson_get_str(yyjson_obj_get(child, "function"));
-        if (!function) throw BinderException("usage.question: missing annotation function");
+        if (!function) throw InvalidInputException("usage.question: missing annotation function");
         fields.emplace_back(yyjson_get_str(key), bare ? AnswerType(function) : LogicalType::STRUCT({
             {"function", LogicalTypeId::VARCHAR}, {"status", StatusType()},
             {"answer", AnswerType(function)}, {"probability", LogicalTypeId::DOUBLE},
@@ -110,10 +105,8 @@ LogicalType AnnotationType(yyjson_val *questions, bool bare) {
     }
     return LogicalType::STRUCT(std::move(fields));
 }
-Value AnnotationAnswer(const LogicalType &type, const thinkthen_buffer &buffer) {
-    if (!buffer.data) return Value(type);
-    auto doc = Parse(Text(buffer));
-    auto root = yyjson_doc_get_root(doc.get());
+Value AnnotationAnswer(const LogicalType &type,yyjson_val *root) {
+    if(!root)return Value(type);
     vector<Value> children;
     for (auto &child : StructType::GetChildTypes(type)) {
         auto outcome = yyjson_obj_get(root, child.first.c_str());

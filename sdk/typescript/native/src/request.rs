@@ -3,7 +3,7 @@ use super::Bridge;
 use serde_json::json;
 use std::time::Duration;
 use thinkthen::{
-    AnyRow, Engine, Error, OffsetUnit, Request,
+    Engine, Error, OffsetUnit, Request,
     native::{Call, Event},
 };
 pub(super) fn run(
@@ -86,8 +86,7 @@ pub(super) fn run(
                 continue;
             }
             Some(Event::Row(row)) => {
-                let mut value =
-                    serde_json::to_value(&row).map_err(|_| thinkthen::native::internal_error())?;
+                let (mut value, _) = thinkthen::native::host_row_json(&row)?;
                 value
                     .as_object_mut()
                     .ok_or_else(thinkthen::native::internal_error)?
@@ -101,20 +100,11 @@ pub(super) fn run(
                         json!({"kind":id.kind(),"value":id.as_i64().map(|id|id.to_string()).or_else(||id.as_u64().map(|id|id.to_string()))})
                     }
                 };
-                let original = if let AnyRow::Rank(rank) = &row {
-                    rank.record()
-                        .map(|record| {
-                            let (kind, bytes) = record.original();
-                            std::str::from_utf8(bytes)
-                                .map(|data| json!({"kind":kind,"data":data}))
-                                .map_err(|_| thinkthen::native::internal_error())
-                        })
-                        .transpose()?
-                } else {
-                    None
-                };
+                // Serialize the same typed row before host-coordinate projection.
+                let canonical =
+                    serde_json::to_string(&row).map_err(|_| thinkthen::native::internal_error())?;
                 let packet =
-                    json!({"row":value,"position":row.position(),"id":id,"original":original});
+                    json!({"row":value,"position":row.position(),"id":id,"canonical":canonical});
                 buffered = Some(packet.to_string());
                 continue;
             }

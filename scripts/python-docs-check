@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check every Python example in the docs for named answers and mypy --strict.
 
-Usage: python-docs-check [--names-only] [FILE ...]
+Usage: python-docs-check [--ideal | --names-only] [FILE ...]
 
 Ian's slide rule of 2026-09-26, extended to the docs on 2026-11-02
 (sdlc/decisions/2026-11-02-python-and-command-interface.md, item 5): each
@@ -177,6 +177,15 @@ def typecheck(found):
 
 
 def main(argv):
+    if "--ideal" in argv:
+        from guide_examples import IDEAL, blocks
+        from python_guide_examples import prelude
+        found = [(f"ideal/python.md:{line}", prelude(examples, index) + code)
+                 for examples in [blocks(IDEAL / "python.md")]
+                 for index, (language, code, line) in enumerate(examples) if language == "python"]
+        bad = typecheck(found)
+        print(f"{len(found)} literal Python examples, {bad} type faults")
+        return 1 if bad else 0
     names_only = "--names-only" in argv
     paths = [Path(arg).resolve() for arg in argv if arg != "--names-only"]
     if not paths:

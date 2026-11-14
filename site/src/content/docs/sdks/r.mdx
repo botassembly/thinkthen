@@ -1,166 +1,621 @@
 ---
 title: R SDK
-description: "R SDK: ask the ten ThinkThen questions from R and get plain R vectors back, with NA for not sure."
-goal: The reader runs a first decide in R, installs the SDK, handles not sure and failures, and finds the R call for each of the ten functions.
+description: "r functions with answered, not-sure and failed results."
+goal: Learn the tested calls and result handling for this language.
 reader: An R developer who wants to ask questions about text from code or a data frame
 kind: reference
-verified: 2026-11-06
+verified: 2026-11-13
 sidebar:
   label: "R"
 ---
 import Example from '../../../components/Example.astro';
-import InstallLine from '../../../components/InstallLine.astro';
-import Fact from '../../../components/Fact.astro';
 
-The R SDK gives R the ten functions, from `tt_decide()` to `tt_annotate()`; each takes your texts and gives back a plain R vector with one answer per text, such as `TRUE` or `FALSE` from decide, or `NA` when it is not sure.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a plain R vector you can branch on, with one answer per message.
 
-<Example id="functions/decide/r" title="refund.R" />
+<Example id="functions/decide/r" />
 
-`TRUE` means yes: the message asks for a refund.
+Use R 4.2.0 or later. Run `install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))`. The SDK includes the engine. Set `THINKTHEN_API_KEY` in the environment first.
 
-Install it (<Fact k="languages.r.requires" />):
+Every answer is in exactly one of three states:
 
-<InstallLine k="languages.r.install" lang="r" />
+- **answered**: there is an answer, and it is the value you get back.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough. The value is `NA`.
+- **failed**: the message could not be judged, or the service did not respond.
 
-On Windows x86-64, `install.packages()` takes R-universe's binary build when it has one for your R, and then you need no compiler. We test this build with pinned R 4.6 and Rtools 4.5 before release, not on R-universe's own builders. Windows support is x86-64 only; Windows ARM64 is untested.
+Three rules hold for every function on this page.
 
-The client uses the key from the [Quickstart](/quickstart/).
+1. **A missing answer is `NA` or a stopped call, never `FALSE`.** Not sure is `NA`, and R's `if` stops on `NA`. A failed message stops the call with one `thinkthen_failed`, after every message is judged. A missing answer never reads as "no" or as an empty value.
+2. **Details keep the state beside the answer.** Add `details = TRUE` to any function but filter and failed judgements remain results, without raising or warning. Its `status`, `probability` and error columns are always safe to read. Usage, setup, authentication and cancellation errors still stop the call.
+3. **Printing never stops.** An answer prints as R prints any value, such as `TRUE` or `NA`. A details data frame prints as a table. A failure's message uses the words the `thinkthen` command prints, such as `failed: backend.status: the backend answered status 503`.
 
-## Handle not sure and failures
+Every function takes the text first and the question second. Name `question =` so a swapped call can't answer the wrong question. All calls use table semantics, even for a one-element vector. Python's scalar failure rule does not add a separate R call shape.
 
-Set a low bar and a high bar with `threshold = c(0.2, 0.8)`. Between them, decide is not sure, and the answer is `NA`. `if (NA)` stops with an error, so not sure never passes for no. When ThinkThen can't judge a text, such as a blank one, the call raises a `thinkthen_failed_rows` error instead of answering.
+<span id="the-ten-functions"></span>
 
-<Example id="sdks/r/unsure" title="unsure.R" />
+## decide
 
-A double charge might be a refund request, or might not, so the answer is `NA`: send it to a person. The blank text can't be judged, so the call raises, and the error's `code` is `record.empty`.
+### The simplest if
 
-Test `is.na()` before you branch on an answer. The error is raised only after every other text is judged; its `failed_rows` lists the texts that failed, and `rows` holds every outcome already paid for. Its message and `codes` name every failure code, and `code` is the first. Every ThinkThen error inherits `thinkthen_error` and carries a `code`; [Troubleshooting](/reference/troubleshooting/) lists each one.
-
-To keep going past a failure, pass `errors = "na"`. The answers stay a plain vector with `NA` for not sure and for a failure, the call warns once with every failure code, and `tt_failures()` lists each failure, so you can tell it from not sure:
+A decide answer goes straight into an `if`.
 
 ```r
-messages <- c("Please refund my order.", NA, "")
-is_refund <- tt_decide(messages, question = "Does the customer request a refund?",
-                       threshold = c(0.2, 0.8), errors = "na")
-tt_failures(is_refund)[c("position", "error_code")]
+library(thinkthen)
+
+if (tt_decide("Please refund my order.", question = "Does the customer request a refund?")) {
+  cat("refund queue\n")
+} else {
+  cat("inbox\n")
+}
 ```
 
-`tt_failures()` gives each failure's place in your input, its code and its message. An answer with no failure gives no warning and an empty list. `tt_filter()`, `tt_keep()` and `tt_annotate()` work the same way.
+If the message could not be judged, the call stops with a `thinkthen_failed`. It never falls through to `inbox`.
 
-## The ten functions
+<span id="yes-no-or-something-else"></span>
 
-Each function takes the texts first, as a character vector, a list or a data frame, and answers each text in input order. Name `question =` so a swapped call can't ask the wrong question. Every program reads the same support-inbox messages as the function pages.
+### Yes, no, or not sure
 
-### decide
+Set two bars and decide can also be not sure. `is.na()` tells you whether there is a yes or no to read.
 
-<details class="example-disclosure">
-<summary>Yes or no about each text</summary>
+```r
+library(thinkthen)
 
-<Example id="functions/decide/r" title="decide.R" />
+is_refund <- tt_decide(
+  "Where is my parcel?",
+  question = "Does the customer request a refund?",
+  threshold = c(0.2, 0.8)
+)
 
-Yes: the message asks for a refund. `tt_decide()` also takes `threshold`, one bar or a low and a high bar, and `yes_means` and `no_means`, which say in words what each answer means. [decide](/functions/decide/) shows every option.
+if (!is.na(is_refund)) {
+  cat(if (is_refund) "refund queue" else "inbox", "\n")
+} else {
+  cat("a person reads it\n")
+}
+```
 
-</details>
+A failed message still stops this call. To send not sure and failed to the same place, catch `thinkthen_no_answer` around the call. It covers both.
 
-### choose
+```r
+tryCatch(
+  {
+    is_refund <- tt_decide(
+      "Where is my parcel?",
+      question = "Does the customer request a refund?",
+      threshold = c(0.2, 0.8)
+    )
+    cat(if (is_refund) "refund queue" else "inbox", "\n")
+  },
+  thinkthen_no_answer = function(no_answer) cat("a person reads it\n")
+)
+```
 
-<details class="example-disclosure">
-<summary>The one choice that fits</summary>
+Not sure is not an error. A call that was not sure signals `thinkthen_unsure` quietly: with no handler, nothing happens and you get the `NA`.
 
-<Example id="functions/choose/r" title="choose.R" />
+Don't wrap an answer in `isTRUE()`. It turns `NA` into `FALSE`, which is how not sure gets read as no.
 
-A refund is about billing. The answer is one of your choices, or `NA` when not sure. `descriptions` says what each choice means, and `threshold` sets the bar. [choose](/functions/choose/) shows every option.
+<span id="did-it-work"></span>
 
-</details>
+### Did the call work
 
-### filter
+```r
+tryCatch(
+  {
+    is_refund <- tt_decide(
+      "Please refund my order.",
+      question = "Does the customer request a refund?"
+    )
+    print(is_refund)
+  },
+  thinkthen_failed = function(failure) {
+    cat("could not judge it:", conditionMessage(failure), "\n")
+  },
+  thinkthen_error = function(failure) {
+    cat("the call did not complete:", conditionMessage(failure), "\n")
+  }
+)
+```
 
-<details class="example-disclosure">
-<summary>Only the texts that answer yes</summary>
+`thinkthen_failed` reports failed judgements after every input is judged. It also belongs to `thinkthen_error`, so put its specific handler first. The broader handler covers usage, setup, authentication and cancellation errors as well; those keep their own classes. Neither handler reads an answer.
 
-<Example id="functions/filter/r" title="filter.R" />
+Not sure counts as working: the plain call signals `thinkthen_unsure` quietly and gives `NA`. This is a condition, not an error, so the error handlers above do not catch it. To inspect all states without stopping for failed judgements, request `details = TRUE` and check its status columns.
 
-The parcel question is left out. `tt_filter()` gives back your own texts, in the form you passed, and leaves out the ones it is not sure about. If any text fails, it raises `thinkthen_failed_rows` after judging the rest, and the error's `kept` holds the kept texts. `tt_keep()` gives the same answer as `TRUE`, `FALSE` or `NA` for each text, for `dplyr::filter()`. [filter](/functions/filter/) shows every option.
+### Both bars and the probability
 
-</details>
+```r
+is_refund <- tt_decide(
+  "Where is my parcel?",
+  question = "Does the customer request a refund?",
+  threshold = c(0.2, 0.8),
+  details = TRUE
+)
+print(is_refund$probability)
+```
 
-### tag
+- No `threshold`: one bar at 0.5. The answer is always yes or no.
+- `threshold = 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `threshold = c(0.2, 0.8)`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
 
-<details class="example-disclosure">
-<summary>Every label that fits</summary>
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is `NA` only when the message failed.
 
-<Example id="functions/tag/r" title="tag.R" />
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `tt_decide()` with `details = TRUE`, keep the `probability` column, and compare with your labels.
 
-The message is about both billing and shipping. `tt_tag()` gives a list with one character vector per text, so `[[1]]` takes the first. [tag](/functions/tag/) shows every option.
+<span id="choose"></span>
 
-</details>
+## choose with your own choices
 
-### score
+Give your choices as a character vector. The answer comes back as a factor, and your choices are its levels.
 
-<details class="example-disclosure">
-<summary>A number from 0 to 1 on your scale</summary>
+```r
+library(thinkthen)
 
-<Example id="functions/score/r" title="score.R" />
+topic_choices <- c("billing", "shipping", "other")
 
-The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+team_for <- function(topic) {
+  switch(as.character(topic),
+    billing = "billing team",
+    shipping = "warehouse",
+    other = "front desk",
+    stop("no team for: ", topic)
+  )
+}
 
-</details>
+topic <- tt_choose(
+  "I was charged twice for one invoice.",
+  question = "What is the message about?",
+  choices = topic_choices
+)
 
-### rank
+if (is.na(topic)) {
+  cat("a person reads it\n")
+} else {
+  cat(team_for(topic), "\n")
+}
+```
 
-<details class="example-disclosure">
-<summary>Every text, highest first</summary>
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `is.na(topic)` before using the answer. `threshold = 0.3` moves the bar.
 
-<Example id="functions/rank/r" title="rank.R" />
+The choices (`"billing"`, `"shipping"`, `"other"`) are the words the model reads, so make them plain words or short phrases, not codes. `levels(topic)` gives them back in the order you wrote them.
 
-The double charge is the most urgent. Each text gets its rank, starting at 1, in input order, so `messages[order(urgency_rank)]` puts the most urgent first. With `top = 2`, ranks past the first two are `NA`. [rank](/functions/rank/) shows every option.
+R can't check a `switch` against a factor's levels. Add a choice and nothing points at `team_for`, so its last branch stops instead of guessing.
 
-</details>
+A choose answer does not belong in an `if`. R can't refuse it: `if (topic)` runs, and is quietly always yes. `topic == "billing"` is an ordinary comparison, and it is `NA` when the answer is not sure.
 
-### find
+<span id="many-records"></span>
 
-<details class="example-disclosure">
-<summary>The line that answers the question</summary>
+## Many messages
 
-<Example id="functions/find/r" title="find.R" />
+Every function takes many messages the same way it takes one: give it a character vector, a list or a data frame, and it gives one answer per message, in order. With `details = TRUE`, each result carries your own message as `item`.
 
-The second line states the action. The answer has `$text`, `$start` and `$end`, counted in characters from 1 with the end included, so `substr(text, action$start, action$end)` gives the line. `$text` is `NA` when no line answers. [find](/functions/find/) shows every option.
+```r
+library(thinkthen)
 
-</details>
+messages <- c(
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice."
+)
 
-### recognize
+refund_checks <- tt_decide(
+  messages,
+  question = "Does the customer request a refund?",
+  threshold = c(0.2, 0.8),
+  details = TRUE
+)
 
-<details class="example-disclosure">
-<summary>Each name in the text and its kind</summary>
+where <- ifelse(refund_checks$answer, "refund queue", "inbox")
+where[refund_checks$status == "unsure"] <- "a person reads it"
+where[refund_checks$status == "failed"] <- "try again later"
+cat(paste0(where, ": ", refund_checks$item), sep = "\n")
+```
 
-<Example id="functions/recognize/r" title="recognize.R" />
+One failed message does not stop the others. Each result keeps its own state, with `position` counted from 1 and the message's `id` when it has one. A one-element input uses these same table rules; it does not become a different scalar call.
 
-`tt_recognize()` gives a list with the names found in each text. Each name has `$text`, `$kind`, `$start`, `$end` and `$probability`. [recognize](/functions/recognize/) shows every option.
+A plain call is the raise-if-failed step: leave off `details = TRUE` and it stops with one `thinkthen_failed` after collecting all results if a message failed. Its `outcomes` holds every result. There is no separate `raise_if_failed` method. Not sure stays `NA`; `errors = "na"` also keeps failed answers as `NA`, warns once with `thinkthen_record_warning`, and lets `tt_failures()` list the failures. Details retain failures without that error or warning.
 
-</details>
+Pass the whole collection in one call so ThinkThen can send the messages in batches. Don't call once per message in a loop or in `sapply()`.
 
-### relate
+To save every result, call `tt_details_write(refund_checks, "outcomes.jsonl")`. It writes each result as a line of JSON. Each line includes the state, so nothing is lost.
 
-<details class="example-disclosure">
-<summary>Names linked by the relations you allow</summary>
+<span id="not-sure-or-failed"></span>
 
-<Example id="functions/relate/r" title="relate.R" />
+## Many-result not sure or failed
 
-`tt_rule()` names the kind of name at each end and the relation between them; `rules` takes one rule or a `list()` of them. Relate finds its own names, so it needs no recognize call first. [relate](/functions/relate/) shows every option.
+Here `refund_checks` is the details data frame from the many-message call above. Its `status` tells not sure and failed apart; only an answered result's value is used as yes or no.
 
-</details>
+```r
+where_it_goes <- function(is_refund) {
+  switch(as.character(is_refund$status),
+    answered = if (is_refund$answer) "refund queue" else "inbox",
+    unsure = "a person reads it",
+    failed = "try again later",
+    stop("no route for: ", is_refund$status)
+  )
+}
 
-### annotate
+for (i in seq_len(nrow(refund_checks))) {
+  is_refund <- refund_checks[i, ]
+  cat(where_it_goes(is_refund), ": ", is_refund$item, "\n", sep = "")
+}
+```
 
-<details class="example-disclosure">
-<summary>Several questions for each text</summary>
+Yes and no are the two answers. Not sure and failed are the two ways of having none. `status` is a factor with exactly three levels: `answered`, `unsure` and `failed`. R can't check that a `switch` names every state, so end it with a `stop()`.
 
-<Example id="functions/annotate/r" title="annotate.R" />
+## filter
 
-`tt_annotate()` gives a tibble with one column per question, each of its own type, and `NA` where a question is not sure. [annotate](/functions/annotate/) shows every option.
+filter means "give me the yeses". It hands back your own messages, in order.
 
-</details>
+```r
+library(thinkthen)
 
-## The full API
+messages <- c(
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice."
+)
 
-`field = "/text"` judges the `text` column of a data frame, or the `text` field of each list. Each function has a `_rows` twin, such as `tt_decide_rows()`, that gives every outcome with its status and probability, and `tt_bind()` adds those to a copy of your data frame. `tt_client()` makes your own client, and Esc or Ctrl-C cancels a running call. The [R API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/r/API.md) lists every function and argument.
+for (refund_request in tt_filter(messages, question = "Does the customer request a refund?")) {
+  cat("refund queue:", refund_request, "\n")
+}
+```
+
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `threshold = 0.7` moves the bar. Two bars are refused with `thinkthen_usage_error`: when you want not sure, use `tt_decide()` with `details = TRUE`, as in the section above.
+
+If a message fails, filter stops with one `thinkthen_failed` after every message is judged. Its `kept` holds every kept message, and its `rows` holds every failed result with its `item`.
+
+```r
+tryCatch(
+  for (refund_request in tt_filter(messages, question = "Does the customer request a refund?")) {
+    cat("refund queue:", refund_request, "\n")
+  },
+  thinkthen_failed = function(failure) {
+    cat(paste("refund queue:", failure$kept), sep = "\n")
+    failed <- failure$rows
+    cat(paste("try again later:", failed$item, failed$error_code), sep = "\n")
+  }
+)
+```
+
+## tag
+
+Labels work as choices do. The answer for each message is a factor of the labels that fit, and it can be empty.
+
+```r
+library(thinkthen)
+
+topic_labels <- c("billing", "shipping")
+
+topics <- tt_tag(
+  "I was charged twice and my parcel is late again.",
+  question = "Which topics appear?",
+  labels = topic_labels
+)[[1]]
+
+if ("billing" %in% topics) {
+  cat("billing team\n")
+}
+for (topic in topics) {
+  cat(topic, "\n")
+}
+```
+
+`tt_tag()` gives a list with one factor per message, so `[[1]]` is the first message's labels. tag is never not sure. `threshold =` sets how likely a label must be to count.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. The order of the supplied character vector defines the scale.
+
+```r
+library(thinkthen)
+
+urgency_levels <- c("routine", "urgent")
+
+urgency <- tt_score(
+  "Please refund my order.",
+  question = "How urgent is the request?",
+  levels = urgency_levels
+)
+
+if (urgency > 0.5) {
+  cat("answer today\n")
+}
+print(round(urgency, 2))
+```
+
+The score is a position between your levels, not one of them, so it is a plain number and there is nothing to `switch` on. To get exactly one level back, ask with `tt_choose()`. score is never not sure.
+
+## rank
+
+rank puts many messages in order along your levels, highest first.
+
+```r
+library(thinkthen)
+
+messages <- c(
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice."
+)
+
+ranked <- tt_rank(
+  messages,
+  question = "How urgent is the request?",
+  levels = urgency_levels,
+  details = TRUE
+)
+cat(paste(ranked$answer, ranked$item), sep = "\n")
+```
+
+`ranked$answer` is the rank, starting at 1, and `ranked$item` is your message. The results come in rank order. rank reads the whole collection before it gives anything back. `top = 5` selects the five highest-ranked messages after judging every input, and the messages below them get no result. A failed message comes back after the ranked ones, with `status` set to `failed`.
+
+Without `details = TRUE`, `tt_rank()` gives each message's rank in the order of your messages, so it lines up with a data frame's inputs, and `messages[order(ranks)]` puts the messages in rank order. With `top`, a message below the top has `NA` for its rank.
+
+## find
+
+find points to the one line that answers.
+
+```r
+library(thinkthen)
+
+message <- "Morgan works for Example Group.\nPlease refund my order."
+action <- tt_find(message, question = "Which line states the requested action?")
+
+if (is.na(action)) {
+  cat("a person reads it\n")
+} else if (!nzchar(action$text)) {
+  cat("no line answers\n")
+} else {
+  cat(action$text, "\n")
+}
+```
+
+The answer is a `tt_span` with `$text`, `$start` and `$end`. When no line answers, the span is empty: its `$text` is `""`, and its `$start` and `$end` are `NA`. An empty span is an answer, so `is.na(action)` is `FALSE` for it. `substr(message, action$start, action$end)` is the line: the offsets count characters from 1, and the end is included. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```r
+library(thinkthen)
+
+names <- tt_recognize(
+  "Morgan works for Example Group.",
+  kinds = c("person", "organization")
+)[[1]]
+
+for (i in seq_along(names)) {
+  name <- names[i]
+  cat(name$kind, name$text, "\n")
+}
+```
+
+`tt_recognize()` gives a list with one set of names per message. Each name also has `$start`, `$end` and `$probability`. The set can be empty. recognize is never not sure.
+
+## relate
+
+```r
+library(thinkthen)
+
+message <- "Morgan works for Example Group.\nPlease refund my order."
+rules <- tt_rule("person", "organization", "works_for")
+
+relations <- tt_relate(message, rules = rules)[[1]]
+
+for (i in seq_along(relations)) {
+  relation <- relations[i]
+  cat(relation$source$text, relation$relation, relation$target$text, "\n")
+}
+```
+
+A rule is the kind it starts from, then the kind it points to, then the relation name. `rules` takes one `tt_rule()` or a `list()` of them. Each relation has `$source`, `$target`, `$relation`, `$probability` and `$either`. With `details = TRUE`, `relations$detail[[1]]$names` holds every name found, including names in no relation.
+
+## annotate
+
+annotate asks several questions of each message and gives back one form per message.
+
+```r
+library(thinkthen)
+
+messages <- c(
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice."
+)
+
+questions <- tt_annotation_questions(list(
+  refund = tt_decide_question("Does the customer request a refund?", threshold = c(0.2, 0.8)),
+  topic = tt_choose_question("What is the message about?", choices = topic_choices),
+  urgency = tt_score_question("How urgent is the request?", levels = urgency_levels)
+))
+
+forms <- tt_annotate(messages, questions, details = TRUE)
+
+for (i in seq_len(nrow(forms))) {
+  form <- forms[i, ]
+  if (form$status == "failed") {
+    cat("try again later:", form$item, "\n")
+    next
+  }
+  if (any(c(form$refund_status, form$topic_status, form$urgency_status) == "failed")) {
+    cat("try again later:", form$item, "\n")
+  } else if (any(c(form$refund_status, form$topic_status) == "unsure")) {
+    cat("a person reads it:", form$item, "\n")
+  } else if (all(c(form$refund_status, form$topic_status, form$urgency_status) == "answered") && form$refund) {
+    cat(sprintf("refund queue: %s %.2f\n", form$topic, form$urgency))
+  }
+}
+```
+
+`forms` has one result per message and one answer column per question, under the name you gave it: `refund` is logical, `topic` is a factor and `urgency` is a number. Each question also has its own state beside its answer, in `refund_status`, `topic_status` and `urgency_status`, with its probability and error columns named the same way. One entry can be not sure or failed while the others answer. Check every entry used by a branch before reading its answer; an answered form alone does not mean its entries all answered. `form$refund` is a decide answer, so it works in an `if`. Here `topic_choices` is the three-choice vector from the choose section.
+
+Without `details = TRUE`, `tt_annotate()` gives only the answer columns, with `NA` where an entry is not sure. By default its ordinary failure check stops with `thinkthen_failed` after collection if a form or any entry failed; an unsure entry is not a failure. An answered form with one, several or all entries failed remains visible in details, along with every entry's state. The plain call still reports those failed entries; it does not adopt Python's parent-only scalar promotion rule.
+
+Question names must not collide with generated table columns such as `status`, `probability`, `position`, `id` or `item`, or with another question's generated suffix columns. For example, `refund` beside `refund_status` is refused. The call raises `thinkthen_usage_error` naming the clashing name before it sends any paid request. This applies to both plain and details tables, so switching to details cannot change which question names are valid.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```r
+is_refund <- tt_decide(
+  "I was charged twice for one invoice.",
+  question = "Does the customer request a refund?",
+  yes_means = "the customer wants money back, including for a duplicate charge",
+  no_means = "the customer wants anything else"
+)
+
+topic <- tt_choose(
+  "I was charged twice for one invoice.",
+  question = "What is the message about?",
+  choices = topic_choices,
+  descriptions = c(
+    billing = "charges, invoices and refunds",
+    shipping = "parcels and delivery"
+  )
+)
+```
+
+decide and filter take `yes_means` and `no_means`. choose, tag, score and rank take `descriptions`, a character vector named by your choices, labels or levels.
+
+<span id="records-and-fields"></span>
+
+## Messages and fields
+
+A message is one string of a character vector, one input in a data frame, or one element of a list. `field = "/text"` picks one column of a data frame or one field of a list element. Without it, ThinkThen judges the whole message.
+
+Give a data frame an `id` column. It is never judged, and each details result carries it back as `id`.
+
+There is no separate one-message call. One message is a vector of length one, and its answer is a vector of length one. A blank message (an empty string, or only spaces) gives a failed result with code `record.empty`, an `NA` message gives one with code `record.missing`, and nothing is sent to the service for either.
+
+## Tables
+
+A data frame needs nothing extra. Give any function the data frame, or one of its columns, and the answers line up with its inputs.
+
+```r
+library(thinkthen)
+
+frame <- read.csv("messages.csv")
+
+frame$is_refund <- tt_decide(
+  frame,
+  question = "Does the customer request a refund?",
+  field = "/text",
+  threshold = c(0.2, 0.8)
+)
+```
+
+You get one answer per input, in a column of the right type. Where there is no answer the column holds R's missing value, `NA`. Tables treat missing values their own way. `subset()` and `dplyr::filter()` drop the `NA` results, for example. The same call works on a column inside `dplyr::mutate()`.
+
+To see why an answer is missing, ask for the details:
+
+```r
+checks <- tt_decide(
+  frame,
+  question = "Does the customer request a refund?",
+  field = "/text",
+  threshold = c(0.2, 0.8),
+  details = TRUE
+)
+needs_a_person <- checks[checks$status == "unsure", ]
+```
+
+`details = TRUE` gives one result per message with `position`, `id`, `item`, `answer`, `status`, `probability`, the error columns `error_code`, `error_message` and `error_http_status`, and `detail`. For a data frame, `item` holds your input data, so `checks$item$text` is the text column. There is one details form for every function but filter, which has none.
+
+A plain column can't hold a failure. So if any result fails, the call stops with one `thinkthen_failed` after every input is judged, and its `outcomes` holds every result. Pass `errors = "na"` to get `NA` for a failed result instead; the call then warns once, and `tt_failures()` on the returned column lists each failure. Subsetting the column drops that list, so read it first.
+
+`tt_filter(frame, ...)` gives back the inputs that answered yes. Like every filter, it takes one bar. It takes no `details` and no `errors`: a failed result stops the call after every input is judged.
+
+Choices come back as a factor column whose levels are your choices. tag, recognize and relate give a list column, with one element per input. rank gives each input its rank, so the column lines up with your frame. For find, a result where no line answers holds an empty span, and `NA` means there is no answer. annotate gives one column per question, named as you named it, and the details put each question's state beside it, as `topic_status`.
+
+## Saved questions
+
+A question object holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
+
+```r
+asks_refund <- tt_decide_question(
+  "Does the customer request a refund?",
+  threshold = c(0.2, 0.8),
+  field = "/text"
+)
+is_refund <- tt_decide(
+  data.frame(id = "a1", text = "Please refund my order."),
+  question = asks_refund
+)
+```
+
+There is one builder per function, such as `tt_choose_question()` and `tt_score_question()`. A toolbox keeps named questions in a JSON file:
+
+```r
+toolbox <- tt_toolbox_read("toolbox.json")
+topic <- tt_choose(
+  data.frame(id = "a1", text = "Where is my parcel?"),
+  question = tt_question(toolbox, "topic")
+)
+```
+
+Asking a toolbox for a name it does not have stops with `thinkthen_usage_error`. So does giving a function a question saved for another function.
+
+## Settings
+
+The functions use a shared client that reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, make a client and pass it as `client =`.
+
+```r
+client <- tt_client(model = "...", batch = 16, retry = tt_retry(max_retries = 5))
+is_refund <- tt_decide(
+  "Please refund my order.",
+  question = "Does the customer request a refund?",
+  client = client
+)
+tt_close(client)
+```
+
+The options are `backend`, `url`, `model`, `api_key`, `batch` and `retry`. Times in `tt_retry()` are in milliseconds, and their names end in `_ms`. Keep the key in the environment, not in your code. Inside a function, write `on.exit(tt_close(client))` so the client is closed even after an error.
+
+Base R has no async calls and runs one call at a time, so every call waits for its answer. To go faster, give one call the whole collection, and it sends the messages in batches.
+
+## Usage
+
+```r
+client <- tt_client()
+tt_decide("Please refund my order.", question = "Does the customer request a refund?", client = client)
+usage <- tt_usage(client)
+cat(usage$attempts, usage$input_tokens$reported, usage$output_tokens$reported, "\n")
+tt_close(client)
+```
+
+`tt_usage(client)` counts everything the client has sent so far: `attempts`, `responses`, retries, bytes sent, and tokens in and out as the service reported them.
+
+## Cancel
+
+Press Esc in RStudio, or Ctrl-C in a terminal, to stop a call. The call stops with `thinkthen_cancelled_error`.
+
+## Errors
+
+| What happened | When it stops | What is signalled |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold or two bars on filter | At the call | `thinkthen_usage_error` |
+| The client could not start, such as no API key | At the call | `thinkthen_setup_error` |
+| The call was cancelled | At the call | `thinkthen_cancelled_error` |
+| The service refuses authentication, or every request in the first batch fails and one has HTTP 4xx | At the call | `thinkthen_backend_error` |
+| A message could not be judged, or the service failed | At the end of a plain call, after every message is judged. Retained without raising or warning with `details = TRUE`; `errors = "na"` warns instead | `thinkthen_failed` |
+| Not sure | Never. The answer is `NA` | `thinkthen_unsure`, quietly, at the end of a plain call |
+| You print or store a returned answer, or inspect a failed judgement in details | Never | |
+
+HTTP 401/403 always stop the call. A service error also stops it when every request in the first batch fails and at least one is HTTP 4xx; other 4xx responses do not automatically become call errors. These service refusals are caught by `thinkthen_error`.
+
+Two classes let you catch by meaning:
+
+- `tryCatch(..., thinkthen_no_answer = )` catches `thinkthen_unsure` and `thinkthen_failed`: there was no answer to read.
+- `tryCatch(..., thinkthen_error = )` catches everything that went wrong, including `thinkthen_failed`. It does not catch `thinkthen_unsure`, because not sure is a result and not an error.
+
+`thinkthen_failed` has both `thinkthen_no_answer` and `thinkthen_error` in its class vector. It carries `code`, `http_status`, `rows`, the failed results, and `outcomes`, every result. From filter it also carries `kept`. Its message has one line per failed message, such as `failed: backend.status: the backend answered status 503`. `thinkthen_unsure` carries `rows`, the not-sure results with their `probability`, and `outcomes`.
+
+`thinkthen_unsure` is a condition but not an error, so `tryCatch(..., error = )` never catches it and an unhandled one does nothing. R's own error from `if (NA)` has no ThinkThen class. To catch not sure by name, put the `tryCatch()` around the call, not around the `if`.
+
+## Upgrading from 0.1
+
+The [R-universe SDK metadata](https://botassembly.r-universe.dev/api/packages/thinkthen) identifies version 0.1.2 and its source commit. The baseline is the matching [published 0.1.2 SDK/source](https://proxy.golang.org/github.com/botassembly/thinkthen/@v/v0.1.2.zip). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
+| --- | --- |
+| `tt_decide(...)$value` | Plain answer vector, or the details form carrying state |
+| `tt_engine`, `tt_question` | Client and typed saved questions |
+| Per-call `facts` | Client usage; uncertainty remains a missing value |
+
+Handle failed judgements with `thinkthen_failed`, or catch the broader `thinkthen_error` when usage, setup, authentication and cancellation need the same route. The no-answer catch remains `thinkthen_no_answer`, which also covers quietly signalled not sure. These condition names do not change wire codes such as `record.empty`.

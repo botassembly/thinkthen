@@ -39,6 +39,7 @@ public enum ErrorCode {
     /** Return the stable wire name.
      * @return the wire name */
     public String wireName() { return wireName; }
+    @Override public String toString() { return wireName; }
     /** Return the error family.
      * @return the family */
     public Family family() { return family; }
@@ -176,11 +177,14 @@ import kotlinx.serialization.SerialName
 ) {
 ''' + code_entries + ''';
 
+    /** The shared printable code. */
+    override fun toString(): String = wireName
+
     /** Looks up codes by wire name. */
     public companion object {
         /** The code with this wire name. Throws [ThinkThenException] with `usage.abi` for a name this library does not know. */
         public fun fromWire(name: String): ErrorCode = entries.singleOrNull { it.wireName == name }
-            ?: throw ThinkThenException(USAGE_ABI, "Unknown native error code $name")
+            ?: throw SetupException(USAGE_ABI, "Unknown native error code $name")
     }
 }
 ''')

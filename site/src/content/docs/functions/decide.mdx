@@ -1,10 +1,10 @@
 ---
 title: decide
 description: decide answers a yes-or-no question about a piece of text with yes, no or, between two bars, not sure.
-goal: A newcomer who needs a yes or no about a text leaves able to ask the question, read yes, no and not sure, see the chance of yes, move the bar, branch a script on the answer, and answer every row of a CSV file.
+goal: A newcomer who needs a yes or no about a text leaves able to ask the question, read yes, no and not sure, see the chance of yes, move the bar, branch a script on the answer, and answer every result of a CSV file.
 reader: Someone at the command line who needs a yes-or-no answer about a text
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "decide: yes, no or not sure about any text"
@@ -13,81 +13,153 @@ import Example from '../../../components/Example.astro';
 import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
 
-decide answers a yes-or-no question about a piece of text. It says yes (`true`) or no (`false`), or, when you set a low and a high bar, not sure (`unsure`).
+decide asks a bounded question about text and returns an answered, not-sure or failed result.
 
-<Example id="decide-yes" />
+<Example id="functions/decide/command" />
 
-Yes: the message asks for a refund.
+### The simplest if
 
-## A no
+A decide call with `--check` goes straight into an `if`. `-q` keeps the word off the screen, as with `grep -q`.
 
-<Example id="decide-no" />
+```bash
+if thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Please refund my order.'; then
+  echo "refund queue"
+fi
+```
 
-No: the message asks about a delivery, not a refund.
+The `then` branch runs only on a yes. If the message could not be judged, the command exits 6 and says why on standard error. It never exits 0.
 
-## Not sure
+Don't add a plain `else` to this `if`. In a shell, `else` runs for every exit code that is not 0: no, not sure and failed alike. To act on a no, read the exit code:
 
-Set a low bar and a high bar. decide says no below the low bar, yes at or above the high bar, and not sure in between.
+```bash
+status=0
+thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Please refund my order.' || status=$?
 
-<Example id="decide-unsure" />
+case $status in
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  *) exit "$status" ;;
+esac
+```
 
-Not sure: a double charge might be a refund request, or might not. Send not sure to a person. Never treat it as a no.
+<span id="not-sure"></span>
+
+### Yes, no, or something else
+
+Send not sure to a person. Never treat it as a no.
+
+Set two bars and decide can also be not sure. Exit codes 0 and 1 are the yes and the no. Codes 3 and 6 both mean there is no answer to read.
+
+<details class="example-disclosure">
+<summary>Handle every result state in Bash</summary>
+
+```bash
+status=0
+thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Where is my parcel?' --low 0.2 --high 0.8 || status=$?
+
+case $status in
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  3 | 6) echo "a person reads it" ;;
+  *) exit "$status" ;;
+esac
+```
+
+`3 | 6` covers both not sure and failed. The last branch is for a mistake in the call itself, such as a misspelled option, which exits 2.
+
+### Not sure or failed
+
+Replace `-q` with `--json` to keep the result as well as the exit code.
+
+```bash
+status=0
+is_refund=$(thinkthen decide --check --json \
+  'Does the customer request a refund?' \
+  --text 'Where is my parcel?' --low 0.2 --high 0.8) || status=$?
+
+case $status in
+  3) echo "a person reads it" \
+    "$(jq -r '.probability' <<< "$is_refund")" ;;
+  6) echo "try again later" "$(jq -r '.error.code' <<< "$is_refund")" ;;
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  *) exit "$status" ;;
+esac
+```
+
+Yes and no are the two answers. Not sure and failed are the two ways of having none. Bash can't check that a `case` names every state, so end each one with a `*)` branch that stops the script.
+
+The result's `status` field holds the same state as a word: `answered`, `unsure` or `failed`.
+
+### Did it work
+
+Without `--check`, the exit code answers only "did it work". It is 0 for yes, no and not sure, and 6 when the result failed.
+
+```bash
+if ! is_refund=$(thinkthen decide \
+  'Does the customer request a refund?' \
+  --text 'Please refund my order.'); then
+  echo "could not judge it: $is_refund"
+fi
+```
+
+When the service cannot judge the message, this reports the failure and its reason. Not sure counts as working: ThinkThen did its job, and the answer was "not sure".
+
+### Raise if it failed
+
+```bash
+set -euo pipefail
+
+is_refund=$(thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.')
+```
+
+Under `set -e` this line stops the script at once when the result failed, with the command's exit code. Otherwise the script goes on, and `$is_refund` holds the printed word.
+
+### Both bars and the probability
+
+```bash
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Where is my parcel?' \
+  --low 0.2 --high 0.8 --json | jq '.probability'
+```
+
+- No bar option: one bar at 0.5. The answer is always yes or no.
+- `--threshold 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `--low 0.2 --high 0.8`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. A result has no `probability` only when the result failed.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `thinkthen decide --json`, save the results, and compare them with your labels using `thinkthen audit`, described at the end of this page.
+
+</details>
+
+<span id="answer-every-row-of-a-csv-file"></span>
+
+## Answer every CSV row
+
+<details class="example-disclosure">
+<summary>Read the CSV file and save its answers</summary>
+
+`--column` selects the CSV column to judge; `--into` names the answer column. Check the exit status before using the saved file.
+
+<ExampleFile id="functions/decide/files" file="messages.csv" />
+
+<Example id="functions/decide/files" />
+
+</details>
 
 ## See why
 
 <details class="example-disclosure">
-<summary>See why</summary>
+<summary>Read the model’s numbers with the answer state</summary>
 
-`--json` prints the details. This `jq` keeps the two that explain the answer.
+The state distinguishes an answer from not sure and failure. These are the actual numbers returned for the shown message.
 
 <Example id="decide-why" />
-
-`probability` is the model's estimate of yes. 0.7 falls between the bars of 0.2 and 0.8, so decide is not sure. [JSON output](/reference/json-output/) lists every field.
-
-</details>
-
-## Move the bar
-
-<details class="example-disclosure">
-<summary>Move the bar</summary>
-
-With one bar, `--threshold`, decide always says yes or no. Raise the bar to 0.8 and the same text is a no, because 0.7 is below it.
-
-<Example id="decide-bar" />
-
-The default bar is 0.5. Lower it to say yes more often. Raise it to require a larger estimate for yes. See [interpreting probability](/reference/json-output/#interpreting-probability) for what these estimates mean.
-
-</details>
-
-## Use the answer in a script
-
-<details class="example-disclosure">
-<summary>Use the answer in a script</summary>
-
-`--check` turns the answer into the exit code.
-
-<Example id="decide-script" />
-
-| Answer | Exit code with `--check` |
-|---|---|
-| `true` | 0 |
-| `false` | 1 |
-| `unsure` | 3 |
-
-Without `--check`, decide exits 0 whenever it answers. [Exit codes](/command-line/exit-codes/) lists every code.
-
-</details>
-
-## Answer every row of a CSV file
-
-<details class="example-disclosure">
-<summary>Answer every row of a CSV file</summary>
-
-<ExampleFile id="decide-csv" file="messages.csv" />
-
-<Example id="decide-csv" />
-
-`--column` names the column to read, and `--into` names the new answer column. A CSV file holds `TRUE` and `FALSE`, which Excel reads as yes and no. With no bars, the double charge is a yes. [File types](/command-line/file-types/) covers TSV, Excel and other files.
 
 </details>
 
@@ -99,9 +171,3 @@ Without `--check`, decide exits 0 whenever it answers. [Exit codes](/command-lin
 <FunctionOptions name="decide" />
 
 </details>
-
-If decide can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#decide) · [TypeScript](/sdks/typescript/#decide) · [Go](/sdks/go/#decide) · [Java](/sdks/java/#decide) · [Kotlin](/sdks/kotlin/#decide) · [C#](/sdks/csharp/#decide) · [R](/sdks/r/#decide) · [Ruby](/sdks/ruby/#decide) · [Rust](/sdks/rust/#decide) · [Swift](/sdks/swift/#decide) · [Zig](/sdks/zig/#decide) · [C](/sdks/c/#decide) · [C++](/sdks/cpp/#decide) · [DuckDB](/sdks/duckdb/#decide) · [SQLite](/sdks/sqlite/#decide) · [PostgreSQL](/sdks/postgresql/#decide)
-
-Next: [choose](/functions/choose/) picks one answer from your list.

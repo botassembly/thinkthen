@@ -1,15 +1,24 @@
-#include <iostream>
 #include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
+
+enum class Urgency { routine, urgent };
+template<>
+inline constexpr std::array<std::pair<Urgency, std::string_view>, 2> thinkthen::words<Urgency>{{
+    {Urgency::routine, "routine"},
+    {Urgency::urgent, "urgent"},
+}};
 
 int main() try {
-    thinkthen::client client;
-    const thinkthen::score how_urgent{"How urgent is the request?",
-                                      {"routine", "urgent"}};
-    // 0 is routine, 1 is urgent.
-    const double urgency =
-        client.score(how_urgent, "Please refund my order.").value();
-    std::cout << urgency << '\n';
-} catch (const thinkthen::error& failure) {
-    std::cerr << failure.code().message() << ": " << failure.what() << '\n';
+    tt::client client;
+    const tt::score<Urgency> asks_urgency{"How urgent is the request?"};
+    const auto urgency = client.score(asks_urgency, "Please refund my order.");
+    std::cout << urgency.answer() << '\n';
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
     return 1;
 }

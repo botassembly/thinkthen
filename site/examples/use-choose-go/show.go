@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 )
@@ -16,13 +17,12 @@ func main() {
 	}
 	defer client.Close()
 
-	topicQuestion := tt.NewChoose("What is the message about?",
-		[]string{"billing", "shipping", "other"})
-	inbox := tt.Texts(
+	topicQuestion := tt.ChooseQuestion[string]{Question: "What is the message about?", Choices: []string{"billing", "shipping", "other"}}
+	inbox := slices.Values([]string{
 		"Please refund my order.",
 		"Where is my parcel?",
 		"I was charged twice for one invoice.",
-	)
+	})
 	// ChooseAll sends every message in one call and yields rows in input order.
 	for message, err := range client.ChooseAll(
 		context.Background(), topicQuestion, inbox,

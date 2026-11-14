@@ -40,15 +40,16 @@ static void typed_wire_projection(const tt::settings& config) {
     capped_config.max_requests = 0;
     tt::client capped(capped_config);
     try { (void)capped.decide(tt::decide{"Ready?"}, "evidence"); assert(false); }
+    catch (const tt::failed&) {assert(false);}
     catch (const tt::error& failure) { assert(std::string(thinkthen_code_name(failure.code().value())) == "local.request-limit"); }
     tt::client owner(config);
-    const auto row = owner.choose(tt::choose{"Which team?", {"billing", "shipping"}},
+    const auto row = owner.choose(tt::choose<>{"Which team?", {"billing", "shipping"}},
                                   tt::text{"refund please"});
     constexpr double expected_probability = 0.7000000000000001;
     assert(row.status() == tt::status::answered && row.position() == 1);
-    assert(row.answer() && *row.answer() == "billing");
+    assert(row.answer() == "billing");
     assert(row.probability() && *row.probability() == expected_probability);
-    assert(row.failure() == nullptr);
+    assert(row.error() == nullptr);
     const auto detail = row.detail();
     assert(detail && detail->labels.size() == 2);
     assert(detail->labels.at("billing") == expected_probability);
@@ -64,8 +65,9 @@ static void failed_stream(const tt::settings& config) {
             std::vector<tt::owned_record>{tt::owned_text{"first"}, tt::owned_text{"second"}})) {
         assert(row.status() == tt::status::failed);
         assert(row.position() == ++count);
-        assert(!row.answer() && !row.probability() && row.failure());
-        assert(code_name(row.failure()->code()) == "backend.transport");
+        assert(!row.probability() && row.error());
+        try{(void)row.answer();assert(false);}catch(const tt::failed&){}
+        assert(code_name(row.error()->code()) == "backend.transport");
     }
     assert(count == 2);
 }

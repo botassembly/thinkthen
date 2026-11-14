@@ -39,7 +39,7 @@ pub unsafe extern "C" fn thinkthen_value_choice(
 ) -> i32 {
     /* SAFETY: value owns the string and the caller owns the output slots. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Choose], || {
             Ok(views::text(live(value)?.answer::<questions::Choose>()?))
         })
     }
@@ -62,13 +62,19 @@ pub unsafe extern "C" fn thinkthen_value_bool(
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
-        answer_project(value, out, error, || {
-            Ok(u8::from(match live(value)?.function()? {
-                FunctionName::Decide => *live(value)?.answer::<questions::Decide>()?,
-                FunctionName::Filter => *live(value)?.answer::<questions::Filter>()?,
-                _ => return Err(native::argument_error(thinkthen::Code::UsageFunction)),
-            }))
-        })
+        answer_project(
+            value,
+            out,
+            error,
+            &[FunctionName::Decide, FunctionName::Filter],
+            || {
+                Ok(u8::from(match live(value)?.function()? {
+                    FunctionName::Decide => *live(value)?.answer::<questions::Decide>()?,
+                    FunctionName::Filter => *live(value)?.answer::<questions::Filter>()?,
+                    _ => return Err(native::argument_error(thinkthen::Code::UsageFunction)),
+                }))
+            },
+        )
     }
 }
 /// Write a score value's score, from 0 to 1, to *out.
@@ -89,7 +95,7 @@ pub unsafe extern "C" fn thinkthen_value_number(
 ) -> i32 {
     /* SAFETY: the value is borrowed and output slots are exclusive. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Score], || {
             Ok(*live(value)?.answer::<questions::Score>()?)
         })
     }
@@ -112,7 +118,7 @@ pub unsafe extern "C" fn thinkthen_value_rank(
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Rank], || {
             Ok(live(value)?.answer::<questions::Rank>()?.get() as u64)
         })
     }
@@ -135,7 +141,7 @@ pub unsafe extern "C" fn thinkthen_value_tag_count(
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Tag], || {
             Ok(live(value)?.answer::<questions::Tag>()?.len())
         })
     }
@@ -161,7 +167,7 @@ pub unsafe extern "C" fn thinkthen_value_tag_at(
 ) -> i32 {
     /* SAFETY: value owns the returned text; output slots are exclusive. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Tag], || {
             Ok(views::text(
                 live(value)?
                     .answer::<questions::Tag>()?
@@ -184,14 +190,14 @@ pub unsafe extern "C" fn thinkthen_value_tag_at(
 /// holds the code and message; passing it again frees what it held, so a reused error leaks
 /// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_value_found(
+pub unsafe extern "C" fn thinkthen_value_span(
     value: *const ValueHandle,
     out: *mut SpanView,
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: value owns any returned text; output slots are exclusive. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Find], || {
             Ok(match live(value)?.answer::<questions::Find>()? {
                 None => SpanView::default(),
                 Some(found) => SpanView {
@@ -221,7 +227,15 @@ pub unsafe extern "C" fn thinkthen_value_name_count(
     error: *mut HostError,
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
-    unsafe { answer_project(value, out, error, || Ok(names(live(value)?)?.len())) }
+    unsafe {
+        answer_project(
+            value,
+            out,
+            error,
+            &[FunctionName::Recognize, FunctionName::Relate],
+            || Ok(names(live(value)?)?.len()),
+        )
+    }
 }
 /// Write the name at index, with its kind and probability, to *out.
 ///
@@ -244,11 +258,17 @@ pub unsafe extern "C" fn thinkthen_value_name_at(
 ) -> i32 {
     /* SAFETY: all text views borrow value until cleanup. */
     unsafe {
-        answer_project(value, out, error, || {
-            Ok(views::name(names(live(value)?)?.get(index).ok_or_else(
-                || native::argument_error(thinkthen::Code::UsageArgument),
-            )?))
-        })
+        answer_project(
+            value,
+            out,
+            error,
+            &[FunctionName::Recognize, FunctionName::Relate],
+            || {
+                Ok(views::name(names(live(value)?)?.get(index).ok_or_else(
+                    || native::argument_error(thinkthen::Code::UsageArgument),
+                )?))
+            },
+        )
     }
 }
 /// Write how many relations a relate value holds to *out.
@@ -269,7 +289,7 @@ pub unsafe extern "C" fn thinkthen_value_relation_count(
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Relate], || {
             Ok(live(value)?.answer::<questions::Relate>()?.len())
         })
     }
@@ -295,7 +315,7 @@ pub unsafe extern "C" fn thinkthen_value_relation_at(
 ) -> i32 {
     /* SAFETY: all returned text borrows value until cleanup. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Relate], || {
             Ok(views::relation(
                 live(value)?
                     .answer::<questions::Relate>()?
@@ -323,7 +343,7 @@ pub unsafe extern "C" fn thinkthen_value_annotation_count(
 ) -> i32 {
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe {
-        answer_project(value, out, error, || {
+        answer_project(value, out, error, &[FunctionName::Annotate], || {
             Ok(live(value)?.answer::<questions::Annotate>()?.len())
         })
     }
@@ -353,6 +373,9 @@ pub unsafe extern "C" fn thinkthen_value_annotation_at(
     /* SAFETY: the borrowed name follows parent lifetime; child receives a unique snapshot. */
     unsafe {
         operation(error, || {
+            if live(value)?.function()? != FunctionName::Annotate {
+                return Err(native::argument_error(thinkthen::Code::UsageFunction));
+            }
             if live(value)?.status()? == thinkthen::results::Status::Unsure {
                 return Ok(crate::THINKTHEN_UNSURE);
             }
@@ -366,10 +389,9 @@ pub unsafe extern "C" fn thinkthen_value_annotation_at(
                 .nth(index)
                 .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?;
             name.write(views::text(key));
-            out.write(Box::into_raw(Box::new(ValueHandle(
-                Owned::Entry(entry.clone()),
-                None,
-            ))));
+            out.write(Box::into_raw(Box::new(ValueHandle(Owned::Entry(
+                entry.clone(),
+            )))));
             Ok(THINKTHEN_OK)
         })
     }
@@ -401,6 +423,9 @@ pub unsafe extern "C" fn thinkthen_value_annotation_get(
     unsafe {
         operation(error, || {
             out.write(std::ptr::null_mut());
+            if live(value)?.function()? != FunctionName::Annotate {
+                return Err(native::argument_error(thinkthen::Code::UsageFunction));
+            }
             if live(value)?.status()? == thinkthen::results::Status::Unsure {
                 return Ok(crate::THINKTHEN_UNSURE);
             }
@@ -412,10 +437,9 @@ pub unsafe extern "C" fn thinkthen_value_annotation_get(
                 .answer::<questions::Annotate>()?
                 .get(name)
                 .ok_or_else(|| native::argument_error(thinkthen::Code::UsageName))?;
-            out.write(Box::into_raw(Box::new(ValueHandle(
-                Owned::Entry(entry.clone()),
-                None,
-            ))));
+            out.write(Box::into_raw(Box::new(ValueHandle(Owned::Entry(
+                entry.clone(),
+            )))));
             Ok(THINKTHEN_OK)
         })
     }

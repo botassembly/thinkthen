@@ -53,8 +53,10 @@ def test_question_overloads_preserve_lists_and_use_the_supplied_client(
         assert row.detail.labels["shipping"] == 0.18765432109877
         with pytest.raises(TypeError):
             cast(Any, row.detail.labels)["billing"] = 0.0
-        with pytest.raises(FrozenInstanceError):
+        # CPython 3.10's frozen-slots property assignment raises TypeError.
+        with pytest.raises((FrozenInstanceError, TypeError)):
             cast(Any, row).answer = "changed"
+        assert row.answer == "billing"
         assert row.source.backend is tt.Backend.SYSTEMONE
         assert row.source.question_identity
         assert row.position == 1 and row.id is None
@@ -69,9 +71,11 @@ def test_python_bands_reach_the_engine_as_numeric_bounds(
 ) -> None:
     with backend(tmp_path, yes(0.55)) as server, client(server) as selected:
         row = selected.decide("Ready?", "body", threshold=threshold)
-        assert row.status is tt.Status.UNSURE and row.answer is None
+        assert row.status is tt.Status.UNSURE
+        with pytest.raises(tt.Unsure):
+            _ = row.answer
         assert row.probability == 0.55 and row.error is None
-        row.raise_for_error()
+        row.raise_if_failed()
         assert server.count() == 1
 
 
@@ -110,12 +114,16 @@ def test_failed_rows_finish_normally_and_explicit_raising_uses_typed_codes(
         backend(tmp_path, [{"status": 501, "body": {}}]) as server,
         client(server) as selected,
     ):
-        row = selected.decide("Ready?", "body")
-        assert row.status is tt.Status.FAILED and row.answer is None
+        with pytest.raises(tt.Failed) as failure:
+            selected.decide("Ready?", "body")
+        row = failure.value.rows[0]
+        assert row.status is tt.Status.FAILED
+        with pytest.raises(tt.Failed):
+            _ = row.answer
         assert row.error is not None and row.error.code is tt.ErrorCode.BACKEND_STATUS
         assert row.error.http_status == 501 and row.probability is None
-        with pytest.raises(tt.RecordError) as raised:
-            row.raise_for_error()
+        with pytest.raises(tt.Failed) as raised:
+            row.raise_if_failed()
         assert raised.value.code is row.error.code
         assert str(raised.value) == row.error.message
         with selected.decide_stream("Ready?", ["one", "two"]) as stream:
@@ -134,7 +142,9 @@ def test_invalid_record_ids_are_failed_rows_without_backend_calls(
     tmp_path: Path, identity: Any
 ) -> None:
     with backend(tmp_path, yes()) as server, client(server) as selected:
-        row = selected.decide("Ready?", {"id": identity, "body": "text"})
+        with pytest.raises(tt.Failed) as failure:
+            selected.decide("Ready?", {"id": identity, "body": "text"})
+        row = failure.value.rows[0]
         assert row.status is tt.Status.FAILED and row.error is not None
         assert row.error.code is tt.ErrorCode.RECORD_INVALID
         assert row.position == 1 and row.probability is None
@@ -151,19 +161,19 @@ def test_record_ids_keep_exact_python_scalar_values(
         assert row.status is tt.Status.ANSWERED and server.count() == 1
 
 
-def test_missing_and_failed_filter_rows_retain_original_objects(tmp_path: Path) -> None:
+def test_missing_and_failed_decide_rows_retain_original_objects(tmp_path: Path) -> None:
     records: list[tt.Record] = [{"id": "yes", "body": "text"}, None, {"id": True}]
     with (
         backend(tmp_path, yes()) as server,
         client(server) as selected,
-        selected.filter_rows("Ready?", records) as stream,
+        selected.decide_stream("Ready?", records) as stream,
     ):
         rows = list(stream)
         assert len(rows) == 3 and [row.position for row in rows] == [1, 2, 3]
         assert all(
             row.item is record for row, record in zip(rows, records, strict=False)
         )
-        assert [row.kept for row in rows] == [True, False, False]
+        assert [row.answered for row in rows] == [True, False, False]
         assert rows[1].error is not None
         assert rows[1].error.code is tt.ErrorCode.RECORD_MISSING
         assert rows[2].error is not None
@@ -272,14 +282,14 @@ def test_async_default_client_belongs_to_the_event_loop_that_set_it() -> None:
     try:
         selected = first.run_until_complete(make())
         assert first.run_until_complete(ask()).source.backend is tt.Backend.STUB
-        with pytest.raises(tt.UsageError, match="THINKTHEN_API_KEY"):
+        with pytest.raises(tt.SetupError, match="THINKTHEN_API_KEY"):
             second.run_until_complete(ask())
         assert first.run_until_complete(ask()).source.backend is tt.Backend.STUB
         first.run_until_complete(aio.aclose_default_client())
         with pytest.raises(tt.UsageError) as raised:
             first.run_until_complete(selected.decide("Ready?", "closed"))
         assert raised.value.code is tt.ErrorCode.USAGE_CLOSED
-        with pytest.raises(tt.UsageError, match="THINKTHEN_API_KEY"):
+        with pytest.raises(tt.SetupError, match="THINKTHEN_API_KEY"):
             first.run_until_complete(ask())
     finally:
         first.close()
@@ -309,11 +319,11 @@ def test_async_default_client_replaces_and_closes_as_the_sync_call_does() -> Non
             aio.set_default_client(replaced)
             async with tt.AsyncClient(backend="stub") as current:
                 aio.set_default_client(current)
-                assert (await replaced.decide("Ready?", "still open")).ok
+                assert (await replaced.decide("Ready?", "still open")).answered
             with pytest.raises(tt.UsageError) as raised:
                 await aio.decide("Ready?", "closed")
             assert raised.value.code is tt.ErrorCode.USAGE_CLOSED
-            assert (await aio.decide("Ready?", "body", client=replaced)).ok
+            assert (await aio.decide("Ready?", "body", client=replaced)).answered
             await aio.aclose_default_client()
 
     asyncio.run(scenario())
@@ -357,7 +367,7 @@ def test_key_redaction_covers_settings_repr_logs_and_usage_errors(
     "function,question,fields,row_type",
     [
         ("decide", "Ready?", {}, "DecideRow"),
-        ("filter", "Ready?", {}, "FilterRow"),
+        ("filter", "Ready?", {"threshold": 0.001}, "str"),
         ("choose", "Which?", {"choices": ["a", "b"]}, "ChooseRow"),
         ("tag", "Which?", {"labels": ["a", "b"]}, "TagRow"),
         ("score", "How much?", {"levels": ["low", "high"]}, "ScoreRow"),
@@ -389,14 +399,17 @@ def test_all_ten_functions_return_their_specific_typed_rows(
         else:
             args = [] if question is None else [question]
         if function in {"filter", "rank"}:
-            with getattr(
-                selected, function + ("_rows" if function == "filter" else "")
-            )(*args, ["Ada knows Bob."], **options) as stream:
+            with getattr(selected, function)(
+                *args, ["Ada knows Bob."], **options
+            ) as stream:
                 rows = list(stream)
             assert len(rows) == 1
             row = rows[0]
         else:
             row = getattr(selected, function)(*args, "Ada knows Bob.", **options)
+        if function == "filter":
+            assert row == "Ada knows Bob."
+            return
         assert isinstance(row, getattr(tt, row_type))
         assert row.function.value == function and row.position == 1
         assert isinstance(row.status, tt.Status)

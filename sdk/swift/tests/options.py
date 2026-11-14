@@ -18,23 +18,23 @@ temporary = tempfile.TemporaryDirectory(prefix="thinkthen-swift-signatures-")
 source = Path(temporary.name) / "Readme.swift"
 # Feature: Swift required domains and numeric-only thresholds are compile-time contracts.
 calls = {
-    "single refuses array": ('client.decide("Ready?", record: [Record.text("a"), Record.text("b")])', "Record"),
-    "annotations reject rank": ('client.annotate(AnnotationQuestions(["rank": .rank(RankQuestion("Best?", levels: ["low", "high"]))]), record: .text("a"))', "rank"),
-    "annotations reject general toolbox": ('client.annotate(Toolbox([:]), record: .text("a"))', "Toolbox"),
-    "choose requires choices": ('client.choose("Topic?", record: .text("a"))', "choices"),
-    "tag requires labels": ('client.tag("Topics?", record: .text("a"))', "labels"),
-    "score requires levels": ('client.score("Scale?", record: .text("a"))', "levels"),
-    "rank requires levels": ('client.rank("Scale?", records: [Record.text("a")])', "levels"),
-    "recognize requires kinds": ('client.recognize(record: .text("a"))', "kinds"),
-    "relate requires rules": ('client.relate(record: .text("a"))', "rules"),
-    "choose refuses a band": ('client.choose("Which?", choices: ["a", "b"], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
-    "tag refuses a band": ('client.tag("Topics?", labels: ["a"], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
-    "find refuses a band": ('client.find("Where?", record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
-    "recognize refuses a band": ('client.recognize(kinds: ["person"], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
-    "relate refuses a band": ('client.relate(rules: [], record: .text("a"), options: .init(threshold: Threshold.band(low: 0.2, high: 0.8)))', "Threshold"),
-    "score has no threshold": ('client.score("Scale?", levels: ["low", "high"], record: .text("a"), options: .init(threshold: 0.5))', "threshold"),
-    "rank has no threshold": ('client.rank("Scale?", levels: ["low", "high"], records: [Record.text("a")], options: .init(threshold: 0.5))', "threshold"),
+    "annotations reject general toolbox": ('client.annotate(Toolbox([:]), record: "a")', "Toolbox"),
+    "choose requires choices": ('client.choose("Topic?", record: "a")', "choices"),
+    "tag requires labels": ('client.tag("Topics?", record: "a")', "labels"),
+    "score requires levels": ('client.score("Scale?", record: "a")', "levels"),
+    "rank requires levels": ('client.rank("Scale?", records: ["a"])', "levels"),
+    "recognize requires kinds": ('client.recognize(record: "a")', "kinds"),
+    "relate requires rules": ('client.relate(record: "a")', "rules"),
+    "choose refuses a band": ('client.choose("Which?", record: "a", choices: ["a", "b"], threshold: .band(low: 0.2, high: 0.8))', "band"),
+    "tag refuses a band": ('client.tag("Topics?", record: "a", labels: ["a"], threshold: .band(low: 0.2, high: 0.8))', "band"),
+    "filter refuses a band": ('client.filter("Ready?", records: ["a"], threshold: .band(low: 0.2, high: 0.8))', "band"),
+    "find refuses a band": ('client.find("Where?", record: "a", threshold: .band(low: 0.2, high: 0.8))', "band"),
+    "recognize refuses a band": ('client.recognize(record: "a", kinds: ["person"], threshold: .band(low: 0.2, high: 0.8))', "band"),
+    "relate refuses a band": ('client.relate(record: "a", rules: [], threshold: .band(low: 0.2, high: 0.8))', "band"),
+    "score has no threshold": ('client.score("Scale?", record: "a", levels: ["low", "high"], threshold: 0.5)', "threshold"),
+    "rank has no threshold": ('client.rank("Scale?", records: ["a"], levels: ["low", "high"], threshold: 0.5)', "threshold"),
 }
+
 
 def compile_source(body):
     source.write_text(
@@ -49,7 +49,7 @@ def compile_source(body):
     )
 
 try:
-    baseline = compile_source('_ = try await client.choose("Topic?", choices: ["a", "b"], record: .text("a"))')
+    baseline = compile_source('_ = try await client.choose("Topic?", record: "a", choices: ["a", "b"])')
     assert baseline.returncode == 0, baseline.stdout + baseline.stderr
     for name, (call, field) in calls.items():
         result = compile_source("_ = try await " + call)
@@ -57,7 +57,7 @@ try:
         assert result.returncode != 0, (name, "invalid public call compiled", diagnostics)
         expected_type = name.split()[0].title() + "Question"
         assert (field in diagnostics or expected_type in diagnostics) and any(fragment in diagnostics for fragment in (
-            "missing argument", "extra argument", "cannot convert value", "no exact matches", "has no member"
+            "missing argument", "extra argument", "cannot convert value", "no exact matches", "has no member", "is unavailable"
         )), (name, diagnostics)
 finally:
     temporary.cleanup()

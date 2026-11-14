@@ -641,6 +641,12 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.revision }}
         run: python3 scripts/release-installer-check windows-x86_64 windows-installed "$RELEASE_SHA" --cli
+      - name: Replay the authored PowerShell guide against the final command
+        id: windows-site-example
+        if: always()
+        env:
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: python3 scripts/release-installer-check windows-x86_64 windows-installed "$RELEASE_SHA" --site-replay
       - name: Preserve Windows CLI failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

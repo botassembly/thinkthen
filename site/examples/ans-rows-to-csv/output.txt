@@ -1,4 +1,4 @@
 "id","status","answer","probability"
 "a1","answered",true,0.99
 "a2","answered",false,0.03
-"a3","answered",true,0.7
+"a3","answered",true,0.71

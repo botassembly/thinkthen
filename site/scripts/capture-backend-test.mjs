@@ -17,6 +17,7 @@ const upstream = http.createServer(async (req, res) => {
   calls++;
   if (upstreamMode === 'failed') { res.writeHead(503); res.end('temporary failure'); return; }
   if (upstreamMode === 'invalid') { res.end('private-test-only invalid JSON'); return; }
+  if (upstreamMode === 'large-valid') { res.end(JSON.stringify({ answers: { q1: { type: 'noul', noul: 0.99 } }, padding: 'x'.repeat(11000) })); return; }
   if (upstreamMode === 'large') { res.end('x'.repeat(1000)); return; }
   res.end(JSON.stringify({ answers: { q1: { type: 'noul', noul: 0.99 } } }));
 });
@@ -47,7 +48,7 @@ try {
   assert.equal((await post(proxy, { q1: { type: 'noul', instructions: 'Refund?' } })).status, 200);
   assert.equal((await post(proxy, { q1: { type: 'noul', instructions: 'Missing?' } })).status, 502);
   assert.equal(calls, 1, 'replay never reaches upstream');
-  assert.deepEqual(proxy.usage(), { calls: 0, bytes: 0 });
+  assert.deepEqual(proxy.usage(), { calls: 0, bytes: 0, inputBytes: 0 });
   assert.equal(proxy.failure(), 'saved response is missing');
   assert.deepEqual(fs.readFileSync(options.file), originalCache, 'miss never changes saved answers');
   const missFile = `${options.file}.miss.json`;
@@ -63,6 +64,23 @@ try {
   assert.equal((await post(proxy, { q1: {} })).status, 502);
   assert.equal(calls, 1, 'byte cap blocks an upstream request');
   await proxy.close();
+  upstreamMode = 'large-valid';
+  const inputRequest = JSON.stringify({ model: 'test', questions: { q1: { instructions: 'Budget?', type: 'noul' } }, state: 'Please refund my order.' });
+  const inputLimit = Buffer.byteLength(inputRequest) + 1;
+  proxy = await captureBackend({ ...options, file: path.join(dir, 'input.json'), maxCalls: 5, maxInputBytes: inputLimit });
+  const beforeInput = calls;
+  assert.equal((await post(proxy, { q1: { type: 'noul', instructions: 'Budget?' } })).status, 200);
+  assert.ok(proxy.usage().bytes > 10000, 'response has a separate total allowance');
+  assert.equal(proxy.usage().inputBytes, inputLimit - 1);
+  assert.ok(fs.existsSync(path.join(dir, 'input.json')), 'large valid paid reply is retained');
+  assert.equal((await post(proxy, { renamed: { instructions: 'Budget?', type: 'noul' } })).status, 200);
+  assert.equal(proxy.usage().inputBytes, inputLimit - 1, 'cache hit consumes no input allowance');
+  assert.equal((await post(proxy, { q1: { type: 'noul', instructions: 'Another?' } })).status, 502);
+  assert.equal(calls, beforeInput + 1, 'cumulative input admission refuses before another paid request');
+  await proxy.close();
+  for (const maxInputBytes of [0, -1, NaN, 1.5]) {
+    await assert.rejects(captureBackend({ ...options, maxInputBytes }), /positive integers/);
+  }
   upstreamMode = 'failed';
   proxy = await captureBackend({ ...options, file: path.join(dir, 'failed.json'), maxCalls: 5 });
   const beforeFailure = calls;

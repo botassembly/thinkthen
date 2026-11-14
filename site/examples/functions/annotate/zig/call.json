@@ -1,5 +1,5 @@
 {
-  "anchor": "    var triage = try client.annotateAll(",
+  "anchor": "    var forms = try client.annotateAll(init.gpa, questions, &messages, &diag);",
   "before": 0,
   "after": 2
 }

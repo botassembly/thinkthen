@@ -12,9 +12,9 @@ public class Relate {
                 message, List.of(worksFor)).answer();
             for (Relation relation : relations) {
                 System.out.println(
-                    relation.source().span().text() + " "
+                    relation.source().text() + " "
                     + relation.relation() + " "
-                    + relation.target().span().text());
+                    + relation.target().text());
             }
         }
     }

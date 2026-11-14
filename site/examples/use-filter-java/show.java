@@ -12,15 +12,13 @@ public class Example {
         var options = FilterOptions.builder()
             .field(Pointer.of("/text")).build();
         try (var client = ThinkThen.builder().build();
-             var refundChecks =
-                 client.filterRows(question, messages, options)) {
-            refundChecks.forEach(each -> {
-                boolean kept =
-                    each.row() instanceof Answered<Boolean, NoDetail> a
-                    && a.answer();
-                System.out.println(each.item().get("id") + " "
-                    + each.row().status() + " kept=" + kept);
-            });
+             var refunds = client.filter(question, messages, options)) {
+            refunds.forEach(message -> System.out.println(
+                message.get("id") + " " + message.get("text")));
+        } catch (FailedException failure) {
+            for (var failed : failure.rows()) {
+                System.out.println("try again later: " + failed.item());
+            }
         }
     }
 }

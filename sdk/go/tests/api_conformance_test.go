@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 
 	"testing"
@@ -167,24 +168,24 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 	if s.Cancelled {
 		cancel()
 	}
-	records := make([]tt.Record, len(s.Request.Records))
+	records := make([]any, len(s.Request.Records))
 	for i, raw := range s.Request.Records {
 		var text string
 		if len(raw) > 0 && raw[0] == '"' && json.Unmarshal(raw, &text) == nil {
-			records[i] = tt.Text(text)
+			records[i] = text
 		} else {
-			records[i] = tt.RawJSON(raw)
+			records[i] = json.RawMessage(raw)
 		}
 	}
-	input := tt.Records(records...)
+	input := slices.Values(records)
 	if form == "sequence" {
-		input = tt.FromSeq(func(yield func(tt.Record, error) bool) {
+		input = func(yield func(any) bool) {
 			for _, record := range records {
-				if !yield(record, nil) {
+				if !yield(record) {
 					return
 				}
 			}
-		})
+		}
 	}
 	for i := range s.Expected {
 		if s.Request.Name != "" {
@@ -193,17 +194,53 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 		}
 	}
 	q := s.Request.Question
+	// Saved presence values that Go's zero-value question fields deliberately omit
+	// are admitted through the public saved-entry boundary.
+	if (q.Function == "filter" && len(q.Threshold) > 0 && q.Threshold[0] == '{') || (q.Function == "rank" && q.Top != nil && *q.Top == 0) {
+		data, err := json.Marshal(map[string]any{"entries": map[string]any{"case": map[string]any{"question": q}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tt.ParseToolbox(data)
+		if !errors.Is(err, tt.ErrUsage) {
+			t.Fatalf("invalid saved question admitted: %v", err)
+		}
+		return
+	}
+
 	if q.Function == "annotate" {
 		questions := map[string]tt.AnnotationQuestion{}
+		savedFields := false
 		for name, child := range q.Questions {
 			questions[name] = questionFor(t, child).(tt.AnnotationQuestion)
+			savedFields = savedFields || (child.Field != nil && *child.Field == "")
 		}
-		request := tt.NewAnnotate(questions)
+		request := tt.AnnotateQuestion{Questions: questions}
+		if savedFields {
+			// An explicit saved root selector overrides the form field; the direct
+			// Go empty string means omission and therefore inherits the form field.
+			entries := map[string]any{}
+			for name, child := range q.Questions {
+				entries[name] = map[string]any{"question": child}
+			}
+			data, err := json.Marshal(map[string]any{"entries": entries})
+			if err != nil {
+				t.Fatal(err)
+			}
+			box, err := tt.ParseToolbox(data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request, err = box.Annotate()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		if q.Field != nil {
-			request = request.WithField(*q.Field)
+			request.Field = *q.Field
 		}
 		rows := collectCase(t, s, c.AnnotateAll(ctx, request, input))
 		if len(rows) != len(s.Expected) {
@@ -227,86 +264,98 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 		return
 	}
 	switch request := questionFor(t, q).(type) {
-	case tt.Decide:
+	case tt.DecideQuestion:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		assertRows(t, collectCase(t, s, c.DecideAll(ctx, request, input)), s.Expected)
-	case tt.Choose:
+	case tt.ChooseQuestion[string]:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		assertRows(t, collectCase(t, s, c.ChooseAll(ctx, request, input)), s.Expected)
-	case tt.Tag:
+	case tt.TagQuestion[string]:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		assertRows(t, collectCase(t, s, c.TagAll(ctx, request, input)), s.Expected)
-	case tt.Score:
+	case tt.ScoreQuestion[string]:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		assertRows(t, collectCase(t, s, c.ScoreAll(ctx, request, input)), s.Expected)
-	case tt.Rank:
+	case tt.RankQuestion[string]:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
-		ranked := collectCase(t, s, c.RankAll(ctx, request, input))
-		rows := make([]tt.Row[int, tt.LevelsDetail], len(ranked))
-		for i, row := range ranked {
-			rows[i] = row.Row
-		}
-		assertRows(t, rows, s.Expected)
-	case tt.Find:
+		ranked := collectCase(t, s, c.Rank(ctx, request, input))
+		assertRows(t, ranked, s.Expected)
+	case tt.FindQuestion:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
-		var rows []tt.FindRow
+		var rows []tt.FindRow[any]
 		if form == "single" {
 			row, err := c.Find(ctx, request, records[0])
 			if err != nil {
 				t.Fatal(err)
 			}
-			rows = []tt.FindRow{row}
+			rows = []tt.FindRow[any]{row}
 		} else {
 			rows = collectCase(t, s, c.FindAll(ctx, request, input))
 		}
 		assertRows(t, rows, s.Expected)
-	case tt.Recognize:
+	case tt.RecognizeQuestion:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		assertRows(t, collectCase(t, s, c.RecognizeAll(ctx, request, input)), s.Expected)
-	case tt.Relate:
+	case tt.RelateQuestion:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
 		assertRows(t, collectCase(t, s, c.RelateAll(ctx, request, input)), s.Expected)
-	case tt.Filter:
+	case tt.FilterQuestion:
 		if s.Request.Name != "" {
-			request = request.WithName(s.Request.Name)
+			request.Name = s.Request.Name
 		}
-		var rows []tt.FilterRow
-		rows = collectCase(t, s, c.FilterRowsAll(ctx, request, input))
-		if len(rows) != len(s.Expected) {
-			t.Fatal("filter row count")
-		}
-		for i, row := range rows {
-			assertMetadata(t, row, s.Expected[i])
-			want := false
-			if s.Expected[i].Status == "answered" {
-				if err := json.Unmarshal(s.Expected[i].Answer, &want); err != nil {
-					t.Fatal(err)
+		var kept []any
+		var failures *tt.FilterError[any]
+		var terminal error
+		for item, err := range c.Filter(ctx, request, input) {
+			if err != nil {
+				if !errors.As(err, &failures) {
+					terminal = err
 				}
-			}
-			if row.Kept() != want {
-				t.Fatal("filter kept differs from typed answer")
-			}
-			pos := row.Position()
-			if pos < 1 || pos > len(records) || !reflect.DeepEqual(row.Item(), records[pos-1]) {
-				t.Fatal("filter lost original item")
+			} else {
+				kept = append(kept, item)
 			}
 		}
+		// Filter emits original items and one failure aggregate; call errors retain
+		// the shared terminal contract independently of that aggregate.
+		collectCase(t, s, func(yield func(any, error) bool) {
+			if terminal != nil {
+				yield(nil, terminal)
+			}
+		})
+
+		var want []any
+		failed := 0
+		for _, row := range s.Expected {
+			if row.Status == "failed" {
+				failed++
+			}
+			if row.Status == "answered" && string(row.Answer) == "true" {
+				want = append(want, records[row.Position-1])
+			}
+		}
+		if !reflect.DeepEqual(kept, want) {
+			t.Fatalf("kept %v want %v", kept, want)
+		}
+		if failed > 0 && (failures == nil || len(failures.Rows) != failed) {
+			t.Fatal("filter failures lost")
+		}
+
 	}
 }
 
@@ -369,7 +418,7 @@ func assertMetadata(t *testing.T, row apiMetadata, want apiExpected) {
 		model = "fixture-model"
 	}
 	if len(source.QuestionIdentity) != 64 || (want.Source.QuestionIdentity != "" && source.QuestionIdentity != want.Source.QuestionIdentity) || !reflect.DeepEqual(source.Name, want.Source.Name) || map[tt.Backend]string{tt.SystemOne: "systemone", tt.OpenAI: "openai", tt.Stub: "stub"}[source.Backend] != backend || source.Model != model {
-		t.Fatal("typed source differs")
+		t.Fatalf("typed source %#v; want %#v", source, want.Source)
 	}
 	failure := rowFailure(row.Err())
 	if (failure != nil) != (want.Error != nil) {
@@ -385,7 +434,7 @@ func assertMetadata(t *testing.T, row apiMetadata, want apiExpected) {
 		}
 	}
 }
-func assertRows[A, D any](t *testing.T, rows []tt.Row[A, D], expected []apiExpected) {
+func assertRows[T, A, D any](t *testing.T, rows []tt.Row[T, A, D], expected []apiExpected) {
 	t.Helper()
 	if len(rows) != len(expected) {
 		t.Fatalf("rows %d; want %d", len(rows), len(expected))

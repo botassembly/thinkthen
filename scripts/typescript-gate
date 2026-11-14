@@ -5,6 +5,8 @@ version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
 cd "$(dirname "$0")/.."
 root=$PWD
 scripts/typescript-prepare
+npm --prefix sdk/typescript ci --offline --ignore-scripts --no-audit --no-fund
+(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js bridge.js stream.js answers.js libc.js platform.js --max-warnings 0 && npx knip --include dependencies)
 addon=
 if [ "${1:-}" = --collection-only ] || [ "${1:-}" = --prepared-addon ]; then
     addon=${2:?Provide the already built native addon}
@@ -33,16 +35,33 @@ cp "$addon" sdk/typescript/thinkthen.node
 cp LICENSE sdk/typescript/LICENSE
 trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$stage"; rm -f sdk/typescript/thinkthen.node sdk/typescript/LICENSE; exit "$gate_status"' EXIT
 trap 'exit 1' HUP INT TERM
-npm --prefix sdk/typescript ci --offline --ignore-scripts --no-audit --no-fund
-(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js bridge.js stream.js answers.js libc.js platform.js --max-warnings 0 && npx knip --include dependencies)
 (cd sdk/typescript && npm pack --pack-destination "$stage" --ignore-scripts --quiet)
 # Node 22.12 supports require(esm); attw's Node 16 resolver predates it.
 # The installed import/require test proves that supported runtime path.
 sdk/typescript/node_modules/.bin/attw "$stage/thinkthen-$version.tgz" --profile node16 --ignore-rules cjs-resolves-to-esm
 mkdir "$stage/consumer"
 npm --prefix "$stage/consumer" install --offline --no-audit --no-fund "$stage/thinkthen-$version.tgz"
+if [ "${1:-}" = --final-check ]; then
+    export THINKTHEN_LOOPBACK="$build_target/debug/loopback"
+    if python3 scripts/guide-examples --surface typescript --typescript-consumer "$stage/consumer" --negative-control exit > "$stage/control.log" 2>&1; then
+        echo 'TypeScript dispatcher accepted a deliberately wrong exit' >&2; exit 1
+    fi
+    cat "$stage/control.log"
+    grep -Eq 'typescript/ideal/[0-9]+/yes: exit: expected 99, got 0' "$stage/control.log"
+    if grep -Eq 'output: expected|branch: expected' "$stage/control.log"; then exit 1; fi
+    python3 - "$stage/consumer" <<'CONTROLS'
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path.cwd() / 'scripts'))
+from typescript_guide_examples import run_checker_controls
+consumer = Path(sys.argv[1])
+run_checker_controls(consumer, consumer / 'guide_compiled')
+CONTROLS
+    THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" node --test --test-name-pattern '^module streams snapshot options at creation' sdk/typescript/tests/package.test.js
+    exit 0
+fi
 if [ "${1:-}" = --docs-only ]; then
-    python3 scripts/typescript-doc-examples "$stage/consumer"
+    THINKTHEN_LOOPBACK="$build_target/debug/loopback" python3 scripts/typescript-doc-examples "$stage/consumer"
     exit
 fi
 if [ "${1:-}" = --answers-only ] || [ "${1:-}" = --answers-independent ]; then
@@ -50,15 +69,15 @@ if [ "${1:-}" = --answers-only ] || [ "${1:-}" = --answers-independent ]; then
     THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" node --test "$@" sdk/typescript/tests/answers.test.js
     exit
 fi
-if [ "${1:-}" != --collection-only ]; then
-    python3 scripts/typescript-doc-examples "$stage/consumer"
-fi
-python3 scripts/surface-example prepare typescript "$stage/consumer"
-(cd "$stage/consumer" && python3 "$root/scripts/surface-example" check typescript node example.mjs)
-if [ "${1:-}" = --collection-only ]; then exit 0; fi
-python3 scripts/module-abi-fixtures typescript "$stage/consumer/node_modules/thinkthen"
+typescript_checks=0
+if [ "${1:-}" != --tests-only ]; then
+THINKTHEN_LOOPBACK="$build_target/debug/loopback" python3 scripts/typescript-doc-examples "$stage/consumer" || typescript_checks=1
+if [ "${1:-}" = --collection-only ]; then exit "$typescript_checks"; fi
+python3 scripts/module-abi-fixtures typescript "$stage/consumer/node_modules/thinkthen" || typescript_checks=1
 cp scripts/release/node.mjs "$stage/consumer/release.mjs"
-node "$stage/consumer/release.mjs" construction/stub.json
+node "$stage/consumer/release.mjs" construction/stub.json || typescript_checks=1
 sed 's|"../index.js"|"thinkthen"|' sdk/typescript/tests/types.ts > "$stage/consumer/types.mts"
-sdk/typescript/node_modules/.bin/tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM,ESNext.Disposable "$stage/consumer/types.mts"
-THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" node --test sdk/typescript/tests/*.test.js
+sdk/typescript/node_modules/.bin/tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM,ESNext.Disposable "$stage/consumer/types.mts" || typescript_checks=1
+fi
+THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" node --test sdk/typescript/tests/*.test.js || typescript_checks=1
+exit "$typescript_checks"

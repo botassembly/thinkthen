@@ -5,4 +5,4 @@ package dev.thinkthen;
      * @param <A> the answer type
      * @param <D> the detail type
      */
-public sealed interface AnnotationQuestion<A,D extends Detail> extends Question<A,D> permits DecideQuestion, ChooseQuestion, TagQuestion, ScoreQuestion, FilterQuestion, FindQuestion, RecognizeQuestion, RelateQuestion {}
+public sealed interface AnnotationQuestion<A,D extends Detail> extends Question<A,D> permits DecideQuestion, ChooseQuestion, TagQuestion, ScoreQuestion, FindQuestion, RecognizeQuestion, RelateQuestion {}

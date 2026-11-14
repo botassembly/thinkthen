@@ -1,6 +1,18 @@
 #!/bin/sh
 # Build native output once; test the installed Java and Kotlin artifacts offline.
 set -eu
+java_host_only=0
+kotlin_host_only=0
+jvm_tail=0
+jvm_after_kotlin_abi=0
+case "${1:-}" in
+    '') ;;
+    --java-host-only) java_host_only=1 ;;
+    --guides-checked) java_host_only=1; kotlin_host_only=1 ;;
+    --continue-after-conformance) jvm_tail=1 ;;
+    --continue-after-kotlin-abi) jvm_after_kotlin_abi=1 ;;
+    *) echo 'usage: scripts/jvm-gate [--java-host-only|--guides-checked|--continue-after-conformance|--continue-after-kotlin-abi]' >&2; exit 2 ;;
+esac
 jvm_python=$(python3 -c 'import sys; print(sys.executable)')
 version=$("$jvm_python" "$(dirname "$0")/release_metadata.py" --version)
 cd "$(dirname "$0")/.."
@@ -68,9 +80,19 @@ mkdir -p "$scratch/home"
 XDG_CACHE_HOME="$scratch/home/.cache"
 export XDG_CACHE_HOME
 java() { command "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" "$@"; }
+if [ "$jvm_tail" = 0 ] && [ "$jvm_after_kotlin_abi" = 0 ]; then
 "$jvm_python" "$root/scripts/sdk-readme-examples" jvm "$classpath" "$scratch/m2" "$scratch/home"
-"$jvm_python" "$root/scripts/java-example-check" "$classpath" "$scratch/target/classes"
-"$jvm_python" "$root/scripts/kotlin-example-check" "$classpath" "$scratch/m2" "$scratch/home"
+if [ "$java_host_only" = 1 ]; then
+    "$jvm_python" "$root/scripts/java-example-check" "$classpath" "$scratch/target/classes" --host-only
+else
+    "$jvm_python" "$root/scripts/java-example-check" "$classpath" "$scratch/target/classes"
+fi
+if [ "$kotlin_host_only" = 1 ]; then
+    "$jvm_python" "$root/scripts/kotlin-example-check" "$classpath" "$scratch/m2" "$scratch/home" --host-only
+else
+    "$jvm_python" "$root/scripts/kotlin-example-check" "$classpath" "$scratch/m2" "$scratch/home"
+fi
+"$jvm_python" "$root/scripts/kotlin-dispatch-check" "$classpath" "$scratch/m2"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConsumerCases "$root/construction/stub.json"
 "$jvm_python" "$root/scripts/native-lookup-check" --embedded "$native_input" -- "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" \
   --enable-native-access=ALL-UNNAMED -cp "$scratch/$classpath" ConsumerCases "$root/construction/stub.json"
@@ -102,6 +124,8 @@ java --enable-native-access=dev.thinkthen --module-path "$(cat "$scratch/classpa
 "$jvm_python" "$root/sdk/kotlin/tests/abi.py" "$THINKTHEN_NATIVE_FIXTURES/manifest.json" "$classpath" "$JAVA_HOME/bin/java" "$jvm_platform" "$jvm_library" "$scratch"
 
 
+fi
+if [ "$jvm_tail" = 0 ]; then
 "$jvm_python" - "$root/sdk/kotlin/tests/compile-fail" <<'PYTHON'
 from pathlib import Path
 import sys
@@ -118,15 +142,31 @@ import sys
 text = Path(sys.argv[2]).read_text()
 for case in Path(sys.argv[1]).glob('*.kt.fail'):
     name = case.name.removesuffix('.fail')
-    assert name + ':' in text, text
+    assert name + ':' in text, name + ": missing compiler refusal\n" + "\n".join(text.splitlines()[-20:])
     for message in [line.removeprefix('// Expect: ') for line in case.read_text().splitlines() if line.startswith('// Expect: ')]:
-        assert any(name + ':' in line and message in line for line in text.splitlines()), (name, message, text)
+        own = [line for line in text.splitlines() if name + ":" in line]
+        assert any(message in line for line in own), name + ": expected " + message + "\n" + "\n".join(own[:3])
     Path('src/main/kotlin', name).unlink()
 print("Kotlin public API compile refusals passed")
 PYTHON
 
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root/conformance/typed"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.ConformanceCasesKt "$root/conformance/typed"
+fi
+if [ "$jvm_tail" = 1 ]; then
+    "$jvm_python" "$root/scripts/guide-examples" --surface java --inventory > "$scratch/java-inventory"
+    grep -F 'ENABLED java:' "$scratch/java-inventory"
+    if [ ! -f "$root/scripts/python_guide_examples.py" ]; then grep -F 'PENDING python:' "$scratch/java-inventory"; fi
+    if "$jvm_python" "$root/scripts/guide-examples" --surface java --java-classpath "$classpath" --negative-control output > "$scratch/java-dispatch" 2>&1; then
+        echo 'Java dispatcher accepted deliberately wrong output' >&2; exit 1
+    fi
+    grep -Fx 'JAVA DISPATCH java/0/yes requests=1 branch=refund queue' "$scratch/java-dispatch"
+    grep -F 'FAIL java/0/yes: output: expected' "$scratch/java-dispatch"
+    grep -F "expected 'deliberately wrong output" "$scratch/java-dispatch" > /dev/null
+    grep -F "got 'refund queue" "$scratch/java-dispatch" > /dev/null
+    "$jvm_python" "$root/scripts/kotlin-example-check" "$classpath" "$scratch/m2" "$scratch/home" --host-only
+    "$jvm_python" "$root/scripts/kotlin-dispatch-check" "$classpath" "$scratch/m2"
+fi
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SurfaceCasesKt "$root/conformance"
 THINKTHEN_BACKEND=stub java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.EnvironmentCasesKt
 (export THINKTHEN_BACKEND=; java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.EnvironmentCasesKt)

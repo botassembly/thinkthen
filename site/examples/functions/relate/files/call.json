@@ -1,5 +1,5 @@
 {
-  "anchor": "thinkthen relate messages.csv --rule works_for person organization \\",
+  "anchor": "thinkthen relate messages.csv --rule person organization works_for \\",
   "before": 0,
   "after": 2
 }

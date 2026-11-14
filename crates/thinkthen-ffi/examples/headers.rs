@@ -482,7 +482,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {"name":"current","version":version,"accept":true,"forward":true},
     {"name":"newer-minor","version":version+1,"accept":true,"forward":true},
     {"name":"wrong-major","version":version+(1<<16),"accept":false,"forward":false},
-    {"name":"insufficient-minor","version":version-1,"accept":false,"forward":false},
+    {"name":if version & 0xffff == 0 {"previous-major"} else {"insufficient-minor"},"version":if version & 0xffff == 0 {version-(1<<16)} else {version-1},"accept":false,"forward":false},
     {"name":"missing-version","version":version,"accept":false,"forward":false,"missing":"thinkthen_abi_version"},
     {"name":"missing-symbol","version":version,"accept":false,"forward":false,"missing":"thinkthen_call_next"}
     ]});

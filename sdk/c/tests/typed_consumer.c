@@ -8,11 +8,11 @@
 #include <stdint.h>
 #include <string.h>
 
-/* Feature: C consumers retain sized, owned outputs after client destruction.
+/* Feature: C consumers retain an owned error and an empty sized row after failure.
  * Shared tests own general engine failures; this checks the installed C
  * declaration/layout and the caller's actual output allocation.
  */
-static void owned_missing_row(void) {
+static void owned_missing_error(void) {
     struct {
         thinkthen_row row;
         unsigned char suffix[32];
@@ -22,10 +22,10 @@ static void owned_missing_row(void) {
     output.row.struct_size = sizeof output;
     error.struct_size = sizeof error;
     assert(test_run_missing(&output.row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
-    assert(output.row.position == 1);
-    assert(strcmp(thinkthen_code_name(output.row.error_code), "record.missing") == 0);
-    assert(isnan(output.row.probability));
-    assert(output.row.error.len != 0);
+    assert(output.row.private_data == NULL);
+    assert(error.code == THINKTHEN_CODE_RECORD_MISSING);
+    assert(error.message.data != NULL && error.message.len > 0);
+    assert(strstr(thinkthen_error_string(&error), "record.missing") != NULL);
     for (size_t i = 0; i < sizeof output.suffix; ++i) assert(output.suffix[i] == 0xa5);
     thinkthen_row_free(&output.row);
     assert(output.row.struct_size == sizeof output);
@@ -61,14 +61,20 @@ static void short_output(void) {
 static void registry_values(void) {
     assert(thinkthen_code_family(0) == NULL);
     assert(thinkthen_code_family(INT32_MAX) == NULL);
+    assert(thinkthen_code_family(INT32_MIN) == NULL);
+    assert(thinkthen_code_name(INT32_MIN) == NULL);
     const size_t count = test_registry_count();
     assert(count != 0);
     for (size_t i = 0; i < count; ++i) {
-        const char *name = thinkthen_code_name(test_registry_code(i));
-        assert(name != NULL);
-        assert(strcmp(name, test_registry_name(i)) == 0);
-        const char *family = thinkthen_code_family(test_registry_code(i));
-        assert(family && strcmp(family, test_registry_family(i)) == 0);
+        const int32_t code = test_registry_code(i);
+        const int32_t values[] = {code, -code};
+        for (size_t j = 0; j < sizeof values / sizeof values[0]; ++j) {
+            const char *name = thinkthen_code_name(values[j]);
+            assert(name != NULL);
+            assert(strcmp(name, test_registry_name(i)) == 0);
+            const char *family = thinkthen_code_family(values[j]);
+            assert(family && strcmp(family, test_registry_family(i)) == 0);
+        }
     }
 }
 
@@ -86,7 +92,7 @@ static void retry_admission(void) {
 int main(void) {
     _Static_assert(offsetof(thinkthen_row, struct_size) == 0, "row size prefix");
     _Static_assert(offsetof(thinkthen_error, struct_size) == 0, "error size prefix");
-    owned_missing_row();
+    owned_missing_error();
     short_output();
     registry_values();
     retry_admission();

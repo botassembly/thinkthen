@@ -63,17 +63,6 @@ if args.interrupt_only:
     sys.exit(0)
 
 
-def guide():
-    folder = args.scratch / "guide"
-    helper = args.root / "scripts/surface-example"
-    subprocess.run([sys.executable, str(helper), "prepare", "r", str(folder)], check=True)
-    subprocess.run([sys.executable, str(helper), "check", "r", "Rscript", "--vanilla", "example.R"],
-                   env=dict(environment, THINKTHEN_BACKEND="stub"), cwd=folder, check=True)
-    subprocess.run(["Rscript", "--vanilla", str(args.root / "sdk/r/tests/readme.R"),
-                    str(args.root / "docs/surfaces/r.md")],
-                   env=dict(environment, THINKTHEN_BACKEND="stub"), cwd=folder, check=True)
-
-
 def module_abi():
     subprocess.run([sys.executable, str(args.root / "scripts/module-abi-fixtures"),
                     "r", str(args.library / "thinkthen")],
@@ -99,7 +88,7 @@ if args.module_abi_only:
     print("R native module reused unchanged:", module, digest, flush=True)
     module_abi()
     subprocess.run(["Rscript", "--vanilla", "-e",
-                    'library(thinkthen); stopifnot(tt_decide_rows("text", "Ready?", '
+                    'library(thinkthen); stopifnot(tt_decide(details = TRUE, "text", "Ready?", '
                     'client=tt_client(backend="stub"))$status == "answered")'],
                    env=environment, cwd=args.scratch, check=True)
     sys.exit(0)
@@ -124,8 +113,6 @@ def expected_r(value):
     if not isinstance(value, dict):
         return value
     result = {key: expected_r(item) for key, item in value.items()}
-    if "start" in result and "end" in result:
-        result["start"] += 1
     if type(result.get("id")) is int:
         result["id"] = {"integer": str(result["id"])}
     return result
@@ -136,7 +123,6 @@ from comparison import typed_numbers, assert_fields, shared_rows
 
 print(rscript(args.root / "sdk/r/tests/readme.R", args.root / "sdk/r/README.md",
               env=dict(environment, THINKTHEN_BACKEND="stub")), end="", flush=True)
-guide()
 module_abi()
 for script in ("interface.R", "contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R", "frame-serialization.R"):
     print(rscript(args.root / "sdk/r/tests" / script), end="", flush=True)
@@ -177,6 +163,15 @@ for name in manifest["cases"]:
                 server.stdin.flush()
                 assert int(read_line(server.stdout)) == case["requests"], (name, provider)
                 continue
+            if "kept" in actual:
+                expected = [case["request"]["records"][row["position"]-1]
+                            for row in case["expected"] if row.get("answer") is True]
+                assert actual["kept"] == expected_r(expected), (name, provider, actual, expected)
+                server.stdin.write("count\n")
+                server.stdin.flush()
+                assert int(read_line(server.stdout)) == case["requests"], (name, provider)
+                coverage[provider].add("filter")
+                continue
             assert "rows" in actual, (name, provider, actual)
             rows = actual["rows"]
             expected = expected_r(case["expected"])
@@ -209,6 +204,14 @@ for index, case in enumerate(json.loads((args.root / "construction/stub.json").r
     with backend(path) as (server, url):
         actual = typed_numbers(json.loads(rscript(args.root / "sdk/r/tests/run.R", path,
                                     env=dict(environment, THINKTHEN_TEST_URL=url))))
+        if "kept" in actual:
+            expected = [case["request"]["records"][row["position"]-1]
+                        for row in case["expected"] if row.get("answer") is True]
+            assert actual["kept"] == expected_r(expected), (index, actual, expected)
+            server.stdin.write("count\n")
+            server.stdin.flush()
+            assert int(read_line(server.stdout)) == 0, ("stub made an HTTP call", index)
+            continue
         assert "rows" in actual, (index, actual)
         assert len(actual["rows"]) == len(case["expected"]), index
         assert_fields(actual["rows"], expected_r(case["expected"]), ("stub", index))

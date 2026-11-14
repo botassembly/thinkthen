@@ -6,9 +6,9 @@
 SQLITE_EXTENSION_INIT1
 
 static const char *const argument_names[] = {"source_sql","question","choices","labels","levels","kinds",
-    "rules","toolbox","threshold","low","high","top","field","params","record_column","id_column","format","name",
-    "yes_means","no_means","descriptions","failures"};
-static const char *const column_names[] = {"position INTEGER","id","answer","probability REAL","status TEXT",
+    "rules","questions","threshold","low","high","top","field","params","record_column","id_column","format","name",
+    "yes_means","no_means","descriptions","raise_if_failed"};
+const char *const tt_columns[COL_COUNT] = {"position INTEGER","id","record","answer","probability REAL","status TEXT",
     "error_code TEXT","error_message TEXT","error_http_status INTEGER","source TEXT","detail TEXT"};
 
 static int is_function(Table *table, const char *name) {
@@ -18,11 +18,11 @@ static int exposed(Table *table, int argument) {
     const char *function = table->registration->function;
     if (argument == ARG_SOURCE || (argument >= ARG_PARAMS && argument <= ARG_NAME)) return 1;
     /* SQL keywords true and false name the shared answer meanings. */
-    if (argument == ARG_YES_MEANS) return tt_argument(function, "true");
-    if (argument == ARG_NO_MEANS) return tt_argument(function, "false");
+    if (argument == ARG_YES_MEANS) return tt_argument(function, "yes_means");
+    if (argument == ARG_NO_MEANS) return tt_argument(function, "no_means");
     if (argument == ARG_DESCRIPTIONS)
         return tt_argument(function, "choices") || tt_argument(function, "labels") || tt_argument(function, "levels");
-    if (argument == ARG_FAILURES) return is_function(table, "filter");
+    if (argument == ARG_RAISE) return !is_function(table, "filter");
     return tt_argument(function, argument_names[argument]);
 }
 static int connect_table(sqlite3 *db, void *aux, int argc, const char *const *argv,
@@ -35,7 +35,7 @@ static int connect_table(sqlite3 *db, void *aux, int argc, const char *const *ar
     memset(table,0,sizeof(*table)); table->db=db; table->registration=aux;
     sqlite3_str *schema=sqlite3_str_new(db);
     sqlite3_str_appendall(schema,"CREATE TABLE x(");
-    for (int n=0;n<COL_COUNT;n++) sqlite3_str_appendf(schema,"%s%s",n?",":"",column_names[n]);
+    for (int n=0;n<COL_COUNT;n++) sqlite3_str_appendf(schema,"%s%s",n?",":"",tt_columns[n]);
     for(int n=0;n<ARG_COUNT;n++) if(exposed(table,n)) {
         sqlite3_str_appendf(schema,",%s HIDDEN",argument_names[n]); table->arguments[table->argument_count++]=n;
     }
@@ -61,7 +61,7 @@ static int best_index(sqlite3_vtab *base, sqlite3_index_info *index) {
             found=i;
         }
         if(found<0) {
-            if(key<=ARG_TOOLBOX && key!=ARG_THRESHOLD) {
+            if(key<=ARG_QUESTIONS && key!=ARG_THRESHOLD) {
                 base->zErrMsg=sqlite3_mprintf("usage.argument: %s is required for thinkthen_%s",argument_names[key],table->registration->function);
                 return SQLITE_ERROR;
             }
@@ -91,7 +91,7 @@ static int filter_cursor(sqlite3_vtab_cursor *base, int mask, const char *plan, 
         if(!cursor->replaying)thinkthen_row_free(&cursor->row);
         json_decref(cursor->answer);cursor->answer=NULL;
         json_decref(cursor->error);cursor->error=NULL;
-        cursor->replaying=1;cursor->rowid=0;filter_reset(cursor);
+        cursor->replaying=1;cursor->rowid=0;
         if(!cursor->read && sqlite3_prepare_v2(cursor->replay,"SELECT * FROM rows ORDER BY rowid",-1,&cursor->read,NULL)!=SQLITE_OK)
             return cursor_error(cursor,SQLITE_ERROR,"cannot rewind result spool");
         sqlite3_reset(cursor->read);
@@ -107,18 +107,11 @@ static int filter_cursor(sqlite3_vtab_cursor *base, int mask, const char *plan, 
         int type=sqlite3_value_type(argv[index]);
         int numeric=n==ARG_THRESHOLD || n==ARG_LOW || n==ARG_HIGH;
         if((numeric && type!=SQLITE_FLOAT && type!=SQLITE_INTEGER) ||
-           (n==ARG_TOP && type!=SQLITE_INTEGER) || (!numeric && n!=ARG_TOP && type!=SQLITE_TEXT))
+           ((n==ARG_TOP || n==ARG_RAISE) && type!=SQLITE_INTEGER) || (!numeric && n!=ARG_TOP && n!=ARG_RAISE && type!=SQLITE_TEXT))
             return usage_error(cursor,"%s must be %s, not %s",argument_names[n],
-                numeric?"a number":n==ARG_TOP?"an integer":"text",type_names[type]);
+                numeric?"a number":(n==ARG_TOP || n==ARG_RAISE)?"an integer":"text",type_names[type]);
         cursor->arguments[n]=sqlite3_value_dup(argv[index++]);
         if(!cursor->arguments[n])return cursor_error(cursor,SQLITE_NOMEM,"out of memory");
-    }
-    if(cursor->arguments[ARG_FAILURES]) {
-        const char *failures=(const char*)sqlite3_value_text(cursor->arguments[ARG_FAILURES]);
-        if(!failures)return cursor_error(cursor,SQLITE_NOMEM,"out of memory");
-        if(strcmp(failures,"row") && strcmp(failures,"raise"))
-            return usage_error(cursor,"failures must be 'raise' or 'row', not '%s'",failures);
-        cursor->keep_failures=!strcmp(failures,"row");
     }
     int result=source_open(cursor);if(result!=SQLITE_OK)return result;
     Connection *connection=table->registration->connection;char *message=NULL;

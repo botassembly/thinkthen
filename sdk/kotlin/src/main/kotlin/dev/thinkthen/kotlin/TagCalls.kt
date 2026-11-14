@@ -1,42 +1,65 @@
 package dev.thinkthen.kotlin
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlin.reflect.KClass
 
-/**
- * Gives every label from [labels] that fits one [record]. [descriptions] optionally says what a label means.
- *
- * Throws [ThinkThenException] with `record.empty` for blank text, before any backend call. A missing record (null) gives a failed row. The row's `answer()` throws on not sure or failure. Pass many records to [tagStream].
- */
-public suspend inline fun <reified T> ThinkThen.tag(question: String, record: T?, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, LabelDetail> =
-    single(Tag(question, labels, threshold, field, name, descriptions), record, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend inline fun <reified T> ThinkThen.tag(question: String, record: T, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, T> =
+    single(TagQuestion(question, labels, threshold, field, name, descriptions), record, { recordSerializer<T>() })
 
-/** The same as the other `tag`, encoding [record] with [serializer]. */
-public suspend fun <T> ThinkThen.tag(question: String, record: T?, labels: List<String>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, LabelDetail> =
-    single(Tag(question, labels, threshold, field, name, descriptions), record, serializer)
+/** Enum words and scale order follow declaration order. */
+public suspend inline fun <reified T, E : Enum<E>> ThinkThen.tag(question: String, record: T, labels: KClass<E>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Row<List<E>, T> =
+    single(TagQuestion(question, labels, threshold, field, name, descriptions), record, { recordSerializer<T>() })
 
-/** The same as the other `tag`, for a missing record written as `null`. It returns a failed `record.missing` row. */
-public suspend fun ThinkThen.tag(question: String, record: Nothing?, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, LabelDetail> =
-    single(Tag(question, labels, threshold, field, name, descriptions), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend fun ThinkThen.tag(question: String, record: Nothing?, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, Nothing?> =
+    single(TagQuestion(question, labels, threshold, field, name, descriptions), record, { JsonElement.serializer() })
 
-/** The same as the other `tag`, for one JSON array record. A JSON array is one record, not many records. */
-public suspend fun ThinkThen.tag(question: String, record: JsonArray, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, LabelDetail> =
-    single(Tag(question, labels, threshold, field, name, descriptions), record, JsonElement.serializer())
+/** Enum words and scale order follow declaration order. */
+public suspend fun <E : Enum<E>> ThinkThen.tag(question: String, record: Nothing?, labels: KClass<E>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Row<List<E>, Nothing?> =
+    single(TagQuestion(question, labels, threshold, field, name, descriptions), record, { JsonElement.serializer() })
 
-/** Many records as a cold flow of rows in input order. Each collection makes its own call; a failed record gives a failed row and the rest continue. */
-public inline fun <reified T> ThinkThen.tagStream(question: String, records: Flow<T>, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<List<String>, LabelDetail>> =
-    stream(Tag(question, labels, threshold, field, name, descriptions), records, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.tagStream(question: String, records: Flow<T>, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<List<String>, T>> =
+    stream(TagQuestion(question, labels, threshold, field, name, descriptions), records, { recordSerializer<T>() })
 
-/** The same as the other `tagStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.tagStream(question: String, records: Flow<T?>, labels: List<String>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<List<String>, LabelDetail>> =
-    stream(Tag(question, labels, threshold, field, name, descriptions), records, serializer)
+/** Enum words and scale order follow declaration order. */
+public inline fun <reified T, E : Enum<E>> ThinkThen.tagStream(question: String, records: Flow<T>, labels: KClass<E>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Flow<Row<List<E>, T>> =
+    stream(TagQuestion(question, labels, threshold, field, name, descriptions), records, { recordSerializer<T>() })
 
-/** Many records from a collection, as a cold flow of rows in input order. */
-public inline fun <reified T> ThinkThen.tagStream(question: String, records: Iterable<T>, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<List<String>, LabelDetail>> =
-    iterable(Tag(question, labels, threshold, field, name, descriptions), records, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.tagStream(question: String, records: Iterable<T>, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<List<String>, T>> =
+    iterable(TagQuestion(question, labels, threshold, field, name, descriptions), records, { recordSerializer<T>() })
 
-/** The same as the other `tagStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.tagStream(question: String, records: Iterable<T?>, labels: List<String>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<List<String>, LabelDetail>> =
-    iterable(Tag(question, labels, threshold, field, name, descriptions), records, serializer)
+/** Enum words and scale order follow declaration order. */
+public inline fun <reified T, E : Enum<E>> ThinkThen.tagStream(question: String, records: Iterable<T>, labels: KClass<E>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Flow<Row<List<E>, T>> =
+    iterable(TagQuestion(question, labels, threshold, field, name, descriptions), records, { recordSerializer<T>() })
+
+/** Ask an immutable typed question. */
+public suspend inline fun <reified T, E : Any> ThinkThen.tag(question: TagQuestion<E>, record: T): Row<List<E>, T> =
+    single(question, record, { recordSerializer<T>() })
+
+/** Ask an immutable typed question. */
+public inline fun <reified T, E : Any> ThinkThen.tagStream(question: TagQuestion<E>, records: Iterable<T>): Flow<Row<List<E>, T>> =
+    iterable(question, records, { recordSerializer<T>() })
+
+/** Ask an immutable typed question. */
+public inline fun <reified T, E : Any> ThinkThen.tagStream(question: TagQuestion<E>, records: Flow<T>): Flow<Row<List<E>, T>> =
+    stream(question, records, { recordSerializer<T>() })
+
+/** One JSON array is one record. */
+public suspend fun ThinkThen.tag(question: String, record: kotlinx.serialization.json.JsonArray, labels: List<String>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<List<String>, kotlinx.serialization.json.JsonArray> =
+    single(TagQuestion(question, labels, threshold, field, name, descriptions), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun <E : Enum<E>> ThinkThen.tag(question: String, record: kotlinx.serialization.json.JsonArray, labels: KClass<E>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Row<List<E>, kotlinx.serialization.json.JsonArray> =
+    single(TagQuestion(question, labels, threshold, field, name, descriptions), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun <E : Any> ThinkThen.tag(question: TagQuestion<E>, record: kotlinx.serialization.json.JsonArray): Row<List<E>, kotlinx.serialization.json.JsonArray> =
+    single(question, record, { JsonElement.serializer() })
+
+/** A missing record retains null as its original item. */
+public suspend fun <E : Any> ThinkThen.tag(question: TagQuestion<E>, record: Nothing?): Row<List<E>, Nothing?> =
+    single(question, record, { JsonElement.serializer() })

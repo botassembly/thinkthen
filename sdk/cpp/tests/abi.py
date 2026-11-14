@@ -17,11 +17,16 @@ with tempfile.TemporaryDirectory() as directory:
     source = root / "source"
     source.mkdir()
     shutil.copy2(Path(__file__).with_name("abi.cpp"), source / "main.cpp")
+    shutil.copy2(Path(__file__).with_name("unknown_code_consumer.cpp"), source / "unknown.cpp")
     (source / "CMakeLists.txt").write_text('''cmake_minimum_required(VERSION 3.20)
 project(AbiConsumer LANGUAGES CXX)
-find_package(ThinkThenCpp CONFIG REQUIRED)
+find_package(ThinkThenCpp CONFIG REQUIRED COMPONENTS Nlohmann)
 add_executable(consumer main.cpp)
-target_link_libraries(consumer PRIVATE ThinkThen::Cpp)
+target_compile_options(consumer PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+target_link_libraries(consumer PRIVATE ThinkThen::CppNlohmann)
+add_executable(unknown_code_consumer unknown.cpp)
+target_compile_options(unknown_code_consumer PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+target_link_libraries(unknown_code_consumer PRIVATE ThinkThen::CppNlohmann)
 ''')
     build = root / "build"
     subprocess.run(["cmake", "-S", str(source), "-B", str(build),
@@ -47,4 +52,6 @@ target_link_libraries(consumer PRIVATE ThinkThen::Cpp)
                 result = subprocess.run([str(build / "consumer"), first], capture_output=True, text=True)
                 expected = "accepted" if case["accept"] else "usage.abi"
                 assert result.returncode == 0 and result.stdout.strip() == expected, (case["name"], first, result)
+            if case["accept"]:
+                subprocess.run([str(build / "unknown_code_consumer")], check=True)
         print(f'installed C++ ABI: {case["name"]} passed')

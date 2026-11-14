@@ -171,7 +171,7 @@ const fn family_code(family: Family) -> u8 {
     match family {
         Family::Usage => 2,
         Family::Record => 6,
-        Family::Backend => 4,
+        Family::Backend => 6,
         Family::Local => 5,
         Family::Internal => 5,
     }

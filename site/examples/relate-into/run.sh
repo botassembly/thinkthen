@@ -1,2 +1,2 @@
-thinkthen relate --rule works_for person organization \
+thinkthen relate --rule person organization works_for \
   --from csv --column text --into relations < messages.csv

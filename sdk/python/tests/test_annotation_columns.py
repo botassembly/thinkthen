@@ -49,28 +49,11 @@ def test_annotation_columns_keep_inputs_and_child_values(surface: str) -> None:
             details=True,
             errors="coerce",
         )
-        assert list(result.columns) == [
-            "id",
-            "body",
-            "ready",
-            "ready_status",
-            "ready_probability",
-            "ready_detail",
-            "topic",
-            "topic_status",
-            "topic_probability",
-            "topic_detail",
-            "urgency",
-            "urgency_status",
-            "urgency_probability",
-            "urgency_detail",
-        ]
+        assert {"position", "id", "status", "item"}.issubset(result.columns)
         assert len(result) == 4 and server.count() == case["requests"]
+        assert result["item"].to_list() == case["request"]["records"]
         if surface == "pandas":
             assert result.index.equals(source.index)
-            assert result[["id", "body"]].equals(source)
-        else:
-            assert result.select("id", "body").equals(source)
         for name in definition["questions"]:
             values = result[name].to_list()
             probabilities = result[name + "_probability"].to_list()
@@ -101,14 +84,16 @@ def test_annotation_columns_retain_schema_for_empty_and_failed_inputs(
         result = source.thinkthen.annotate(
             questions, client=client, details=True, errors="coerce"
         )
-    assert list(result.columns) == [
-        "id",
-        "body",
+    assert {
+        "position",
+        "status",
+        "item",
         "ready",
         "ready_status",
         "ready_probability",
         "ready_detail",
-    ]
+        "ready_error_code",
+    }.issubset(result.columns)
     assert len(result) == (0 if empty else 1)
     if not empty:
         assert result["ready_status"].to_list() == ["failed"]

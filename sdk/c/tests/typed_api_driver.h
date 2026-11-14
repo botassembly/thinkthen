@@ -5,7 +5,7 @@
 
 /* Exercise real typed builders and run_one through the installed declaration.
  * The helper destroys settings, question and client before returning, leaving
- * the actual engine-owned output alive for the consumer.
+ * the owned error allocation alive; the failed scalar row stays empty.
  */
 int32_t test_run_missing(thinkthen_row *out, thinkthen_error *error);
 

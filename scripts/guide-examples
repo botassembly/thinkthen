@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""Run enabled guide behavior checks; --inventory lists every guide and fence.
+
+Usage: guide-examples [--surface NAME ...] [--python PYTHON] [--command COMMAND]
+                     [--java-classpath CLASSPATH] [--require-all] [--inventory]
+Per-surface gates select their own guide. --inventory checks registration only.
+The prepared interface-source-gate --shared-abi executes the owning host gates;
+publication requires their green execution on the same source and --require-all
+registration completeness.
+"""
+import argparse
+import importlib
+import os
+from pathlib import Path
+import sys
+from guide_examples import inventory
+
+# Each surface registers the runner proved by its implementation ticket.
+REGISTERED = {
+    'bash': ('bash_guide_examples', 'run_bash_ideal', 'command'),
+    'c': ('c_guide_examples', 'run_c', 'c_command'),
+    'cpp': ('cpp_guide_examples', 'run_cpp', 'command'),
+    'zig': ('zig_guide_examples', 'run_zig', 'zig_stage'),
+    'swift': ('swift_guide_examples', 'run_swift', 'swift_consumer'),
+    'r': ('r_guide_examples', 'run_r', 'r_command'),
+    'python': ('python_guide_examples', 'run_python_ideal', 'python'),
+    'pandas': ('pandas_guide_examples', 'run_pandas', 'python'),
+    'polars': ('polars_guide_examples', 'run_polars', 'python'),
+    'ruby': ('ruby_guide_examples', 'run_ruby', 'ruby'),
+    'java': ('guide_java', 'run_java', 'java_classpath'),
+    'go': ('go_guide_examples', 'run_go', 'go_command'),
+    'typescript': ('typescript_guide_examples', 'run_typescript', 'typescript_consumer'),
+    'kotlin': ('guide_kotlin', 'run_kotlin', 'kotlin_classpath'),
+    'csharp': ('guide_csharp', 'run_csharp', 'csharp_stage'),
+    'rust': ('rust_guide_examples', 'run_rust', 'command'),
+    'service': ('service_guide_examples', 'run_service', 'command'),
+    'duckdb': ('duckdb_ideal_guide', 'run_duckdb', 'duckdb_package'),
+    'sql': ('duckdb_ideal_guide', 'run_sql', 'duckdb_package'),
+    'sqlite': ('sqlite_guide_examples', 'run_sqlite', 'sqlite_command'),
+    'postgresql': ('postgres_guide_examples', 'run_postgresql', 'postgres_loopback'),
+}
+RUNNERS = {
+    name: entry for name, entry in REGISTERED.items()
+    if (Path(__file__).resolve().parent / (entry[0] + '.py')).is_file()
+}
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--python', default=sys.executable)
+parser.add_argument('--ruby', default='ruby')
+parser.add_argument('--command', default=str(Path(__file__).resolve().parent.parent / 'target/debug/thinkthen'))
+parser.add_argument('--java-classpath', default=os.environ.get('THINKTHEN_JAVA_CLASSPATH'))
+parser.add_argument('--c-command')
+parser.add_argument('--zig-stage', default=os.environ.get('THINKTHEN_ZIG_GUIDE_STAGE'))
+parser.add_argument('--swift-consumer', default=os.environ.get('THINKTHEN_SWIFT_GUIDE_CONSUMER'))
+parser.add_argument('--r-command')
+parser.add_argument('--go-command', default=os.environ.get('THINKTHEN_GO_GUIDE_TEST_COMMAND'))
+parser.add_argument('--typescript-consumer', default=os.environ.get('THINKTHEN_TYPESCRIPT_CONSUMER'))
+parser.add_argument('--kotlin-classpath', default=os.environ.get('THINKTHEN_KOTLIN_CLASSPATH'))
+parser.add_argument('--csharp-stage', default=os.environ.get('THINKTHEN_CSHARP_STAGE'))
+parser.add_argument('--duckdb-package', default=os.environ.get('THINKTHEN_DUCKDB_PACKAGE'))
+parser.add_argument('--sqlite-command')
+parser.add_argument('--postgres-loopback', default=os.environ.get('THINKTHEN_LOOPBACK'))
+parser.add_argument('--surface', action='append')
+parser.add_argument('--inventory', action='store_true')
+parser.add_argument('--require-all', action='store_true')
+parser.add_argument('--negative-control', choices=('output', 'branch', 'exit', 'refusal'), help=argparse.SUPPRESS)
+args = parser.parse_args()
+try:
+    guides = inventory()
+    if not guides:
+        raise AssertionError('no ideal guides found')
+    pending = set(guides) - RUNNERS.keys()
+    for name, examples in guides.items():
+        print(f'{"PENDING" if name in pending else "ENABLED"} {name}: {len(examples)} fenced blocks')
+        if args.inventory:
+            for language, _, line in examples:
+                print(f'  {name}.md:{line} {language or "untyped"}')
+    selected = args.surface or list(RUNNERS)
+    runs = []
+    for name in selected:
+        if name not in RUNNERS:
+            raise AssertionError(f'{name}: guide runner not enabled')
+        if not args.inventory:
+            module, function, argument = RUNNERS[name]
+            value = getattr(args, argument)
+            if argument in ('java_classpath', 'kotlin_classpath') and not value:
+                raise AssertionError(f'{name}: --{name}-classpath or THINKTHEN_{name.upper()}_CLASSPATH is required')
+            if argument == 'go_command' and not value:
+                raise AssertionError('go: --go-command or THINKTHEN_GO_GUIDE_TEST_COMMAND is required')
+            if argument == 'zig_stage' and not value:
+                raise AssertionError('zig: --zig-stage or THINKTHEN_ZIG_GUIDE_STAGE is required')
+            if argument == 'swift_consumer' and not value:
+                raise AssertionError('swift: --swift-consumer or THINKTHEN_SWIFT_GUIDE_CONSUMER is required')
+            if argument == 'csharp_stage' and not value:
+                raise AssertionError('csharp: --csharp-stage or THINKTHEN_CSHARP_STAGE is required')
+            if argument == 'typescript_consumer' and not value:
+                raise AssertionError('typescript: --typescript-consumer or THINKTHEN_TYPESCRIPT_CONSUMER is required')
+            runs.append((module, function, value))
+    for module, function, value in runs:
+        runner = getattr(importlib.import_module(module), function)
+        runner(value, args.negative_control)
+    if args.require_all and pending:
+        raise AssertionError(f'{len(pending)} ideal guides still pending: {", ".join(sorted(pending))}')
+    if not args.inventory:
+        print(f'Guides PASS; {len(pending)} ideal guides pending')
+except (AssertionError, RuntimeError, OSError, ImportError) as error:
+    print('FAIL ' + str(error), file=sys.stderr)
+    sys.exit(1)

@@ -42,14 +42,14 @@ mod output {
     /// A name recognized in the original text.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
     pub(crate) struct Name {
+        /// The chosen kind, or ENTITY when kinds were omitted.
+        pub(crate) kind: String,
         /// The original text covered by the name.
         pub(crate) text: String,
         /// Inclusive Unicode scalar offset.
         pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
         pub(crate) end: usize,
-        /// The chosen kind, or ENTITY when kinds were omitted.
-        pub(crate) kind: String,
         /// The least member-piece membership multiplied by the chosen kind's probability.
         /// This support score is not the probability of exact name boundaries.
         pub(crate) p: Probability,

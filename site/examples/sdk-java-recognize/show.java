@@ -8,8 +8,8 @@ public class Recognize {
                 "Morgan works for Example Group.",
                 List.of("person", "organization")).answer();
             for (Entity name : names) {
-                System.out.println(name.mention().kind() + " "
-                    + name.mention().span().text());
+                System.out.println(name.kind() + " "
+                    + name.text());
             }
         }
     }

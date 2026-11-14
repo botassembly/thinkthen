@@ -13,7 +13,7 @@ export type JsonValue = null | boolean | number | string
 /** One scalar or object record. Top-level arrays belong to a stream; null and undefined are missing records. */
 export type RecordInput = null | undefined | boolean | number | string | {
   readonly [key: string]: JsonValue } | {
-  /** Caller id in its original string or integer type. JSON.stringify throws for bigint ids. */
+  /** Caller id in its original string or integer type. Canonical saving preserves bigint ids exactly. */
   readonly id: bigint;
   readonly [key: string]: JsonValue | bigint };
 /** A synchronous or asynchronous object iterable of records. Strings are not record collections. */
@@ -62,19 +62,19 @@ export interface NumericOptions extends CallOptions {
   /** Minimum probability for a positive match. */
   readonly threshold?: number }
 /** Choices required for a direct choose call. */
-export interface ChooseOptions<C extends readonly string[]> extends NumericOptions, Descriptions<C[number]> {
+export interface ChooseOptions<C extends readonly string[]> extends NumericOptions, Descriptions<NoInfer<C[number]>> {
   /** Allowed answers, preserving the literal TypeScript domain. */
   readonly choices: C }
 /** Labels required for a direct tag call. */
-export interface TagOptions<L extends readonly string[]> extends NumericOptions, Descriptions<L[number]> {
+export interface TagOptions<L extends readonly string[]> extends NumericOptions, Descriptions<NoInfer<L[number]>> {
   /** Allowed tags, or each label probability in result detail. */
   readonly labels: L }
 /** Ordered levels required for a direct score call. */
-export interface ScoreOptions extends CallOptions, Descriptions {
+export interface ScoreOptions<L extends readonly string[] = readonly string[]> extends CallOptions, Descriptions<NoInfer<L[number]>> {
   /** Ordered score levels, or their probabilities in result detail. */
-  readonly levels: readonly string[] }
+  readonly levels: L }
 /** Ordered levels and optional output limit for ranking. */
-export interface RankOptions extends ScoreOptions {
+export interface RankOptions<L extends readonly string[] = readonly string[]> extends ScoreOptions<L> {
   /** Maximum ranked records to emit. */
   readonly top?: number }
 
@@ -98,39 +98,35 @@ export interface ErrorInfo {
   /** HTTP status when the backend supplied one. */
   readonly httpStatus?: number;
 }
-/** Answered, not-sure or failed judgment; only answered outcomes contain an answer. */
-export type Outcome<A, D = never> =
-  | {
-  /** Narrow the outcome before reading its answer, error or probability. */
-  readonly status: "answered";
-  /** The answered value; absent on failed and not-sure outcomes. */
-  readonly answer: A;
-  /** Answer confidence. For decide and filter this is the probability of yes, including on a no. */
-  readonly probability?: number;
-  /** Typed supporting probabilities and spans; never the raw backend reply. */
-  readonly detail?: D }
-  | {
-  /** Narrow the outcome before reading its answer, error or probability. */
-  readonly status: "unsure";
-  /** Answer confidence. For decide and filter this is the probability of yes, including on a no. */
-  readonly probability: number;
-  /** Typed supporting probabilities and spans; never the raw backend reply. */
-  readonly detail?: D }
-  | {
-  /** Narrow the outcome before reading its answer, error or probability. */
-  readonly status: "failed";
-  /** The failed record error, with its engine code and message. */
-  readonly error: ErrorInfo };
+/** Shared result operations; answer reads and explicit failure checks can throw. */
+export interface ResultMethods {
+  /** Return the same result, throwing for an own or nested form failure. */
+  throwIfFailed(): this;
+  /** Safe human-readable form, using the command's printed vocabulary. */
+  toString(): string;
+  /** Canonical wire row, with character offsets and exact integer ids. */
+  toJSON(): unknown;
+}
+/** Three discriminated states; an unavailable answer is a throwing getter. */
+export type Outcome<A, D = never> = ResultMethods & (
+  | { readonly status: "answered"; readonly answered: true; readonly unsure: false; readonly failed: false;
+      readonly answer: A; readonly probability: number | undefined; readonly error: undefined; readonly detail: D | undefined }
+  | { readonly status: "unsure"; readonly answered: false; readonly unsure: true; readonly failed: false;
+      readonly answer: never; readonly probability: number; readonly error: undefined; readonly detail: D | undefined }
+  | { readonly status: "failed"; readonly answered: false; readonly unsure: false; readonly failed: true;
+      readonly answer: never; readonly probability: undefined; readonly error: ErrorInfo; readonly detail: undefined });
 /** Immutable judgment with function, position, id and provenance. */
 export type Row<F extends FunctionName, A, D = never> = Outcome<A, D> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: F;
   /** One-based input position, independent of the record id. */
   readonly position: number;
-  /** Caller id in its original string or integer type. JSON.stringify throws for bigint ids. */
+  /** Caller id in its original string or integer type. Canonical saving preserves bigint ids exactly. */
   readonly id?: string | number | bigint;
   /** Provenance of the judgment, or the source span of a relation. */
   readonly source: Source;
+  /** The caller's own record, never cloned or frozen. */
+  readonly item: RecordInput;
 };
 /** Boolean judgment whose probability is always the probability of yes. */
 export type DecideRow = ProbabilityRow<"decide">;
@@ -146,8 +142,8 @@ export type ScoreRow = Row<"score", number, LevelsDetail>;
 export type FilterRow = ProbabilityRow<"filter">;
 /** One-based rank with the original input position. */
 export type RankRow<T extends RecordInput = RecordInput> = Row<"rank", number, LevelsDetail> & {
-  /** Equal-value, immutable native snapshot of the input, not the caller's object. Unconvertible records have no snapshot. */
-  readonly item: T | undefined;
+  /** The caller's original record, retained until ranking finishes. */
+  readonly item: T;
 };
 /** Matched span, or null when nothing was found. */
 export type FindRow = Row<"find", Span | null>;
@@ -182,20 +178,20 @@ export interface Relation<R extends string = string> {
   /** Answer confidence. For decide and filter this is the probability of yes, including on a no. */
   readonly probability: number;
   /** Whether the relation may be read in either direction. */
-  readonly symmetric?: boolean;
+  readonly either?: boolean;
 }
 /** One allowed relation between source and target kinds. */
 export interface RelationRule {
   /** Relation name used in the returned answers. */
-  readonly name: string;
+  readonly relation: string;
   /** Kind allowed at the source of this relation. */
   readonly source: string;
   /** Kind allowed at the target of this relation. */
   readonly target: string;
   /** Description of how to read this relation. */
-  readonly phrase?: string;
+  readonly reads?: string;
   /** Whether the relation may be read in either direction. */
-  readonly symmetric?: boolean;
+  readonly either?: boolean;
 }
 /** Each allowed label mapped to its probability. */
 export interface LabelsDetail<L extends string = string> {
@@ -246,13 +242,13 @@ export type DecideQuestion = DecisionFields & Pick<BooleanOptions, "yesMeans" | 
   /** The bounded question to ask about the selected record field. */
   readonly question: string };
 /** A reusable question that keeps records answered yes. */
-export type FilterQuestion = DecisionFields & Pick<BooleanOptions, "yesMeans" | "noMeans"> & {
+export type FilterQuestion = NumericFields & Pick<BooleanOptions, "yesMeans" | "noMeans"> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "filter";
   /** The bounded question to ask about the selected record field. */
   readonly question: string };
 /** A reusable question whose answer comes from the supplied choices. */
-export type ChooseQuestion<C extends readonly string[] = readonly string[]> = NumericFields & Descriptions<C[number]> & {
+export type ChooseQuestion<C extends readonly string[] = readonly string[]> = NumericFields & Descriptions<NoInfer<C[number]>> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "choose";
   /** The bounded question to ask about the selected record field. */
@@ -261,7 +257,7 @@ export type ChooseQuestion<C extends readonly string[] = readonly string[]> = Nu
   readonly choices: C;
 };
 /** A reusable question that selects any matching labels. */
-export type TagQuestion<L extends readonly string[] = readonly string[]> = NumericFields & Descriptions<L[number]> & {
+export type TagQuestion<L extends readonly string[] = readonly string[]> = NumericFields & Descriptions<NoInfer<L[number]>> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "tag";
   /** The bounded question to ask about the selected record field. */
@@ -270,21 +266,21 @@ export type TagQuestion<L extends readonly string[] = readonly string[]> = Numer
   readonly labels: L;
 };
 /** A reusable question scored against ordered levels. */
-export type ScoreQuestion = QuestionFields & Descriptions & {
+export type ScoreQuestion<L extends readonly string[] = readonly string[]> = QuestionFields & Descriptions<NoInfer<L[number]>> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "score";
   /** The bounded question to ask about the selected record field. */
   readonly question: string;
   /** Ordered score levels, or their probabilities in result detail. */
-  readonly levels: readonly string[] };
+  readonly levels: L };
 /** A reusable ranking question with ordered levels and an optional limit. */
-export type RankQuestion = QuestionFields & Descriptions & {
+export type RankQuestion<L extends readonly string[] = readonly string[]> = QuestionFields & Descriptions<NoInfer<L[number]>> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "rank";
   /** The bounded question to ask about the selected record field. */
   readonly question: string;
   /** Ordered score levels, or their probabilities in result detail. */
-  readonly levels: readonly string[];
+  readonly levels: L;
   /** Maximum ranked records to emit. */
   readonly top?: number };
 /** A reusable question that finds a matching text span. */
@@ -309,14 +305,14 @@ export type RelateQuestion<R extends readonly RelationRule[] = readonly Relation
 export type ToolboxQuestion = DecideQuestion | FilterQuestion | ChooseQuestion | TagQuestion
   | ScoreQuestion | RankQuestion | FindQuestion | RecognizeQuestion | RelateQuestion;
 /** Question definitions indexed by caller-chosen entry names. */
-export type Toolbox = Readonly<Record<string, ToolboxQuestion>>;
+export type ToolboxDefinitions = Readonly<Record<string, ToolboxQuestion>>;
 /** Load saved question toolbox JSON through shared engine admission. */
-export function parseToolbox(json: string): Toolbox;
+export function parseToolbox(json: string): ToolboxDefinitions;
 /** Save a toolbox for another SDK or the command. */
-export function serializeToolbox(toolbox: Toolbox): string;
+export function serializeToolbox(toolbox: ToolboxDefinitions): string;
 
 /** A question usable within annotate; rank cannot be nested. */
-export type AnnotationQuestion = Exclude<ToolboxQuestion, RankQuestion>;
+export type AnnotationQuestion = Exclude<ToolboxQuestion, RankQuestion | FilterQuestion>;
 /** Named questions evaluated against one record. */
 export type AnnotationQuestions = Readonly<Record<string, AnnotationQuestion>>;
 /** The typed outcome of one annotation question. */
@@ -330,10 +326,10 @@ export type EntryOf<Q extends AnnotationQuestion> =
   Q extends RecognizeQuestion<infer K> ? Outcome<readonly RecognizedName<K[number]>[], RecognizeDetail> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "recognize" } :
-  Q extends RelateQuestion<infer R> ? Outcome<readonly Relation<R[number]["name"]>[], RelateDetail<R[number]["name"]>> & {
+  Q extends RelateQuestion<infer R> ? Outcome<readonly Relation<R[number]["relation"]>[], RelateDetail<R[number]["relation"]>> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: "relate" } :
-  Q extends DecideQuestion | FilterQuestion ? Outcome<boolean> & {
+  Q extends DecideQuestion ? Outcome<boolean> & {
   /** Discriminant naming the function that produced this outcome. */
   readonly function: Q["function"] } :
   Q extends ScoreQuestion ? Outcome<number, LevelsDetail> & {
@@ -352,7 +348,7 @@ export type DeepReadonly<T> = T extends object
   ? {
   readonly [P in keyof T]: DeepReadonly<T[P]> } : T;
 /** Copy and deeply freeze question definitions without freezing their owner. */
-export function defineToolbox<const T extends Toolbox>(value: T): DeepReadonly<T>;
+export function defineToolbox<const T extends ToolboxDefinitions>(value: T): DeepReadonly<T>;
 
 /** The ten public function names. */
 export type FunctionName = "decide" | "choose" | "tag" | "score" | "filter" | "rank" | "find" | "recognize" | "relate" | "annotate";
@@ -369,82 +365,62 @@ export interface RowStream<R> extends AsyncIterableIterator<R>, AsyncDisposable 
   /** Release this call when leaving an await using scope. */
   [Symbol.asyncDispose](): Promise<void>;
 }
-/** Every-row filter view with the original record and kept decision. */
-export interface FilterItem<T> {
-  /** Original caller record; the SDK does not clone or freeze it. */
-  readonly item: T;
-  /** Full immutable row, including not-sure and failed outcomes. */
-  readonly row: FilterRow;
-  /** True only for an answered yes. */
-  readonly kept: boolean; }
-/** Evaluate decide for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function decide(question: string, record: RecordInput, options?: BooleanOptions): AnswerPromise<DecideRow>;
-/** Evaluate decide for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function decide(question: DecideQuestion, record: RecordInput, options?: SignalOptions): AnswerPromise<DecideRow>;
+/** Evaluate decide for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function decide(question: string, record: RecordInput, options?: BooleanOptions): Promise<DecideRow>;
+/** Evaluate decide for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function decide(question: DecideQuestion, record: RecordInput, options?: SignalOptions): Promise<DecideRow>;
 /** Evaluate decide lazily and retain every outcome with its input position. */
-export function decideStream(question: string, records: Records, options?: BooleanOptions): RowStream<DecideRow>;
+export function decideStream<T extends RecordInput>(question: string, records: Records<T>, options?: BooleanOptions): RowStream<DecideRow & {readonly item: T}>;
 /** Evaluate decide lazily and retain every outcome with its input position. */
-export function decideStream(question: DecideQuestion, records: Records, options?: SignalOptions): RowStream<DecideRow>;
-/** Evaluate choose for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function choose<const C extends readonly string[]>(question: string, record: RecordInput, options: ChooseOptions<C>): AnswerPromise<ChooseRow<C[number]>>;
-/** Evaluate choose for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function choose<const C extends readonly string[]>(question: ChooseQuestion<C>, record: RecordInput, options?: SignalOptions): AnswerPromise<ChooseRow<C[number]>>;
+export function decideStream<T extends RecordInput>(question: DecideQuestion, records: Records<T>, options?: SignalOptions): RowStream<DecideRow & {readonly item: T}>;
+/** Evaluate choose for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function choose<const C extends readonly string[]>(question: string, record: RecordInput, options: ChooseOptions<C>): Promise<ChooseRow<C[number]>>;
+/** Evaluate choose for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function choose<const C extends readonly string[]>(question: ChooseQuestion<C>, record: RecordInput, options?: SignalOptions): Promise<ChooseRow<C[number]>>;
 /** Evaluate choose lazily and retain every outcome with its input position. */
-export function chooseStream<const C extends readonly string[]>(question: string, records: Records, options: ChooseOptions<C>): RowStream<ChooseRow<C[number]>>;
+export function chooseStream<const C extends readonly string[], T extends RecordInput>(question: string, records: Records<T>, options: ChooseOptions<C>): RowStream<ChooseRow<C[number]> & {readonly item: T}>;
 /** Evaluate choose lazily and retain every outcome with its input position. */
-export function chooseStream<const C extends readonly string[]>(question: ChooseQuestion<C>, records: Records, options?: SignalOptions): RowStream<ChooseRow<C[number]>>;
-/** Evaluate tag for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function tag<const L extends readonly string[]>(question: string, record: RecordInput, options: TagOptions<L>): AnswerPromise<TagRow<L[number]>>;
-/** Evaluate tag for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function tag<const L extends readonly string[]>(question: TagQuestion<L>, record: RecordInput, options?: SignalOptions): AnswerPromise<TagRow<L[number]>>;
+export function chooseStream<const C extends readonly string[], T extends RecordInput>(question: ChooseQuestion<C>, records: Records<T>, options?: SignalOptions): RowStream<ChooseRow<C[number]> & {readonly item: T}>;
+/** Evaluate tag for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function tag<const L extends readonly string[]>(question: string, record: RecordInput, options: TagOptions<L>): Promise<TagRow<L[number]>>;
+/** Evaluate tag for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function tag<const L extends readonly string[]>(question: TagQuestion<L>, record: RecordInput, options?: SignalOptions): Promise<TagRow<L[number]>>;
 /** Evaluate tag lazily and retain every outcome with its input position. */
-export function tagStream<const L extends readonly string[]>(question: string, records: Records, options: TagOptions<L>): RowStream<TagRow<L[number]>>;
+export function tagStream<const L extends readonly string[], T extends RecordInput>(question: string, records: Records<T>, options: TagOptions<L>): RowStream<TagRow<L[number]> & {readonly item: T}>;
 /** Evaluate tag lazily and retain every outcome with its input position. */
-export function tagStream<const L extends readonly string[]>(question: TagQuestion<L>, records: Records, options?: SignalOptions): RowStream<TagRow<L[number]>>;
-/** Evaluate score for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function score(question: string, record: RecordInput, options: ScoreOptions): AnswerPromise<ScoreRow>;
-/** Evaluate score for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function score(question: ScoreQuestion, record: RecordInput, options?: SignalOptions): AnswerPromise<ScoreRow>;
+export function tagStream<const L extends readonly string[], T extends RecordInput>(question: TagQuestion<L>, records: Records<T>, options?: SignalOptions): RowStream<TagRow<L[number]> & {readonly item: T}>;
+/** Evaluate score for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function score<const L extends readonly string[]>(question: string, record: RecordInput, options: ScoreOptions<L>): Promise<ScoreRow>;
+/** Evaluate score for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function score<const L extends readonly string[]>(question: ScoreQuestion<L>, record: RecordInput, options?: SignalOptions): Promise<ScoreRow>;
 /** Evaluate score lazily and retain every outcome with its input position. */
-export function scoreStream(question: string, records: Records, options: ScoreOptions): RowStream<ScoreRow>;
+export function scoreStream<const L extends readonly string[], T extends RecordInput>(question: string, records: Records<T>, options: ScoreOptions<L>): RowStream<ScoreRow & {readonly item: T}>;
 /** Evaluate score lazily and retain every outcome with its input position. */
-export function scoreStream(question: ScoreQuestion, records: Records, options?: SignalOptions): RowStream<ScoreRow>;
-/** Evaluate find for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function find(question: string, record: RecordInput, options?: NumericOptions): AnswerPromise<FindRow>;
-/** Evaluate find for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function find(question: FindQuestion, record: RecordInput, options?: SignalOptions): AnswerPromise<FindRow>;
+export function scoreStream<const L extends readonly string[], T extends RecordInput>(question: ScoreQuestion<L>, records: Records<T>, options?: SignalOptions): RowStream<ScoreRow & {readonly item: T}>;
+/** Evaluate find for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function find(question: string, record: RecordInput, options?: NumericOptions): Promise<FindRow>;
+/** Evaluate find for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function find(question: FindQuestion, record: RecordInput, options?: SignalOptions): Promise<FindRow>;
 /** Evaluate find lazily and retain every outcome with its input position. */
-export function findStream(question: string, records: Records, options?: NumericOptions): RowStream<FindRow>;
+export function findStream<T extends RecordInput>(question: string, records: Records<T>, options?: NumericOptions): RowStream<FindRow & {readonly item: T}>;
 /** Evaluate find lazily and retain every outcome with its input position. */
-export function findStream(question: FindQuestion, records: Records, options?: SignalOptions): RowStream<FindRow>;
-/** Evaluate recognize for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function recognize<const K extends readonly string[]>(question: K, record: RecordInput, options?: NumericOptions): AnswerPromise<RecognizeRow<K[number]>>;
-/** Evaluate recognize for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function recognize<const K extends readonly string[]>(question: RecognizeQuestion<K>, record: RecordInput, options?: SignalOptions): AnswerPromise<RecognizeRow<K[number]>>;
-/** Evaluate recognize lazily and retain every outcome with its input position. */
-export function recognizeStream<const K extends readonly string[]>(question: K, records: Records, options?: NumericOptions): RowStream<RecognizeRow<K[number]>>;
-/** Evaluate recognize lazily and retain every outcome with its input position. */
-export function recognizeStream<const K extends readonly string[]>(question: RecognizeQuestion<K>, records: Records, options?: SignalOptions): RowStream<RecognizeRow<K[number]>>;
-/** Evaluate relate for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function relate<const R extends readonly RelationRule[]>(question: R, record: RecordInput, options?: NumericOptions): AnswerPromise<RelateRow<R[number]["name"]>>;
-/** Evaluate relate for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function relate<const R extends readonly RelationRule[]>(question: RelateQuestion<R>, record: RecordInput, options?: SignalOptions): AnswerPromise<RelateRow<R[number]["name"]>>;
-/** Evaluate relate lazily and retain every outcome with its input position. */
-export function relateStream<const R extends readonly RelationRule[]>(question: R, records: Records, options?: NumericOptions): RowStream<RelateRow<R[number]["name"]>>;
-/** Evaluate relate lazily and retain every outcome with its input position. */
-export function relateStream<const R extends readonly RelationRule[]>(question: RelateQuestion<R>, records: Records, options?: SignalOptions): RowStream<RelateRow<R[number]["name"]>>;
-/** Evaluate annotate for one record. Await its answer; call row() for every status and metadata. A blank record rejects either way. */
-export function annotate<const T extends AnnotationQuestions>(question: T, record: RecordInput, options?: CallOptions): AnswerPromise<AnnotateRow<T>>;
+export function findStream<T extends RecordInput>(question: FindQuestion, records: Records<T>, options?: SignalOptions): RowStream<FindRow & {readonly item: T}>;
+/** Recognize names in one record, preserving the supplied kinds. */
+export function recognize<const K extends readonly string[]>(record: RecordInput, options: NumericOptions & {readonly kinds: K}): Promise<RecognizeRow<K[number]>>;
+/** Recognize names in many records, retaining each caller record. */
+export function recognizeStream<const K extends readonly string[], T extends RecordInput>(records: Records<T>, options: NumericOptions & {readonly kinds: K}): RowStream<RecognizeRow<K[number]> & {readonly item: T}>;
+/** Relate names in one record using the supplied allowed rules. */
+export function relate<const R extends readonly RelationRule[]>(record: RecordInput, options: NumericOptions & {readonly rules: R}): Promise<RelateRow<R[number]["relation"]>>;
+/** Relate names in many records, retaining each caller record. */
+export function relateStream<const R extends readonly RelationRule[], T extends RecordInput>(records: Records<T>, options: NumericOptions & {readonly rules: R}): RowStream<RelateRow<R[number]["relation"]> & {readonly item: T}>;
+/** Evaluate annotate for one record. Await its immutable result; failed scalar parents reject with FailedError; unsure fulfills normally. */
+export function annotate<const T extends AnnotationQuestions>(question: T, record: RecordInput, options?: CallOptions): Promise<AnnotateRow<T>>;
 /** Evaluate annotate lazily and retain every outcome with its input position. */
-export function annotateStream<const T extends AnnotationQuestions>(question: T, records: Records, options?: CallOptions): RowStream<AnnotateRow<T>>;
-/** Evaluate filter lazily and retain every outcome with its input position. */
-export function filterStream<T extends RecordInput>(question: string, records: Records<T>, options?: BooleanOptions): RowStream<FilterItem<T>>;
-/** Evaluate filter lazily and retain every outcome with its input position. */
-export function filterStream<T extends RecordInput>(question: FilterQuestion, records: Records<T>, options?: SignalOptions): RowStream<FilterItem<T>>;
-/** Evaluate rank lazily and retain every outcome with its input position. */
-export function rankStream<T extends RecordInput>(question: string, records: Records<T>, options: RankOptions): RowStream<RankRow<T>>;
-/** Evaluate rank lazily and retain every outcome with its input position. */
-export function rankStream<T extends RecordInput>(question: RankQuestion, records: Records<T>, options?: SignalOptions): RowStream<RankRow<T>>;
+export function annotateStream<const T extends AnnotationQuestions, I extends RecordInput>(question: T, records: Records<I>, options?: CallOptions): RowStream<AnnotateRow<T> & {readonly item: I}>;
+/** Rank records highest first; failed results follow the ranked ones. */
+export function rank<T extends RecordInput, const L extends readonly string[]>(question: string, records: Records<T>, options: RankOptions<L>): RowStream<RankRow<T>>;
+/** Rank records with a saved question. */
+export function rank<T extends RecordInput, const L extends readonly string[]>(question: RankQuestion<L>, records: Records<T>, options?: SignalOptions): RowStream<RankRow<T>>;
 
 /** Provider-reported subtotal; null indicates overflow, unknownAttempts counts unavailable finished sends. */
 export interface TokenUsage { readonly reported: bigint | null; readonly unknownAttempts: bigint; }
@@ -462,53 +438,51 @@ export interface Usage {
 }
 
 /** Reusable native engine client. Close it, or use await using, after its calls finish. */
-export declare class ThinkThen implements AsyncDisposable {
+export declare class Client implements AsyncDisposable {
   /** Create an engine with explicit settings or the documented environment defaults. */
   constructor(options?: ClientOptions);
   /** Cancel active calls and release native resources; repeated closes are safe. */
   close(): Promise<void>;
   /** Copy cumulative accounting; remains available after awaited close. */
-  usage(): Usage;
+  readonly usage: Usage;
   /** Close the client when leaving an await using scope. */
   [Symbol.asyncDispose](): Promise<void>;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly decide: typeof decide;
   /** Evaluate decide lazily, retaining all outcomes. */
   readonly decideStream: typeof decideStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly choose: typeof choose;
   /** Evaluate choose lazily, retaining all outcomes. */
   readonly chooseStream: typeof chooseStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly tag: typeof tag;
   /** Evaluate tag lazily, retaining all outcomes. */
   readonly tagStream: typeof tagStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly score: typeof score;
   /** Evaluate score lazily, retaining all outcomes. */
   readonly scoreStream: typeof scoreStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly find: typeof find;
   /** Evaluate find lazily, retaining all outcomes. */
   readonly findStream: typeof findStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly recognize: typeof recognize;
   /** Evaluate recognize lazily, retaining all outcomes. */
   readonly recognizeStream: typeof recognizeStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly relate: typeof relate;
   /** Evaluate relate lazily, retaining all outcomes. */
   readonly relateStream: typeof relateStream;
-  /** Judge one record; await the answer or read its row(). A blank record rejects either way. */
+  /** Judge one record and return its immutable result. */
   readonly annotate: typeof annotate;
   /** Evaluate annotate lazily, retaining all outcomes. */
   readonly annotateStream: typeof annotateStream;
   /** Yield kept original records, then one error carrying all failures. */
   readonly filter: typeof filter;
-  /** Evaluate filter lazily, retaining all outcomes. */
-  readonly filterStream: typeof filterStream;
-  /** Evaluate rank lazily, retaining all outcomes. */
-  readonly rankStream: typeof rankStream;
+  /** Rank records highest first with their original records. */
+  readonly rank: typeof rank;
 }
 export { ERROR_CODES } from "./errors.js";
 import type { ErrorCode, RowErrorCode, UsageCode, BackendCode } from "./errors.js";
@@ -539,18 +513,10 @@ export declare class UsageError extends ThinkThenError {
   readonly httpStatus?: number }, options?: ErrorOptions);
   /** Stable engine error code; generated from the shared registry. */
   readonly code: UsageCode; }
-/** A service failure with a shared backend code. */
-export declare class BackendError extends ThinkThenError {
-  /** Preserve the engine diagnostic and optional underlying cause. */
-  constructor(error: {
-  /** Stable engine error code; generated from the shared registry. */
-  readonly code: BackendCode;
-  /** Engine diagnostic without credentials or raw backend replies. */
-  readonly message: string;
-  /** HTTP status when the backend supplied one. */
-  readonly httpStatus?: number }, options?: ErrorOptions);
-  /** Stable engine error code; generated from the shared registry. */
-  readonly code: BackendCode; }
+/** The native client or backend could not start. */
+export declare class SetupError extends ThinkThenError {}
+/** An unexpected engine fault. */
+export declare class InternalError extends ThinkThenError {}
 /** Cancellation error named AbortError, with the signal reason as its cause. */
 export declare class CancelledError extends ThinkThenError {
   /** Preserve the engine diagnostic and optional underlying cause. */
@@ -562,25 +528,14 @@ export declare class CancelledError extends ThinkThenError {
   /** Stable engine error code; generated from the shared registry. */
   readonly code: "local.cancelled"; }
 
-/** The answered value of a row, preserving its label domain. */
-export type AnswerOf<R> = R extends {
-  /** Narrow the outcome before reading its answer, error or probability. */
-  readonly status: "answered";
-  /** The answered value; absent on failed and not-sure outcomes. */
-  readonly answer: infer A } ? A : never;
-/** Await the answer, or use row() to inspect every status from the same call. A blank record rejects either way. */
-export interface AnswerPromise<R extends AnyRow> extends Promise<AnswerOf<R>> {
-  /** Read the immutable row without extracting its answer or executing again. */
-  row(): Promise<R>;
-}
 /** A full row or an annotation entry; entries omit position, id and source. */
 export type Judgment = Outcome<unknown, unknown> & {
   /** Function that produced this judgment. */
-  readonly function: FunctionName };
-/** Extract the typed answer of a row or annotation entry; throw for not sure or failure. */
-export function answer<R extends Judgment>(row: R): AnswerOf<R>;
+  readonly function: FunctionName; readonly item?: RecordInput };
+/** Either uncertainty or a failed result, usable with instanceof. */
+export declare class NoAnswerError extends Error {}
 /** A judgment whose probability lies between the decision thresholds. */
-export declare class UnsureError extends Error {
+export declare class UnsureError extends NoAnswerError {
   /** Preserve the row or annotation entry and its probability. Not sure has no engine error code. */
   constructor(row: Extract<Judgment, { readonly status: "unsure" }>);
   /** Original immutable row or annotation entry. */
@@ -589,23 +544,33 @@ export declare class UnsureError extends Error {
   readonly probability: number;
 }
 /** A failed record or annotation entry; filters carry all failed rows. */
-export declare class RecordError extends ThinkThenError {
-  /** Use the first failure's engine code and retain every failed judgment. */
+export declare class FailedError extends ThinkThenError {
+  /** Use the first failure's engine code and retain each affected record once. */
   constructor(rows: readonly Extract<Judgment, { readonly status: "failed" }>[]);
   /** First failed row or annotation entry. */
   readonly row: Extract<Judgment, { readonly status: "failed" }>;
-  /** All failed judgments in input order. */
+  /** Failed records in input order; a form contributes its first failed entry with parent context. */
   readonly rows: readonly Extract<Judgment, { readonly status: "failed" }>[];
 }
 /** Yield original kept records, then reject once with all failed rows. */
-export function filter<T extends RecordInput>(question: string, records: Records<T>, options?: BooleanOptions): RowStream<T>;
+export function filter<T extends RecordInput>(question: string, records: Records<T>, options?: FilterOptions): RowStream<T>;
 /** Yield original kept records using a saved filter question. */
 export function filter<T extends RecordInput>(question: FilterQuestion, records: Records<T>, options?: SignalOptions): RowStream<T>;
 
-/** Set the caller-owned client used by module functions; pass undefined to reset it. Module functions never close this client. */
-export function setDefaultClient(client: ThinkThen | undefined): void;
-/** Read toolbox JSON from a UTF-8 file through shared engine admission. */
-export function loadToolbox(path: string | URL): Promise<Toolbox>;
+/** Saved questions selected through shared name and function admission. */
+export declare class Toolbox {
+  constructor(definitions: ToolboxDefinitions);
+  static load(path: string | URL): Promise<Toolbox>;
+  decide(name: string): DecideQuestion;
+  choose(name: string): ChooseQuestion;
+  tag(name: string): TagQuestion;
+  score(name: string): ScoreQuestion;
+  filter(name: string): FilterQuestion;
+  rank(name: string): RankQuestion;
+  find(name: string): FindQuestion;
+  recognize(name: string): RecognizeQuestion;
+  relate(name: string): RelateQuestion;
+}
 
 /** Meanings for the yes and no outcomes of a boolean judgment. */
 export interface BooleanOptions extends DecisionOptions {
@@ -618,4 +583,10 @@ export interface BooleanOptions extends DecisionOptions {
 export interface Descriptions<N extends string = string> {
   /** Meaning of each named answer or ordered level. Unknown keys are refused. */
   readonly descriptions?: Readonly<Partial<Record<N, string>>>;
+}
+
+/** Filter accepts a single numeric bar; use decideStream for uncertainty. */
+export interface FilterOptions extends NumericOptions {
+  readonly yesMeans?: string;
+  readonly noMeans?: string;
 }

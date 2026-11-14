@@ -136,24 +136,10 @@ fn blank_records_fail_without_requests_and_empty_calls_return_nothing() {
         (json!(null), "record.missing"),
     ] {
         let record = Record::json(json!({"text":value}));
-        if expected == "record.empty" {
-            assert_eq!(
-                engine.run(&selected, record).unwrap_err().code().as_str(),
-                expected
-            );
-        } else {
-            assert_eq!(
-                engine
-                    .run(&selected, record)
-                    .unwrap()
-                    .error()
-                    .unwrap()
-                    .code()
-                    .as_str(),
-                expected
-            );
-        }
+        let error = engine.run(&selected, record).unwrap_err();
+        assert_eq!(error.code().as_str(), expected);
     }
+
     let question = Decide::new("Ready?").unwrap();
     let error = engine.run(&question, Record::text(" ")).unwrap_err();
     assert_eq!(error.code().as_str(), "record.empty");

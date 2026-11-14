@@ -23,8 +23,8 @@ func main() {
 	// tt.Answer returns tt.ErrUnsure when not sure,
 	// and the error when the message failed.
 	isRefund, err := tt.Answer(client.Decide(context.Background(),
-		tt.NewDecide("Does the customer request a refund?"),
-		tt.Text(string(message))))
+		tt.DecideQuestion{Question: "Does the customer request a refund?"},
+		string(message)))
 	if err != nil {
 		log.Fatal(err)
 	}

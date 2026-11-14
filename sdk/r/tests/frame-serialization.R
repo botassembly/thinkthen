@@ -12,10 +12,10 @@ local({
   source(file.path(dirname(sub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE))), "support.R"))
   stub <- tt_client(backend = "stub")
   large <- data.frame(body = rep("βeta", 100000L))
-  result <- tt_filter_rows(large, "Ready?", field = "/body", client = stub)
+  result <- tt_decide(details = TRUE, large, "Ready?", field = "/body", client = stub)
   message("Frame serialization calls: ", .GlobalEnv$.thinkthen_frame_calls)
   stopifnot(.GlobalEnv$.thinkthen_frame_calls == 1L, nrow(result) == nrow(large),
     identical(result$position, as.double(seq_len(nrow(large)))),
-    all(result$status == "answered"), identical(result$kept, result$answer))
+    all(result$status == "answered"), identical(result$item,large))
 })
 cat("R single-call large frame encoding passed\n")

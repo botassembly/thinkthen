@@ -16,7 +16,7 @@ int main(void) {
     assert(thinkthen_settings_set_backend(settings, THINKTHEN_BACKEND_STUB, &error) == THINKTHEN_OK);
     assert(thinkthen_client_open(settings, &client, &error) == THINKTHEN_OK);
     thinkthen_settings_free(settings);
-    assert(thinkthen_question_new(THINKTHEN_FUNCTION_FILTER, (const char *)"Ready?", 6, &question, &error) == THINKTHEN_OK);
+    assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const char *)"Ready?", 6, &question, &error) == THINKTHEN_OK);
     assert(thinkthen_question_set_band(question, 0.001, 1, &error) == THINKTHEN_OK);
     const char json[] = "{\"id\":{\"invalid\":true},\"body\":\"original\"}";
     const char invalid_utf8[] = {(char)0xff};

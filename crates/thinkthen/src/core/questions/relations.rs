@@ -17,11 +17,11 @@ impl RelationRule {
     /// # Errors
     /// Returns the shared rule admission error.
     pub fn new(
-        relation: impl Into<String>,
         source: impl Into<String>,
         target: impl Into<String>,
+        relation: impl Into<String>,
     ) -> Result<Self, Error> {
-        crate::core::RelationRule::new(relation, source, target).map(Self)
+        crate::core::RelationRule::new(source, target, relation).map(Self)
     }
     /// Supply explicit relation wording.
     /// # Errors
@@ -54,7 +54,7 @@ struct RuleWire {
 impl TryFrom<RuleWire> for RelationRule {
     type Error = Error;
     fn try_from(value: RuleWire) -> Result<Self, Error> {
-        let rule = Self::new(value.relation, value.source, value.target)?.either(value.either);
+        let rule = Self::new(value.source, value.target, value.relation)?.either(value.either);
         match value.reads {
             Some(reads) => rule.reads(reads),
             None => Ok(rule),
@@ -64,7 +64,7 @@ impl TryFrom<RuleWire> for RelationRule {
 impl From<RelationRule> for RuleWire {
     fn from(value: RelationRule) -> Self {
         Self {
-            relation: value.0.name,
+            relation: value.0.relation,
             source: value.0.source,
             target: value.0.target,
             reads: Some(value.0.reads),

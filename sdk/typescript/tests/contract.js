@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import {fixtureJson} from "./canonical.js";
 
 // Test-only projection of the shared wire contract into its TypeScript names.
 export function hostValue(value) {
+  if (value && typeof value.toJSON === "function") value = fixtureJson(JSON.stringify(value));
   if (Array.isArray(value)) return value.map(hostValue);
   if (value === null || typeof value !== "object") return value;
   const fields = Object.fromEntries(Object.entries(value).filter(([key]) => (key !== "message" || typeof value.code !== "string") && (key !== "item" || value.function !== "rank")).map(([key, child]) => [key, hostValue(child)]));
@@ -15,9 +17,6 @@ export function hostValue(value) {
       fields.error = {...error,httpStatus:http_status};
     }
   }
-  if (typeof fields.relation === "string" && typeof fields.source === "object" && typeof fields.target === "object" && "either" in fields) {
-    fields.symmetric = fields.either; delete fields.either;
-  }
   return fields;
 }
 
@@ -30,48 +29,28 @@ export function streamFor(client, request, signal) {
   const question = questionOf(request);
   const { function: name, ...fields } = question;
   if (name === "annotate") return client.annotateStream(Object.fromEntries(Object.entries(fields.questions).map(([key, value]) => [key, hostQuestion(value)])), request.records, { ...(fields.field === undefined ? {} : {field: fields.field}), ...(request.name === undefined ? {} : {name: request.name}), signal });
-  return client[`${name}Stream`](hostQuestion(question), request.records, { ...(request.name === undefined ? {} : {name: request.name}), signal });
+  const options = {...(request.name === undefined ? {} : {name: request.name}), signal};
+  if (name === "recognize" || name === "relate") return client[`${name}Stream`](request.records, {...fields, ...options});
+  return client[name === "filter" || name === "rank" ? name : `${name}Stream`](hostQuestion(question), request.records, options);
 }
 
-export function expectedRows(fixture) {
-  const expected = structuredClone(fixture.expected);
-  if (!Array.isArray(expected)) return expected;
-  for (const row of expected) {
-    const record = fixture.request.records[row.position - 1];
-    const question = fixture.request.question;
-    if (question.function === "annotate" && row.status === "answered") {
-      for (const [name, child] of Object.entries(row.answer)) {
-        const pointer = question.questions[name].field ?? question.field;
-        offsets(child.answer, field(record, pointer));
-        offsets(child.detail, field(record, pointer));
-      }
-    } else {
-      offsets(row.answer, field(record, question.field));
-      offsets(row.detail, field(record, question.field));
-    }
+export function expectedRows(fixture) { return hostValue(fixture.expected); }
+
+function hostQuestion(value) { return value; }
+
+export async function assertKept(client, fixture, signal) {
+  const received = [];
+  let failed = [];
+  try {
+    for await (const record of streamFor(client, fixture.request, signal)) received.push(record);
+  } catch (error) {
+    if (!Array.isArray(error.rows)) throw error;
+    failed = error.rows;
   }
-  return hostValue(expected);
-}
-
-function offsets(value, text) {
-  if (!value || typeof value !== "object") return;
-  if ("start" in value && "end" in value) {
-    const points = Array.from(text);
-    value.start = points.slice(0, value.start).join("").length;
-    value.end = points.slice(0, value.end).join("").length;
-  }
-  for (const child of Object.values(value)) offsets(child, text);
-}
-function field(record, pointer) {
-  if (typeof record === "string") return record;
-  let value = record;
-  if (pointer) for (const part of pointer.slice(1).split("/")) value = value?.[part.replaceAll("~1", "/").replaceAll("~0", "~")];
-  if (!pointer && value && typeof value === "object" && !Array.isArray(value)) { const {id, ...fields} = value; value = fields; }
-  return typeof value === "string" ? value : JSON.stringify(value) ?? "";
-}
-
-function hostQuestion(value) {
-  const question = hostValue(value);
-  if (question.rules) question.rules = question.rules.map(({relation, reads, either, ...rule}) => ({...rule, name: relation, ...(reads === undefined ? {} : {phrase: reads}), ...(either === undefined ? {} : {symmetric: either})}));
-  return question;
+  const expected = fixture.expected;
+  assert.deepEqual(received, expected.filter(row => row.status === "answered" && row.answer)
+    .map(row => fixture.request.records[row.position - 1]));
+  assert.deepEqual(failed.map(row => ({position:row.position, code:row.error.code})),
+    expected.filter(row => row.status === "failed").map(row => ({position:row.position, code:row.error.code})));
+  for (const row of failed) assert.equal(row.item, fixture.request.records[row.position - 1]);
 }

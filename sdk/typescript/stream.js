@@ -1,12 +1,13 @@
 // @ts-check
 import { isProxy } from "node:util/types";
-import { CancelledError, engineError, hostValue, hostSnapshot, nativeError, loadNative } from "./bridge.js";
+import { CancelledError, engineError, hostValue, nativeError, loadNative } from "./bridge.js";
 import { encodeRecord } from "./bridge.js";
+import { result as project } from "./answers.js";
 /** @typedef {import('./bridge.js').NativeClient} NativeClient */
 /** @typedef {import('./bridge.js').Operation} Operation */
 /** @typedef {import('./bridge.js').Reply} Reply */
 /** @typedef {import('./index.d.ts').AnyRow} Row */
-/** @typedef {{row: Row, position: number, id: {kind: string, value?: string}, original?: {kind: string, data: string} | null}} Packet */
+/** @typedef {{row: Row, position: number, id: {kind: string, value?: string}, canonical: string}} Packet */
 /** @typedef {{packet: Packet, reply: Reply}} Event */
 /** @param {string} text @returns {Packet} */
 function packet(text) {
@@ -21,19 +22,6 @@ function packet(text) {
   value.row = /** @type {Row} */(hostValue(value.row));
   return value;
 }
-/** @param {Packet} value @returns {unknown} */
-function rankOriginal(value) {
-  const original = value.original;
-  if (!original || original.kind === "invalid" || original.kind === "missing") return undefined;
-  if (original.kind === "text") return original.data;
-  if (original.kind !== "json") throw engineError(null);
-  const result = /** @type {unknown} */(JSON.parse(original.data));
-  if (result !== null && typeof result === "object" && !Array.isArray(result)
-      && !Object.hasOwn(result, "id") && value.id.kind !== "absent") {
-    Object.defineProperty(result, "id", {value: value.id.kind === "string" ? value.id.value : BigInt(/** @type {string} */(value.id.value)), enumerable: true});
-  }
-  return hostSnapshot(result);
-}
 /**
  * @param {NativeClient} client @param {string} request
  * @param {Iterable<import('./index.d.ts').RecordInput> | AsyncIterable<import('./index.d.ts').RecordInput>} records
@@ -41,13 +29,12 @@ function rankOriginal(value) {
  * @returns {import('./index.d.ts').RowStream<unknown>}
  */
 export function stream(client, request, records, signal, name, release) {
-  const filter = name === "filter";
   const rank = name === "rank";
   /** @type {Iterator<import('./index.d.ts').RecordInput> | AsyncIterator<import('./index.d.ts').RecordInput> | undefined} */
   let iterator;
   /** @type {Operation | undefined} */ let operation;
   /** @type {Event[]} */ const events = [];
-  /** @type {Map<number, import('./index.d.ts').RecordInput>} */ const originals = new Map();
+  /** @type {Map<number, {item: import('./index.d.ts').RecordInput, idBigInt: boolean}>} */ const originals = new Map();
   /** @type {(() => void) | undefined} */ let wake;
   /** @type {(() => void) | undefined} */ let completed;
   /** @type {Promise<void> | undefined} */ let completion;
@@ -94,7 +81,7 @@ export function stream(client, request, records, signal, name, release) {
   const callback = (error, kind, data, reply) => {
     if (kind === "done") {
       ended = true;
-      if (data && !stopped) { failed = true; failure = engineError(/** @type {unknown} */(JSON.parse(data))); }
+      if (data && !stopped) { failed = true; failure = engineError(/** @type {unknown} */(JSON.parse(data)), name); }
       reply("", false); completed?.(); notify(); return;
     }
     if (error) { reply("", false); fail(nativeError(error)); return; }
@@ -114,12 +101,13 @@ export function stream(client, request, records, signal, name, release) {
         if (!isStopped() && reading) operation?.reference();
         if (isStopped() || item.done) { inputEnded ||= item.done === true; reply("", false); return; }
         submitted++;
-        if (filter) originals.set(++position, item.value);
+        const original = {item: item.value, idBigInt: false};
+        originals.set(++position, original);
         try {
           const encoded = typeof item.value === "string" ? {data: item.value} : encodeRecord(item.value);
           if (encoded.missing) reply(encoded.data, false, false, "", "", true);
           else if (encoded.idKind === undefined) reply(encoded.data, typeof item.value === "string");
-          else reply(encoded.data, false, false, encoded.idKind, encoded.idValue);
+          else { original.idBigInt = true; reply(encoded.data, false, false, encoded.idKind, encoded.idValue); }
         }
         catch { reply("", false, true); }
       } catch (error) { pulling = false; reply("", false); fail(error); }
@@ -157,10 +145,12 @@ export function stream(client, request, records, signal, name, release) {
         acknowledgement = event.reply;
         reading = false;
         operation?.unreference();
-        const row = event.packet.row;
-        const item = rank ? rankOriginal(event.packet) : originals.get(event.packet.position);
+        const original = originals.get(event.packet.position);
+        const row = original?.idBigInt && event.packet.id.value !== undefined
+          ? /** @type {Row} */({...event.packet.row, id: BigInt(event.packet.id.value)}) : event.packet.row;
+        const item = original?.item;
         originals.delete(event.packet.position);
-        return { done: false, value: filter ? Object.freeze({item, row, kept: row.status === "answered" && row.answer === true}) : rank ? Object.freeze({...row, item}) : row };
+        return { done: false, value: project(row, event.packet.canonical, item) };
       }
       await new Promise(resolve => { wake = () => { resolve(undefined); }; });
     }

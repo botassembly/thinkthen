@@ -3,6 +3,7 @@
 #include <thinkthen/errors.hpp>
 #include <chrono>
 #include <ostream>
+#include <stop_token>
 namespace thinkthen { inline namespace v0_2 {
 /// A named backend supported by the engine.
 enum class backend : std::uint32_t {
@@ -37,28 +38,30 @@ public:
 /// Retry settings admitted by the engine when a client opens.
 struct retry_policy {
     /// Retries after the first attempt.
-    std::uint32_t max_retries;
+    std::optional<std::uint32_t> max_retries{};
     /// Initial delay before a retry.
-    std::chrono::milliseconds initial_backoff;
+    std::optional<std::chrono::milliseconds> initial_backoff{};
     /// Timeout for each backend attempt.
-    std::chrono::milliseconds attempt_timeout;
+    std::optional<std::chrono::milliseconds> attempt_timeout{};
 };
 /// Client configuration. Absent settings use the engine’s defaults and environment.
 struct settings {
     /// Override THINKTHEN_BACKEND when supplied.
-    std::optional<thinkthen::backend> backend;
-    /// Override the backend model.
-    std::optional<std::string> model;
+    std::optional<thinkthen::backend> backend{};
     /// Override the backend address.
-    std::optional<std::string> url;
+    std::optional<std::string> url{};
+    /// Override the backend model.
+    std::optional<std::string> model{};
     /// Explicit key, otherwise the backend reads its own key source.
-    thinkthen::api_key api_key;
+    thinkthen::api_key api_key{};
     /// Override the engine batch size.
-    std::optional<std::uint64_t> batch;
-    /// Client send allowance; absent is unlimited and zero forbids sends.
-    std::optional<std::uint64_t> max_requests;
+    std::optional<std::uint64_t> batch{};
     /// Override the engine retry policy.
-    std::optional<retry_policy> retry;
+    std::optional<retry_policy> retry{};
+    /// The caller's standard cancellation token.
+    std::stop_token stop{};
+    /// Client send allowance; absent is unlimited and zero forbids sends.
+    std::optional<std::uint64_t> max_requests{};
 };
 }}
 #endif

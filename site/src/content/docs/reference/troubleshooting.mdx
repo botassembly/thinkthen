@@ -161,7 +161,7 @@ An option is unknown, has a value it doesn't take, or doesn't fit with another o
 | `expected true or false` | An on-or-off option, or its `THINKTHEN_` variable, holds something other than `true` or `false`. |
 | `choice: expected a supplied list; received absent option` | Give the function its list: `--choice` for choose, `--label` for tag, `--level` for score and rank, `--kind` for recognize, `--rule` for relate. |
 | `threshold: expected low and high together; received one bound` | Give `--low` and `--high` as a pair, or `--threshold` alone. |
-| `threshold: expected a single numeric cut; received a low/high band` | Only decide and filter take a low and a high bar. Give this function one number. |
+| `threshold: expected a single numeric cut; received a low/high band` | Only decide takes a low and high bar. Give this function one number; use decide to retain not sure. |
 | `check: expected text framing and exactly one source; …` | `--check` answers one text. To check many lines, use [filter](/functions/filter/) with `--check`. |
 | `field: expected JSON or table framing; omit --field for lines; …` | Plain lines have no fields. Drop `--field`, or read JSON Lines with `--from jsonl`. |
 | `into: expected an answer column name; received absent name` | Name the new answer column of a CSV, TSV or Excel file with `--into`. |
@@ -257,6 +257,14 @@ You see `thinkthen: backend.reply: … the backend's reply is not a System One r
 **Code:** `local.request-limit`, exit code 5. **Cause:** the invocation used its `--max-requests` allowance, or the value from `THINKTHEN_MAX_REQUESTS`. The explicit option takes precedence. The count includes actual HTTP attempts for retries, split requests and saved function steps. Zero prevents remote sends; unset is unlimited. Already reserved attempts may finish.
 
 **Fix:** keep completed output and recovery exports, inspect `--usage` accounting, and choose the unfinished work for a later invocation. A plain rerun can pay for completed work again. The allowance is a request count, not a dollar guarantee or a limit on shell subprocesses. SQL does not support it; bound SQL input and commit saved chunks separately.
+
+<span id="local-accounting"></span>
+
+### Its usage counters cannot advance safely
+
+**Code:** `local.accounting`, exit code 5. **Cause:** client usage or active-call accounting exceeded its supported range. ThinkThen checks these counters before admitting a call or sending another request, so the refused attempt sends no further request. Earlier work may already have completed.
+
+**Fix:** keep completed answers and usage information, stop the run, and report the code with `thinkthen --version` before deciding which unfinished work to resume.
 
 <span id="local-io"></span>
 
@@ -369,6 +377,8 @@ An `id` that isn't a string or a whole number fails the same way, with the same 
 [Exit codes](/command-line/exit-codes/) shows how a script tells these errors apart.
 
 ## An interrupted file operation left completed answers
+
+[Current recover arguments and flags](/reference/options/#recover).
 
 Named table operations retain a private recovery artifact until their completed output is published. An interruption or local error names it. Run `thinkthen recover FILE > completed.jsonl` to export completed answers with their types and status offline. The JSON summary on stderr identifies missing original positions and incomplete operations; it is separate from the answer output.
 

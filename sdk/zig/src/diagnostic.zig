@@ -4,13 +4,13 @@ const native = @import("native.zig");
 /// The engine's error codes, generated from its registry. New codes may appear in later engines.
 pub const ErrorCode = @import("codes").ErrorCode;
 /// Errors a failed engine operation or failed record can return. The Diagnostic holds the exact code.
-pub const FailureError = error{ Usage, Setup, Cancelled, EngineVersion, Internal, UnknownCode, Record, Backend, Local };
+pub const FailureError = error{ Usage, Setup, Cancelled, Internal, Failed };
 /// Errors from reading a row as its answer: `Unsure` for a not-sure row, or the failed row's error.
-pub const AnswerError = FailureError || error{Unsure};
+pub const AnswerError = error{ Unsure, Failed };
 /// Every error the public interface returns.
 /// `Unsure` means a row was used as an answer while not sure; it is never an engine failure.
 /// `RecordSource` is a caller's RecordSource failing to produce its next record.
-pub const Error = AnswerError || error{ OutOfMemory, RecordSource };
+pub const Error = FailureError || error{ OutOfMemory, RecordSource };
 /// One failed record or operation: the engine's code, its message, and any HTTP status.
 pub const Failure = struct {
     /// The engine code, or null when this engine is newer and `raw_name` holds its name.
@@ -75,6 +75,12 @@ pub const Diagnostic = struct {
     pub fn rawName(self: *const Diagnostic) ?[]const u8 {
         return if (self.name_length == 0) null else self.name_buffer[0..self.name_length];
     }
+    pub fn format(self: Diagnostic, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        if (self.rawName()) |name| {
+            try writer.print("{s}: ", .{name});
+        } else if (self.code) |code| try writer.print("{s}: ", .{code.name()});
+        try writer.writeAll(self.message());
+    }
     /// Forget the last error.
     pub fn clear(self: *Diagnostic) void {
         self.code = null;
@@ -114,26 +120,23 @@ pub fn bytes(buffer: c.thinkthen_buffer) []const u8 {
 pub fn emptyError() c.thinkthen_error {
     return .{ .struct_size = @sizeOf(c.thinkthen_error) };
 }
-pub fn incompatible(diag: ?*Diagnostic) error{EngineVersion} {
+pub fn incompatible(diag: ?*Diagnostic) error{Setup} {
     if (diag) |d| d.set(.{ .code = .usage_abi, .message = c.THINKTHEN_ABI_ERROR_MESSAGE });
-    return error.EngineVersion;
+    return error.Setup;
 }
 pub fn promote(failure: Failure, diag: ?*Diagnostic) FailureError {
     if (diag) |d| d.set(failure);
-    const code = failure.code orelse return error.UnknownCode;
-    if (code == .usage_abi) return error.EngineVersion;
+    const code = failure.code orelse return error.Internal;
+    if (code == .usage_abi) return error.Setup;
     if (code == .local_cancelled) return error.Cancelled;
-    native.ready() catch |failure_to_load| switch (failure_to_load) {
-        error.EngineVersion => return incompatible(diag),
-        error.LoadFailure => return error.Setup,
-    };
+    ready(diag) catch |failure_to_load| return failure_to_load;
     const raw = native.function("thinkthen_code_family")(@backingInt(code));
-    if (raw == null) return error.UnknownCode;
+    if (raw == null) return error.Internal;
     const family = std.mem.span(raw);
     if (std.mem.eql(u8, family, "usage")) return error.Usage;
-    if (std.mem.eql(u8, family, "record")) return error.Record;
-    if (std.mem.eql(u8, family, "backend")) return error.Backend;
-    if (std.mem.eql(u8, family, "local")) return error.Local;
+    if (std.mem.eql(u8, family, "record")) return error.Failed;
+    if (std.mem.eql(u8, family, "backend")) return error.Failed;
+    if (std.mem.eql(u8, family, "local")) return error.Cancelled;
     return error.Internal;
 }
 pub fn check(result: i32, err: *c.thinkthen_error, diag: ?*Diagnostic) FailureError!void {
@@ -141,5 +144,15 @@ pub fn check(result: i32, err: *c.thinkthen_error, diag: ?*Diagnostic) FailureEr
     defer native.function("thinkthen_error_free")(err);
     const code: ErrorCode = @fromBackingInt(@intCast(err.code));
     const name = native.function("thinkthen_code_name")(err.code);
-    return promote(.{ .code = code, .raw_name = if (name == null) null else std.mem.span(name), .message = bytes(err.message), .http_status = if (err.http_status == 0) null else err.http_status }, diag);
+    return promote(.{ .code = code, .raw_name = if (name != null and std.mem.eql(u8, code.name(), "unknown")) std.mem.span(name) else null, .message = bytes(err.message), .http_status = if (err.http_status == 0) null else err.http_status }, diag);
+}
+
+pub fn ready(diag: ?*Diagnostic) FailureError!void {
+    native.ready() catch |failure| switch (failure) {
+        error.EngineVersion => return incompatible(diag),
+        error.LoadFailure => {
+            if (diag) |target| target.set(.{ .code = .local_io, .message = native.failure() });
+            return error.Setup;
+        },
+    };
 }

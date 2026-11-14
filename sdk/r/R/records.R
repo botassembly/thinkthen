@@ -41,40 +41,36 @@ vec_cast.tt_relation.tt_relation <- function(x, to, ...) x
   }, missing)
 }
 
-.tt_answer_values <- function(rows, verb) {
+.tt_domain_names <- function(definition, field) {
+  vapply(definition[[field]], function(value) {
+    if (is.list(value)) value$name else value
+  }, character(1))
+}
+
+.tt_answer_values <- function(rows, verb, definition = NULL) {
   switch(verb,
     decide = .tt_scalar(rows, "answer", NA), filter = .tt_scalar(rows, "answer", NA),
-    choose = .tt_scalar(rows, "answer", NA_character_),
+    choose = factor(.tt_scalar(rows, "answer", NA_character_),
+      levels = .tt_domain_names(definition, "choices")),
     score = .tt_scalar(rows, "answer", NA_real_, as.double),
     rank = .tt_scalar(rows, "answer", NA_real_, as.double),
-    tag = vctrs::new_list_of(lapply(rows, function(row) {
-      if (is.null(row$answer)) NULL else as.character(unlist(row$answer, use.names = FALSE))
-    }), ptype = character()),
-    find = .tt_span(lapply(rows, `[[`, "answer")),
+    tag = {
+      domain <- .tt_domain_names(definition, "labels")
+      vctrs::new_list_of(lapply(rows, function(row) {
+        if (!identical(row$status, "answered")) NULL else {
+          factor(as.character(unlist(row$answer, use.names = FALSE)), levels = domain)
+        }
+      }), ptype = factor(character(), levels = domain))
+    },
+    find = .tt_span(lapply(rows, function(row) {
+      if (identical(row$status, "answered") && is.null(row$answer)) list(text = "") else row$answer
+    })),
     recognize = vctrs::new_list_of(lapply(rows, function(row) {
       if (is.null(row$answer)) NULL else .tt_span(row$answer, "tt_name")
     }), ptype = .tt_span(class = "tt_name")),
     relate = vctrs::new_list_of(lapply(rows, function(row) {
       if (is.null(row$answer)) NULL else .tt_relations(row$answer)
-    }), ptype = .tt_relations()),
-    annotate = lapply(rows, function(row) {
-      if (is.null(row$answer)) return(NULL)
-      lapply(row$answer, function(outcome) {
-        verb <- outcome[["function"]]
-        outcome$answer <- .tt_answer_values(list(outcome), verb)
-        outcome$detail <- .tt_detail_value(outcome$detail, verb)
-        status <- outcome$status
-        if (!status %in% .tt_status_names) .tt_check_abi_failure()
-        outcome$status <- factor(status, levels = unname(.tt_status_names))
-        if (!is.null(outcome$error)) {
-          if (!outcome$error$code %in% .tt_code_names) .tt_check_abi_failure()
-          outcome$error$code <- factor(outcome$error$code, levels = unname(.tt_code_names))
-          if (!is.null(outcome$error$http_status)) outcome$error$http_status <- as.integer(outcome$error$http_status)
-          class(outcome$error) <- "tt_error"
-        }
-        structure(outcome, class = c(paste0("tt_", verb, "_", status, "_outcome"), "tt_outcome"))
-      })
-    }))
+    }), ptype = .tt_relations()))
 }
 
 .tt_named_double <- function(value) {
@@ -107,16 +103,19 @@ vec_cast.tt_relation.tt_relation <- function(x, to, ...) x
   structure(detail, class = paste0("tt_", verb, "_detail"))
 }
 
-.tt_frame <- function(rows, verb) {
+.tt_entry_suffixes <- c("_status", "_probability", "_error_code",
+  "_error_message", "_error_http_status", "_detail")
+
+.tt_metadata <- function(rows) {
   statuses <- unname(.tt_status_names)
   if (any(!vapply(rows, function(row) row$status %in% statuses, logical(1)))) .tt_check_abi_failure()
   codes <- vapply(rows, function(row) if (is.null(row$error)) NA_character_ else row$error$code, character(1))
   if (any(!is.na(codes) & !codes %in% .tt_code_names)) .tt_check_abi_failure()
-  result <- tibble::new_tibble(list(
+  list(
     position = .tt_scalar(rows, "position", NA_real_, as.double),
     id = lapply(rows, `[[`, "id"),
+    item = vector("list", length(rows)),
     status = factor(.tt_scalar(rows, "status", NA_character_), levels = statuses),
-    answer = .tt_answer_values(rows, verb),
     probability = .tt_scalar(rows, "probability", NA_real_, as.double),
     source = lapply(rows, function(row) {
       source <- row$source
@@ -124,32 +123,62 @@ vec_cast.tt_relation.tt_relation <- function(x, to, ...) x
       source$backend <- factor(source$backend, levels = unname(.tt_backend_names))
       structure(source, class = "tt_source")
     }),
-    error_code = factor(codes, levels = unname(.tt_code_names)),
+    error_code = codes,
     error_message = vapply(rows, function(row) if (is.null(row$error)) NA_character_ else row$error$message, character(1)),
     error_http_status = vapply(rows, function(row) if (is.null(row$error$http_status)) NA_integer_ else as.integer(row$error$http_status), integer(1)),
-    detail = lapply(rows, function(row) .tt_detail_value(row$detail, verb))
-  ), nrow = length(rows), class = c(paste0("tt_", verb, "_rows"), "tt_rows"))
+    detail = lapply(rows, function(row) .tt_detail_value(row$detail, row[["function"]])))
+}
+
+.tt_form_columns <- function(rows, definitions) {
+  columns <- list()
+  for (name in names(definitions)) {
+    definition <- definitions[[name]]
+    verb <- definition[["function"]]
+    children <- lapply(rows, function(row) row$answer[[name]])
+    errors <- lapply(children, `[[`, "error")
+    columns[name] <- list(.tt_answer_values(children, verb, definition))
+    state <- factor(.tt_scalar(children, "status", NA_character_), levels = unname(.tt_status_names))
+    columns[paste0(name, .tt_entry_suffixes)] <- list(
+      state, .tt_scalar(children, "probability", NA_real_, as.double),
+      .tt_scalar(errors, "code", NA_character_), .tt_scalar(errors, "message", NA_character_),
+      .tt_scalar(errors, "http_status", NA_integer_, as.integer),
+      lapply(children, function(child) .tt_detail_value(child$detail, verb)))
+  }
+  columns
+}
+
+.tt_frame <- function(rows, verb, definition = NULL) {
+  metadata <- .tt_metadata(rows)
+  columns <- if (verb == "annotate") {
+    .tt_form_columns(rows, definition$questions)
+  } else list(answer = .tt_answer_values(rows, verb, definition))
+  result <- tibble::new_tibble(c(metadata, columns), nrow = length(rows), class = "tt_details")
   attr(result, ".thinkthen_function") <- verb
+  if (verb == "annotate") attr(result, ".thinkthen_children") <- definition$questions
   result
 }
 
 .tt_check_abi_failure <- function() {
-  rlang::abort(.tt_abi_message, class = c("thinkthen_usage_error", "thinkthen_error"),
+  rlang::abort(.tt_abi_message, class = c("thinkthen_setup_error", "thinkthen_error"),
                code = .tt_abi_code, call = NULL, trace = rlang::trace_back(bottom = globalenv()))
 }
 
-vec_ptype2.tt_rows.tt_rows <- function(x, y, ...) {
-  if (!identical(class(x), class(y))) .tt_r_error("Result row types must match.", "rows")
+vec_ptype2.tt_details.tt_details <- function(x, y, ...) {
+  if (!identical(class(x), class(y)) || !identical(attr(x,".thinkthen_function"),attr(y,".thinkthen_function")) ||
+      !identical(attr(x,".thinkthen_children"),attr(y,".thinkthen_children"))) .tt_r_error("Result row types must match.", "rows")
   out <- vctrs::vec_ptype2(tibble::as_tibble(x), tibble::as_tibble(y))
   class(out) <- class(x)
   attr(out, ".thinkthen_function") <- attr(x, ".thinkthen_function")
+  attr(out, ".thinkthen_children") <- attr(x, ".thinkthen_children")
   out
 }
-vec_cast.tt_rows.tt_rows <- function(x, to, ...) {
-  if (!identical(class(x), class(to))) .tt_r_error("Result row types must match.", "rows")
+vec_cast.tt_details.tt_details <- function(x, to, ...) {
+  if (!identical(class(x), class(to)) || !identical(attr(x,".thinkthen_function"),attr(to,".thinkthen_function")) ||
+      !identical(attr(x,".thinkthen_children"),attr(to,".thinkthen_children"))) .tt_r_error("Result row types must match.", "rows")
   out <- vctrs::vec_cast(tibble::as_tibble(x), tibble::as_tibble(to))
   class(out) <- class(to)
   attr(out, ".thinkthen_function") <- attr(to, ".thinkthen_function")
+  attr(out, ".thinkthen_children") <- attr(to, ".thinkthen_children")
   out
 }
 

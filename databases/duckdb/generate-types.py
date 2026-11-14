@@ -27,8 +27,10 @@ def native(value):
         if 'additionalProperties' in value and isinstance(value['additionalProperties'], dict):
             return 'LogicalType::MAP(LogicalTypeId::VARCHAR,' + native(value['additionalProperties']) + ')'
         properties = value['properties']
-        order = ([key for key in ('text', 'kind', 'start', 'end', 'probability') if key in properties]
-                 if 'text' in properties and 'start' in properties else list(properties))
+        order = ([key for key in ('kind', 'text', 'start', 'end', 'probability') if key in properties]
+                 if 'text' in properties and 'start' in properties else
+                 [key for key in ('source', 'target', 'relation', 'probability', 'either') if key in properties]
+                 if 'relation' in properties and 'source' in properties else list(properties))
         order += [key for key in properties if key not in order]
         return 'LogicalType::STRUCT({' + ','.join('{' + quote({'start':'start_offset','end':'end_offset'}.get(key,key)) + ',' + native(properties[key]) + '}' for key in order) + '})'
     if kind == 'array':
@@ -36,7 +38,7 @@ def native(value):
     return {'null':'LogicalType::JSON()', 'string':'LogicalTypeId::VARCHAR','boolean':'LogicalTypeId::BOOLEAN','number':'LogicalTypeId::DOUBLE','integer':'LogicalTypeId::BIGINT'}[kind]
 descriptions = {
     'decide': 'Judge whether each record answers the question. Not sure has a NULL answer; inspect status.',
-    'filter': "Return kept records. Record failures raise after input ends; failures := 'row' returns failed records too.",
+    'filter': "Return kept records. Record failures raise after input ends.",
     'choose': 'Choose one of the named choices for each record.',
     'tag': 'Return the labels that apply to each record.',
     'score': 'Score each record on the supplied ordered levels.',
@@ -74,7 +76,7 @@ lines += ['string FunctionHelp(const string &function) {', *['if (function == ' 
 Path(sys.argv[1]).write_text('\n'.join(lines) + '\n')
 
 sys.path.insert(0, str(root / "extensions"))
-from rules import header, arguments, SETTINGS, CLIENT
+from rules import header, SETTINGS
 with Path(sys.argv[1]).open("a") as output:
     output.write(header())
     output.write("bool HasArgument(const string &function, const char *name) { return tt_argument(function.c_str(), name); }\n")

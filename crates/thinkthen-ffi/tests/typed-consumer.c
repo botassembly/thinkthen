@@ -51,8 +51,13 @@ static thinkthen_question *question(thinkthen_function function, thinkthen_error
     }
     return value;
 }
+static void wire_one(thinkthen_client *client,thinkthen_question *question,const thinkthen_record_input *input,thinkthen_row *row,thinkthen_error *error) {
+    thinkthen_call *call=NULL;
+    ok(thinkthen_call_open_records_question(client,question,NULL,input,1,sizeof *input,THINKTHEN_OFFSET_UTF8,&call,error),error);
+    ok(thinkthen_call_next(call,row,error),error);thinkthen_call_free(call);
+}
 static void identity(thinkthen_client *client, thinkthen_question *question, uint8_t result[64], thinkthen_error *error) {
-    thinkthen_row row = {0}; row.struct_size = sizeof(row); rejected(thinkthen_run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING, &row, error), THINKTHEN_CODE_RECORD_MISSING, error);
+    thinkthen_row row = {0}; row.struct_size = sizeof(row);const thinkthen_record_input missing={sizeof missing,THINKTHEN_RECORD_MISSING,NULL,0};wire_one(client,question,&missing,&row,error);
     assert(row.status == THINKTHEN_STATUS_FAILED && row.error_code == THINKTHEN_CODE_RECORD_MISSING);
     thinkthen_value *value = NULL; ok(thinkthen_row_values(&row, &value, error), error); thinkthen_row_free(&row);
     thinkthen_source source = {0}; ok(thinkthen_value_source(value, &source, error), error); assert(source.question_identity.len == 64); memcpy(result, source.question_identity.data, 64); thinkthen_value_free(value);
@@ -66,7 +71,7 @@ static void builders_and_prefixes(void) {
         rejected(thinkthen_question_set_field(value, (const char *)"body", 4, &error), THINKTHEN_CODE_USAGE_POINTER, &error);
         identity(client, value, after, &error); assert(memcmp(before, after, 64) == 0);
         ok(thinkthen_question_set_field(value, (const char *)"/body", 5, &error), &error);
-        if (function == THINKTHEN_FUNCTION_DECIDE || function == THINKTHEN_FUNCTION_FILTER) ok(thinkthen_question_set_band(value, 0.2, 0.8, &error), &error);
+        if (function == THINKTHEN_FUNCTION_DECIDE) ok(thinkthen_question_set_band(value, 0.2, 0.8, &error), &error);
         else rejected(thinkthen_question_set_band(value, 0.2, 0.8, &error), THINKTHEN_CODE_USAGE_THRESHOLD, &error);
         if (function == THINKTHEN_FUNCTION_SCORE || function == THINKTHEN_FUNCTION_RANK || function == THINKTHEN_FUNCTION_ANNOTATE) rejected(thinkthen_question_set_cut(value, 0.7, &error), THINKTHEN_CODE_USAGE_THRESHOLD, &error);
         else ok(thinkthen_question_set_cut(value, 0.7, &error), &error);
@@ -97,7 +102,7 @@ static void builders_and_prefixes(void) {
     assert(error.code == THINKTHEN_CODE_USAGE_ABI);
     assert(error.message.len == strlen(initialization_hint));
     assert(memcmp(error.message.data, initialization_hint, error.message.len) == 0);
-    assert(uninitialized.struct_size == 0 && uninitialized.source.data == NULL);
+    assert(uninitialized.struct_size == 0 && uninitialized.private_data == NULL);
     thinkthen_error_free(&error);
     _Alignas(thinkthen_row) struct { uint32_t size; uint32_t guard; } short_row = { sizeof(uint32_t), UINT32_C(0x84ab1de6) };
     rejected(thinkthen_run_one(client, decide, NULL, 0, THINKTHEN_RECORD_MISSING, (thinkthen_row *)&short_row, &error), THINKTHEN_CODE_USAGE_ABI, &error); assert(short_row.guard == UINT32_C(0x84ab1de6));
@@ -115,7 +120,8 @@ static void builders_and_prefixes(void) {
     ok(thinkthen_question_add_choice(incomplete, (const char *)"one", 3, &error), &error);
     rejected(thinkthen_run_one(client, incomplete, NULL, 0, THINKTHEN_RECORD_MISSING, &row, &error), THINKTHEN_CODE_USAGE_QUESTION, &error);
     ok(thinkthen_question_add_choice(incomplete, (const char *)"two", 3, &error), &error);
-    rejected(thinkthen_run_one(client, incomplete, NULL, 0, THINKTHEN_RECORD_MISSING, &row, &error), THINKTHEN_CODE_RECORD_MISSING, &error);
+    const thinkthen_record_input missing = {sizeof missing, THINKTHEN_RECORD_MISSING, NULL, 0};
+    wire_one(client, incomplete, &missing, &row, &error);
     assert(row.function == THINKTHEN_FUNCTION_CHOOSE); thinkthen_row_free(&row); thinkthen_question_free(incomplete);
     thinkthen_question_free(decide); thinkthen_client_free(client); thinkthen_error_free(&error);
 }
@@ -186,9 +192,7 @@ static void finite_inputs(void) {
 }
 
 /* The Rust driver supplies canonical questions and reviewed expected rows. */
-static void field(const char *name, thinkthen_buffer value) {
-    if (value.len) { printf(",\"%s\":", name); fwrite(value.data, 1, value.len, stdout); }
-}
+
 static int named_fixture(int argc, char **argv) {
     assert(argc == 10);
     const char *mode = argv[1];
@@ -238,10 +242,8 @@ static int named_fixture(int argc, char **argv) {
             assert((projected_name.data != NULL) == (execution_name != NULL));
             if (execution_name) assert(projected_name.len == execution_name->len);
             thinkthen_value_free(value);
-            printf("{\"function\":%u,\"status\":%u,\"position\":%" PRIu64, row.function, row.status, row.position);
-            if (!isnan(row.probability)) printf(",\"probability\":%.17g", row.probability);
-            field("answer", row.answer); field("detail", row.detail); field("source", row.source); field("error", row.error);
-            puts("}"); thinkthen_row_free(&row);
+            thinkthen_buffer json={0};ok(thinkthen_row_host_json(&row,&json,&error),&error);
+            fwrite(json.data,1,json.len,stdout);putchar('\n');thinkthen_buffer_free(&json); thinkthen_row_free(&row);
         }
     }
     thinkthen_call_free(call); thinkthen_error_free(&error); return 0;
@@ -327,7 +329,7 @@ static void input_helpers(void) {
         assert(row.position == i + 1);
         assert(row.status == (i == 1 ? THINKTHEN_STATUS_FAILED : THINKTHEN_STATUS_ANSWERED));
         if (i == 1) assert(row.error_code == THINKTHEN_CODE_RECORD_MISSING);
-        if (i == 2) assert(row.id.len == 20 && memcmp(row.id.data, "18446744073709551615", 20) == 0);
+        if (i==2) {thinkthen_id id={0};ok(thinkthen_row_id(&row,&id,&error),&error);assert(id.kind==THINKTHEN_ID_UNSIGNED && id.unsigned_value==UINT64_MAX);}
         thinkthen_value *value = NULL;
         ok(thinkthen_row_values(&row, &value, &error), &error);
         thinkthen_text actual_name = {0};
@@ -348,8 +350,8 @@ static void input_helpers(void) {
 /* Canonical meanings survive admission, independent clones and native execution. */
 static void answer_meanings(void) {
     const char *definitions[] = {
-        "{\"function\":\"decide\",\"question\":\"Ready?\",\"true\":\"safe to proceed\",\"false\":\"needs work\"}",
-        "{\"function\":\"filter\",\"question\":\"Ready?\",\"true\":\"safe to proceed\",\"false\":\"needs work\"}",
+        "{\"function\":\"decide\",\"question\":\"Ready?\",\"yes_means\":\"safe to proceed\",\"no_means\":\"needs work\"}",
+        "{\"function\":\"filter\",\"question\":\"Ready?\",\"yes_means\":\"safe to proceed\",\"no_means\":\"needs work\"}",
         "{\"function\":\"choose\",\"question\":\"Ready?\",\"choices\":[{\"name\":\"low\",\"description\":\"safe to proceed\"},\"high\"]}",
         "{\"function\":\"tag\",\"question\":\"Ready?\",\"labels\":[{\"name\":\"low\",\"description\":\"safe to proceed\"},\"high\"]}",
         "{\"function\":\"score\",\"question\":\"Ready?\",\"levels\":[{\"name\":\"low\",\"description\":\"safe to proceed\"},\"high\"]}",
@@ -376,7 +378,7 @@ static void answer_meanings(void) {
         identity(client, copy, after, &error);
         assert(memcmp(before, after, 64) == 0);
         thinkthen_row row = {.struct_size = sizeof row};
-        ok(thinkthen_run_one(client, copy, (const char *)"evidence", 8, THINKTHEN_RECORD_TEXT, &row, &error), &error);
+        const thinkthen_record_input evidence=THINKTHEN_TEXT_RECORD("evidence");wire_one(client,copy,&evidence,&row,&error);
         assert(row.function == functions[i]);
         assert(row.status == THINKTHEN_STATUS_ANSWERED);
         thinkthen_row_free(&row);
@@ -408,6 +410,7 @@ int main(int argc, char **argv) {
     assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, THINKTHEN_ABI_VERSION));
     assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, THINKTHEN_ABI_VERSION + 1));
     assert(!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, THINKTHEN_ABI_VERSION - 1));
+    assert(!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION + 1, THINKTHEN_ABI_VERSION));
     assert(!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, THINKTHEN_ABI_VERSION + (1u << 16)));
     for (size_t index = 0; index < thinkthen_code_count(); index++) assert(thinkthen_code_name(thinkthen_code_at(index)) != NULL);
     assert(thinkthen_version()[0] != '\0');
@@ -424,7 +427,8 @@ int main(int argc, char **argv) {
     struct { thinkthen_row row; uint64_t tail; } result = {0};
     result.row.struct_size = sizeof(result);
     result.tail = UINT64_C(0x53cd8b02a17f9406);
-    rejected(thinkthen_run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING, &result.row, &error), THINKTHEN_CODE_RECORD_MISSING, &error);
+    const thinkthen_record_input missing = {sizeof missing, THINKTHEN_RECORD_MISSING, NULL, 0};
+    wire_one(client, question, &missing, &result.row, &error);
     assert(result.tail == UINT64_C(0x53cd8b02a17f9406));
     assert(result.row.function == THINKTHEN_FUNCTION_DECIDE);
     assert(result.row.status == THINKTHEN_STATUS_FAILED);
@@ -439,8 +443,47 @@ int main(int argc, char **argv) {
     assert(source.question_identity.len == 64);
     thinkthen_question_free(question);
     thinkthen_client_free(client);
-    assert(result.row.error.len > 0);
+    assert(result.row.private_data != NULL);
+    thinkthen_buffer saved = {0};
+    ok(thinkthen_row_to_json(&result.row, &saved, &error), &error);
+    assert(saved.data != NULL && saved.len > 0);
+    thinkthen_buffer previous = saved;
+    ok(thinkthen_row_to_json(&result.row, &saved, NULL), &error);
+    assert(previous.data != saved.data && previous.data[0] == '{');
+    thinkthen_buffer_free(&previous);
+    previous = saved;
+    rejected(thinkthen_row_to_json(NULL, &saved, &error), THINKTHEN_CODE_USAGE_ABI, &error);
+    assert(saved.data == NULL && saved.len == 0 && previous.data[0] == '{');
+    thinkthen_buffer_free(&previous);
+    uint32_t row_size = result.row.struct_size;
+    result.row.struct_size = 1;
+    assert(thinkthen_row_to_json(&result.row, &saved, NULL) == -THINKTHEN_CODE_USAGE_ABI);
+    assert(saved.data == NULL && saved.len == 0);
+    result.row.struct_size = row_size;
+    thinkthen_function function = result.row.function;
+    result.row.function = UINT32_MAX;
+    rejected(thinkthen_row_to_json(&result.row, &saved, &error), THINKTHEN_CODE_USAGE_ABI, &error);
+    result.row.function = function;
+    thinkthen_status original_status = result.row.status;
+    result.row.status = UINT32_MAX;
+    rejected(thinkthen_row_to_json(&result.row, &saved, &error), THINKTHEN_CODE_USAGE_ABI, &error);
+    result.row.status = original_status;
+    int32_t original_code = result.row.error_code;
+    const int32_t invalid_codes[] = {INT32_MAX, THINKTHEN_CODE_RECORD_EMPTY, 0};
+    for (size_t i = 0; i < sizeof(invalid_codes) / sizeof(invalid_codes[0]); i++) {
+        result.row.error_code = invalid_codes[i];
+        rejected(thinkthen_row_to_json(&result.row, &saved, &error), THINKTHEN_CODE_USAGE_ABI, &error);
+        assert(saved.data == NULL && saved.len == 0);
+        thinkthen_value *invalid_value = NULL;
+        rejected(thinkthen_row_values(&result.row, &invalid_value, &error), THINKTHEN_CODE_USAGE_ABI, &error);
+        assert(invalid_value == NULL);
+    }
+    result.row.error_code = original_code;
+    ok(thinkthen_row_to_json(&result.row, &saved, &error), &error);
     thinkthen_row_free(&result.row);
+    assert(saved.data[0] == '{');
+    thinkthen_buffer_free(&saved);
+    thinkthen_buffer_free(&saved);
     thinkthen_row_free(&result.row);
     assert(result.row.struct_size == sizeof(result));
     assert(result.tail == UINT64_C(0x53cd8b02a17f9406));

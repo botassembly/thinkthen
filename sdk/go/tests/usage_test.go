@@ -19,7 +19,7 @@ func TestUsageCopiesCountersAndSurvivesClose(t *testing.T) {
 	if before.Attempts != 0 || before.InputTokens.Reported == nil || *before.InputTokens.Reported != 0 {
 		t.Fatalf("wrong initial usage: %+v", before)
 	}
-	row, err := client.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("yes"))
+	row, err := client.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "yes")
 	if err != nil || row.Status() != tt.Answered {
 		t.Fatalf("stub row: %v %v", row, err)
 	}
@@ -52,7 +52,7 @@ func TestZeroRequestAllowanceProjection(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer client.Close()
-	_, err = client.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence"))
+	_, err = client.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence")
 	if err == nil {
 		t.Fatal("request allowance disappeared")
 	}

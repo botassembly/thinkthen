@@ -3,7 +3,7 @@ package consumer.rejected
 import dev.thinkthen.kotlin.*
 import kotlinx.coroutines.flow.Flow
 
-// Feature: FilterReturnsRecords. filter gives the kept records themselves; filterRows gives the rows.
+// Feature: FilterReturnsRecords. filter gives the kept records themselves; decideStream gives every decision.
 fun rejectedFilterReturnsRecords(client: ThinkThen) {
-    val rows: Flow<Filtered<String>> = client.filter("Ready?", listOf("alpha", "beta"))
+    val rows: Flow<Row<Boolean, String>> = client.filter("Ready?", listOf("alpha", "beta"))
 }

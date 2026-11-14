@@ -140,11 +140,11 @@ fn annotate_answers_are_found_by_name() {
 }
 
 #[test]
-fn filter_gives_kept_records_and_each_failure_in_its_place() {
+fn filter_gives_kept_records_before_its_aggregate_and_failed_rows() {
     let server = Loopback::case(&case("filter-rows")).unwrap();
     assert_eq!(
         program("filter", Some(&server)),
-        "rc=0 position=1 text=refund\nrc=-2002 position=4 text=\nrc=-2005 position=5 text=   \n"
+        "rc=0 position=1 text=refund\nfailed rc=-2002\nrc=-2002 position=4 text=\nrc=-2005 position=5 text=   \n"
     );
 }
 

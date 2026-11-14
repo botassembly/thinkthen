@@ -8,7 +8,7 @@ use crate::core::{
 /// An ordered, typed relation rule.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub(crate) struct RelationRule {
-    pub(crate) name: String,
+    pub(crate) relation: String,
     pub(crate) source: String,
     pub(crate) target: String,
     pub(crate) reads: String,
@@ -35,14 +35,14 @@ impl RelationRule {
     /// # Errors
     /// Returns usage.question for blank or malformed names and kinds.
     pub(crate) fn new(
-        name: impl Into<String>,
         source: impl Into<String>,
         target: impl Into<String>,
+        relation: impl Into<String>,
     ) -> Result<Self, Error> {
-        let name = label(name.into())?;
+        let relation = label(relation.into())?;
         Ok(Self {
-            reads: name.replace('_', " "),
-            name,
+            reads: relation.replace('_', " "),
+            relation,
             source: label(source.into())?,
             target: label(target.into())?,
             either: false,
@@ -91,14 +91,14 @@ mod output {
     /// A relation endpoint in the original text.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
     pub(crate) struct RelationName {
+        /// Recognized kind.
+        pub(crate) kind: String,
         /// Original name text.
         pub(crate) text: String,
         /// Inclusive Unicode scalar offset.
         pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
         pub(crate) end: usize,
-        /// Recognized kind.
-        pub(crate) kind: String,
     }
     impl From<&Name> for RelationName {
         fn from(name: &Name) -> Self {
@@ -142,7 +142,7 @@ impl Relate {
     /// Returns usage.question for empty or duplicate rules or invalid kinds.
     pub(crate) fn new(rules: Vec<RelationRule>) -> Result<Self, Error> {
         if rules.len() < crate::core::questions::MIN_RULES
-            || !crate::core::ask::distinct_labels(rules.iter().map(|rule| rule.name.as_str()))
+            || !crate::core::ask::distinct_labels(rules.iter().map(|rule| rule.relation.as_str()))
         {
             return Err(Error::new(
                 ErrorKind::Question,
@@ -223,7 +223,7 @@ impl Relate {
             detail.push(Relation {
                 source,
                 target,
-                relation: rule.name.clone(),
+                relation: rule.relation.clone(),
                 p,
                 either: rule.either,
             });

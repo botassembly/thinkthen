@@ -16,10 +16,9 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	topicsQuestion := tt.NewTag("Which topics appear?",
-		[]string{"billing", "shipping"})
-	message := tt.Text(
-		"I was charged twice and my parcel is late again.")
+	topicsQuestion := tt.TagQuestion[string]{Question: "Which topics appear?", Labels: []string{"billing", "shipping"}}
+	message :=
+		"I was charged twice and my parcel is late again."
 	topics, err := tt.Answer(
 		client.Tag(ctx, topicsQuestion, message))
 	if err != nil {

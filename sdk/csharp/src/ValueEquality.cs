@@ -32,14 +32,13 @@ internal static class ValueEquality
         PieceDetail detail => [detail.Span, detail.Tags],
         KindDetail detail => [detail.Text, detail.Start, detail.End, detail.Kinds],
         RecognizeDetail detail => [detail.Pieces, detail.Names],
-        RelateDetail detail => [detail.Names, detail.Pairs],
-        AnnotationEntry entry => [entry.Function, entry.Value],
-        IOutcome outcome => outcome.Values,
+        RelationDetail detail => [detail.Names, detail.Pairs],
+        IRowValue row => row.OwnValues,
         IReadOnlyDictionary<string, double> map => map.OrderBy(pair => pair.Key, StringComparer.Ordinal)
             .SelectMany(pair => new object?[] { pair.Key, pair.Value }).ToArray(),
         IReadOnlyDictionary<BoundaryTag, double> map => map.OrderBy(pair => pair.Key)
             .SelectMany(pair => new object?[] { pair.Key, pair.Value }).ToArray(),
-        IReadOnlyDictionary<string, AnnotationEntry> map => map.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+        IReadOnlyDictionary<string, IRow> map => map.OrderBy(pair => pair.Key, StringComparer.Ordinal)
             .SelectMany(pair => new object?[] { pair.Key, pair.Value }).ToArray(),
         string => null,
         IEnumerable sequence => sequence.Cast<object?>().ToArray(),
@@ -52,8 +51,4 @@ internal static class ValueEquality
         IEnumerable sequence => "[" + string.Join(", ", sequence.Cast<object?>().Select(Display)) + "]",
         _ => value.ToString() ?? "null"
     };
-}
-internal interface IOutcome
-{
-    object?[] Values { get; }
 }

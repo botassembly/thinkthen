@@ -5,5 +5,5 @@ import kotlinx.coroutines.flow.flowOf
 
 // Feature: FilterRejectsSingleAsk. This expression must fail after the positive consumer compiles.
 suspend fun rejectedFilterRejectsSingleAsk(client: ThinkThen) {
-    client.ask(Filter("Ready?"), "record")
+    client.decide(FilterQuestion("Ready?"), "record")
 }

@@ -14,8 +14,8 @@ func ExampleAnswer() {
 	}
 	defer client.Close()
 	isRefund, err := tt.Answer(client.Decide(context.Background(),
-		tt.NewDecide("Does the message request a refund?"),
-		tt.Text("Please refund this order.")))
+		tt.DecideQuestion{Question: "Does the message request a refund?"},
+		"Please refund this order."))
 	if err != nil {
 		fmt.Println(err)
 		return

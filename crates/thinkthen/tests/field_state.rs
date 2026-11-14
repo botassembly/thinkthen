@@ -263,7 +263,7 @@ fn selected_text_is_shared_field_for_both_adapters_and_all_name_rounds() {
                 engine(&server, adapter)
                     .rows(
                         &Relate::new(vec![
-                            RelationRule::new("works_for", "person", "company").unwrap(),
+                            RelationRule::new("person", "company", "works_for").unwrap(),
                         ])
                         .unwrap()
                         .field("/nested/text".parse().unwrap()),

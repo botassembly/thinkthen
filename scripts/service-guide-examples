@@ -1,0 +1,8 @@
+#!/bin/sh
+# Exercise the ideal JSON contract through the public Rust engine and saved-row codec.
+set -eu
+cd "$(dirname "$0")/.."
+command_target=${CARGO_TARGET_DIR:-$PWD/target}
+case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
+export THINKTHEN_LOOPBACK="$command_target/debug/loopback"
+exec python3 scripts/service_guide_examples.py

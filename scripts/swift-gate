@@ -4,8 +4,9 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
 unset THINKTHEN_LIBRARY
+python3 scripts/swift-consumer-staging-test
+ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/swift-consumer-stage scripts/swift-consumer-staging-test scripts/release/swift.py sdk/c/tests/admission.py
 swift format lint --strict --recursive sdk/swift
-scripts/swift-interface-check
 export CARGO_NET_OFFLINE=true
 if [ -z "${THINKTHEN_LOOPBACK:-}" ]; then cargo build --locked -p loopback; fi
 build_target=${CARGO_TARGET_DIR:-$root/target}
@@ -29,9 +30,8 @@ swift build --package-path "$scratch/consumer" --disable-sandbox --jobs "${CARGO
     export THINKTHEN_BACKEND=stub HOME="$scratch/home" TMPDIR="$scratch/tmp"
     cd "$scratch/consumer/Examples"
     "$scratch/consumer/.build/debug/Examples"
-    cd "$scratch/consumer/Guide"
-    python3 "$root/scripts/surface-example" check swift "$scratch/consumer/.build/debug/Guide"
 )
+python3 scripts/swift-dispatch-check "$scratch/consumer"
 mkdir "$scratch/installed"
 cp "$scratch/consumer/.build/debug/Consumer" "$scratch/consumer/.build/debug/Readme" "$scratch/installed/"
 for resources in "$scratch/consumer/.build/debug/"*.resources "$scratch/consumer/.build/debug/"*.bundle; do
@@ -51,3 +51,5 @@ if [ -n "${THINKTHEN_SWIFT_OUTPUT:-}" ]; then
 fi
 
 python3 sdk/swift/tests/run.py "$scratch/installed/Consumer" "$root" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}"
+
+THINKTHEN_LOOPBACK="${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" python3 sdk/swift/tests/review_probes.py "$scratch/installed/Consumer"

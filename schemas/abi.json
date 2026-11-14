@@ -1,5 +1,5 @@
 {
-  "abi_version": 131076,
+  "abi_version": 327681,
   "contract": "contract.json",
   "error": {
     "code": "usage.abi",
@@ -44,8 +44,16 @@
       "name": "thinkthen_call_next"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_call_next_failed(struct thinkthen_call *call, struct thinkthen_row *row, struct thinkthen_error *error);",
+      "name": "thinkthen_call_next_failed"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_call_next_kept(struct thinkthen_call *call, struct thinkthen_row *row, struct thinkthen_error *error);",
       "name": "thinkthen_call_next_kept"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_call_open(const struct thinkthen_client *client, const struct thinkthen_question *question, const struct thinkthen_record_input *records, size_t count, struct thinkthen_call **out, struct thinkthen_error *error);",
+      "name": "thinkthen_call_open"
     },
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_call_open_json(const struct thinkthen_client *client, const char *request, size_t len, thinkthen_offset offsets, struct thinkthen_call **out, struct thinkthen_error *error);",
@@ -82,6 +90,18 @@
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_call_send_utf16(struct thinkthen_call *call, const uint16_t *data, size_t len, struct thinkthen_error *error);",
       "name": "thinkthen_call_send_utf16"
+    },
+    {
+      "declaration": "void thinkthen_cancel_free(struct thinkthen_cancel *stop);",
+      "name": "thinkthen_cancel_free"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_cancel_new(struct thinkthen_cancel **out, struct thinkthen_error *error);",
+      "name": "thinkthen_cancel_new"
+    },
+    {
+      "declaration": "void thinkthen_cancel_request(const struct thinkthen_cancel *stop);",
+      "name": "thinkthen_cancel_request"
     },
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_cancelled_error(struct thinkthen_error *error);",
@@ -152,6 +172,10 @@
       "name": "thinkthen_error_free"
     },
     {
+      "declaration": "const char *thinkthen_error_string(const struct thinkthen_error *error);",
+      "name": "thinkthen_error_string"
+    },
+    {
       "declaration": "void thinkthen_events_free(struct thinkthen_events *events);",
       "name": "thinkthen_events_free"
     },
@@ -204,6 +228,10 @@
       "name": "thinkthen_question_conversion_error"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_expect_choices(const struct thinkthen_question *question, const char *const *data, size_t count, struct thinkthen_error *error);",
+      "name": "thinkthen_question_expect_choices"
+    },
+    {
       "declaration": "void thinkthen_question_free(struct thinkthen_question *question);",
       "name": "thinkthen_question_free"
     },
@@ -224,6 +252,10 @@
       "name": "thinkthen_question_set_band"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_set_choices(struct thinkthen_question *question, const char *const *data, size_t count, struct thinkthen_error *error);",
+      "name": "thinkthen_question_set_choices"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_set_cut(struct thinkthen_question *question, double cut, struct thinkthen_error *error);",
       "name": "thinkthen_question_set_cut"
     },
@@ -234,6 +266,14 @@
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_set_field(struct thinkthen_question *question, const char *data, size_t len, struct thinkthen_error *error);",
       "name": "thinkthen_question_set_field"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_set_labels(struct thinkthen_question *question, const char *const *data, size_t count, struct thinkthen_error *error);",
+      "name": "thinkthen_question_set_labels"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_set_levels(struct thinkthen_question *question, const char *const *data, size_t count, struct thinkthen_error *error);",
+      "name": "thinkthen_question_set_levels"
     },
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_set_no_means(struct thinkthen_question *question, const char *data, size_t len, struct thinkthen_error *error);",
@@ -252,6 +292,10 @@
       "name": "thinkthen_question_to_json"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_question_validate_table_columns(const struct thinkthen_question *question, const struct thinkthen_text *columns, size_t column_count, const struct thinkthen_text *suffixes, size_t suffix_count, struct thinkthen_error *error);",
+      "name": "thinkthen_question_validate_table_columns"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_recognize(const struct thinkthen_client *client, const char *const *kinds, size_t count, const char *text, size_t len, struct thinkthen_value **names, struct thinkthen_error *error);",
       "name": "thinkthen_recognize"
     },
@@ -260,12 +304,92 @@
       "name": "thinkthen_relate"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_bool(const struct thinkthen_row *row, bool *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_bool"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_choice(const struct thinkthen_row *row, int32_t *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_choice"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_entry(const struct thinkthen_row *row, const char *name, size_t len, struct thinkthen_row *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_entry"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_names(const struct thinkthen_row *row, const struct thinkthen_name **out, size_t *count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_names"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_rank(const struct thinkthen_row *row, uint64_t *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_rank"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_relations(const struct thinkthen_row *row, const struct thinkthen_relation **out, size_t *count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_relations"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_score(const struct thinkthen_row *row, double *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_score"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_span(const struct thinkthen_row *row, struct thinkthen_span *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_span"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_answer_tags(const struct thinkthen_row *row, bool *out, size_t count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_answer_tags"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_detail_labels(const struct thinkthen_row *row, const struct thinkthen_probability **out, size_t *count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_detail_labels"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_detail_levels(const struct thinkthen_row *row, const double **out, size_t *count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_detail_levels"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_detail_names(const struct thinkthen_row *row, const struct thinkthen_name **out, size_t *count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_detail_names"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_detail_pairs(const struct thinkthen_row *row, const struct thinkthen_relation **out, size_t *count, struct thinkthen_error *error);",
+      "name": "thinkthen_row_detail_pairs"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_detail_pieces(const struct thinkthen_row *row, struct thinkthen_recognition_detail *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_detail_pieces"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_err_if_failed(const struct thinkthen_row *row, struct thinkthen_error *error);",
+      "name": "thinkthen_row_err_if_failed"
+    },
+    {
       "declaration": "void thinkthen_row_free(struct thinkthen_row *row);",
       "name": "thinkthen_row_free"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_host_json(const struct thinkthen_row *row, struct thinkthen_buffer *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_host_json"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_id(const struct thinkthen_row *row, struct thinkthen_id *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_id"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_original(const struct thinkthen_row *row, struct thinkthen_record_view *out, struct thinkthen_error *error);",
       "name": "thinkthen_row_original"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_selected_text(const struct thinkthen_row *row, const char *entry_name, size_t name_len, struct thinkthen_text *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_selected_text"
+    },
+    {
+      "declaration": "const char *thinkthen_row_string(const struct thinkthen_row *row);",
+      "name": "thinkthen_row_string"
+    },
+    {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_to_json(const struct thinkthen_row *row, struct thinkthen_buffer *out, struct thinkthen_error *error);",
+      "name": "thinkthen_row_to_json"
     },
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_row_values(const struct thinkthen_row *row, struct thinkthen_value **out, struct thinkthen_error *error);",
@@ -316,6 +440,10 @@
       "name": "thinkthen_settings_set_batch"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_settings_set_cancel(struct thinkthen_settings *settings, const struct thinkthen_cancel *stop, struct thinkthen_error *error);",
+      "name": "thinkthen_settings_set_cancel"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_settings_set_max_requests(struct thinkthen_settings *settings, uint64_t max_requests, struct thinkthen_error *error);",
       "name": "thinkthen_settings_set_max_requests"
     },
@@ -356,6 +484,10 @@
       "name": "thinkthen_toolbox_insert"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_toolbox_names_json(const struct thinkthen_toolbox *toolbox, struct thinkthen_buffer *out, struct thinkthen_error *error);",
+      "name": "thinkthen_toolbox_names_json"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_toolbox_new(struct thinkthen_toolbox **out, struct thinkthen_error *error);",
       "name": "thinkthen_toolbox_new"
     },
@@ -394,10 +526,6 @@
     {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_value_error(const struct thinkthen_value *value, struct thinkthen_error *result, struct thinkthen_error *error);",
       "name": "thinkthen_value_error"
-    },
-    {
-      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_value_found(const struct thinkthen_value *value, struct thinkthen_span *out, struct thinkthen_error *error);",
-      "name": "thinkthen_value_found"
     },
     {
       "declaration": "void thinkthen_value_free(struct thinkthen_value *value);",
@@ -512,6 +640,10 @@
       "name": "thinkthen_value_source_name"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_value_span(const struct thinkthen_value *value, struct thinkthen_span *out, struct thinkthen_error *error);",
+      "name": "thinkthen_value_span"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_value_status(const struct thinkthen_value *value, thinkthen_status *out, struct thinkthen_error *error);",
       "name": "thinkthen_value_status"
     },
@@ -583,6 +715,10 @@
       "name": "thinkthen_sql_call_send_chunk_postgres"
     },
     {
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_sql_call_set_raise_if_failed(struct thinkthen_sql_call *call, uint8_t enabled, struct thinkthen_error *error);",
+      "name": "thinkthen_sql_call_set_raise_if_failed"
+    },
+    {
       "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_sql_client_open(const char *settings, size_t len, struct thinkthen_client **out, struct thinkthen_error *error);",
       "name": "thinkthen_sql_client_open"
     },
@@ -599,7 +735,7 @@
       "name": "thinkthen_sql_question_set_threshold"
     },
     {
-      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_sql_row_postgres_id(struct thinkthen_row *row, const struct thinkthen_text *id, struct thinkthen_error *error);",
+      "declaration": "THINKTHEN_NODISCARD int32_t thinkthen_sql_row_postgres_id(struct thinkthen_sql_call *call, struct thinkthen_row *row, const struct thinkthen_text *id, struct thinkthen_error *error);",
       "name": "thinkthen_sql_row_postgres_id"
     }
   ]

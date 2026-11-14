@@ -1,19 +1,21 @@
-#include <iostream>
 #include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
 
 int main() try {
-    thinkthen::client client;
-    const thinkthen::relate works_for{
-        std::vector<thinkthen::rule>{{"works_for", "person", "organization"}}};
-    const std::vector<thinkthen::relation> relations =
-        client
-            .relate(works_for,
-                    "Morgan works for Example Group.\nPlease refund my order.")
-            .value();
-    for (const auto& relation : relations)
-        std::cout << relation.source.text << " --" << relation.label << "--> "
-                  << relation.target.text << '\n';
-} catch (const thinkthen::error& failure) {
-    std::cerr << failure.code().message() << ": " << failure.what() << '\n';
+    tt::client client;
+    const tt::rule works_for{.source = "person", .target = "organization", .relation = "works_for"};
+    const tt::relate finds_relations{{works_for}};
+    const auto relations = client.relate(finds_relations,
+        "Morgan works for Example Group.\nPlease refund my order.");
+    for (const auto& relation : relations.answer())
+        std::cout << relation.source.text << " --" << relation.relation
+                  << "--> " << relation.target.text << '\n';
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
     return 1;
 }

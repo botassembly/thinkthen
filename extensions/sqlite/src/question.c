@@ -27,9 +27,9 @@ static int describe(Cursor *cursor, thinkthen_question **question, thinkthen_err
     thinkthen_buffer_free(&built);
     if (!json_is_object(definition)) { json_decref(definition); return thinkthen_question_conversion_error(error); }
     if (cursor->arguments[ARG_YES_MEANS])
-        json_object_set_new(definition, "true", json_stringn(text(cursor, ARG_YES_MEANS), length(cursor, ARG_YES_MEANS)));
+        json_object_set_new(definition, "yes_means", json_stringn(text(cursor, ARG_YES_MEANS), length(cursor, ARG_YES_MEANS)));
     if (cursor->arguments[ARG_NO_MEANS])
-        json_object_set_new(definition, "false", json_stringn(text(cursor, ARG_NO_MEANS), length(cursor, ARG_NO_MEANS)));
+        json_object_set_new(definition, "no_means", json_stringn(text(cursor, ARG_NO_MEANS), length(cursor, ARG_NO_MEANS)));
     if (cursor->arguments[ARG_DESCRIPTIONS]) {
         static const char *const domains[] = {"choices", "labels", "levels"};
         const char *domain = NULL;
@@ -118,7 +118,7 @@ int question_open(Cursor *cursor) {
     }
     /* Structured lists use the shared admitted contract, including unknown-field checks. */
     if(code==THINKTHEN_OK && (function==THINKTHEN_FUNCTION_ANNOTATE || function==THINKTHEN_FUNCTION_RELATE)) {
-        int argument=function==THINKTHEN_FUNCTION_ANNOTATE?ARG_TOOLBOX:ARG_RULES;
+        int argument=function==THINKTHEN_FUNCTION_ANNOTATE?ARG_QUESTIONS:ARG_RULES;
         json_t *q=json_object();json_object_set_new(q,"function",json_string(table->registration->function));
         if(cursor->arguments[ARG_FIELD])json_object_set_new(q,"field",json_stringn(text(cursor,ARG_FIELD),length(cursor,ARG_FIELD)));
         if(cursor->arguments[ARG_THRESHOLD])json_object_set_new(q,"threshold",json_real(sqlite3_value_double(cursor->arguments[ARG_THRESHOLD])));
@@ -137,9 +137,19 @@ int question_open(Cursor *cursor) {
         if(!encoded)code=thinkthen_question_conversion_error(&error);
         else {code=thinkthen_sql_question_from_json((const char*)encoded,(size_t)encoded_length,&question,&error);sqlite3_free(encoded);}
     }
+    if(code==THINKTHEN_OK && function==THINKTHEN_FUNCTION_ANNOTATE) {
+        thinkthen_text shape[COL_COUNT];
+        for(size_t n=0;n<COL_COUNT;n++){shape[n].data=tt_columns[n];shape[n].len=strcspn(tt_columns[n]," ");}
+        code=thinkthen_question_validate_table_columns(question,shape,COL_COUNT,NULL,0,&error);
+    }
     if(code==THINKTHEN_OK) {
         thinkthen_text name={(const char*)text(cursor,ARG_NAME),length(cursor,ARG_NAME)};
         code=thinkthen_sql_call_open_question(table->registration->connection->client,question,cursor->arguments[ARG_NAME]?&name:NULL,&cursor->call,&error);
+    }
+    if(code==THINKTHEN_OK && cursor->arguments[ARG_RAISE]) {
+        sqlite3_int64 enabled=sqlite3_value_int64(cursor->arguments[ARG_RAISE]);
+        if(enabled!=0 && enabled!=1){thinkthen_question_free(question);return usage_error(cursor,"raise_if_failed must be 0 or 1");}
+        code=thinkthen_sql_call_set_raise_if_failed(cursor->call,(uint8_t)enabled,&error);
     }
     thinkthen_question_free(question);
     if(code==THINKTHEN_OK)return SQLITE_OK;

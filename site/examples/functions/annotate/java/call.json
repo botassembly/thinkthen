@@ -1,5 +1,5 @@
 {
-  "anchor": "                    client.annotate(questions, message).answer();",
+  "anchor": "                var form = client.annotate(questions, message);",
   "before": 0,
   "after": 2
 }

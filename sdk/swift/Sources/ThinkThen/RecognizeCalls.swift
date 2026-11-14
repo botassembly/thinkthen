@@ -1,81 +1,42 @@
 import Foundation
+import Synchronization
 
 extension Client {
-  /// Evaluate a lazy stream of records with recognize.
   public func recognize<S: Sequence & Sendable>(
     _ question: RecognizeQuestion, records: S, name: String? = nil
-  ) -> RecognizeRows where S.Element == Record {
-    rows(question, source: source(records), name: name) { wire, _ in
-      try wire.decode(RecognizeQuestion.self)
-    }
+  ) -> RecognizeRows<S.Element> where S.Element: Encodable & Sendable {
+    evaluate(question, input: source(records), item: S.Element.self, name: name)
   }
-  /// Evaluate a lazy stream of records with recognize.
   public func recognize<S: AsyncSequence & Sendable>(
     _ question: RecognizeQuestion, records: S, name: String? = nil
-  ) -> RecognizeRows where S.Element == Record {
-    rows(question, source: source(records), name: name) { wire, _ in
-      try wire.decode(RecognizeQuestion.self)
-    }
+  ) -> RecognizeRows<S.Element> where S.Element: Encodable & Sendable {
+    evaluate(question, input: source(records), item: S.Element.self, name: name)
   }
-  /// Evaluate one record with recognize.
-  public func recognize(_ question: RecognizeQuestion, record: Record, name: String? = nil)
-    async throws -> RecognizeRow
-  {
-    try await single(recognize(question, records: [record], name: name))
+  public func recognize<T: Encodable & Sendable>(
+    _ question: RecognizeQuestion, record: T, name: String? = nil
+  ) async throws -> RecognizeRow<T> {
+    try requireSingleRecord(record, function: .recognize)
+    return try await single(recognize(question, records: [record], name: name))
   }
-  /// Evaluate a lazy stream of records with recognize.
   public func recognize<S: Sequence & Sendable>(
-    kinds: [String], records: S, options: RecognizeOptions = .init(), name: String? = nil
-  ) -> RecognizeRows where S.Element == Record {
-    recognize(RecognizeQuestion(kinds: kinds, options: options), records: records, name: name)
+    records: S, kinds: [String], threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) -> RecognizeRows<S.Element> where S.Element: Encodable & Sendable {
+    recognize(
+      RecognizeQuestion(kinds: kinds, threshold: threshold, field: field), records: records,
+      name: name)
   }
-  /// Evaluate a lazy stream of records with recognize.
   public func recognize<S: AsyncSequence & Sendable>(
-    kinds: [String], records: S, options: RecognizeOptions = .init(), name: String? = nil
-  ) -> RecognizeRows where S.Element == Record {
-    recognize(RecognizeQuestion(kinds: kinds, options: options), records: records, name: name)
+    records: S, kinds: [String], threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) -> RecognizeRows<S.Element> where S.Element: Encodable & Sendable {
+    recognize(
+      RecognizeQuestion(kinds: kinds, threshold: threshold, field: field), records: records,
+      name: name)
   }
-  /// Evaluate one record with recognize.
-  public func recognize(
-    kinds: [String], record: Record, options: RecognizeOptions = .init(), name: String? = nil
-  ) async throws -> RecognizeRow {
+  public func recognize<T: Encodable & Sendable>(
+    record: T, kinds: [String], threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) async throws -> RecognizeRow<T> {
     try await recognize(
-      RecognizeQuestion(kinds: kinds, options: options), record: record, name: name)
-  }
-  /// Evaluate text records without wrapping each string in Record.text.
-  public func recognize<S: Sequence & Sendable>(
-    _ question: RecognizeQuestion, records: S, name: String? = nil
-  ) -> RecognizeRows where S.Element == String {
-    recognize(question, records: TextRecords(records), name: name)
-  }
-  /// Evaluate text records without wrapping each string in Record.text.
-  public func recognize<S: AsyncSequence & Sendable>(
-    _ question: RecognizeQuestion, records: S, name: String? = nil
-  ) -> RecognizeRows where S.Element == String {
-    recognize(question, records: records.map { Record.text($0) }, name: name)
-  }
-  /// Evaluate text input without converting each value to Record.text.
-  public func recognize<S: Sequence & Sendable>(
-    kinds: [String], records: S, options: RecognizeOptions = .init(), name: String? = nil
-  ) -> RecognizeRows where S.Element == String {
-    recognize(RecognizeQuestion(kinds: kinds, options: options), records: records, name: name)
-  }
-  /// Evaluate text input without converting each value to Record.text.
-  public func recognize<S: AsyncSequence & Sendable>(
-    kinds: [String], records: S, options: RecognizeOptions = .init(), name: String? = nil
-  ) -> RecognizeRows where S.Element == String {
-    recognize(RecognizeQuestion(kinds: kinds, options: options), records: records, name: name)
-  }
-  /// Evaluate a text value without wrapping it in Record.text.
-  public func recognize(_ question: RecognizeQuestion, record: String, name: String? = nil)
-    async throws -> RecognizeRow
-  {
-    try await recognize(question, record: .text(record), name: name)
-  }
-  /// Evaluate a text value without wrapping it in Record.text.
-  public func recognize(
-    kinds: [String], record: String, options: RecognizeOptions = .init(), name: String? = nil
-  ) async throws -> RecognizeRow {
-    try await recognize(kinds: kinds, record: .text(record), options: options, name: name)
+      RecognizeQuestion(kinds: kinds, threshold: threshold, field: field), record: record,
+      name: name)
   }
 }

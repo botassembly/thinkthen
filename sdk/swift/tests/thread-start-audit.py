@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-swift-thread-starts-') as tem
             lines = log.read_text().splitlines() if log.exists() else []
             identified = [line for line in lines if line.startswith('identified\t')]
             retired = [line for line in lines if line.startswith('retired\t')]
-            print(json.dumps({'events': lines}, sort_keys=True), flush=True)
+            print(json.dumps({'identified': len(identified), 'retired': len(retired)}, sort_keys=True), flush=True)
         result.check_returncode()
         active, seen = {}, set()
         for line in lines:

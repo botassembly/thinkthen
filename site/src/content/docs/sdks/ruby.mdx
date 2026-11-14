@@ -1,163 +1,586 @@
 ---
 title: Ruby SDK
-description: "Ruby SDK: ask the ten ThinkThen questions from Ruby and get yes, no or not sure back as plain Ruby values."
-goal: The reader runs a first decide in Ruby, installs the gem, rescues not sure and failures, and finds the Ruby call for each of the ten functions.
+description: "ruby functions with answered, not-sure and failed results."
+goal: Learn the tested calls and result handling for this language.
 reader: A Ruby developer who wants to ask questions about text from code
 kind: reference
-verified: 2026-11-03
+verified: 2026-11-13
 sidebar:
   label: "Ruby"
 ---
 import Example from '../../../components/Example.astro';
-import InstallLine from '../../../components/InstallLine.astro';
-import Fact from '../../../components/Fact.astro';
 
-The Ruby SDK gives your Ruby code the ten functions as methods on one client; `decide?` gives back `true` or `false`, and raises when the answer is not sure.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-<Example id="lang-ruby" title="refund.rb" />
+<Example id="functions/decide/ruby" />
 
-`true` means yes: the message asks for a refund.
+Use Ruby 3.3 or later. Run `gem install thinkthen`. The gem includes the engine. Set `THINKTHEN_API_KEY` in the environment first.
 
-Install the gem (<Fact k="languages.ruby.requires" />). It includes the native engine.
+A one-message call raises `ThinkThen::FailedError` at the call when its message could not be judged. A successful call returns an answered or unsure result, with `failed?` false and its own `error` set to `nil`. Many-message calls keep failures in their results, so the shared result type has three states:
 
-<InstallLine k="languages.ruby.install" lang="sh" />
+- **answered**: there is an answer, and `result.answer` is it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the message could not be judged, or the service did not respond.
 
-With Bundler, run `bundle add thinkthen --version 0.2.0`. The client uses the key from the [Quickstart](/quickstart/).
+Three rules hold for every function on this page.
 
-## Rescue not sure and failures
+1. **Reading the answer raises when there is none.** On a returned one-message result, `result.answer` can raise `ThinkThen::UnsureError`. On a many-message result, form entry or saved result, it can also raise `ThinkThen::FailedError`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never raises.** `result.answered?`, `result.unsure?`, `result.failed?`, `result.probability` and `result.error` are always safe to call.
+3. **Printing never raises.** `puts result` and `"#{result}"` show the answer, `unsure`, or `failed:` with the reason. A yes prints as `true` and a no as `false`, the same words the `thinkthen` command prints.
 
-Give `threshold:` a range, such as `0.2..0.8`, to set a low bar and a high bar. Between them, decide is not sure, and `decide?` raises `ThinkThen::UnsureError`. When ThinkThen can't judge the message, it raises an error that includes `ThinkThen::Error`, such as `ThinkThen::RecordError`. Neither one can pass for `false`.
+<span id="the-ten-functions"></span>
 
-<Example id="sdks/ruby/unsure" title="refund.rb" />
+## decide
 
-A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+### The simplest if
 
-`UnsureError#probability` is the chance of yes. `UnsureError` does not include `ThinkThen::Error`, so `rescue ThinkThen::Error` never catches a not sure by accident. The error's `code` names what went wrong, such as `:"record.empty"`; [Troubleshooting](/reference/troubleshooting/) lists each one.
+Ask a decide result `yes?` in an `if`.
 
-To check the outcome without raising, call `client.decide` without the question mark. What it gives back is a `ThinkThen::Answered`, `ThinkThen::Unsure` or `ThinkThen::Failed`, so you can test `unsure?` and `failed?`, or match it with `case ... in ThinkThen::Unsure`. Reading its `answer` raises just as `decide?` does.
+```ruby
+require "thinkthen"
 
-## The ten functions
+if ThinkThen.decide("Does the customer request a refund?", "Please refund my order.").yes?
+  puts "refund queue"
+else
+  puts "inbox"
+end
+```
 
-Each function asks the same support-inbox questions as the function pages.
+If the message could not be judged, `ThinkThen.decide` raises `ThinkThen::FailedError` at the call. The `if` never receives a failed result and never falls through to `inbox` for a failure. With one bar, a returned decide result is yes or no; two bars can make its answer read raise `ThinkThen::UnsureError`.
 
-### decide
+Always write `yes?`. A result is an object, and Ruby counts every object except `nil` and `false` as true, so `if is_refund` takes the yes branch every time. Ruby gives a library no way to change that. Steep can report an unreachable-branch hint when it knows the type, but its default hint does not make the build fail.
 
-<details class="example-disclosure">
-<summary>Yes or no about one message</summary>
+<span id="yes-no-or-something-else"></span>
 
-<Example id="functions/decide/ruby" title="decide.rb" />
+### Yes, no, or not sure
 
-Yes: the message asks for a refund. `decide?` takes `threshold:` (one bar, or a range for a low and a high bar), `yes_means:` and `no_means:`. [decide](/functions/decide/) shows every option.
+Set two bars and decide can also be not sure. `answered?` tells you whether there is a yes or no to read.
 
-`decide_each` takes many messages and yields one result for each, in order. A not sure or a failure is a result like any other, so the rest keep going:
+```ruby
+require "thinkthen"
 
-<Example id="use-decide-ruby" title="decide_each.rb" />
+is_refund = ThinkThen.decide(
+  "Does the customer request a refund?",
+  "Where is my parcel?",
+  threshold: 0.2..0.8,
+)
 
-`field: "/text"` judges the `text` field of each Hash, and `id` is the message's own `id`. Each one-message method has an `_each` twin that works the same way.
+if is_refund.answered?
+  puts is_refund.yes? ? "refund queue" : "inbox"
+else
+  puts "a person reads it"
+end
+```
 
-</details>
+You can also let the read raise and rescue `ThinkThen::UnsureError`. The call above has already succeeded, so this read cannot report a failed result.
 
-### choose
+```ruby
+begin
+  puts is_refund.yes? ? "refund queue" : "inbox"
+rescue ThinkThen::UnsureError
+  puts "a person reads it"
+end
+```
 
-<details class="example-disclosure">
-<summary>The one choice that fits</summary>
+<span id="did-it-work"></span>
 
-<Example id="functions/choose/ruby" title="choose.rb" />
+### Did the call work
 
-A refund is about billing. `choose` takes `descriptions:`, a Hash from each choice to what it means, and `threshold:`, which can make choose not sure. `answer` raises `UnsureError` then. [choose](/functions/choose/) shows every option.
+```ruby
+begin
+  is_refund = ThinkThen.decide("Does the customer request a refund?", "Please refund my order.")
+  puts is_refund
+rescue ThinkThen::FailedError => failure
+  puts "could not judge it: #{failure}"
+rescue ThinkThen::Error => failure
+  puts "the call did not complete: #{failure}"
+end
+```
 
-</details>
+`ThinkThen::FailedError` reports failed judgements. `ThinkThen::Error` also covers usage, setup, cancellation and internal call errors, keeping their existing classifications. Printing a returned result does not read its answer.
 
-### filter
+Not sure counts as a successful call: ThinkThen did its job and returned an unsure result. Its answer read can raise `ThinkThen::UnsureError`, which neither rescue above handles.
 
-<details class="example-disclosure">
-<summary>Only the messages that answer yes</summary>
+### Both bars and the probability
 
-<Example id="functions/filter/ruby" title="filter.rb" />
+```ruby
+is_refund = ThinkThen.decide(
+  "Does the customer request a refund?",
+  "Where is my parcel?",
+  threshold: 0.2..0.8,
+)
+puts is_refund.probability
+```
 
-The parcel question is left out. `filter` gives back your own messages, and leaves out the ones it is not sure about. If any message fails, it raises one `RecordError` after the kept ones, and its `rows` lists every failure. `failures: :row` hands the failures over after the kept messages instead, and `filter_each` gives every message with its outcome. [filter](/functions/filter/) shows every option.
+- No `threshold:`: one bar at 0.5. The answer is always yes or no.
+- `threshold: 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `threshold: 0.2..0.8`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
 
-</details>
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is present even for an unsure decide result. A failed many-message result has `nil` probability.
 
-### tag
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `ThinkThen.decide_each`, save each `probability`, and compare with your labels.
 
-<details class="example-disclosure">
-<summary>Every label that fits</summary>
+<span id="choose"></span>
 
-<Example id="functions/tag/ruby" title="tag.rb" />
+## choose with your own choices
 
-The message is about both billing and shipping. The answer is an Array of the labels that fit. [tag](/functions/tag/) shows every option.
+Give your choices as a frozen list of symbols. The answer comes back as one of them.
 
-</details>
+```ruby
+require "thinkthen"
 
-### score
+TOPIC = %i[billing shipping other].freeze
 
-<details class="example-disclosure">
-<summary>A number from 0 to 1 on your scale</summary>
+def team_for(topic)
+  case topic
+  in :billing then "billing team"
+  in :shipping then "warehouse"
+  in :other then "front desk"
+  end
+end
 
-<Example id="functions/score/ruby" title="score.rb" />
+topic = ThinkThen.choose(
+  "What is the message about?",
+  "I was charged twice for one invoice.",
+  choices: TOPIC,
+)
 
-The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+if topic.unsure?
+  puts "a person reads it"
+else
+  puts team_for(topic.answer)
+end
+```
 
-</details>
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.unsure?` before reading the answer. `threshold: 0.3` moves the bar.
 
-### rank
+The symbols (`:billing`, `:shipping`, `:other`) are the words the model reads, so make them plain words, not codes. The same symbols are what your code matches on.
 
-<details class="example-disclosure">
-<summary>Every message, highest first</summary>
+Add a symbol to `TOPIC` and `team_for` raises `NoMatchingPatternError` the first time that topic arrives, so a new choice can't slip through as `nil`. Ruby does not check this before the program runs. A one-line test does: `TOPIC.each { |topic| team_for(topic) }`.
 
-<Example id="sdks/ruby/rank" title="rank.rb" />
+A choose result has no `yes?`, and is not equal to its answer. `topic.yes?` raises `NoMethodError`. `topic == :billing` raises `TypeError` and tells you to read `topic.answer`. Written the other way round, `:billing == topic` is quietly false, because Ruby asks the symbol and not the result. So always compare `topic.answer`.
 
-The double charge is the most urgent. Each result holds a copy of your message as `item` and its place as `rank`, starting at 1. Reading `rank` raises `UnsureError` for a message it is not sure about; that message keeps its place in the order. `top:` keeps only the first few. [rank](/functions/rank/) shows every option.
+Value equality and hashing cover only `function`, `status`, `answer`, `probability`, `error`, `position`, `id`, `source` and `detail`, using this language's names. They never include `item`, including on entries inside a form. Changing the caller's message cannot change a result's equality or hash.
 
-</details>
+A list of strings also works, `choices: ["billing", "shipping", "other"]`, and the answer is then a `String`. Use strings when a choice is a phrase with spaces.
 
-### find
+<span id="many-records"></span>
 
-<details class="example-disclosure">
-<summary>The line that answers the question</summary>
+## Many messages
 
-<Example id="functions/find/ruby" title="find.rb" />
+Each one-message function has an `_each` form that takes many messages and gives your block one result per message, in order. Each result carries your own message as `.item`.
 
-The second line states the action. The answer is a `ThinkThen::Found` with `text`, `start` and `end`, or `nil` when no line answers. [find](/functions/find/) shows every option.
+```ruby
+require "thinkthen"
 
-</details>
+messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+]
 
-### recognize
+ThinkThen.decide_each(
+  "Does the customer request a refund?", messages, threshold: 0.2..0.8
+) do |is_refund|
+  if is_refund.unsure?
+    puts "a person reads it: #{is_refund.item}"
+  elsif is_refund.failed?
+    puts "try again later: #{is_refund.item}"
+  elsif is_refund.yes?
+    puts "refund queue: #{is_refund.item}"
+  else
+    puts "inbox: #{is_refund.item}"
+  end
+end
+```
 
-<details class="example-disclosure">
-<summary>Each name in the text and its kind</summary>
+One failed message does not stop the call. Each result keeps its own state, with `position` counted from 1 and the message's `id` when it has one. An `_each` call remains many-message even with a one-item collection: its failed result is yielded. Collection length never chooses the scalar rule.
 
-<Example id="functions/recognize/ruby" title="recognize.rb" />
+To stop on an encountered failed result, use its explicit check:
 
-Each `ThinkThen::Name` holds `text`, `kind`, `start`, `end` and `probability`. [recognize](/functions/recognize/) shows every option.
+```ruby
+ThinkThen.decide_each(
+  "Does the customer request a refund?", messages, threshold: 0.2..0.8
+) do |is_refund|
+  puts is_refund.raise_if_failed
+end
+```
 
-</details>
+`raise_if_failed` raises `ThinkThen::FailedError` for a failed result and otherwise returns that same result. Not sure does not raise here, and printing is safe. The method stays on the shared result class; it is redundant after a successful ordinary scalar call.
 
-### relate
+Pass the whole collection to one call so ThinkThen can send the messages in batches. The call is closed when the block ends, even after an early `break`. Without a block, the call gives an Enumerator, and `.to_a` collects every result and closes it.
 
-<details class="example-disclosure">
-<summary>Names linked by the relations you allow</summary>
+To save every result, write `result.to_json` as a line of JSON. It includes the state, so nothing is lost.
 
-<Example id="functions/relate/ruby" title="relate.rb" />
+<span id="not-sure-or-failed"></span>
 
-A `ThinkThen::RelationRule` names the kind of name at each end and the relation between them. It also takes `phrase:` and `symmetric: true`. [relate](/functions/relate/) shows every option.
+<span id="raise-if-it-failed"></span>
 
-</details>
+## Many-result not sure or failed
 
-### annotate
+Here each result comes from a many-message call, where all three states remain possible.
 
-<details class="example-disclosure">
-<summary>Several questions for each message</summary>
+```ruby
+ThinkThen.decide_each(
+  "Does the customer request a refund?", messages, threshold: 0.2..0.8
+) do |is_refund|
+  if is_refund.unsure?
+    puts "a person reads it #{is_refund.probability}"
+  elsif is_refund.failed?
+    puts "try again later #{is_refund.error.code}"
+  elsif is_refund.yes?
+    puts "refund queue"
+  else
+    puts "inbox"
+  end
+end
+```
 
-<Example id="functions/annotate/ruby" title="annotate.rb" />
+Yes and no are the two answers. Not sure and failed are the two ways of having none. To name every state, use `case` with `in` and no `else`, in a method that returns a value:
 
-`form[:refund]` takes a String or Symbol name and raises `KeyError` for a name you never added. Each `answer` raises `UnsureError` when not sure, as decide does. For one message, call `client.annotate(questions, message)`. [annotate](/functions/annotate/) shows every option.
+```ruby
+def where_it_goes(is_refund)
+  case is_refund.status
+  in :answered then is_refund.yes? ? "refund queue" : "inbox"
+  in :unsure then "a person reads it"
+  in :failed then "try again later"
+  end
+end
+```
 
-</details>
+Ruby does not check this before the program runs. What `in` gives you is a loud miss: a state with no branch raises `NoMatchingPatternError`, where `case` with `when` would quietly give `nil`.
 
-## The full API
+Call the routing method on each result:
 
-A message is a String, or a Hash with String or Symbol keys; `field: "/text"` judges one field. Every call also takes `name:` and `cancel:`. Pass `cancel: ThinkThen::CancelToken.new`, and `cancel` on the token stops the call; Ctrl-C does the same, and both raise `ThinkThen::CancelledError`. `ThinkThen.configure` sets up one shared client for the module calls, such as `ThinkThen.decide?`.
+```ruby
+ThinkThen.decide_each(
+  "Does the customer request a refund?", messages, threshold: 0.2..0.8
+) do |is_refund|
+  puts "#{where_it_goes(is_refund)}: #{is_refund.item}"
+end
+```
 
-The [Ruby signatures](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/ruby/sig/thinkthen.rbs) list every public name, and the [Ruby API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/ruby/API.md) explains each one.
+`ThinkThen::NoAnswerError` groups `ThinkThen::UnsureError` and `ThinkThen::FailedError` for answer reads on many-message results, form entries and saved results. Rescue it when either state means there is no answer to use; rescue them separately when their routes differ. Scalar and many-message calls share the same function-specific result class: only a scalar result's own failed state is excluded at runtime.
+
+## filter
+
+filter means "give me the yeses". It hands back your own messages, in order.
+
+```ruby
+require "thinkthen"
+
+messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+]
+
+ThinkThen.filter("Does the customer request a refund?", messages) do |refund_request|
+  puts "refund queue: #{refund_request}"
+end
+```
+
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `threshold: 0.7` moves the bar. Two bars are refused with `ThinkThen::UsageError`: when you want not sure, use `ThinkThen.decide_each`, as in the section above.
+
+If a message fails, you still get every kept message first. Then filter raises one `ThinkThen::FailedError`, and its `rows` holds every failed result with its `.item`.
+
+```ruby
+begin
+  ThinkThen.filter("Does the customer request a refund?", messages) do |refund_request|
+    puts "refund queue: #{refund_request}"
+  end
+rescue ThinkThen::FailedError => failure
+  failure.rows.each do |failed|
+    puts "try again later: #{failed.item} #{failed.error.code}"
+  end
+end
+```
+
+## tag
+
+Labels work as choices do. The answer is a frozen Array of the symbols that fit, and it can be empty.
+
+```ruby
+require "thinkthen"
+
+TOPIC = %i[billing shipping].freeze
+
+topics = ThinkThen.tag(
+  "Which topics appear?",
+  "I was charged twice and my parcel is late again.",
+  labels: TOPIC,
+)
+
+puts "billing team" if topics.answer.include?(:billing)
+topics.answer.each do |topic|
+  puts topic
+end
+```
+
+tag is never not sure. `threshold:` sets how likely a label must be to count.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. The order of the supplied Array defines the scale.
+
+```ruby
+require "thinkthen"
+
+URGENCY = %i[routine urgent].freeze
+
+urgency = ThinkThen.score(
+  "How urgent is the request?",
+  "Please refund my order.",
+  levels: URGENCY,
+)
+
+puts "answer today" if urgency.answer > 0.5
+puts urgency.answer.round(2)
+```
+
+The score is a position between your levels, not one of them, so it is a `Float` and there is nothing to match with `case`. To get exactly one level back, ask with `ThinkThen.choose`. score is never not sure.
+
+## rank
+
+rank puts many messages in order along your levels, highest first.
+
+```ruby
+require "thinkthen"
+
+messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+]
+
+ThinkThen.rank("How urgent is the request?", messages, levels: URGENCY) do |ranked|
+  puts "#{ranked.answer} #{ranked.item}"
+end
+```
+
+`ranked.answer` is the rank, starting at 1, and `ranked.item` is your message. rank reads the whole collection before it gives anything back. `top: 5` selects the five highest-ranked messages after judging the collection. A failed message comes back after the ranked ones, with `failed?` true.
+
+## find
+
+find points to the one line that answers.
+
+```ruby
+require "thinkthen"
+
+message = "Morgan works for Example Group.\nPlease refund my order."
+action = ThinkThen.find("Which line states the requested action?", message)
+
+if action.unsure?
+  puts "a person reads it"
+elsif action.answer.nil?
+  puts "no line answers"
+else
+  puts action.answer.text
+end
+```
+
+The answer is a `ThinkThen::Span` with `text`, `start` and `end`, or `nil` when no line answers. `message[span.start...span.end]` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```ruby
+require "thinkthen"
+
+names = ThinkThen.recognize(
+  "Morgan works for Example Group.",
+  kinds: ["person", "organization"],
+)
+
+names.answer.each do |name|
+  puts "#{name.kind} #{name.text}"
+end
+```
+
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure.
+
+## relate
+
+```ruby
+require "thinkthen"
+
+message = "Morgan works for Example Group.\nPlease refund my order."
+rules = [ThinkThen::RelationRule.new(source: "person", target: "organization", relation: "works_for")]
+
+relations = ThinkThen.relate(message, rules: rules)
+
+relations.answer.each do |relation|
+  puts "#{relation.source.text} #{relation.relation} #{relation.target.text}"
+end
+```
+
+Each relation has `source`, `target`, `relation`, `probability` and `either`. `relations.detail.names` holds every name found, including names in no relation.
+
+## annotate
+
+annotate asks several questions of each message and gives back one form per message.
+
+```ruby
+require "thinkthen"
+
+messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+]
+
+questions = ThinkThen::AnnotationQuestions.new(
+  refund: ThinkThen::DecideQuestion.new("Does the customer request a refund?", threshold: 0.2..0.8),
+  topic: ThinkThen::ChooseQuestion.new("What is the message about?", choices: TOPIC),
+  urgency: ThinkThen::ScoreQuestion.new("How urgent is the request?", levels: URGENCY),
+)
+
+ThinkThen.annotate_each(questions, messages) do |form|
+  if form.failed?
+    puts "try again later: #{form.item}"
+    next
+  end
+  entries = form.answer
+  is_refund, topic, urgency = entries[:refund], entries[:topic], entries[:urgency]
+  if is_refund.failed? || topic.failed? || urgency.failed?
+    puts "try again later: #{form.item}"
+  elsif is_refund.unsure? || topic.unsure?
+    puts "a person reads it: #{form.item}"
+  elsif is_refund.answered? && topic.answered? && urgency.answered? && is_refund.yes?
+    puts "refund queue: #{topic.answer} #{urgency.answer.round(2)}"
+  end
+end
+```
+
+`form.answer` holds one entry per question, under the name you gave it. Each entry is a result of its own function, with its own state. `form.answer[:refund]` is a decide result, so it has `yes?`. One entry can be not sure or failed while the others answer. Check every entry used by a branch before reading its answer; an answered form alone does not mean its entries all answered. Here `TOPIC` is the three-choice list from the choose section, and `URGENCY` is the list from the score section.
+
+For one message, `ThinkThen.annotate(questions, message)` raises `ThinkThen::FailedError` only when the parent form itself failed. An answered parent is returned even when one, several or all entries failed. The scalar boundary does not run the recursive form check to decide whether to return it.
+
+```ruby
+form = ThinkThen.annotate(questions, "Please refund my order.")
+form.raise_if_failed
+```
+
+The optional second line explicitly raises for a failed entry as well as a failed parent. An unsure entry is not a failure; otherwise this check returns the same form unchanged. It also works on forms yielded by `annotate_each`. Checking only the parent never authorizes reading an unchecked entry's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```ruby
+is_refund = ThinkThen.decide(
+  "Does the customer request a refund?",
+  "I was charged twice for one invoice.",
+  yes_means: "the customer wants money back, including for a duplicate charge",
+  no_means: "the customer wants anything else",
+)
+
+topic = ThinkThen.choose(
+  "What is the message about?",
+  "I was charged twice for one invoice.",
+  choices: TOPIC,
+  descriptions: {
+    billing: "charges, invoices and refunds",
+    shipping: "parcels and delivery",
+  },
+)
+```
+
+decide and filter take `yes_means:` and `no_means:`. choose, tag, score and rank take `descriptions:`, keyed by your choices, labels or levels.
+
+<span id="records-and-fields"></span>
+
+## Messages and fields
+
+A message is a String, or a Hash or other JSON-like value. `field: "/text"` picks one field of a Hash. Without it, ThinkThen judges the whole message. A message of your own class works when it has `to_h`, as a `Struct` or a `Data` does.
+
+Give Hash messages an `id`. Each result carries it back as `.id`.
+
+A one-message call given an Array raises `ThinkThen::UsageError` and names the `_each` form. A blank message (an empty string, only spaces, or `{}`) raises `ThinkThen::FailedError` at the scalar call with code `record.empty`; a `nil` message does so with code `record.missing`. Neither sends that input to the service. In the `_each` forms, the same inputs remain failed results, even with one input.
+
+## Saved questions
+
+A question object holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
+
+```ruby
+asks_refund = ThinkThen::DecideQuestion.new(
+  "Does the customer request a refund?",
+  threshold: 0.2..0.8,
+  field: "/text",
+)
+is_refund = ThinkThen.decide(asks_refund, {id: "a1", text: "Please refund my order."})
+```
+
+There is one class per function, such as `ThinkThen::ChooseQuestion` and `ThinkThen::ScoreQuestion`. A `ThinkThen::Toolbox` keeps named questions in a JSON file:
+
+```ruby
+toolbox = ThinkThen::Toolbox.load_file("toolbox.json")
+topic = ThinkThen.choose(toolbox.choose(:topic), {id: "a1", text: "Where is my parcel?"})
+```
+
+## Settings
+
+The functions on `ThinkThen` use a shared client that reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, open a client and call the same functions on it.
+
+```ruby
+ThinkThen::Client.open(model: "...", batch: 16, retry: ThinkThen::RetryPolicy.new(max_retries: 5)) do |client|
+  is_refund = client.decide("Does the customer request a refund?", "Please refund my order.")
+end
+```
+
+The options are `backend:`, `url:`, `model:`, `api_key:`, `batch:` and `retry:`. Times in `ThinkThen::RetryPolicy` are in seconds. Keep the key in the environment, not in your code. The block closes the client when it ends. Open a new client after `fork`.
+
+Ruby has no `async` and `await`, so there is no second client. A call waits without holding Ruby's interpreter lock, so other threads keep running, and one client is safe to share between threads.
+
+## Usage
+
+```ruby
+ThinkThen::Client.open do |client|
+  client.decide("Does the customer request a refund?", "Please refund my order.")
+  usage = client.usage
+  puts "#{usage.attempts} #{usage.input_tokens.reported} #{usage.output_tokens.reported}"
+end
+```
+
+`client.usage` counts everything the client has sent so far: `attempts`, `responses`, retries, bytes sent, and tokens in and out as the service reported them.
+
+## Cancel
+
+```ruby
+stop = ThinkThen::Cancel.new
+is_refund = ThinkThen.decide("Does the customer request a refund?", "Please refund my order.", cancel: stop)
+```
+
+Calling `stop.cancel` from another thread stops the call, which raises `ThinkThen::CancelledError`. Ctrl-C does the same.
+
+## Errors
+
+| What happened | When it raises | What is raised |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold or an Array given to a one-message call | At the call | `ThinkThen::UsageError`, which is also an `ArgumentError` |
+| The client could not start, such as no API key | At the call | `ThinkThen::SetupError` |
+| The call was cancelled | At the call | `ThinkThen::CancelledError` |
+| A one-message judgement failed, including blank/nil input or a service failure on its result | At the scalar call | `ThinkThen::FailedError` |
+| A many-message result or form entry failed | At its answer read, `yes?` or `raise_if_failed` | `ThinkThen::FailedError` |
+| An annotate parent failed | At the scalar call; retained as a failed form by `annotate_each` | `ThinkThen::FailedError` at the scalar call or later failed-form read/check |
+| An answered annotate parent contains failed entries | The call returns it; reading a failed entry or explicitly checking the form raises | `ThinkThen::FailedError` |
+| Not sure | When you read the answer | `ThinkThen::UnsureError` |
+| You print a result, store it, or ask about its state | Never | |
+
+Two parents let you rescue by meaning:
+
+- `rescue ThinkThen::NoAnswerError` catches `ThinkThen::UnsureError` and `ThinkThen::FailedError`: there was no answer to read.
+- `rescue ThinkThen::Error` catches the library's call errors, including `ThinkThen::FailedError`. It does not catch `ThinkThen::UnsureError`, because not sure is a result and not an error. Ruby's own argument and file errors keep their usual classes.
+
+HTTP 401 or 403 stops the call. The call also stops when every request in its first batch fails and at least one failure has an HTTP status from 400 through 499. These remote call refusals raise `ThinkThen::SetupError`. Other service failures become failed results: a scalar call promotes its own failed result to `ThinkThen::FailedError`, while `_each` calls retain it as a result.
+
+`ThinkThen::FailedError` retains the former `ThinkThen::RecordError` payload: `code`, `http_status` and `rows`, the failed results. Only the concrete host exception name changes; result classes, status symbols, wire codes such as `record.empty` and engine error families do not change. `ThinkThen::UnsureError` carries `probability` and `row`.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 SDK/source](https://rubygems.org/gems/thinkthen-0.1.2-x86_64-linux.gem). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
+| --- | --- |
+| `ThinkThen.decide(q, text).value`; `nil` for not sure | Scalar failures raise `ThinkThen::FailedError` at the call; a returned result is answered or unsure, with `.unsure?` and the loud answer read |
+| `ThinkThen::Engine`, `ThinkThen.question(...)` | Client and typed saved questions/toolbox |
+| Per-call `.facts` | Client usage |

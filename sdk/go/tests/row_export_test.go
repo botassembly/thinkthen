@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 
@@ -54,17 +55,14 @@ func assertSourceShape(t *testing.T, raw json.RawMessage) {
 // Feature: row errors follow Go nil comparisons and retain native error identity.
 func TestRowErrorsFollowGoConventions(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence"))
+	row, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if row.Err() != nil {
 		t.Fatalf("successful row returned a non-nil error: %v", row.Err())
 	}
-	failed, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Missing())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failed := collect(t, c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, slices.Values([]any{nil})))[0]
 	var native *tt.Error
 	if !errors.Is(failed.Err(), tt.CodeRecordMissing) || !errors.As(failed.Err(), &native) || native.Error() == "" {
 		t.Fatal("failed row lost its native error")
@@ -80,22 +78,19 @@ func TestRowsMarshalContractJSON(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	for _, id := range []string{"", `"case"`, `-9223372036854775808`, `18446744073709551615`} {
 		for _, status := range []tt.Status{tt.Answered, tt.Unsure, tt.Failed} {
-			q := tt.NewDecide("Ready?")
+			q := tt.DecideQuestion{Question: "Ready?"}
 			body := `{"body":"evidence"}`
 			if id != "" {
 				body = `{"id":` + id + `,"body":"evidence"}`
 			}
-			record := tt.RawJSON([]byte(body))
+			record := json.RawMessage([]byte(body))
 			if status == tt.Unsure {
-				q = q.WithThreshold(tt.Band(0.01, 1))
+				q.Threshold = tt.Band(0.01, 1)
 			}
 			if status == tt.Failed {
-				q = q.WithField("/absent")
+				q.Field = "/absent"
 			}
-			row, err := c.Decide(context.Background(), q, record)
-			if err != nil {
-				t.Fatal(err)
-			}
+			row := collect(t, c.DecideAll(context.Background(), q, slices.Values([]json.RawMessage{record})))[0]
 			if row.Status() != status {
 				t.Fatalf("fixture status: %v", row.Status())
 			}

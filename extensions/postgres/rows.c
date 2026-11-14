@@ -155,47 +155,24 @@ static JsonbValue *binary(JsonbValue *slot, Jsonb *value)
     return slot;
 }
 
-/* Keep the first failure for the statement-level errors tt_finish raises. */
-static void record_outcome(TtOwner *owner, const thinkthen_row *row, Jsonb *error)
+static Jsonb *projected_field(Jsonb *row,const char *name)
 {
-    const char *family = thinkthen_code_family(row->error_code);
-    JsonbValue *message = tt_field(error, "message");
-    owner->rows++;
-    if (row->status != THINKTHEN_STATUS_FAILED) return;
-    owner->failed++;
-    if (family != NULL && !strcmp(family, "backend")) owner->backend_failed++;
-    if (owner->failed > 1) return;
-    owner->first_failed_code = row->error_code;
-    owner->first_failed_position = row->position;
-    owner->first_failed_message = message != NULL && message->type == jbvString
-        ? MemoryContextStrdup(owner->id_context, pnstrdup(message->val.string.val, message->val.string.len))
-        : MemoryContextStrdup(owner->id_context, thinkthen_code_name(row->error_code));
-}
-
-void tt_finish(TtOwner *owner)
-{
-    char *message;
-    /* A dead backend raises its error, as the command exits 4, not a page of failures. */
-    if (owner->rows > 0 && owner->backend_failed == owner->rows)
-        tt_raise(owner->first_failed_code, owner->first_failed_message, NULL);
-    if (owner->function != THINKTHEN_FUNCTION_FILTER || owner->failed == 0 || owner->keep_failures)
-        return;
-    message = psprintf("%llu of %llu records failed; the first, at position %llu, failed with %s: %s",
-        (unsigned long long)owner->failed, (unsigned long long)owner->rows,
-        (unsigned long long)owner->first_failed_position,
-        thinkthen_code_name(owner->first_failed_code), owner->first_failed_message);
-    tt_raise(owner->first_failed_code, message, "Pass failures => 'row' to return the failed rows with the kept rows.");
+    JsonbValue *value=tt_field(row,name);
+    return value ? JsonbValueToJsonb(value) : NULL;
 }
 
 void tt_emit(TtOwner *owner, ReturnSetInfo *result)
 {
     thinkthen_row *row = &owner->row;
     Jsonb *answer;
+    Jsonb *fields;
+    JsonbValue *filter_answer;
     Jsonb *error;
     Jsonb *source;
     Jsonb *detail;
     Jsonb *id;
     int code;
+    thinkthen_record_view original;
     JsonbValue scalar;
     Datum *values = palloc0(sizeof(Datum) * result->setDesc->natts);
     bool *nulls = palloc(sizeof(bool) * result->setDesc->natts);
@@ -206,15 +183,23 @@ void tt_emit(TtOwner *owner, ReturnSetInfo *result)
     if (owner->ids != NULL) {
         TtId *selected = hash_search(owner->ids, &row->position, HASH_FIND, NULL);
         if (selected != NULL) {
-            TT_BRIDGE(code = thinkthen_sql_row_postgres_id(row, &selected->value, &owner->error));
+            TT_BRIDGE(code = thinkthen_sql_row_postgres_id(owner->call, row, &selected->value, &owner->error));
             tt_check(owner, code);
         }
     }
-    answer = tt_json(&row->answer);
-    error = tt_json(&row->error);
-    source = tt_json(&row->source);
-    detail = tt_json(&row->detail);
-    id = tt_json(&row->id);
+    TT_BRIDGE(code = thinkthen_row_original(row, &original, &owner->error));
+    tt_check(owner, code);
+    TT_BRIDGE(thinkthen_buffer_free(&owner->projection));
+    TT_BRIDGE(code=thinkthen_row_host_json(row,&owner->projection,&owner->error));
+    tt_check(owner,code);
+    fields=tt_json(&owner->projection);
+    TT_BRIDGE(thinkthen_buffer_free(&owner->projection));
+    answer=projected_field(fields,"answer");
+    error=projected_field(fields,"error");
+    source=projected_field(fields,"source");
+    detail=projected_field(fields,"detail");
+    id=projected_field(fields,"id");
+    filter_answer=tt_field(fields,"answer");
     /* The id conversion above may turn an answered row into a failed one. */
     answered = row->status == THINKTHEN_STATUS_ANSWERED;
     status = answered ? "answered" :
@@ -222,10 +207,8 @@ void tt_emit(TtOwner *owner, ReturnSetInfo *result)
     if (status == NULL || row->function != owner->function
         || (row->status == THINKTHEN_STATUS_FAILED && thinkthen_code_name(row->error_code) == NULL))
         ereport(ERROR, (errcode(tt_sqlstate(THINKTHEN_CODE_USAGE_ABI)), errmsg("%s", THINKTHEN_ABI_ERROR_MESSAGE), errdetail_internal("%s", THINKTHEN_ABI_ERROR_CODE)));
-    record_outcome(owner, row, error);
-    /* Filter returns kept rows, and failed rows only when the caller asks. */
-    if (owner->function != THINKTHEN_FUNCTION_FILTER || (answered && row->answer_bool)
-        || (row->status == THINKTHEN_STATUS_FAILED && owner->keep_failures)) {
+    /* The shared SQL call owns failure reporting; filter emits only yeses. */
+    if (owner->function != THINKTHEN_FUNCTION_FILTER || (answered && filter_answer && filter_answer->type==jbvBool && filter_answer->val.boolean)) {
         for (column = 0; column < result->setDesc->natts; column++) {
             Form_pg_attribute attribute = TupleDescAttr(result->setDesc, column);
             const char *name = NameStr(attribute->attname);
@@ -235,10 +218,13 @@ void tt_emit(TtOwner *owner, ReturnSetInfo *result)
             else if (!strcmp(name, "probability")) {
                 nulls[column] = isnan(row->probability);
                 values[column] = Float8GetDatum(row->probability);
+            } else if (!strcmp(name, "record")) {
+                nulls[column] = original.kind == THINKTHEN_RECORD_MISSING || original.kind == THINKTHEN_RECORD_INVALID;
+                if (!nulls[column]) values[column] = PointerGetDatum(tt_server_text((const char *)original.data, original.len));
             } else if (!strcmp(name, "id")) {nulls[column] = id == NULL; if (id != NULL) values[column] = JsonbPGetDatum(id);}
             else if (!strcmp(name, "answer") && owner->function == THINKTHEN_FUNCTION_RANK) {
                 nulls[column] = !answered;
-                values[column] = Int64GetDatum(row->rank);
+                values[column] = tt_json_value(tt_field(fields,"answer"),attribute->atttypid,&nulls[column]);
             } else if (!strcmp(name, "answer") && annotate) {
                 nulls[column] = !answered || answer == NULL;
                 if (!nulls[column]) values[column] = JsonbPGetDatum(bare_answers(answer));

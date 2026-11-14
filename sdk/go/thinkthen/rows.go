@@ -3,9 +3,12 @@
 package thinkthen
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
+	"strings"
 )
 
 // RecordID preserves a string or integer record identifier without rounding.
@@ -48,8 +51,7 @@ type wireRow struct {
 	probability                *float64
 	failure                    *Error
 	position                   uint64
-	kept                       bool
-	original                   Record
+	canonical                  json.RawMessage
 }
 
 // Entry holds a typed answer, status, probability, detail, and failure.
@@ -57,26 +59,25 @@ type Entry[A, D any] struct{ row wireRow }
 
 // String displays the answer, uncertainty, or failure without internal buffers.
 func (e Entry[A, D]) String() string {
-	var text string
 	switch e.Status() {
-	case Answered:
-		var answer A
-		_ = json.Unmarshal(e.row.answer, &answer)
-		text = fmt.Sprint(answer)
 	case Unsure:
-		text = "unsure"
+		return "unsure"
 	case Failed:
 		if e.row.failure != nil {
-			return "failed: " + e.row.failure.Code().String() + ": " + e.row.failure.Error()
+			return "failed: " + printLeaf(e.row.failure.Code().String()) + ": " + printLeaf(e.row.failure.Error())
 		}
 		return "failed"
-	default:
-		return "uninitialized"
+	case Answered:
+		data := e.row.answer
+		if len(e.row.canonical) > 0 {
+			var row struct{ Answer json.RawMessage }
+			if json.Unmarshal(e.row.canonical, &row) == nil {
+				data = row.Answer
+			}
+		}
+		return printAnswer(Function(e.row.function), data)
 	}
-	if p, ok := e.Probability(); ok {
-		return fmt.Sprintf("%s (probability %g)", text, p)
-	}
-	return text
+	return "uninitialized"
 }
 
 // GoString provides the same concise representation as String.
@@ -101,10 +102,18 @@ func (e Entry[A, D]) Answer() (A, error) {
 	switch e.Status() {
 	case Answered:
 		// Native rows are admitted and decoded before they are exposed.
-		_ = json.Unmarshal(e.row.answer, &value)
+		if err := decodeAnswer(e.row.answer, &value); err != nil {
+			return value, abiError()
+		}
+		if form, ok := any(&value).(*Annotations); ok && len(e.row.canonical) > 0 {
+			var saved struct{ Answer map[string]json.RawMessage }
+			_ = json.Unmarshal(e.row.canonical, &saved)
+			form.canonical = saved.Answer
+		}
 		return value, nil
 	case Unsure:
-		return value, ErrUnsure
+		probability, _ := e.Probability()
+		return value, &UnsureError{Probability: probability}
 	case Failed:
 		if err := e.Err(); err != nil {
 			return value, err
@@ -150,16 +159,19 @@ func (e Entry[A, D]) Err() error {
 }
 
 // Row adds input position, identifier and source metadata to a typed entry.
-type Row[A, D any] struct{ Entry[A, D] }
+type Row[T, A, D any] struct {
+	Entry[A, D]
+	item T
+}
 
 // Position returns the one-based input position.
-func (r Row[A, D]) Position() int { return int(r.row.position) }
+func (r Row[T, A, D]) Position() int { return int(r.row.position) }
 
 // ID returns the original identifier when present.
-func (r Row[A, D]) ID() (RecordID, bool) { return RecordID{string(r.row.id)}, len(r.row.id) > 0 }
+func (r Row[T, A, D]) ID() (RecordID, bool) { return RecordID{string(r.row.id)}, len(r.row.id) > 0 }
 
 // Source returns the question and backend metadata.
-func (r Row[A, D]) Source() Source {
+func (r Row[T, A, D]) Source() Source {
 	var value struct {
 		QuestionIdentity string `json:"question_identity"`
 		Name             *string
@@ -181,44 +193,125 @@ func (r Row[A, D]) Source() Source {
 	return Source{value.QuestionIdentity, value.Name, b, value.Model}
 }
 
-// DecideRow is the typed decide outcome.
-type DecideRow = Row[bool, NoDetail]
-
-// ChooseRow is the typed choose outcome.
-type ChooseRow = Row[string, LabelsDetail]
-
-// TagRow is the typed tag outcome.
-type TagRow = Row[[]string, LabelsDetail]
-
-// ScoreRow is the typed score outcome.
-type ScoreRow = Row[float64, LevelsDetail]
-
-// RankRow is the typed rank outcome.
-type RankRow struct{ Row[int, LevelsDetail] }
-
-// Item returns the original record retained by this ranked outcome.
-func (r RankRow) Item() Record { return r.row.original }
-
-// FindRow is the typed find outcome.
-type FindRow = Row[*Span, NoDetail]
-
-// RecognizeRow is the typed recognize outcome.
-type RecognizeRow = Row[[]Name, RecognizeDetail]
-
-// RelateRow is the typed relate outcome.
-type RelateRow = Row[[]Relation, PairsDetail]
-
-// AnnotateRow is the typed annotate outcome.
-type AnnotateRow = Row[Annotations, NoDetail]
-
-// FilterRow retains the original record together with its filter outcome.
-type FilterRow struct {
-	Row[bool, NoDetail]
-	item Record
+// Item returns the caller's own input record.
+func (r Row[T, A, D]) Item() T                       { return r.item }
+func (r Row[T, A, D]) Equal(other Row[T, A, D]) bool { return r.Entry.Equal(other.Entry) }
+func (e Entry[A, D]) Equal(other Entry[A, D]) bool {
+	a, b := e.row, other.row
+	return a.function == b.function && a.status == b.status && bytes.Equal(a.answer, b.answer) && bytes.Equal(a.detail, b.detail) && bytes.Equal(a.source, b.source) && bytes.Equal(a.id, b.id) && a.position == b.position && reflect.DeepEqual(a.probability, b.probability) && equalFailure(a.failure, b.failure)
+}
+func (e Entry[A, D]) IsAnswered() bool { return e.Status() == Answered }
+func (e Entry[A, D]) IsUnsure() bool   { return e.Status() == Unsure }
+func (e Entry[A, D]) IsFailed() bool   { return e.Status() == Failed }
+func (e Entry[A, D]) failed() error {
+	if err := e.Err(); err != nil {
+		return err
+	}
+	if e.row.function == uint32(FunctionAnnotate) && e.IsAnswered() {
+		var a Annotations
+		if err := json.Unmarshal(e.row.answer, &a); err != nil {
+			return err
+		}
+		for _, name := range a.Names() {
+			if v, ok := a.entries[name].(interface{ failed() error }); ok {
+				if err := v.failed(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+func ErrIfFailed[R interface{ failed() error }](row R, err error) (R, error) {
+	if err != nil {
+		return row, err
+	}
+	return row, row.failed()
 }
 
-// Item returns the original input record.
-func (r FilterRow) Item() Record { return r.item }
+// DecideRow is a decide result carrying its original record.
+type DecideRow[T any] = Row[T, bool, NoDetail]
 
-// Kept reports whether the engine kept this answered record.
-func (r FilterRow) Kept() bool { return r.row.kept }
+// ChooseRow is a choose result carrying its original record.
+type ChooseRow[C ~string, T any] = Row[T, C, LabelsDetail]
+
+// TagRow is a tag result carrying its original record.
+type TagRow[C ~string, T any] = Row[T, []C, LabelsDetail]
+
+// ScoreRow is a score result carrying its original record.
+type ScoreRow[T any] = Row[T, float64, LevelsDetail]
+
+// RankRow is a rank result carrying its original record.
+type RankRow[T any] = Row[T, int, LevelsDetail]
+
+// FindRow is a find result carrying its original record.
+type FindRow[T any] = Row[T, *Span, NoDetail]
+
+// RecognizeRow is a recognize result carrying its original record.
+type RecognizeRow[T any] = Row[T, []Name, RecognizeDetail]
+
+// RelateRow is a relate result carrying its original record.
+type RelateRow[T any] = Row[T, []Relation, PairsDetail]
+
+// AnnotateRow is a annotate result carrying its original record.
+type AnnotateRow[T any] = Row[T, Annotations, NoDetail]
+
+func printAnswer(function Function, data json.RawMessage) string {
+	switch function {
+	case FunctionChoose:
+		var v string
+		_ = json.Unmarshal(data, &v)
+		return printLeaf(v)
+	case FunctionScore:
+		var value float64
+		_ = json.Unmarshal(data, &value)
+		return strconv.FormatFloat(value, 'f', -1, 64)
+	case FunctionTag:
+		var v []string
+		_ = json.Unmarshal(data, &v)
+		for i, word := range v {
+			v[i] = printLeaf(word)
+		}
+		return strings.Join(v, "\t")
+	case FunctionFind:
+		var v *Span
+		_ = json.Unmarshal(data, &v)
+		if v == nil {
+			return ""
+		}
+		return printLeaf(v.Text)
+	case FunctionRecognize:
+		var v []Name
+		_ = json.Unmarshal(data, &v)
+		parts := make([]string, len(v))
+		for i, n := range v {
+			parts[i] = fmt.Sprintf("%s: %s (%d..%d)", printLeaf(n.Kind), printLeaf(n.Text), n.Start, n.End)
+		}
+		return strings.Join(parts, "\t")
+	case FunctionRelate:
+		var v []Relation
+		_ = json.Unmarshal(data, &v)
+		parts := make([]string, len(v))
+		for i, r := range v {
+			parts[i] = printLeaf(r.Source.Text) + " --" + printLeaf(r.Relation) + "--> " + printLeaf(r.Target.Text)
+		}
+		return strings.Join(parts, "\t")
+	case FunctionAnnotate:
+		var v Annotations
+		_ = json.Unmarshal(data, &v)
+		return v.String()
+	default:
+		return string(data)
+	}
+}
+
+func equalFailure(a, b *Error) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.code == b.code && a.message == b.message && a.httpStatus == b.httpStatus
+}
+
+var printedLeaf = strings.NewReplacer("\r", " ", "\n", " ", "\t", " ")
+
+func printLeaf(value string) string { return printedLeaf.Replace(value) }

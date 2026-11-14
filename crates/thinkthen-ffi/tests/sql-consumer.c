@@ -137,7 +137,13 @@ int main(int argc, char **argv) {
         assert(rows == 0);
     } else {
         assert(result == THINKTHEN_END && rows == 1);
-        assert(retained.status == THINKTHEN_STATUS_ANSWERED && retained.source.len != 0);
+        assert(retained.status == THINKTHEN_STATUS_ANSWERED);
+        thinkthen_value *value = NULL;
+        assert(thinkthen_row_values(&retained, &value, &error) == THINKTHEN_OK);
+        thinkthen_source source = {0};
+        assert(thinkthen_value_source(value, &source, &error) == THINKTHEN_OK);
+        assert(source.question_identity.len != 0);
+        thinkthen_value_free(value);
     }
     thinkthen_error_free(&error);
     thinkthen_row_free(&retained);

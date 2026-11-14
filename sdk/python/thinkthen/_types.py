@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import ItemsView, Iterator, KeysView, Mapping, ValuesView
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field, fields, is_dataclass
+from decimal import Decimal
 from enum import Enum
 from reprlib import repr as short_repr
 from typing import (
@@ -14,10 +15,9 @@ from typing import (
     NoReturn,
     TypeAlias,
     cast,
-    overload,
 )
 
-from typing_extensions import TypeForm, TypeVar
+from typing_extensions import Self, TypeForm, TypeVar
 
 from ._codes import ErrorCode
 from ._enums import StringEnum
@@ -105,10 +105,6 @@ class BoundaryTag(StringEnum):
     OUT = "OUT"
 
 
-# A ranked record the engine could not keep, because it had no JSON form.
-UNAVAILABLE: Any = object()
-
-
 class Band(NamedTuple):
     low: float
     high: float
@@ -164,12 +160,18 @@ class InternalError(ThinkThenError):
     """The native operation could not complete."""
 
 
-class RecordError(ThinkThenError):
-    """A failed result was raised explicitly or used as an answer.
+class NoAnswer(Exception):
+    """No answer was available to read."""
+
+
+class Failed(ThinkThenError, NoAnswer):
+    """A scalar judgement failed, or a failed bulk result was checked or read.
 
     When ``filter`` raises after delivering its kept records, ``code`` is the
     first failed row's code and ``rows`` holds every failed row in input order.
     """
+
+    outcomes: Any
 
     def __init__(
         self,
@@ -201,11 +203,12 @@ class FailedRowsWarning(UserWarning):
         self.rows = rows
 
 
-class Unsure(ValueError):
+class Unsure(NoAnswer):
     """A not-sure result was used as an answer. Check .unsure first."""
 
     def __init__(self, row: _Result[Any]) -> None:
         self.row = row
+        self.probability = row.probability
         super().__init__("not sure; check .unsure or inspect .answer")
 
 
@@ -306,9 +309,26 @@ class _Result(Generic[A_co]):
 
     function: Function
     status: Status
-    answer: A_co | None
+    _answer: A_co | None
     probability: float | None
     error: RowError | None
+
+    @property
+    def answer(self) -> A_co:
+        """Read the plain answer, raising when this result has none."""
+        self._raise_own_failure()
+        if self.unsure:
+            raise Unsure(self)
+        value = self._answer
+        if isinstance(value, Mapping):
+            return cast(A_co, dict(value))
+        if isinstance(value, tuple):
+            return cast(A_co, list(value))
+        return cast(A_co, value)
+
+    @property
+    def answered(self) -> bool:
+        return self.status is Status.ANSWERED
 
     @property
     def unsure(self) -> bool:
@@ -318,64 +338,117 @@ class _Result(Generic[A_co]):
     def failed(self) -> bool:
         return self.status is Status.FAILED
 
-    def _answer_value(self) -> A_co | None:
-        self.raise_for_error()
-        if self.unsure:
-            raise Unsure(self)
-        return self.answer
+    def _raise_own_failure(self) -> None:
+        if self.error is not None:
+            raise Failed(
+                self.error.code, self.error.message, self.error.http_status, (self,)
+            )
 
-    def _comparison_value(self) -> object:
-        return self.answer.text if isinstance(self.answer, Span) else self.answer
+    def raise_if_failed(self) -> Self:
+        """Raise for this result or a failed form entry; uncertainty is not failure."""
+        self._raise_own_failure()
+        if self.function is Function.ANNOTATE and isinstance(self._answer, Mapping):
+            for name in sorted(self._answer):
+                child = self._answer[name]
+                if child.error is not None:
+                    raise Failed(
+                        child.error.code,
+                        child.error.message,
+                        child.error.http_status,
+                        (self,),
+                    )
+        return self
 
     def __bool__(self) -> bool:
-        answer = self._answer_value()
-        if self.function in {
-            Function.CHOOSE,
-            Function.SCORE,
-            Function.RANK,
-            Function.ANNOTATE,
-        }:
+        if self.function is not Function.DECIDE:
             raise TypeError(
-                f"{self.function.value} is not a yes/no answer; compare it or inspect .answer"
+                f"{self.function.value} is not a yes/no result; read .answer"
             )
-        return bool(answer)
+        return bool(self.answer)
+
+    def _value(self) -> tuple[object, ...]:
+        return tuple(
+            _freeze(self._answer if name == "answer" else getattr(self, name, None))
+            for name in (
+                "function",
+                "status",
+                "answer",
+                "probability",
+                "error",
+                "position",
+                "id",
+                "source",
+                "detail",
+            )
+        )
 
     def __eq__(self, other: object) -> bool:
-        self._answer_value()
-        if isinstance(other, _Result):
-            other._answer_value()
-            other = other._comparison_value()
-        try:
-            return bool(self._comparison_value() == other)
-        except Exception:  # noqa: BLE001 - equality must never raise on host objects.
-            return False
+        if not isinstance(other, _Result):
+            raise TypeError(
+                "compare result.answer with a value; a result equals only another result"
+            )
+        return self._value() == other._value()
 
     def __hash__(self) -> int:
-        return hash(self._comparison_value())
+        return hash(self._value())
 
     def __str__(self) -> str:
-        self._answer_value()
-        value = self._comparison_value()
-        return str(value.value if isinstance(value, Enum) else value)
+        if self.failed:
+            assert self.error is not None
+            return f"failed: {_leaf_text(self.error.code.value)}: {_leaf_text(self.error.message)}"
+        if self.unsure:
+            return "unsure"
+        return _printed(self._answer)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({short_repr(self._comparison_value())}, probability={self.probability!r}, status={self.status.value!r})"
+        return f"{type(self).__name__}({short_repr(str(self))}, probability={self.probability!r}, status={self.status.value!r})"
 
     def to_dict(self) -> dict[str, Any]:
-        """Copy this result and its nested values into plain Python containers."""
+        """Copy the wire result; unavailable answers and caller objects are omitted."""
         from ._decode import plain
 
         return cast(dict[str, Any], plain(self))
 
-    @property
-    def ok(self) -> bool:
-        return self.status is Status.ANSWERED
 
-    def raise_for_error(self) -> None:
-        if self.error is not None:
-            raise RecordError(
-                self.error.code, self.error.message, self.error.http_status
-            )
+def _freeze(value: object) -> object:
+    if isinstance(value, _Result):
+        return value._value()
+    if isinstance(value, Mapping):
+        return frozenset((key, _freeze(item)) for key, item in value.items())
+    if isinstance(value, (tuple, list)):
+        return tuple(_freeze(item) for item in value)
+    if is_dataclass(value) and not isinstance(value, type):
+        return tuple(_freeze(getattr(value, part.name)) for part in fields(value))
+    return value
+
+
+def _leaf_text(value: object) -> str:
+    return str(value).replace("\r", " ").replace("\n", " ").replace("\t", " ")
+
+
+def _printed(value: object) -> str:
+    if isinstance(value, _Result):
+        return str(value)
+    if isinstance(value, Enum):
+        return _leaf_text(value.value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        text = format(Decimal(str(value)), "f")
+        return text.rstrip("0").rstrip(".") if "." in text else text
+    if isinstance(value, Name):
+        return f"{_leaf_text(value.kind)}: {_leaf_text(value.text)} ({value.start}..{value.end})"
+    if isinstance(value, Span):
+        return _leaf_text(value.text)
+    if isinstance(value, Relation):
+        return f"{_leaf_text(value.source.text)} --{_leaf_text(value.relation)}--> {_leaf_text(value.target.text)}"
+    if isinstance(value, Mapping):
+        return "\t".join(
+            f"{_leaf_text(name)}={_printed(item)}" for name, item in value.items()
+        )
+    if isinstance(value, (tuple, list)):
+        return "\t".join(_printed(item) for item in value)
+    return "" if value is None else _leaf_text(value)
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
@@ -383,76 +456,17 @@ class _Row(_Result[A_co]):
     position: int
     id: str | int | None
     source: Source
+    item: Any = field(kw_only=True, default=None)
 
     def __enter__(self) -> NoReturn:
         function = self.function.value
-        stream = {"filter": "filter_rows", "rank": "rank"}.get(
+        stream = {"filter": "filter", "rank": "rank"}.get(
             function, function + "_stream"
         )
         raise TypeError(f"this is one {function} row; use {stream}(...) for a stream")
 
     def __exit__(self, *exception: object) -> NoReturn:
         self.__enter__()
-
-
-class _SequenceAnswer(Generic[T_co]):
-    __slots__ = ()
-
-    def _items(self) -> tuple[T_co, ...]:
-        return cast(
-            tuple[T_co, ...], cast(_Result[tuple[T_co, ...]], self)._answer_value()
-        )
-
-    def __iter__(self) -> Iterator[T_co]:
-        return iter(self._items())
-
-    def __len__(self) -> int:
-        return len(self._items())
-
-    @overload
-    def __getitem__(self, index: int) -> T_co: ...
-
-    @overload
-    def __getitem__(self, index: slice) -> tuple[T_co, ...]: ...
-
-    def __getitem__(self, index: int | slice) -> T_co | tuple[T_co, ...]:
-        return self._items()[index]
-
-
-class _NumberAnswer:
-    __slots__ = ()
-
-    def _number(self) -> float:
-        return cast(float, cast(_Result[float], self)._answer_value())
-
-    def __float__(self) -> float:
-        return float(self._number())
-
-    def __lt__(self, other: float) -> bool:
-        return self._number() < other
-
-    def __le__(self, other: float) -> bool:
-        return self._number() <= other
-
-    def __gt__(self, other: float) -> bool:
-        return self._number() > other
-
-    def __ge__(self, other: float) -> bool:
-        return self._number() >= other
-
-
-class _FindAnswer:
-    __slots__ = ()
-
-    @property
-    def start(self) -> int | None:
-        span = cast(_Result[Span], self)._answer_value()
-        return None if span is None else span.start
-
-    @property
-    def end(self) -> int | None:
-        span = cast(_Result[Span], self)._answer_value()
-        return None if span is None else span.end
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
@@ -481,7 +495,7 @@ class FilterRow(_Row[bool], Generic[T_co]):
 
     @property
     def kept(self) -> bool:
-        return self.status is Status.ANSWERED and self.answer is True
+        return self.status is Status.ANSWERED and self._answer is True
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
@@ -509,92 +523,70 @@ class ChooseOutcome(_Result[_Label_co], Generic[_Label_co]):
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class TagRow(
-    _Row[tuple[_Label_co, ...]], _SequenceAnswer[_Label_co], Generic[_Label_co]
-):
+class TagRow(_Row[list[_Label_co]], Generic[_Label_co]):
     function: Literal[Function.TAG]
     detail: LabelDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class TagOutcome(
-    _Result[tuple[_Label_co, ...]], _SequenceAnswer[_Label_co], Generic[_Label_co]
-):
+class TagOutcome(_Result[list[_Label_co]], Generic[_Label_co]):
     function: Literal[Function.TAG]
     detail: LabelDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class ScoreRow(_Row[float], _NumberAnswer):
+class ScoreRow(_Row[float]):
     function: Literal[Function.SCORE]
     detail: LevelDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class ScoreOutcome(_Result[float], _NumberAnswer):
+class ScoreOutcome(_Result[float]):
     function: Literal[Function.SCORE]
     detail: LevelDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class RankRow(_Row[int], _NumberAnswer, Generic[_Item_co]):
-    """A rank starting at 1 and a copy of the record it ranks."""
+class RankRow(_Row[int], Generic[_Item_co]):
+    """A rank starting at 1 and the original record it ranks."""
 
     function: Literal[Function.RANK]
     detail: LevelDetail | None = None
-    _item: Any = field(kw_only=True, default=None)
-
-    @property
-    def item(self) -> _Item_co:
-        """An equal copy of the ranked record, kept by the engine.
-
-        A record with no JSON form failed as ``record.invalid``; reading its
-        item raises that row's ``RecordError``.
-        """
-        if self._item is UNAVAILABLE:
-            self.raise_for_error()
-            raise SetupError(ErrorCode.USAGE_ABI, "the ranked record is unavailable")
-        return cast(_Item_co, self._item)
-
-    def __int__(self) -> int:
-        return cast(int, self._answer_value())
-
-    def __index__(self) -> int:
-        return int(self)
+    item: _Item_co = field(kw_only=True)
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class FindRow(_Row[Span], _FindAnswer):
+class FindRow(_Row[Span | None]):
     function: Literal[Function.FIND]
     detail: None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class FindOutcome(_Result[Span], _FindAnswer):
+class FindOutcome(_Result[Span | None]):
     function: Literal[Function.FIND]
     detail: None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class RecognizeRow(_Row[tuple[Name, ...]], _SequenceAnswer[Name]):
+class RecognizeRow(_Row[list[Name]]):
     function: Literal[Function.RECOGNIZE]
     detail: RecognizeDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class RecognizeOutcome(_Result[tuple[Name, ...]], _SequenceAnswer[Name]):
+class RecognizeOutcome(_Result[list[Name]]):
     function: Literal[Function.RECOGNIZE]
     detail: RecognizeDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class RelateRow(_Row[tuple[Relation, ...]], _SequenceAnswer[Relation]):
+class RelateRow(_Row[list[Relation]]):
     function: Literal[Function.RELATE]
     detail: RelationDetail | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class RelateOutcome(_Result[tuple[Relation, ...]], _SequenceAnswer[Relation]):
+class RelateOutcome(_Result[list[Relation]]):
     function: Literal[Function.RELATE]
     detail: RelationDetail | None = None
 
@@ -612,27 +604,11 @@ Outcome: TypeAlias = (
 
 
 @dataclass(frozen=True, slots=True, eq=False, repr=False)
-class AnnotateRow(_Row[Mapping[str, Outcome]]):
+class AnnotateRow(_Row[Mapping[str, Any]]):
+    # Dynamic question names can mix result types; no static schema is declared.
+    # Each returned entry retains its concrete runtime result and loud answer.
     function: Literal[Function.ANNOTATE]
     detail: None = None
-
-    def __getitem__(self, key: str) -> Outcome:
-        return cast(Mapping[str, Outcome], self._answer_value())[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(cast(Mapping[str, Outcome], self._answer_value()))
-
-    def __len__(self) -> int:
-        return len(cast(Mapping[str, Outcome], self._answer_value()))
-
-    def keys(self) -> KeysView[str]:
-        return cast(Mapping[str, Outcome], self._answer_value()).keys()
-
-    def values(self) -> ValuesView[Outcome]:
-        return cast(Mapping[str, Outcome], self._answer_value()).values()
-
-    def items(self) -> ItemsView[str, Outcome]:
-        return cast(Mapping[str, Outcome], self._answer_value()).items()
 
 
 __all__ = [
@@ -649,6 +625,7 @@ __all__ = [
     "DecideRow",
     "Descriptions",
     "ErrorCode",
+    "Failed",
     "FilterOutcome",
     "FilterRow",
     "FindOutcome",
@@ -660,6 +637,7 @@ __all__ = [
     "LabelDetail",
     "LevelDetail",
     "Name",
+    "NoAnswer",
     "Outcome",
     "PieceDetail",
     "RankRow",
@@ -667,7 +645,6 @@ __all__ = [
     "RecognizeOutcome",
     "RecognizeRow",
     "Record",
-    "RecordError",
     "RelateOutcome",
     "RelateRow",
     "Relation",

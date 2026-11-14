@@ -177,6 +177,17 @@ int32_t thinkthen_sql_call_open_json(const thinkthen_client *client,
                                      thinkthen_error *error);
 
 /**
+ * Select whether completion reports failed records; filter always reports them.
+ * Rows remain available until the final statement failure. enabled is 0 or 1.
+ * Pointers and threads:
+ * One database thread drives call. error is NULL or an initialized, exclusive output.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_sql_call_set_raise_if_failed(struct thinkthen_sql_call *call,
+                                               uint8_t enabled,
+                                               thinkthen_error *error);
+
+/**
  * Send count database rows to a call.
  *
  * Send only after thinkthen_sql_call_poll returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK,
@@ -275,13 +286,15 @@ int32_t thinkthen_sql_call_poll_postgres(struct thinkthen_sql_call *call,
  * Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_ABI when row did not come from this library.
  * The row is changed in place; free it with thinkthen_row_free.
  * Pointers and threads:
- * One database thread drives call. row is a row this library wrote. id is NULL or points to a
+ * One database thread drives call. row is the most recent row this call wrote, before the
+ * next row or completion. id is NULL or points to a
  * readable thinkthen_text. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
  * negative return it holds the code and message; passing it again frees what it held, so a
  * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
 THINKTHEN_API THINKTHEN_NODISCARD
-int32_t thinkthen_sql_row_postgres_id(thinkthen_row *row,
+int32_t thinkthen_sql_row_postgres_id(struct thinkthen_sql_call *call,
+                                      thinkthen_row *row,
                                       const thinkthen_text *id,
                                       thinkthen_error *error);
 

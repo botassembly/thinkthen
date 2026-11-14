@@ -16,10 +16,8 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	urgencyQuestion := tt.NewScore(
-		"How urgent is the request?",
-		[]string{"routine", "urgent"})
-	message := tt.Text("Please refund my order.")
+	urgencyQuestion := tt.ScoreQuestion[string]{Question: "How urgent is the request?", Levels: []string{"routine", "urgent"}}
+	message := "Please refund my order."
 	urgency, err := tt.Answer(
 		client.Score(ctx, urgencyQuestion, message))
 	if err != nil {

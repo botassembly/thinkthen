@@ -1,15 +1,8 @@
 #!/bin/sh
-# Run the literal Bash guide with the current tree's already built command.
+# Run every literal ideal Bash guide example against designated offline outcomes.
 set -eu
 cd "$(dirname "$0")/.."
-guide_root=$PWD
-guide_scratch=$(mktemp -d)
-trap 'status=$?; trap - EXIT; rm -rf "$guide_scratch" || :; exit "$status"' EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
-python3 scripts/surface-example prepare bash "$guide_scratch"
 command_target=${CARGO_TARGET_DIR:-$PWD/target}
 case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
-cd "$guide_scratch"
-PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example" check bash bash example.sh
+export THINKTHEN_LOOPBACK="$command_target/debug/loopback"
+exec python3 scripts/bash_guide_examples.py "$command_target/debug/thinkthen"

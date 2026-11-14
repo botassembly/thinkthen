@@ -1,12 +1,17 @@
-# Runs show.go against this commit's Go module, linked to the C package scripts/prepare-packages.sh staged.
-# The records come from the function's case.json, staged as the file show.go reads.
-# The run fails when show.go's question or options differ from case.json, then
-# turns the printed answers into the JSON every language's example must match.
-set -e
-root=$(cd ../../../../.. && pwd)
-shown=$(pwd)/show.go
+# Compile only in preparation; capture and replay execute this retained program.
+set -euo pipefail
+[ "${SITE_EXECUTE_ONLY:-}" != 1 ] || { echo 'Use the prepared function executable' >&2; exit 2; }
+if [ "${1:-}" = --prepare ]; then program=$2; mkdir -p "$program"; else
+  program=$(mktemp -d)
+  trap 'status=$?; trap - EXIT; set +e; rm -rf "$program"; exit "$status"' EXIT
+fi
+bash ../../../lang-go/run.sh --prepare "$program"
+cat > "$program/run.sh" <<'RUN'
+set -euo pipefail
+program=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+shown=$program/main.go
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+trap 'status=$?; trap - EXIT; set +e; rm -rf "$work"; exit "$status"' EXIT
 jq -r '[.question?, .choices[]?, .labels[]?, .levels[]?, .kinds[]?,
         (.rules[]? | .source, .target, .relation),
         (.questions? // {} | keys[]),
@@ -16,14 +21,9 @@ jq -r '[.question?, .choices[]?, .labels[]?, .levels[]?, .kinds[]?,
     grep -qF "\"$wording\"" "$shown" || { echo "show.go does not use \"$wording\" from case.json" >&2; exit 1; }
   done
 jq -j '.records | if length == 1 then .[0] else error("expected one record") end' "$SITE_CASE_FILE" > "$work/message.txt"
-cp "$shown" "$work/main.go"
-printf 'module example\n\ngo 1.23\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v0.2.0\n\nreplace github.com/botassembly/thinkthen/sdk/go/thinkthen => %s\n' \
-  "$root/sdk/go/thinkthen" > "$work/go.mod"
-export PKG_CONFIG_PATH="$root/target/site-packages/c/lib/pkgconfig"
-export GOFLAGS=-mod=mod
-# pkg-config leaves runtime lookup to the program; -rpath records where the library is.
-export CGO_LDFLAGS="-Wl,-rpath,$(pkg-config --variable=libdir thinkthen-c)"
-(cd "$work" && go run -tags thinkthen_system .) > "$work/output.txt"
+(cd "$work" && "$program/example") > "$work/output.txt"
 cat "$work/output.txt"
 jq -R -s -c --slurpfile case "$SITE_CASE_FILE" 'split("\n") | map(select(length > 0)) | map(fromjson)' \
   "$work/output.txt" > "$SITE_ANSWERS_FILE"
+RUN
+[ "${1:-}" = --prepare ] || bash "$program/run.sh"

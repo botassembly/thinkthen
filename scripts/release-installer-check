@@ -13,11 +13,15 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('target')
 parser.add_argument('candidate', type=Path)
 parser.add_argument('revision')
-parser.add_argument('--cli', action='store_true')
+mode = parser.add_mutually_exclusive_group()
+mode.add_argument('--cli', action='store_true')
+mode.add_argument('--site-replay', action='store_true')
 args = parser.parse_args()
 package = args.candidate.resolve() / version() / args.target
 validate(package, args.target, args.revision)
 windows = args.target == 'windows-x86_64'
+if args.site_replay and not windows:
+    parser.error('--site-replay requires the native Windows candidate')
 suffix = 'zip' if windows else 'tar.gz'
 archive = package / f'thinkthen-{version()}-{args.target}.{suffix}'
 with tempfile.TemporaryDirectory(prefix='thinkthen-real-installer-') as temporary:
@@ -29,6 +33,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-real-installer-') as temporar
         with tarfile.open(archive) as packed:
             packed.extractall(scratch, filter='data')
     binary = scratch / ('thinkthen.exe' if windows else 'thinkthen')
+    if args.site_replay:
+        run('node', ROOT / 'site/scripts/windows-example.mjs', '--binary', binary,
+            '--source', args.revision, '--cache', ROOT / 'site/examples/start/decide-branch-ps/replay-cache.json',
+            '--evidence', ROOT / 'target/windows-cli-diagnostics/site-example')
+        sys.exit(0)
     helper = 'windows-cli-check' if args.cli else 'installer-test'
     arguments = ['--binary', binary]
     if windows and args.cli:

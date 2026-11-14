@@ -1,10 +1,4 @@
+# --prepare is forwarded to the shared language launcher.
+SITE_FUNCTION_NORMALIZER="$PWD/normalize.sh"
+export SITE_FUNCTION_NORMALIZER
 . ../../../lang-typescript/run.sh
-python3 -B - "$work/output.txt" "$SITE_ANSWERS_FILE" <<'PYANSWERS'
-import ast
-import json
-from pathlib import Path
-import sys
-
-answers = [sorted(ast.literal_eval(Path(sys.argv[1]).read_text().strip()))]
-Path(sys.argv[2]).write_text(json.dumps(answers))
-PYANSWERS

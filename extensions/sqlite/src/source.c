@@ -99,7 +99,6 @@ int source_open(Cursor *cursor) {
             : "source_sql has no column named %s; name one with record_column",record);
     if(cursor->arguments[ARG_ID] && cursor->id_column<0)
         return usage_error(cursor,"id_column '%s' names no column of source_sql",id);
-    cursor->spool_ids=!strcmp(table->registration->function,"rank");
     cursor->json=cursor->arguments[ARG_FIELD]!=NULL;
     if(cursor->arguments[ARG_FORMAT]) {
         const char *format=(const char*)sqlite3_value_text(cursor->arguments[ARG_FORMAT]);
@@ -112,34 +111,10 @@ int source_open(Cursor *cursor) {
     return bind_parameters(cursor);
 }
 
-/* Keep this source row's native id until its result row is emitted. */
-static int keep_id(Cursor *cursor) {
-    if(cursor->id_column<0 && cursor->spool_ids)return SQLITE_OK;
-    sqlite3_value *value=cursor->id_column<0 ? NULL : sqlite3_column_value(cursor->source,cursor->id_column);
-    if(cursor->spool_ids)return replay_save_id(cursor,value);
-    if(cursor->ids_count==cursor->ids_capacity) {
-        size_t capacity=cursor->ids_capacity?cursor->ids_capacity*2:128;
-        sqlite3_value **ids=sqlite3_realloc64(cursor->ids,capacity*sizeof(*ids));
-        if(!ids)return SQLITE_NOMEM;
-        cursor->ids=ids;cursor->ids_capacity=capacity;
-    }
-    sqlite3_value *id=value ? sqlite3_value_dup(value) : NULL;
-    if(value && !id)return SQLITE_NOMEM;
-    cursor->ids[cursor->ids_count++]=id;
-    return SQLITE_OK;
-}
-
 int source_chunk(Cursor *cursor) {
     Table *table = (Table *)cursor->base.pVtab;
     thinkthen_sql_input records[TT_SOURCE_CHUNK_RECORDS] = {{0}};
     sqlite3_value *values[TT_SOURCE_CHUNK_RECORDS] = {0};
-    /* Reuse released slots between chunks; rank spools its ids instead. */
-    if(cursor->ids_start) {
-        cursor->ids_count-=cursor->ids_start;
-        memmove(cursor->ids,cursor->ids+cursor->ids_start,cursor->ids_count*sizeof(*cursor->ids));
-        cursor->ids_offset+=cursor->ids_start;
-        cursor->ids_start=0;
-    }
     size_t count = 0;
     int result = SQLITE_OK;
     int ended = 0;
@@ -149,7 +124,8 @@ int source_chunk(Cursor *cursor) {
         result = sqlite3_step(cursor->source);
         if (result == SQLITE_DONE) { ended = 1; result = SQLITE_OK; break; }
         if (result != SQLITE_ROW) break;
-        result = keep_id(cursor);
+        sqlite3_value *id = cursor->id_column<0 ? NULL : sqlite3_column_value(cursor->source,cursor->id_column);
+        result = replay_save_input(cursor,id,sqlite3_column_value(cursor->source,cursor->record_column));
         if (result != SQLITE_OK) break;
         int type = sqlite3_column_type(cursor->source, cursor->record_column);
         if (type != SQLITE_TEXT) {

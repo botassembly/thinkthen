@@ -2,7 +2,7 @@
 # Load one installed extension in the minimum and current SQLite native hosts.
 set -eu
 cd "$(dirname "$0")/.."
-if [ "${1:-}" = --development ]; then exec sh extensions/sqlite/tests/development.sh; fi
+if [ "${1:-}" = --development ]; then shift; exec sh extensions/sqlite/tests/development.sh "$@"; fi
 root=$PWD
 . scripts/native-build-env
 fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the shared explicit fixture-routing archive}
@@ -12,7 +12,7 @@ trap 'exit 1' HUP INT TERM
 THINKTHEN_SQL_TEST_ARCHIVE= scripts/sqlite-package "$scratch/production"
 case "$(uname -s)" in Darwin) suffix=dylib ;; Linux) suffix=so ;; esac
 python3 databases/duckdb/tests/package-safety.py "$scratch/production/package/thinkthen_sqlite.$suffix"
-python3 extensions/sqlite/tests/docs.py "$scratch/production/package/thinkthen_sqlite.$suffix"
+python3 extensions/sqlite/tests/docs.py "$scratch/production/package/thinkthen_sqlite.$suffix" "$THINKTHEN_SQLITE_ROOT/sqlite-3.41.0/bin/sqlite3"
 THINKTHEN_SQL_TEST_ARCHIVE=$fixture_archive scripts/sqlite-package "$scratch/built"
 mkdir "$scratch/installed"
 tar -xzf "$scratch/built"/*.tar.gz -C "$scratch/installed"
@@ -42,6 +42,7 @@ for version in 3.41.0 3.54.1; do
     THINKTHEN_FAILURE_EXTENSION="$scratch/installed/$extension" THINKTHEN_FAIL_FUNCTION=1 \
         "$scratch/consumer" "$scratch/failing-loader.$suffix" fail
     python3 extensions/sqlite/tests/run.py "$scratch/consumer" "$scratch/installed/$extension" "${THINKTHEN_LOOPBACK:-$target/debug/loopback}" "$root" || status=1
+    THINKTHEN_LOOPBACK="${THINKTHEN_LOOPBACK:-$target/debug/loopback}" python3 extensions/sqlite/tests/ideal.py "$scratch/consumer" "$scratch/installed/$extension"
     python3 extensions/sqlite/tests/live.py "$scratch/consumer" "$scratch/installed/$extension" extensions/sqlite/examples/all-ten.sql --stub
 done
 # Exercise the installed loader with a newer generated consumer requirement.

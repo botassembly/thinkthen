@@ -9,6 +9,7 @@ refunds <- tt_decide(
   messages,
   "Does the customer request a refund?",
   field = "/body",
-  threshold = c(0.2, 0.8)
+  threshold = c(0.2, 0.8),
+  details = TRUE
 )
 refunds[c("status", "answer", "probability")]

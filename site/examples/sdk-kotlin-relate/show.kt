@@ -10,8 +10,8 @@ fun main() = runBlocking {
         val relations =
             client.relate(message, listOf(worksFor)).answer()
         for (relation in relations) {
-            val source = relation.source.span.text
-            val target = relation.target.span.text
+            val source = relation.source.text
+            val target = relation.target.text
             println("$source ${relation.relation} $target")
         }
     }

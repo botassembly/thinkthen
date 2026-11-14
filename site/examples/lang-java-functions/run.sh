@@ -1,2 +1,2 @@
-# --prepare is forwarded to the shared language runner.
+# --prepare is forwarded to the shared Java launcher.
 . ../lang-java/run.sh

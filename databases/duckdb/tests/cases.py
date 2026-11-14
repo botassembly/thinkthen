@@ -26,7 +26,7 @@ def arguments(question):
             continue
         if key == 'questions':
             value = question['questions']
-            key, value = 'toolbox', quote(json.dumps(value)) + '::JSON'
+            key, value = 'questions', quote(json.dumps(value)) + '::JSON'
         elif key in ('choices', 'labels', 'levels', 'kinds'):
             described = {item['name']: item['description'] for item in value if isinstance(item, dict)}
             if described:

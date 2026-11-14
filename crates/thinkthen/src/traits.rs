@@ -55,3 +55,22 @@ impl fmt::Display for RecordId {
         }
     }
 }
+
+/// Borrowed JSON retains the caller's value on a many-record result.
+impl From<&serde_json::Value> for Record {
+    fn from(value: &serde_json::Value) -> Self {
+        Self::json(value)
+    }
+}
+/// Borrowed text from a collection of string slices.
+impl From<&&str> for Record {
+    fn from(value: &&str) -> Self {
+        Self::text(*value)
+    }
+}
+/// Borrowed admitted records retain their original value on results.
+impl From<&Record> for Record {
+    fn from(value: &Record) -> Self {
+        value.clone()
+    }
+}

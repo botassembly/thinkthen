@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Compile source C++ consumers once and run their existing public wire proofs."""
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import tempfile
+from guide_examples import ROOT,environment
+
+target=Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'target')).resolve()
+compiler=shlex.split(os.environ.get('CXX','c++'))
+json_include=Path.home()/'.local/share/thinkthen-build-tools/nlohmann-json/3.11.3/include'
+flags=['-std=c++20','-Wall','-Wextra','-Werror','-UNDEBUG','-pthread','-I',str(ROOT/'sdk/cpp/include'),'-I',str(ROOT/'crates/thinkthen-ffi/include'),'-I',str(json_include),'-L',str(target/'debug'),'-lthinkthen_ffi','-Wl,-rpath,'+str(target/'debug')]
+loopback=str(target/'debug/loopback')
+with tempfile.TemporaryDirectory(prefix='cpp-consumers-') as directory:
+    folder=Path(directory)
+    for name in ('consumer','typed_consumer','interface','typed_network_consumer','unknown_code_consumer'):
+        subprocess.run([*compiler,str(ROOT/f'sdk/cpp/tests/{name}.cpp'),*flags,'-o',str(folder/name)],check=True)
+    env=environment();env['THINKTHEN_BACKEND']='stub'
+    for name in ('typed_consumer','interface','unknown_code_consumer'):
+        subprocess.run([str(folder/name)],env=env,check=True,timeout=60)
+    subprocess.run(['python3','sdk/c/tests/toolbox.py',str(folder/'typed_consumer'),str(ROOT)],env=env,check=True)
+    subprocess.run(['python3','sdk/cpp/tests/run.py',str(folder/'consumer'),loopback,str(folder/'consumer'),str(ROOT/'conformance/typed/manifest.json')],env=env,check=True)
+    subprocess.run(['python3','scripts/release/native_cases.py',str(folder/'consumer'),'construction/stub.json','schemas/contract.json','cpp'],env=env,check=True)
+    subprocess.run(['python3','sdk/cpp/tests/network.py',str(folder/'typed_network_consumer'),loopback],env=env,check=True)
+
+# This exercises the real C++ flag/staging route with mocked Windows tools only.
+print('Windows C++ configuration probe: mocked platform tools, no Windows execution claim',flush=True)
+subprocess.run(['python3','scripts/release-windows-sdks-test','only-cpp'],check=True)

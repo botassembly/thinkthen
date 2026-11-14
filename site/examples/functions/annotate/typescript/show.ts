@@ -1,4 +1,4 @@
-import { ThinkThen, answer, defineToolbox } from "thinkthen";
+import { Client, defineToolbox } from "thinkthen";
 
 const messages = [
   "Please refund my order.",
@@ -21,14 +21,13 @@ const questions = defineToolbox({
     levels: ["routine", "urgent"],
   },
 });
-const tt = new ThinkThen();
+const tt = new Client();
 try {
   for await (const form of tt.annotateStream(questions, messages)) {
-    // answer() throws UnsureError when not sure, RecordError on failure.
-    const triage = answer(form);
-    const isRefund = answer(triage.refund);
-    const topic = answer(triage.topic);
-    const urgency = answer(triage.urgency);
+    const triage = form.throwIfFailed().answer;
+    const isRefund = String(triage.refund);
+    const topic = String(triage.topic);
+    const urgency = String(triage.urgency);
     console.log(isRefund, topic, urgency);
   }
 } finally {

@@ -1,5 +1,5 @@
 {
-  "anchor": "string topic = await client.ChooseAsync(",
+  "anchor": "var topic = await client.ChooseAsync(",
   "before": 0,
   "after": 2
 }

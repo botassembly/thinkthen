@@ -20,9 +20,9 @@ func main() {
 	}
 	defer client.Close()
 
-	actionQuestion := tt.NewFind("Which line states the requested action?")
+	actionQuestion := tt.FindQuestion{Question: "Which line states the requested action?"}
 	action, err := tt.Answer(client.Find(context.Background(), actionQuestion,
-		tt.Text(string(message))))
+		string(message)))
 	if err != nil {
 		log.Fatal(err)
 	}

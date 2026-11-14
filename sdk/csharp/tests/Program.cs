@@ -19,6 +19,7 @@ internal static partial class Program
 
     private static async Task Main(string[] args)
     {
+        if (args is ["--ideal-host", var scenario]) { await CSharpIdealCases.Run(scenario); return; }
         if (args is ["--interface-only"]) { InterfaceCases(); return; }
         if (args is ["--description-admission"]) { DescriptionAdmissionCases(); return; }
         if (args is ["--backend-empty"])
@@ -84,20 +85,30 @@ internal static partial class Program
         }
         Check(args.Length == 3, "supply construction file, canonical conformance directory and loopback executable");
         InterfaceCases();
-        await InterfaceNativeCases();
-        await UsageCases();
-        await Construction(args[0]);
-        await AdmissionCases(args[1]);
-        await Conformance(Path.Combine(args[1], "typed"), args[2]);
-        await OptionCases(args[1]);
-        await SharedOptions(Path.Combine(args[1],"..","construction","options.json"));
-        await SdkUsageErrors();
-        await SavedToolbox(Path.Combine(args[1], "toolbox"));
-        await HostBehavior(args[2], args[1]);
-        await EncoderCauses();
-        await LifetimeCases(args[2]);
-        await StreamThreads();
-        await Registry(Path.Combine(Path.GetDirectoryName(args[1])!, "schemas", "contract.json"));
+        (string Name, Func<Task> Run)[] groups =
+        [
+            ("native interface", InterfaceNativeCases),
+            ("usage", UsageCases),
+            ("construction", () => Construction(args[0])),
+            ("admission", () => AdmissionCases(args[1])),
+            ("conformance", () => Conformance(Path.Combine(args[1], "typed"), args[2])),
+            ("options", () => OptionCases(args[1])),
+            ("shared options", () => SharedOptions(Path.Combine(args[1],"..","construction","options.json"))),
+            ("SDK usage errors", SdkUsageErrors),
+            ("saved toolbox", () => SavedToolbox(Path.Combine(args[1], "toolbox"))),
+            ("host behavior", () => HostBehavior(args[2], args[1])),
+            ("encoder causes", EncoderCauses),
+            ("lifetime", () => LifetimeCases(args[2])),
+            ("stream threads", StreamThreads),
+            ("registry", () => Registry(Path.Combine(Path.GetDirectoryName(args[1])!, "schemas", "contract.json"))),
+        ];
+        var failures = new List<Exception>();
+        foreach (var group in groups)
+        {
+            try { await group.Run(); Console.WriteLine("PASS C# SDK " + group.Name); }
+            catch (Exception error) { failures.Add(error); Console.Error.WriteLine("FAIL C# SDK " + group.Name + ": " + error); }
+        }
+        if (failures.Count != 0) throw new AggregateException(failures);
         Console.WriteLine("Installed C# public API consumer completed.");
     }
 
@@ -123,6 +134,17 @@ internal static partial class Program
         return result;
     }
 
+    private static async Task<Row<A,T>> CallFailed<A,T>(Task<Row<A,T>> task)
+    {
+        try { await task; }
+        catch(FailedException error)
+        {
+            Check(error.Rows.Count==1,"a failed scalar call retains one own row");
+            return (Row<A,T>)error.Rows[0];
+        }
+        throw new Exception("scalar failure did not fail the call");
+    }
+
     private static async Task Code(ErrorCode code, Func<Task> action)
     {
         try { await action(); }
@@ -130,6 +152,10 @@ internal static partial class Program
         {
             Check(error.ErrorCode == code, $"expected {code}, got {error.ErrorCode}");
             return;
+        }
+        catch(FailedException error)
+        {
+            Check(error.Code==JsonSerializer.SerializeToNode(code,JsonOptions)!.GetValue<string>(),$"expected {code}, got {error.Code}"); return;
         }
         throw new Exception($"expected {code}");
     }
@@ -139,7 +165,7 @@ internal static partial class Program
 
     private static async Task Cancelled(Task task, CancellationToken token = default)
     {
-        try { await task.WaitAsync(TimeSpan.FromSeconds(2)); }
+        try { await task; }
         catch (OperationCanceledException error)
         {
             Check(!token.CanBeCanceled || error.CancellationToken == token,
@@ -159,7 +185,7 @@ internal static partial class Program
             JsonNode request = sample!["request"]!;
             functions.Add(request["question"]!["function"]!.GetValue<string>());
             JsonNode actual = await ContractRows(client, request, default, new());
-            Check(JsonNode.DeepEquals(actual, sample["expected"]),
+            Check(JsonNode.DeepEquals(actual, ExpectedProjection(request,sample["expected"]!)),
                 $"construction {request["question"]!["function"]}: {actual} != {sample["expected"]}");
         }
         Check(functions.SetEquals(Enum.GetNames<Function>().Select(name => name.ToLowerInvariant())),

@@ -2,10 +2,12 @@
 """Compare generated construction semantics and validate surface applicability."""
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 SURFACES = {"bash", "c", "cpp", "csharp", "duckdb", "go", "java", "kotlin",
@@ -37,13 +39,16 @@ def compare(actual, generated):
 
 
 def main():
+    environment = dict(os.environ)
+    environment.setdefault("RUSTUP_TOOLCHAIN", tomllib.loads(
+        (ROOT / "rust-toolchain.toml").read_text())["toolchain"]["channel"])
     with tempfile.TemporaryDirectory(prefix="thinkthen-construction-") as temporary:
         folder = Path(temporary)
         (folder / "conformance").symlink_to(ROOT / "conformance", target_is_directory=True)
         (folder / "construction").mkdir()
         subprocess.run(["cargo", "run", "--quiet", "--manifest-path", str(ROOT / "Cargo.toml"),
                         "-p", "thinkthen", "--example", "construction", "--locked"],
-                       cwd=folder, check=True)
+                       cwd=folder, env=environment, check=True)
         for name in ("stub.json", "options.json"):
             actual = json.loads((ROOT / "construction" / name).read_text())
             generated = json.loads((folder / "construction" / name).read_text())

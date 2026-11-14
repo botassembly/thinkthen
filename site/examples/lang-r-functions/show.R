@@ -25,7 +25,7 @@ tt_rank(messages, "How urgent is the request?", urgency,
 tt_find(text, "Which line states the requested action?", client = client)
 tt_recognize("Morgan works for Example Group.", c("person", "organization"),
              client = client)
-tt_relate(text, vctrs::list_of(tt_rule("person", "organization", "works_for")),
+tt_relate(text, list(tt_rule("person", "organization", "works_for")),
           client = client)
 tt_annotate(messages, tt_annotation_questions(list(
   refund = tt_decide_question("Does the customer request a refund?"),

@@ -4,4 +4,4 @@ FROM thinkthen_rank(
    WHERE msg_id <= 3',
   'How urgent is the request?')
 WHERE levels = '["routine", "urgent"]'
-ORDER BY urgency_rank;
+ORDER BY urgency_rank NULLS LAST;

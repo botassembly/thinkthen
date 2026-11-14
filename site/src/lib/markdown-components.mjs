@@ -7,7 +7,7 @@ import { fact, oneLine } from './facts.mjs';
 
 export default {
   SharedOptions: () => sharedOptionsMarkdown(),
-  FunctionOptions: (a) => functionOptionsMarkdown(a.name),
+  FunctionOptions: (a) => functionOptionsMarkdown(a.name, a.scope),
   LanguageGroup: () => '',
   LanguageVariant: (a) => `### ${surfaces.find(({id}) => id === a.surface)?.label ?? a.surface}\n\n`,
   InstallLine: (a) => '```' + (a.lang ?? 'sh') + '\n' + fact(a.k ?? 'install.brew') + '\n```',

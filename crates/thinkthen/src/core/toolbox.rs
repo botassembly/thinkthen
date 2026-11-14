@@ -18,7 +18,6 @@ pub(crate) enum ToolboxFunction {
     /// A yes or no question.
     Decide(Decide),
     /// A yes or no question that keeps matching records.
-    Filter(Decide),
     /// A single choice.
     Choose(Choose),
     /// Independent labels.
@@ -70,7 +69,7 @@ impl ToolboxQuestion {
 macro_rules! dispatch {
     ($function:expr, $q:ident => $call:expr) => {
         match $function {
-            ToolboxFunction::Decide($q) | ToolboxFunction::Filter($q) => $call,
+            ToolboxFunction::Decide($q) => $call,
             ToolboxFunction::Choose($q) => $call,
             ToolboxFunction::Tag($q) => $call,
             ToolboxFunction::Score($q) => $call,

@@ -1,6 +1,6 @@
 module example
 
-go 1.23
+go 1.27
 
 require github.com/botassembly/thinkthen/sdk/go/thinkthen v0.2.0
 

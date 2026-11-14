@@ -53,9 +53,8 @@
   {
     "code": 4,
     "name": "backend",
-    "meaning": "A backend failure stopped the call, including a transport failure on the first row before any output, or every row failed with a backend error.",
-    "when": "A call-level backend error, backend.transport on the first row before any row was written, or a finished command where every row failed with a backend error, as when the key is wrong.",
-    "example": "error-transport",
+    "meaning": "A service error stopped the call before it produced any result, such as a refused key.",
+    "when": "A call-level service error. A produced failed result always exits 6.",
     "families": [
       "backend"
     ],
@@ -64,12 +63,7 @@
       "title": "Troubleshooting backend errors",
       "href": "/troubleshooting/#backend-errors"
     },
-    "beforeOutputCodes": [
-      "backend.transport"
-    ],
-    "allRowsFailedFamilies": [
-      "backend"
-    ]
+    "noExample": "A service may refuse the whole call before producing a result, such as when authentication is rejected. Check the key and account. A produced failed result uses exit 6 instead."
   },
   {
     "code": 5,
@@ -91,7 +85,7 @@
     "code": 6,
     "name": "failed rows",
     "meaning": "The command finished, and one or more rows failed. The other rows still hold their answers.",
-    "when": "Any row has status failed, unless every row failed with a backend error, which exits 4. A failed row wins over every --check verdict.",
+    "when": "Any result has status failed, including a service outage affecting every message. A failed result wins over every --check verdict.",
     "example": "exit-failed-row",
     "rowFailures": true,
     "source": "crates/thinkthen/src/cli/execute.rs, Completion::code",

@@ -7,12 +7,12 @@ try:
     is_refund = messages["message"].thinkthen.decide(
         "Does the customer request a refund?"
     )
-except tt.RecordError as failure:
-    outcomes = failure.outcomes.struct.unnest()
+except tt.Failed as failure:
+    outcomes = failure.outcomes
     print(
         outcomes.select(
             "status",
             "answer",
-            pl.col("error").struct.field("code"),
+            "error_code",
         )
     )

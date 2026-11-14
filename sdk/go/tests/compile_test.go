@@ -16,9 +16,10 @@ func TestAnnotationTypesRejectIneligibleQuestions(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, expression := range map[string]string{
-		"rank":        `var _ tt.AnnotationQuestion=tt.NewRank("How?",[]string{"low","high"})`,
-		"nested":      `var _ tt.AnnotationQuestion=tt.NewAnnotate(nil)`,
-		"general-map": `var _=tt.NewAnnotate(map[string]tt.Question{"ready":tt.NewDecide("Ready?")})`,
+		"filter":      `var _ tt.AnnotationQuestion=tt.FilterQuestion{Question:"Ready?"}`,
+		"rank":        `var _ tt.AnnotationQuestion=tt.RankQuestion[string]{Question:"How?",Levels:[]string{"low","high"}}`,
+		"nested":      `var _ tt.AnnotationQuestion=tt.AnnotateQuestion{Questions:nil}`,
+		"general-map": `var _=tt.AnnotateQuestion{Questions:map[string]tt.Question{"ready":tt.DecideQuestion{Question:"Ready?"}}}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -41,6 +42,6 @@ func TestAnnotationTypesRejectIneligibleQuestions(t *testing.T) {
 
 // A collection rank remains a concrete selectable toolbox question.
 var (
-	_ tt.Question                  = tt.NewRank("How?", []string{"low", "high"})
-	_ func(string) (tt.Rank, bool) = tt.Toolbox{}.Rank
+	_ tt.Question                                   = tt.RankQuestion[string]{Question: "How?", Levels: []string{"low", "high"}}
+	_ func(string) (tt.RankQuestion[string], error) = tt.Toolbox{}.Rank[string]
 )

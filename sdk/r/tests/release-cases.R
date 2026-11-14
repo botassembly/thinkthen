@@ -9,7 +9,6 @@ canonical <- function(value) {
 }
 expected_r <- function(value) {
   if (!is.list(value)) return(value)
-  if (all(c("start", "end") %in% names(value))) value$start <- value$start + 1
   if (is.numeric(value$id)) value$id <- list(integer = sprintf("%.0f", value$id))
   lapply(value, expected_r)
 }
@@ -38,18 +37,20 @@ cat("R installed release consumer preserves every shared stub row\n")
 source(file.path(folder, "support.R"))
 client <- tt_client(backend = "stub")
 for (case in cases) {
-  rows <- invoke(case$request$records, case$request$question, client, case$request$name)
   verb <- case$request$question[["function"]]
-  projected <- plain(tt_answer(rows, errors = "na"))
-  actual <- tryCatch(invoke(case$request$records, case$request$question,
-                           client, case$request$name, vector = TRUE), thinkthen_failed_rows = identity)
-  if (inherits(actual, "thinkthen_failed_rows")) {
-    stopifnot(identical(actual$rows, rows))
-    actual <- if (verb == "filter") actual$kept else plain(tt_answer(actual$rows, errors = "na"))
+  actual <- tryCatch(invoke(case$request$records,case$request$question,client,case$request$name,vector=TRUE),thinkthen_failed=identity)
+  if(verb=="filter") {
+    if(inherits(actual,"thinkthen_failed")) actual <- actual$kept
+    expected <- case$request$records[vapply(case$expected,function(row)isTRUE(row$answer),logical(1))]
+    stopifnot(identical(actual,expected))
+  } else {
+    rows <- invoke(case$request$records,case$request$question,client,case$request$name)
+    if(inherits(actual,"thinkthen_failed")) {
+      stopifnot(identical(actual$outcomes,rows))
+      actual <- plain(tt_answer(actual$outcomes,errors="na"))
+    }
+    stopifnot(identical(actual,plain(tt_answer(rows,errors="na"))))
   }
-  if (verb == "filter") {
-    stopifnot(identical(actual, case$request$records[rows$position[which(rows$answer)]]))
-  } else stopifnot(identical(actual, projected))
 }
 cat("R installed vector functions preserve every shared stub answer projection\n")
 frame <- data.frame(body = c("Ada works at Acme", "Bea works at Acme"), stringsAsFactors = FALSE)
@@ -59,13 +60,14 @@ for (case in cases) {
   q <- case$request$question
   q$field <- "/body"
   verb <- q[["function"]]
-  actual <- invoke(frame, q, client)
-  expected <- invoke(records, q, client)
-  stopifnot(identical(actual[names(actual) != "item"], expected[names(expected) != "item"]))
-  check_rows(actual, verb, nrow(expected))
-  if (verb == "filter") {
-    stopifnot(identical(actual$kept, expected$kept))
-    for (i in seq_len(nrow(actual))) stopifnot(identical(actual$item[[i]], frame[actual$position[[i]], , drop = FALSE]))
+  actual <- invoke(frame,q,client)
+  expected <- invoke(records,q,client)
+  if(verb=="filter") {
+    stopifnot(identical(actual$body, vapply(expected,`[[`,character(1),"body")))
+  } else {
+    stopifnot(identical(actual[names(actual)!="item"],expected[names(expected)!="item"]))
+    check_rows(actual,verb,nrow(expected))
+    stopifnot(identical(actual$item,frame[actual$position,,drop=FALSE]))
   }
   functions <- c(functions, verb)
 }

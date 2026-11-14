@@ -3,7 +3,7 @@
 // --capture EXAMPLES... records real bodies once, reuses them across surfaces,
 // and writes public output only after the cell passes. --replay uses saved bodies
 // without network calls. Run command cells first to establish semantic answers.
-// Capture caps: SITE_CAPTURE_MAX_CALLS (100), SITE_CAPTURE_MAX_BYTES (300000).
+// Capture caps: SITE_CAPTURE_MAX_CALLS (99), SITE_CAPTURE_MAX_INPUT_BYTES (10000), SITE_CAPTURE_MAX_BYTES (300000).
 // SITE_CAPTURE_FILE selects the body-only recording; credentials remain in memory.
 // Capture/replay require an empty absolute SITE_CAPTURE_ARTIFACT_DIR outside the checkout.
 import { spawn, spawnSync } from 'node:child_process';
@@ -91,6 +91,7 @@ const discover = (dir, prefix = '') => fs.readdirSync(dir, { withFileTypes: true
 });
 const ids = discover(root).filter((id) => !only.length || only.includes(id)).sort();
 for (const id of only) if (!ids.includes(id)) throw new Error(`example ${id}: no runnable runner`);
+if (!check && ids.some(needsPreparation) && !process.env.SITE_PREPARED_EXAMPLES) throw new Error('capture and replay require a prepared executable bundle; compilation is disabled');
 let preparedDir;
 let preparedIds = new Set();
 if (process.env.SITE_PREPARED_EXAMPLES) {
@@ -153,6 +154,7 @@ const env = {
   NO_COLOR: '1',
   TERM: 'dumb',
   COLUMNS: '100',
+  PYTHONDONTWRITEBYTECODE: '1',
   ...Object.fromEntries(PASS.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]])),
   ...(product.exampleSetup?.({ ...dirs, sandbox, bin, shell: process.env }) ?? {}),
   ...(product.exampleEnv ?? {}),
@@ -162,7 +164,7 @@ for (const k of Object.keys(env)) if (SECRET.test(k) || KNOWN_KEYS.includes(k)) 
 
 if (capture || replay) {
   if (capture && !process.env.THINKTHEN_API_KEY) throw new Error('capture needs THINKTHEN_API_KEY');
-  transport = await captureBackend({ file: path.resolve(process.env.SITE_CAPTURE_FILE ?? 'examples/captured-responses.json'), key: process.env.THINKTHEN_API_KEY, replayOnly: replay, maxCalls: Number(process.env.SITE_CAPTURE_MAX_CALLS ?? 100), maxBytes: Number(process.env.SITE_CAPTURE_MAX_BYTES ?? 300000) });
+  transport = await captureBackend({ file: path.resolve(process.env.SITE_CAPTURE_FILE ?? 'examples/captured-responses.json'), key: process.env.THINKTHEN_API_KEY, replayOnly: replay, maxCalls: Number(process.env.SITE_CAPTURE_MAX_CALLS ?? 99), maxInputBytes: Number(process.env.SITE_CAPTURE_MAX_INPUT_BYTES ?? 10000), maxBytes: Number(process.env.SITE_CAPTURE_MAX_BYTES ?? 300000) });
   env.THINKTHEN_BACKEND = 'systemone';
   env.THINKTHEN_BASE_URL = transport.url;
   env.THINKTHEN_API_KEY = 'docs-loopback';
@@ -230,12 +232,14 @@ function outputProblems(id, r) {
 // Everything wrong with one run.
 function judge(id, r) {
   const problems = outputProblems(id, r);
-  const want = Number((file(id, 'exit') ?? '0').trim());
+  const routine = check ? product.exampleRoutineResults?.[id] : undefined;
+  const want = routine?.exit ?? Number((file(id, 'exit') ?? '0').trim());
   if (!check) {
     if (r.exit !== want) problems.push(`exit ${r.exit}, expected ${want}; fix the example or explicitly review a changed documented exit`);
     return problems;
   }
   if (r.exit !== want) problems.push(`exit ${r.exit}, expected ${want}`);
+  if (routine && (!r.rawOut.equals(Buffer.from(routine.stdout)) || !r.rawErr.equals(Buffer.from(routine.stderr)))) problems.push('output differs from the exact routine branch witness');
   return problems;
 }
 
@@ -251,6 +255,12 @@ const addNeeds = (id, from) => {
 };
 for (const id of [...ids]) addNeeds(id);
 if (errors.length) { console.error(errors.join('\n')); process.exit(1); }
+// Dependencies are part of the execution set too. Refuse the entire plan before
+// any example can ask the recorder or reach a build-capable fallback.
+if (!check) for (const id of ids.filter(needsPreparation)) {
+  if (!preparedDir || !preparedIds.has(id) || !fs.existsSync(path.join(preparedDir, id, 'run.sh'))) throw new Error(`${id}: prepared executable is required; compilation is disabled`);
+}
+
 if (capture || replay) {
   const withheld = ids.filter((id) => (product.exampleWithheldCaptures ?? []).includes(id));
   if (withheld.length) throw new Error(`${withheld.join(', ')}: capture withheld for stand-in example`);

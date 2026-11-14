@@ -1,11 +1,17 @@
-# Compile the unchanged example against the shared staged swift package.
-set -eu
-root=$(cd ../../../../.. && pwd)
-packages=${SITE_PACKAGES:-$root/target/site-packages}
-shown=$(pwd)/show.swift
+# Compile only in preparation; capture and replay execute this retained program.
+set -euo pipefail
+[ "${SITE_EXECUTE_ONLY:-}" != 1 ] || { echo 'Use the prepared function executable' >&2; exit 2; }
+if [ "${1:-}" = --prepare ]; then program=$2; mkdir -p "$program"; else
+  program=$(mktemp -d)
+  trap 'status=$?; trap - EXIT; set +e; rm -rf "$program"; exit "$status"' EXIT
+fi
+bash ../../../lang-swift/run.sh --prepare "$program"
+cat > "$program/run.sh" <<'RUN'
+set -euo pipefail
+program=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+shown=$program/show.swift
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-# Keep the question and options aligned with the shared capture case.
+trap 'status=$?; trap - EXIT; set +e; rm -rf "$work"; exit "$status"' EXIT
 jq -r '[.question?, .choices[]?, .labels[]?, .levels[]?, .kinds[]?,
         (.rules[]? | .source, .target, .relation),
         (.questions? // {} | keys[]),
@@ -15,15 +21,9 @@ jq -r '[.question?, .choices[]?, .labels[]?, .levels[]?, .kinds[]?,
     grep -qF "\"$wording\"" "$shown" || { echo "show.swift does not use \"$wording\" from case.json" >&2; exit 1; }
   done
 jq -j '.records | if length == 1 then .[0] else error("expected one record") end' "$SITE_CASE_FILE" > "$work/message.txt"
-build=$(cat "$packages/swift/module-path")
-compiler=$(cat "$packages/swift/compiler-path")
-# SwiftPM's resource accessor looks beside the consumer executable.
-for resources in "$build/ThinkThen_ThinkThen.resources" "$build/ThinkThen_ThinkThen.bundle"; do
-  if [ -d "$resources" ]; then ln -s "$resources" "$work/"; fi
-done
-"$compiler" -swift-version 6 -I "$build/Modules" -I "$build/CThinkThen.build" \
-  "$shown" "$build"/ThinkThen.build/*.o "$build"/CThinkThen.build/*.o -o "$work/example"
-(cd "$work" && ./example) > "$work/output.txt"
+(cd "$work" && "$program/example") > "$work/output.txt"
 cat "$work/output.txt"
 jq -R -s -c --slurpfile case "$SITE_CASE_FILE" 'split("\n") | map(select(length > 0)) | map(if . == "no line answers" then null else . end)' \
   "$work/output.txt" > "$SITE_ANSWERS_FILE"
+RUN
+[ "${1:-}" = --prepare ] || bash "$program/run.sh"

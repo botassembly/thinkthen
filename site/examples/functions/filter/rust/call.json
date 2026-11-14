@@ -1,5 +1,5 @@
 {
-  "anchor": "    for refund_request in engine.filter(&refund, messages, |message| *message)?",
+  "anchor": "    for refund_request in engine.filter(&refund, messages)? {",
   "before": 0,
   "after": 2
 }

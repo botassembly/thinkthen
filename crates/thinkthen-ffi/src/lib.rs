@@ -2,6 +2,12 @@
 #[cfg(all(feature = "fixture-routing", not(debug_assertions)))]
 compile_error!("fixture routing cannot enter a production release build");
 mod builders;
+mod c_detail_views;
+mod c_row_details;
+pub use c_detail_views::*;
+mod c_rows;
+pub use c_row_details::*;
+pub use c_rows::*;
 mod direct;
 mod events;
 #[cfg(test)]
@@ -15,8 +21,11 @@ mod original;
 #[cfg(test)]
 mod reuse_tests;
 mod row;
+mod selected;
 mod single;
+pub use selected::thinkthen_row_selected_text;
 mod sql;
+mod table;
 mod usage;
 mod values;
 pub use builders::*;
@@ -31,6 +40,7 @@ pub use memory::{
 pub use original::{RecordView, thinkthen_row_original};
 pub use single::*;
 pub use sql::*;
+pub use table::*;
 pub use usage::*;
 pub use values::*;
 

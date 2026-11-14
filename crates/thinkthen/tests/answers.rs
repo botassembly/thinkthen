@@ -8,8 +8,8 @@ use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{
     AnnotatableQuestion, Annotate, AnnotationEntry, BackendName, Choose, Decide, Engine, Filter,
-    Found, Key, Name, NoAnswer, Outcome, Probability, Question, Rank, Record, RecordId, Relation,
-    Score, Settings, Status, Tag, Threshold,
+    Key, Name, NoAnswer, Outcome, Probability, Question, Rank, Record, RecordId, Relation, Score,
+    Settings, Span, Status, Tag, Threshold,
 };
 
 fn stub() -> Engine {
@@ -59,7 +59,12 @@ fn into_answer_gives_the_answer_and_refuses_not_sure_and_failed_rows() {
         Err(NoAnswer::Failed(error)) => panic!("not sure became {error}"),
     }
 
-    let failed = stub().run(&banded, Record::missing()).unwrap();
+    let failed = stub()
+        .rows(&banded, [Record::missing()])
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
     match failed.into_answer() {
         Err(NoAnswer::Failed(error)) => assert_eq!(error.code().as_str(), "record.missing"),
         other => panic!("a failed record became {other:?}"),
@@ -69,10 +74,10 @@ fn into_answer_gives_the_answer_and_refuses_not_sure_and_failed_rows() {
 #[test]
 fn rows_compare_and_print_as_their_answer() {
     let engine = stub();
-    let team = Choose::new("Which team owns this?", ["billing", "shipping"]).unwrap();
+    let team = Choose::with_strings("Which team owns this?", ["billing", "shipping"]).unwrap();
     let row = engine.run(&team, "My parcel never came.").unwrap();
     assert_eq!(row, engine.run(&team, "My parcel never came.").unwrap());
-    let owner: String = row.answer().unwrap().clone();
+    let owner: String = row.answer().unwrap().to_owned();
     assert_eq!(row.to_string(), owner);
     assert!(!format!("{row:?}").contains("PhantomData"), "{row:?}");
 
@@ -82,8 +87,16 @@ fn rows_compare_and_print_as_their_answer() {
         .threshold(Threshold::band(0.2, 0.8).unwrap());
     let unsure = answering(&middle).run(&banded, "Perhaps.").unwrap();
     assert_eq!(unsure.to_string(), "unsure");
-    let failed = engine.run(&banded, Record::missing()).unwrap();
-    assert_eq!(failed.to_string(), "failed: record.missing");
+    let failed = engine
+        .rows(&banded, [Record::missing()])
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        failed.to_string(),
+        "failed: record.missing: the record is missing"
+    );
     assert_ne!(unsure, failed);
 }
 
@@ -112,40 +125,47 @@ fn run_takes_text_and_json_as_they_are() {
 }
 
 #[test]
-fn filter_yields_only_kept_items_with_failures_in_place() {
-    let engine = stub();
+fn filter_yields_kept_items_before_one_failure_with_all_failed_items() {
+    let server = Loopback::noul(0.9).unwrap();
+    let engine = answering(&server);
     let complaint = Filter::new("Is this review a complaint?").unwrap();
-    let reviews: Vec<Option<String>> = (0..40)
-        .map(|n| (n % 7 != 3).then(|| format!("Review number {n}.")))
-        .collect();
-    let record =
-        |review: &Option<String>| review.clone().map_or_else(Record::missing, Record::text);
-    let expected: Vec<Result<Option<String>, Option<String>>> = engine
-        .filter_items(&complaint, reviews.clone(), record)
-        .unwrap()
-        .map(Result::unwrap)
-        .filter_map(|(review, row)| match row.status() {
-            Status::Answered => row.kept().then_some(Ok(review)),
-            Status::Unsure => None,
-            Status::Failed => Some(Err(review)),
+    let reviews: Vec<serde_json::Value> = (0..40)
+        .map(|n| {
+            (n % 7 != 3)
+                .then(|| format!("Review number {n}."))
+                .map_or(serde_json::Value::Null, serde_json::Value::String)
         })
         .collect();
-    let kept: Vec<Result<Option<String>, Option<String>>> = engine
-        .filter(&complaint, reviews, record)
-        .unwrap()
-        .map(|result| {
-            result.map_err(|failure| {
+    let mut expected = Vec::new();
+    let mut failed = Vec::new();
+    for review in &reviews {
+        if review.is_null() {
+            failed.push(review.clone());
+        } else {
+            expected.push(review.clone());
+        }
+    }
+    let mut results = engine.filter(&complaint, reviews).unwrap();
+    let mut actual = Vec::new();
+    for result in results.by_ref() {
+        match result {
+            Ok(review) => actual.push(review),
+            Err(failure) => {
                 assert_eq!(failure.error().code().as_str(), "record.missing");
-                failure.into_item().unwrap()
-            })
-        })
-        .collect();
-    assert_eq!(kept, expected);
-    let first_failure = kept.iter().position(Result::is_err).unwrap();
-    assert!(
-        kept[first_failure..].iter().any(Result::is_ok),
-        "reading goes on after a failure: {kept:?}"
-    );
+                assert_eq!(
+                    failure
+                        .rows()
+                        .iter()
+                        .map(|row| row.item().clone())
+                        .collect::<Vec<_>>(),
+                    failed
+                );
+                assert!(results.next().is_none());
+                break;
+            }
+        }
+    }
+    assert_eq!(actual, expected);
 }
 
 #[test]
@@ -168,7 +188,7 @@ fn typed_calls_carry_the_engine_execution_name() {
 #[test]
 fn annotate_takes_pairs_and_refuses_a_repeated_name() {
     let refund = Decide::new("Does the customer ask for a refund?").unwrap();
-    let team = Choose::new("Which team owns this?", ["billing", "shipping"]).unwrap();
+    let team = Choose::with_strings("Which team owns this?", ["billing", "shipping"]).unwrap();
     let form = Annotate::new([
         ("refund", AnnotatableQuestion::from(refund.clone())),
         ("team", AnnotatableQuestion::from(team)),
@@ -189,7 +209,7 @@ fn annotate_takes_pairs_and_refuses_a_repeated_name() {
 #[test]
 fn annotate_answers_read_one_question_in_its_own_type() {
     let refund = Decide::new("Does the customer ask for a refund?").unwrap();
-    let team = Choose::new("Which team owns this?", ["billing", "shipping"]).unwrap();
+    let team = Choose::with_strings("Which team owns this?", ["billing", "shipping"]).unwrap();
     let form = Annotate::new([
         ("refund", AnnotatableQuestion::from(refund)),
         ("team", team.into()),
@@ -208,9 +228,9 @@ fn annotate_answers_read_one_question_in_its_own_type() {
         AnnotationEntry::Decide(Outcome::Failed { error }) => Err(NoAnswer::Failed(error.clone())),
         other => panic!("refund is not a decide entry: {other:?}"),
     };
-    let is_refund: Result<bool, NoAnswer> = answers.answer::<Decide>("refund");
+    let is_refund: Result<bool, NoAnswer> = answers.decide("refund").unwrap().answer();
     assert_eq!(is_refund, expected);
-    let owner: Result<String, NoAnswer> = answers.answer::<Choose>("team");
+    let owner: Result<String, NoAnswer> = answers.choose::<String>("team").unwrap().into_answer();
     match (&answers["team"], owner) {
         (AnnotationEntry::Choose(Outcome::Answered { answer, .. }), Ok(owner)) => {
             assert_eq!(&owner, answer);
@@ -225,24 +245,22 @@ fn annotate_answers_read_one_question_in_its_own_type() {
     assert_eq!(names, ["refund", "team"]);
     for (name, question, code) in [
         ("urgency", "decide", "usage.name"),
-        ("refund", "filter", "usage.function"),
         ("refund", "choose", "usage.function"),
         ("team", "decide", "usage.function"),
     ] {
         let read = match question {
-            "decide" => answers.answer::<Decide>(name).map(|_| ()),
-            "filter" => answers.answer::<Filter>(name).map(|_| ()),
-            _ => answers.answer::<Choose>(name).map(|_| ()),
+            "decide" => answers.decide(name).map(|_| ()),
+            _ => answers.choose::<String>(name).map(|_| ()),
         };
         match read {
-            Err(NoAnswer::Failed(error)) => assert_eq!(error.code().as_str(), code, "{name}"),
+            Err(error) => assert_eq!(error.code().as_str(), code, "{name}"),
             other => panic!("{name} as {question} gave {other:?}"),
         }
     }
 }
 
 #[test]
-fn run_takes_a_borrowed_string_and_refuses_blank_text() {
+fn run_takes_a_borrowed_string_and_returns_blank_text_as_a_call_error() {
     let engine = stub();
     let refund = Decide::new("Does the customer ask for a refund?").unwrap();
     let message = String::from("Please refund my order.");
@@ -292,7 +310,7 @@ fn record_ids_print_as_the_caller_wrote_them() {
 
 #[test]
 fn spans_and_probabilities_are_plain_values() {
-    let found: Found =
+    let found: Span =
         serde_json::from_value(json!({"text": "refund", "start": 7, "end": 13})).unwrap();
     let span: (usize, usize) = (found.start(), found.end());
     assert_eq!(span, (7, 13));
@@ -319,14 +337,12 @@ fn spans_and_probabilities_are_plain_values() {
 
 #[test]
 fn ranked_rows_carry_their_own_record() {
-    let by_urgency = Rank::new("How urgent is the request?", ["routine", "urgent"]).unwrap();
+    let by_urgency =
+        Rank::with_strings("How urgent is the request?", ["routine", "urgent"]).unwrap();
     let messages = ["Refund me now!", "Thanks for the help."];
-    for (row, message) in stub().rows(&by_urgency, messages).unwrap().zip(messages) {
+    for row in stub().rank(&by_urgency, messages).unwrap() {
         let row = row.unwrap();
-        assert_eq!(
-            format!("{:?}", row.record().unwrap()),
-            format!("{:?}", Record::text(message))
-        );
+        assert_eq!(*row.item(), messages[row.position() as usize - 1]);
     }
 }
 
@@ -342,23 +358,23 @@ fn meanings_and_descriptions_reach_the_question() {
         .no_means("needs work");
     for question in [Question::from(decide), Question::from(filter)] {
         let definition = serde_json::to_value(&question).unwrap();
-        assert_eq!(definition["true"], "safe to proceed");
-        assert_eq!(definition["false"], "needs work");
+        assert_eq!(definition["yes_means"], "safe to proceed");
+        assert_eq!(definition["no_means"], "needs work");
     }
     let described = [("billing", "money owed or paid")];
-    let choose = Choose::new("Which team?", ["billing", "shipping"])
+    let choose = Choose::with_strings("Which team?", ["billing", "shipping"])
         .unwrap()
         .descriptions(described)
         .unwrap();
-    let tag = Tag::new("Which teams?", ["billing", "shipping"])
+    let tag = Tag::with_strings("Which teams?", ["billing", "shipping"])
         .unwrap()
         .descriptions(described)
         .unwrap();
-    let score = Score::new("How urgent?", ["routine", "urgent"])
+    let score = Score::with_strings("How urgent?", ["routine", "urgent"])
         .unwrap()
         .descriptions([("urgent", "needs an answer today")])
         .unwrap();
-    let rank = Rank::new("How urgent?", ["routine", "urgent"])
+    let rank = Rank::with_strings("How urgent?", ["routine", "urgent"])
         .unwrap()
         .descriptions([("urgent", "needs an answer today")])
         .unwrap();
@@ -391,7 +407,7 @@ fn meanings_and_descriptions_reach_the_question() {
 #[test]
 fn an_unknown_description_name_gets_the_engine_refusal() {
     let unknown = [("sales", "selling things")];
-    let refused = Choose::new("Which team?", ["billing", "shipping"])
+    let refused = Choose::with_strings("Which team?", ["billing", "shipping"])
         .unwrap()
         .descriptions(unknown)
         .unwrap_err();
@@ -403,17 +419,17 @@ fn an_unknown_description_name_gets_the_engine_refusal() {
     assert_eq!(refused.code(), shared.code());
     assert_eq!(refused.to_string(), shared.to_string());
     for refused in [
-        Tag::new("Which teams?", ["billing", "shipping"])
+        Tag::with_strings("Which teams?", ["billing", "shipping"])
             .unwrap()
             .descriptions(unknown)
             .map(|_| ())
             .unwrap_err(),
-        Score::new("How urgent?", ["routine", "urgent"])
+        Score::with_strings("How urgent?", ["routine", "urgent"])
             .unwrap()
             .descriptions(unknown)
             .map(|_| ())
             .unwrap_err(),
-        Rank::new("How urgent?", ["routine", "urgent"])
+        Rank::with_strings("How urgent?", ["routine", "urgent"])
             .unwrap()
             .descriptions(unknown)
             .map(|_| ())

@@ -48,7 +48,8 @@ export const capturedStreams = (example) => [example.output, example.stderr];
 // a literal ampersand sequence already present in captured text.
 export const outputHtml = (text) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\r', '&#13;');
 export const outputNotice = (text) => text === '' ? '(nothing printed)' : /^(?:\r?\n)$/.test(text) ? '(an empty line)' : '';
-export const outputStreams = (example) => [['stdout', example.output], ...(example.stderr ? [['stderr', example.stderr]] : [])];
+export const outputStreams = (example) => example.unverified && !example.output && !example.stderr ? []
+  : [['stdout', example.output], ...(example.stderr ? [['stderr', example.stderr]] : [])];
 
 // A reviewed literal source anchor selects a contiguous excerpt, never inferred code.
 export function selectQuestionCall(show, selection, id = 'example') {
@@ -105,7 +106,7 @@ export function exampleMarkdown(id) {
 }
 
 // The files of the example folder that make the build run it, not the files the example reads.
-const HARNESS = /^(run\.(?:sh|ps1)|show\..+|output\.txt|stderr\.txt|answers\.json|capture\.json|call\.json|exit|ran|unverified|needs|expect-status|exact|build-only)$/;
+const HARNESS = /^(run\.(?:sh|ps1)|show\..+|output\.txt|stderr\.txt|answers\.json|capture\.json|call\.json|normalize\.sh|exit|ran|unverified|needs|expect-status|exact|build-only)$/;
 
 // examples/<id>/build-only lists files that point the build at the packages staged from this
 // commit, one `FILE: reason` per line. A reader writes those files differently, with the

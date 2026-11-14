@@ -9,7 +9,6 @@ records <- request$records
 for (index in names(case$integer_ids)) records[[as.integer(index)]]$id <- tt_id_integer(case$integer_ids[[index]])
 for (index in unlist(case$invalid_integer_ids, use.names = FALSE)) records[[index]]$id <- 2^53
 
-# Translate public typed R projections for comparison to the shared cases.
 record_fields <- function(x, i = 1L) {
   fields <- setNames(lapply(vctrs::fields(x), function(field) {
     value <- vctrs::field(x, field)
@@ -29,73 +28,24 @@ normal <- function(x) {
   if (is.atomic(x) && !is.null(names(x))) return(as.list(x))
   x
 }
-answer_value <- function(x, verb, i = 1L) {
-  if (verb == "find") {
-    if (is.na(x[i])) NULL else record_fields(x, i)
-  } else if (verb %in% c("recognize", "relate")) {
-    value <- x[[i]]
-    if (is.null(value)) NULL else lapply(seq_along(value), function(j) record_fields(value, j))
-  } else if (verb == "tag") as.list(x[[i]]) else if (verb == "annotate") {
-    lapply(x[[i]], function(entry) {
-      child <- entry[["function"]]
-      result <- list(`function` = child, status = as.character(entry$status))
-      if (entry$status == "answered") result["answer"] <- list(answer_value(entry$answer, child))
-      if (!is.null(entry$probability)) result$probability <- entry$probability
-      if (!is.null(entry$error)) result$error <- normal(entry$error)
-      if (!is.null(entry$detail)) result$detail <- normal(entry$detail)
-      result
-    })
-  } else x[[i]]
-}
 result <- tryCatch({
   client <- do.call(tt_client, settings)
-  output <- invoke(records, request$question, client, request$name)
-  if (identical(case$name, "annotate-columns")) {
-    input <- as.data.frame(do.call(rbind, lapply(records, as.data.frame)), stringsAsFactors = FALSE)
-    attached <- tt_bind(input, output)
-    stopifnot(nrow(attached) == 4L, identical(attached[names(input)], input))
-    for (name in names(request$question$questions)) {
-      for (i in seq_len(nrow(attached))) {
-        child <- case$expected[[i]]$answer[[name]]
-        stopifnot(identical(attached[[name]][[i]], child$answer),
-                  as.character(attached[[paste0(name, "_status")]][[i]]) == child$status)
-        probability <- attached[[paste0(name, "_probability")]][[i]]
-        stopifnot(if (is.null(child$probability)) is.na(probability) else identical(probability, child$probability))
-      }
-    }
-  }
   verb <- request$question[["function"]]
-  check_rows(output, verb, length(case$expected))
-  rows <- lapply(seq_len(nrow(output)), function(i) {
-    row <- list(`function` = verb, position = output$position[[i]],
-                status = as.character(output$status[[i]]), source = normal(output$source[[i]]))
-    if (!is.null(output$id[[i]])) row$id <- normal(output$id[[i]])
-    if (row$status == "failed") {
-      row$error <- list(code = as.character(output$error_code[[i]]), message = output$error_message[[i]])
-      if (!is.na(output$error_http_status[[i]])) row$error$http_status <- output$error_http_status[[i]]
-    } else {
-      if (row$status == "answered") row["answer"] <- list(answer_value(output$answer, verb, i))
-      if (!is.na(output$probability[[i]])) row$probability <- output$probability[[i]]
-      if (!is.null(output$detail[[i]])) row$detail <- normal(output$detail[[i]])
+  output <- tryCatch(invoke(records, request$question, client, request$name),
+                     thinkthen_failed = identity)
+  if (verb == "filter" && !inherits(output, "thinkthen_failed")) {
+    list(kept = normal(output))
+  } else {
+    if (inherits(output, "thinkthen_failed")) output <- output$outcomes
+    check_rows(output, verb, length(case$expected))
+    path <- tempfile()
+    tt_details_write(output, path)
+    rows <- lapply(readLines(path, encoding="UTF-8"), jsonlite::fromJSON, simplifyVector = FALSE, bigint_as_char = TRUE)
+    for (i in seq_along(rows)) {
+      if (!is.null(output$id[[i]])) rows[[i]]$id <- normal(output$id[[i]])
     }
-    if (verb == "filter") {
-      stopifnot(identical(output$item[[i]], records[[output$position[[i]]]]),
-                identical(output$kept[[i]], isTRUE(row$answer)))
-    }
-    if (verb == "find" && !is.null(row$answer)) {
-      text <- records[[output$position[[i]]]]
-      pointer <- request$question$field
-      if (!is.null(pointer)) {
-        for (part in strsplit(substring(pointer, 2L), "/", fixed = TRUE)[[1]]) {
-          key <- gsub("~0", "~", gsub("~1", "/", part, fixed = TRUE), fixed = TRUE)
-          text <- if (is.null(names(text))) text[[as.integer(key) + 1L]] else text[[key]]
-        }
-      }
-      stopifnot(identical(substr(text, row$answer$start, row$answer$end), row$answer$text))
-    }
-    row
-  })
-  list(rows = rows)
+    list(rows = rows)
+  }
 }, thinkthen_error = function(error) c(list(error = error$code, family = class(error)[[1]]),
                                        if (!is.null(error$http_status)) list(http_status = error$http_status)))
 # JSON has one number type. Preserve R's numeric storage before serialization

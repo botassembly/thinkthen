@@ -3,7 +3,7 @@
     unsafe_code,
     reason = "exports borrow counted foreign inputs and own supported output prefixes"
 )]
-use crate::memory::{bytes, error_size, live, row_size, text};
+use crate::memory::{error_size, live, row_size, text};
 use crate::{
     Buffer, CallHandle, ClientHandle, HostError, HostRow, QuestionHandle, SettingsHandle, TextView,
 };
@@ -132,6 +132,7 @@ pub extern "C" fn thinkthen_code_family(value: i32) -> *const c_char {
     code_metadata(value).map_or(ptr::null(), |(_, _, family)| family.as_ptr())
 }
 fn code_metadata(value: i32) -> Option<&'static (i32, std::ffi::CString, std::ffi::CString)> {
+    let value = value.checked_abs()?;
     static CODES: OnceLock<Vec<(i32, std::ffi::CString, std::ffi::CString)>> = OnceLock::new();
     CODES
         .get_or_init(|| {
@@ -174,11 +175,16 @@ pub unsafe extern "C" fn thinkthen_client_open(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
+            let stop = settings.as_ref().and_then(|settings| settings.1.clone());
             let settings = match settings.as_ref() {
                 Some(settings) => settings.0.clone(),
                 None => native::environment_settings(|name| std::env::var(name).ok())?,
             };
             let engine = crate::engine(settings)?;
+            let engine = match stop {
+                Some(stop) => engine.cancel(stop),
+                None => engine,
+            };
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(THINKTHEN_OK)
         })
@@ -344,11 +350,7 @@ pub(crate) unsafe fn open(
     let call = native::Call::open(&unsafe { live(client) }?.0, request, offsets)?;
     /* SAFETY: an independent owned call is published into the empty slot. */
     unsafe {
-        out.write(Box::into_raw(Box::new(CallHandle::new(
-            call,
-            request,
-            crate::original::Original::initial(request),
-        ))));
+        out.write(Box::into_raw(Box::new(CallHandle::new(call, request))));
     }
     Ok(THINKTHEN_OK)
 }
@@ -439,18 +441,13 @@ pub unsafe extern "C" fn thinkthen_call_send_text(
     /* SAFETY: one driver exclusively accesses the cell; cancel uses a separate token. */
     unsafe {
         operation(error, || {
-            let (driver, originals) = driven(call)?;
+            let driver = driven(call)?;
             driver.send(crate::finite::admit_record(
                 data,
                 len,
                 thinkthen::records::RecordKind::Text.abi(),
             )?)?;
-            if let Some(originals) = originals {
-                originals.push_back(crate::original::Original::new(
-                    thinkthen::records::RecordKind::Text,
-                    bytes(data, len),
-                ));
-            }
+
             Ok(THINKTHEN_OK)
         })
     }
@@ -478,14 +475,9 @@ pub unsafe extern "C" fn thinkthen_call_send_json(
         operation(error, || {
             let record =
                 crate::finite::admit_record(data, len, thinkthen::records::RecordKind::Json.abi())?;
-            let (driver, originals) = driven(call)?;
+            let driver = driven(call)?;
             driver.send(record)?;
-            if let Some(originals) = originals {
-                originals.push_back(crate::original::Original::new(
-                    thinkthen::records::RecordKind::Json,
-                    bytes(data, len),
-                ));
-            }
+
             Ok(THINKTHEN_OK)
         })
     }
@@ -516,19 +508,9 @@ pub unsafe extern "C" fn thinkthen_call_send_utf16(
             } else {
                 std::slice::from_raw_parts(data, len)
             };
-            let (driver, originals) = driven(call)?;
+            let driver = driven(call)?;
             driver.send(Record::from_utf16(units))?;
-            if let Some(originals) = originals {
-                originals.push_back(match String::from_utf16(units) {
-                    Ok(text) => crate::original::Original::new(
-                        thinkthen::records::RecordKind::Text,
-                        text.as_bytes(),
-                    ),
-                    Err(_) => {
-                        crate::original::Original::new(thinkthen::records::RecordKind::Invalid, &[])
-                    }
-                });
-            }
+
             Ok(THINKTHEN_OK)
         })
     }
@@ -551,14 +533,9 @@ pub unsafe extern "C" fn thinkthen_call_send_missing(
     /* SAFETY: only the driver accesses this call cell and output slot. */
     unsafe {
         operation(error, || {
-            let (driver, originals) = driven(call)?;
+            let driver = driven(call)?;
             driver.send(Record::missing())?;
-            if let Some(originals) = originals {
-                originals.push_back(crate::original::Original::new(
-                    thinkthen::records::RecordKind::Missing,
-                    &[],
-                ));
-            }
+
             Ok(THINKTHEN_OK)
         })
     }
@@ -581,14 +558,9 @@ pub unsafe extern "C" fn thinkthen_call_send_invalid(
     /* SAFETY: only the driver accesses this call cell and output slot. */
     unsafe {
         operation(error, || {
-            let (driver, originals) = driven(call)?;
+            let driver = driven(call)?;
             driver.send(Record::invalid())?;
-            if let Some(originals) = originals {
-                originals.push_back(crate::original::Original::new(
-                    thinkthen::records::RecordKind::Invalid,
-                    &[],
-                ));
-            }
+
             Ok(THINKTHEN_OK)
         })
     }
@@ -602,7 +574,7 @@ pub unsafe extern "C" fn thinkthen_call_send_invalid(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
     /* SAFETY: only the driver accesses the call cell. */
-    if let Ok((driver, _)) = unsafe { driven(call) } {
+    if let Ok(driver) = unsafe { driven(call) } {
         driver.end_input();
     }
 }
@@ -612,7 +584,7 @@ pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
 /// waits for a send or thinkthen_call_end_input; THINKTHEN_END when every row is read; or a
 /// negative code for the call as a whole, such as -THINKTHEN_CODE_LOCAL_CANCELLED. A record
 /// that fails is still THINKTHEN_OK: its row has status THINKTHEN_STATUS_FAILED and its own
-/// code, and reading goes on. *out is empty unless the return is THINKTHEN_OK. A filter row's
+/// code, and reading goes on. *out is empty unless the return is THINKTHEN_OK. A row's
 /// input comes from thinkthen_row_original. After a call-level error, every later read returns
 /// that same error until the call is freed; a failed call never returns THINKTHEN_END.
 /// # Safety
@@ -633,10 +605,13 @@ pub unsafe extern "C" fn thinkthen_call_next(
         operation(error, || {
             let size = row_size(out)?;
             HostRow::clear(out);
+            if live(call)?.filter && live(call)?.c_surface {
+                return Err(native::argument_error(Code::UsageFunction));
+            }
             match next(call)? {
                 Next::Status(status) => Ok(status),
-                Next::Row(row, original) => {
-                    publish(*row, original, size, out)?;
+                Next::Row(row) => {
+                    publish(*row, size, out, live(call)?.domain.clone())?;
                     Ok(THINKTHEN_OK)
                 }
             }
@@ -645,68 +620,46 @@ pub unsafe extern "C" fn thinkthen_call_next(
 }
 enum Next {
     Status(i32),
-    // A row is large beside a status, so it lives on the heap.
-    Row(
-        Box<thinkthen::results::AnyRow>,
-        Option<crate::original::Original>,
-    ),
+    Row(Box<thinkthen::AnyRow>),
 }
-type Originals = Option<std::collections::VecDeque<crate::original::Original>>;
-// The call and its originals, for the sole driver. Cancel reaches neither cell.
-unsafe fn driven<'a>(
-    call: *const CallHandle,
-) -> Result<(&'a mut native::Call, &'a mut Originals), Error> {
-    /* SAFETY: only the sole driver reaches these cells of a live call. */
-    unsafe {
-        let call = live(call)?;
-        Ok((&mut *call.call.get(), &mut *call.originals.get()))
-    }
+// Only the sole driver borrows the call cell; cancellation owns a separate token.
+unsafe fn driven<'a>(call: *const CallHandle) -> Result<&'a mut native::Call, Error> {
+    /* SAFETY: only the sole driver accesses this cell of a live call. */
+    unsafe { Ok(&mut *live(call)?.call.get()) }
 }
-// Pull one event and pair a filter row with its original input.
 unsafe fn next(call: *mut CallHandle) -> Result<Next, Error> {
-    /* SAFETY: only the sole driver reaches the call cell. */
+    /* SAFETY: the sole driver owns the mutable call borrow until the event is copied. */
     unsafe {
-        let (driver, originals) = driven(call)?;
-        Ok(match driver.next_event()? {
+        Ok(match driven(call)?.next_event()? {
             Event::NeedsInput => Next::Status(THINKTHEN_NEEDS_INPUT),
             Event::Finished => Next::Status(THINKTHEN_END),
-            Event::Row(row) => {
-                let original = match originals {
-                    Some(originals) => {
-                        Some(originals.pop_front().ok_or_else(native::internal_error)?)
-                    }
-                    None => None,
-                };
-                Next::Row(Box::new(row), original)
-            }
+            Event::Row(row) => Next::Row(Box::new(row)),
             _ => return Err(native::abi_error()),
         })
     }
 }
 unsafe fn publish(
-    row: thinkthen::results::AnyRow,
-    original: Option<crate::original::Original>,
+    row: thinkthen::AnyRow,
     size: u32,
     out: *mut HostRow,
+    domain: std::sync::Arc<crate::row::Domain>,
 ) -> Result<(), Error> {
-    let mut result = HostRow::from_row(size, row)?;
-    /* SAFETY: the fresh row owns its source allocation, and out is a validated slot. */
+    let result = HostRow::from_value(size, crate::values::ValueHandle::from_any(row), domain)?;
+    /* SAFETY: out is a validated exclusive sized output slot. */
     unsafe {
-        if let Some(original) = original {
-            result.source.attach_original(original);
-        }
         result.write(out);
     }
     Ok(())
 }
 /// Read the next kept record of a filter call, skipping the records it drops.
 ///
-/// This is filter's usual view: a record the model answers no for, or is not sure about, is
-/// skipped. thinkthen_call_next stays the view of every row. Returns THINKTHEN_OK with *row
+/// A single cut keeps answered-yes records and skips answered-no records.
+/// thinkthen_call_next stays the internal adapter view of every row. Returns THINKTHEN_OK with *row
 /// holding a kept row (thinkthen_row_original gives its input); THINKTHEN_NEEDS_INPUT when a
 /// streaming call waits for a send; THINKTHEN_END when every record is judged; or a negative
-/// code. A failed record returns its own negative code in its place, with its row in *row and
-/// its message in error, and you may keep reading the records after it.
+/// code. Every kept record is returned before one terminal error summarizing all failed
+/// records. Read their owned rows with thinkthen_call_next_failed. The terminal error leaves
+/// *row empty; further kept reads return THINKTHEN_END.
 /// -THINKTHEN_CODE_USAGE_FUNCTION means the call is not a filter call.
 /// # Safety
 /// One thread at a time drives call; thinkthen_call_cancel may run on any thread. row is
@@ -726,29 +679,81 @@ pub unsafe extern "C" fn thinkthen_call_next_kept(
         operation(error, || {
             let size = row_size(row)?;
             HostRow::clear(row);
-            if driven(call)?.1.is_none() {
+            if !live(call)?.filter {
                 return Err(native::argument_error(Code::UsageFunction));
+            }
+            if (*live(call)?.kept.get()).finished {
+                return Ok(THINKTHEN_END);
             }
             loop {
                 match next(call)? {
+                    Next::Status(THINKTHEN_END) => {
+                        let state = &mut *live(call)?.kept.get();
+                        state.finished = true;
+                        return match &state.first {
+                            Some((first, position)) => Err(native::records_failed(
+                                first,
+                                state.failures,
+                                state.total,
+                                *position,
+                            )),
+                            None => Ok(THINKTHEN_END),
+                        };
+                    }
                     Next::Status(status) => return Ok(status),
-                    Next::Row(item, original) => {
-                        let failure = item.error().cloned();
-                        let kept = matches!(
-                            &*item,
-                            thinkthen::results::AnyRow::Filter(item)
-                                if matches!(item.outcome(), thinkthen::results::Outcome::Answered { answer: true, .. })
-                        );
-                        if let Some(failure) = failure {
-                            publish(*item, original, size, row)?;
-                            return Err(failure);
+                    Next::Row(item) => {
+                        let state = &mut *live(call)?.kept.get();
+                        state.total = item.position();
+                        if let Some(failure) = item.failure() {
+                            state.failures = state.failures.saturating_add(1);
+                            if state.first.is_none() {
+                                state.first = Some((failure.clone(), item.position()));
+                            }
+                            state.failed.push_back(*item);
+                            continue;
                         }
-                        if kept {
-                            publish(*item, original, size, row)?;
+                        if matches!(&*item, thinkthen::AnyRow::Filter(item)
+                            if matches!(item.outcome(), thinkthen::Outcome::Answered { answer: true, .. }))
+                        {
+                            publish(*item, size, row, live(call)?.domain.clone())?;
                             return Ok(THINKTHEN_OK);
                         }
                     }
                 }
+            }
+        })
+    }
+}
+/// Read the next failed result retained by a filter's kept-record operation.
+///
+/// Returns THINKTHEN_OK with *row written, or THINKTHEN_END when no retained failures remain.
+/// Reading failures performs no backend work. A retained row owns its original record and
+/// remains valid after the call is freed. -THINKTHEN_CODE_USAGE_FUNCTION refuses non-filter calls.
+/// # Safety
+/// One thread at a time drives call. row is initialized with THINKTHEN_ROW_INIT; passing it
+/// again frees its previous contents. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+/// Free row and error after their last use, with thinkthen_row_free and thinkthen_error_free.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_next_failed(
+    call: *mut CallHandle,
+    row: *mut HostRow,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the sole driver lends a live call and exclusive sized output slots. */
+    unsafe {
+        operation(error, || {
+            let size = row_size(row)?;
+            HostRow::clear(row);
+            let handle = live(call)?;
+            if !handle.filter {
+                return Err(native::argument_error(Code::UsageFunction));
+            }
+            match (&mut *handle.kept.get()).failed.pop_front() {
+                Some(item) => {
+                    publish(item, size, row, live(call)?.domain.clone())?;
+                    Ok(THINKTHEN_OK)
+                }
+                None => Ok(THINKTHEN_END),
             }
         })
     }

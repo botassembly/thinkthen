@@ -7,42 +7,6 @@ import "C"
 
 import "encoding/json"
 
-// YesMeans returns a copy describing what a yes answer means.
-func (v Decide) YesMeans(meaning string) Decide { v.q.yesMeans = &meaning; return v }
-
-// NoMeans returns a copy describing what a no answer means.
-func (v Decide) NoMeans(meaning string) Decide { v.q.noMeans = &meaning; return v }
-
-// YesMeans returns a copy describing which records the filter keeps.
-func (v Filter) YesMeans(meaning string) Filter { v.q.yesMeans = &meaning; return v }
-
-// NoMeans returns a copy describing which records the filter drops.
-func (v Filter) NoMeans(meaning string) Filter { v.q.noMeans = &meaning; return v }
-
-// Descriptions returns a copy with descriptions for its named choices.
-func (v Choose) Descriptions(descriptions map[string]string) Choose {
-	v.q.descriptions = copyDescriptions(descriptions)
-	return v
-}
-
-// Descriptions returns a copy with descriptions for its named labels.
-func (v Tag) Descriptions(descriptions map[string]string) Tag {
-	v.q.descriptions = copyDescriptions(descriptions)
-	return v
-}
-
-// Descriptions returns a copy with descriptions for its ordered levels.
-func (v Score) Descriptions(descriptions map[string]string) Score {
-	v.q.descriptions = copyDescriptions(descriptions)
-	return v
-}
-
-// Descriptions returns a copy with descriptions for its ordered levels.
-func (v Rank) Descriptions(descriptions map[string]string) Rank {
-	v.q.descriptions = copyDescriptions(descriptions)
-	return v
-}
-
 func copyDescriptions(values map[string]string) map[string]string {
 	if values == nil {
 		return nil
@@ -70,7 +34,7 @@ func describeQuestion(ptr *C.thinkthen_question, q question) (*C.thinkthen_quest
 	for _, meaning := range []struct {
 		name  string
 		value *string
-	}{{"true", q.yesMeans}, {"false", q.noMeans}} {
+	}{{"yes_means", q.yesMeans}, {"no_means", q.noMeans}} {
 		if meaning.value != nil {
 			data, _ := json.Marshal(*meaning.value)
 			definition[meaning.name] = data

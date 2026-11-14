@@ -26,6 +26,9 @@ const all = pages();
 const errors = [];
 const notices = [];
 
+const helpTables = spawnSync(process.execPath, ['scripts/help-tables.mjs', '--rendered'], { encoding: 'utf8' });
+if (helpTables.status !== 0) errors.push(helpTables.stderr.trim() || helpTables.stdout.trim() || 'Rendered help table check did not run');
+
 const pythonExamples = spawnSync('python3', ['scripts/check-python-examples.py'], { encoding: 'utf8' });
 if (pythonExamples.status !== 0) errors.push(pythonExamples.stderr.trim() || 'Python example check did not run');
 
@@ -57,7 +60,7 @@ for (const p of all) {
 for (const expected of menuPages) {
   const p = all.find((page) => page.route === expected.route);
   if (!p) { errors.push(`${expected.route}: sitemap page missing`); continue; }
-  const name = expected.slug.startsWith('sdks/') && !['duckdb', 'sqlite', 'postgresql'].includes(expected.slug.split('/')[1])
+  const name = expected.slug.startsWith('sdks/') && !['duckdb', 'sqlite', 'postgresql', 'sql'].includes(expected.slug.split('/')[1])
     ? `${expected.label} SDK` : expected.route === '/' ? product.name : expected.label;
   if (p.data.title !== name) errors.push(`${expected.route}: title must be ${name}, got ${p.data.title}`);
   const fn = expected.route.match(/^\/functions\/([^/]+)\/$/)?.[1];

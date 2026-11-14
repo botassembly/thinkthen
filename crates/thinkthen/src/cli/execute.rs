@@ -55,6 +55,7 @@ pub(super) fn invocation(
         return super::saved_run::run(args, &target, input, &output, cancel, account);
     }
     let request = super::invocation::request(function, args)?;
+    output.validate_function(request.question().function())?;
     if !input.table() && options::explicit(args, "into").is_some() {
         return super::jsonl::run(input, args, &request, &output, cancel, account);
     }
@@ -73,9 +74,6 @@ pub(super) fn stream(
     engine: &Engine,
     cancel: &Cancel,
 ) -> Result<u8, Error> {
-    let mut items =
-        (!output.quiet && output.json && matches!(request.question(), crate::Question::Filter(_)))
-            .then(std::collections::VecDeque::new);
     let originals = !output.quiet
         && !output.json
         && matches!(
@@ -98,7 +96,7 @@ pub(super) fn stream(
             .sources
             .iter()
             .any(|(_, format)| *format != super::input::Format::Text);
-    let selected_field = !input.selection.is_empty();
+    let items = !output.quiet && output.json && keyed;
     let mut input = super::input::StreamInput::new(input, cancel.clone())?;
     let engine = engine.clone().cancel(cancel.clone());
     // Rank reads as it asks, so with --top it holds only the best rows, and a
@@ -116,19 +114,7 @@ pub(super) fn stream(
         }
         match call.next_event()? {
             Event::NeedsInput => match input.poll()? {
-                InputEvent::Record(record, bytes, start) => {
-                    if let Some(items) = &mut items {
-                        let format = if selected_field && input.format == super::input::Format::Text
-                        {
-                            super::input::Format::Jsonl
-                        } else {
-                            input.format
-                        };
-                        items.push_back(super::render::item(
-                            super::input::source_body(&bytes, start),
-                            format,
-                        )?);
-                    }
+                InputEvent::Record(record, bytes) => {
                     if let Some(originals) = &mut originals {
                         originals.push(&bytes)?;
                     }
@@ -151,25 +137,14 @@ pub(super) fn stream(
                     }
                     return Ok(2);
                 }
-                if completion.rows == 0
-                    && let Some(error) = row.failure()
-                    && error.code() == crate::Code::BackendTransport
-                {
-                    return Err(error.clone());
-                }
                 completion.row(&row);
                 report_failure(&row, input.origin(row.position()));
                 if output.quiet {
                     continue;
                 }
-                if let Some(items) = &mut items {
-                    let item = items.pop_front().ok_or_else(|| {
-                        Error::from_contract(
-                            crate::Code::InternalBug,
-                            "the engine returned a row without an original item",
-                        )
-                    })?;
-                    super::render::filter_row(&row, &item, cancel)?;
+                if items {
+                    let item = super::render::item(&row)?;
+                    super::render::item_row(&row, &item, cancel)?;
                 } else if let Some(originals) = &mut originals {
                     if super::render::keeps(&row) {
                         originals.write(row.position(), cancel)?;
@@ -217,25 +192,14 @@ pub(super) fn stream(
 pub(super) struct Completion {
     rows: u64,
     failed: u64,
-    backend_failed: u64,
     yes: bool,
     unsure: u64,
 }
 impl Completion {
-    pub(super) const fn rows(&self) -> u64 {
-        self.rows
-    }
     pub(super) fn row(&mut self, row: &AnyRow) {
         self.rows += 1;
         if row.failure().is_some() {
             self.failed += 1;
-            if row.status() == Status::Failed
-                && row
-                    .failure()
-                    .is_some_and(|error| error.code().family() == crate::Family::Backend)
-            {
-                self.backend_failed += 1;
-            }
         }
         self.unsure += u64::from(row.status() == Status::Unsure);
         self.yes |= match row {
@@ -256,9 +220,7 @@ impl Completion {
         super::table::report_counts(self.unsure, self.failed, quiet);
     }
     pub(super) const fn code(&self, check: bool) -> u8 {
-        if self.rows > 0 && self.backend_failed == self.rows {
-            4
-        } else if self.failed > 0 {
+        if self.failed > 0 {
             6
         } else if !check || self.yes {
             0

@@ -39,28 +39,19 @@ int main(int argc, char **argv) {
     thinkthen_row row = {.struct_size = sizeof row};
     assert(thinkthen_run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING,
                               &row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
-    thinkthen_error_free(&error);
-    thinkthen_row_free(&row);
+    assert(row.private_data == NULL && error.code == THINKTHEN_CODE_RECORD_MISSING);
     const char pointer[] = "/text";
     const char array[] = "[{\"text\":\"first\"},{\"text\":\"second\"}]";
     assert(thinkthen_question_set_field(question, pointer, sizeof pointer - 1, &error) == THINKTHEN_OK);
     assert(thinkthen_run_one(client, question, array, sizeof array - 1, THINKTHEN_RECORD_JSON,
                               &row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
-    thinkthen_error_free(&error);
-    thinkthen_value *value = NULL;
-    assert(thinkthen_row_values(&row, &value, &error) == THINKTHEN_OK);
-    thinkthen_error failure = {.struct_size = sizeof failure};
-    assert(thinkthen_value_error(value, &failure, &error) == THINKTHEN_OK);
+    assert(row.private_data == NULL && error.code == THINKTHEN_CODE_RECORD_MISSING);
     const char expected[] = "the record is an array of 2 values and holds nothing at /text. Use the stream form of the call to judge each value";
-    assert(failure.message.len == sizeof expected - 1);
-    assert(memcmp(failure.message.data, expected, sizeof expected - 1) == 0);
-    thinkthen_error_free(&failure);
-    thinkthen_value_free(value);
+    assert(error.message.len == sizeof expected - 1);
+    assert(memcmp(error.message.data, expected, sizeof expected - 1) == 0);
     thinkthen_question_free(question);
     thinkthen_client_free(client);
-    assert(row.status == THINKTHEN_STATUS_FAILED && row.position == 1);
-    assert(strcmp(thinkthen_code_name(row.error_code), "record.missing") == 0);
-    assert(isnan(row.probability));
+    assert(strstr(thinkthen_error_string(&error), "record.missing") != NULL);
     thinkthen_row_free(&row);
     thinkthen_row_free(&row);
     thinkthen_error_free(&error);

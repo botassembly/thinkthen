@@ -64,11 +64,11 @@ internal static partial class Program
                 {
                     if (request["question"]!["function"]!.GetValue<string>() == "annotate")
                     {
-                        using var rejected = AnnotationQuestions.Parse(request["question"]!["questions"]!.ToJsonString());
+                        var rejected = AnnotationQuestions.Parse(request["question"]!["questions"]!.ToJsonString());
                     }
                     else
                     {
-                        using var rejected = Toolbox.Parse(new JsonObject { ["case"] = request["question"]!.DeepClone() }.ToJsonString());
+                        var rejected = Toolbox.Parse(new JsonObject { ["case"] = request["question"]!.DeepClone() }.ToJsonString());
                     }
                     return Task.CompletedTask;
                 });
@@ -76,7 +76,7 @@ internal static partial class Program
             {
                 JsonNode actual = await ContractRows(client,request,default,new());
                 JsonNode equivalent = await ContractRows(client,sample["equivalent_request"]!,default,new());
-                Check(JsonNode.DeepEquals(WithoutMessages(actual),WithoutMessages(sample["expected"]!)), $"shared C# options changed: {sample["name"]}");
+                Check(JsonNode.DeepEquals(WithoutMessages(actual),WithoutMessages(ExpectedProjection(request,sample["expected"]!))), $"shared C# options changed: {sample["name"]}");
                 Check(JsonNode.DeepEquals(actual,equivalent), "equivalent typed options changed the rows");
             }
         }
@@ -130,8 +130,9 @@ internal static partial class Program
                 continue;
             }
             await using var client = Client();
-            JsonArray actual = (JsonArray)await ContractRows(client, request, stop.Token, new());
-            foreach (var row in actual)
+            JsonNode actual = await ContractRows(client, request, stop.Token, new());
+            var checkedRows=actual is JsonArray array ? array : actual["failed"]!.AsArray();
+            foreach (var row in checkedRows)
             {
                 Check(row!["source"]!["backend"]!.GetValue<string>() == backend.GetValue<string>(), "row source backend");
                 Check(row["source"]!["model"]!.GetValue<string>() == settings["model"]!.GetValue<string>(), "row source model");
@@ -141,8 +142,7 @@ internal static partial class Program
                     row["source"] = new JsonObject { ["name"] = executionName.DeepClone() };
                 else row.AsObject().Remove("source");
             }
-            JsonNode expected = fixture["expected"]!.DeepClone();
-            ExpectedUtf16(expected, request);
+            JsonNode expected = ExpectedProjection(request,fixture["expected"]!);
             Check(JsonNode.DeepEquals(WithoutMessages(actual), WithoutMessages(expected)),
                 $"{backend}/{name}: {actual} != {expected}");
             int requests = int.Parse(await server.Command("count"));
@@ -186,67 +186,42 @@ internal static partial class Program
                 return await Rows(client.AnnotateStreamAsync(AnnotationQuestions.Parse(question["questions"]!.ToJsonString(), token), source,
                     new() { Field = field }, name: executionName, cancellationToken: token), output);
             case "filter":
-                await foreach (var item in client.FilterStreamAsync(toolbox!.Filter(entryName), source, name: executionName, cancellationToken: token))
+                var projection=new JsonObject { ["kept"]=new JsonArray(),["failed"]=new JsonArray() };
+                try
                 {
-                    Check(item.Item.GetRawText() == records[checked((int)item.Row.Position - 1)].GetRawText(),
-                        "filter changed the item joined by position");
-                    Check(item.Kept == (item.Row is Answered<bool, NoDetail> { Answer: true }),
-                        "filter kept a failed, unsure or false row");
-                    output.Add(Row(item.Row));
+                    await foreach(var item in client.FilterAsync(toolbox!.Filter(entryName),source,name:executionName,cancellationToken:token))
+                        projection["kept"]!.AsArray().Add(JsonNode.Parse(item.GetRawText()));
                 }
-                return output;
-            case "rank":
-                await foreach (var item in client.RankAsync(toolbox!.Rank(entryName), source, name: executionName, cancellationToken: token))
+                catch(FailedException error)
                 {
-                    Check(item.Item.GetRawText() == records[checked((int)item.Row.Position - 1)].GetRawText(),
-                        "rank used rank answer instead of input position to join the item");
-                    output.Add(Row(item.Row));
+                    foreach(var failure in error.Rows)
+                    {
+                        Check(((JsonElement)failure.Item!).GetRawText()==records[checked((int)failure.Position-1)].GetRawText(),"failed filter rows retain the original record value");
+                        projection["failed"]!.AsArray().Add(Row((Row<bool,JsonElement>)failure));
+                    }
+                }
+                return projection;
+            case "rank":
+                await foreach(var row in client.RankAsync(toolbox!.Rank(entryName),source,name:executionName,cancellationToken:token))
+                {
+                    Check(row.Item.GetRawText()==records[checked((int)row.Position-1)].GetRawText(),"rank joins originals by input position");
+                    output.Add(Row(row));
                 }
                 return output;
             default: throw new Exception($"unknown canonical function {function}");
         }
     }
 
-    private static void ExpectedUtf16(JsonNode expected, JsonNode request)
+    private static JsonNode ExpectedProjection(JsonNode request,JsonNode expected)
     {
-        if (expected is not JsonArray rows) return;
-        foreach (JsonNode? row in rows)
+        if(request["question"]!["function"]!.GetValue<string>()!="filter"||expected is not JsonArray rows) return expected.DeepClone();
+        var result=new JsonObject { ["kept"]=new JsonArray(),["failed"]=new JsonArray() };
+        foreach(var row in rows)
         {
-            JsonNode? record = request["records"]![checked((int)row!["position"]!.GetValue<ulong>() - 1)];
-            JsonNode question = request["question"]!;
-            string Field(JsonNode definition)
-            {
-                JsonNode? selected = record;
-                string? pointer = definition["field"]?.GetValue<string>() ?? question["field"]?.GetValue<string>();
-                if (pointer is not null)
-                    foreach (string part in pointer.Split('/').Skip(1))
-                    {
-                        string key = part.Replace("~1", "/").Replace("~0", "~");
-                        selected = selected is JsonArray array ? array[int.Parse(key)] : selected?[key];
-                    }
-                return selected is JsonValue text && text.TryGetValue<string>(out var value)
-                    ? value : selected?.ToJsonString() ?? "null";
-            }
-            if (question["function"]!.GetValue<string>() == "annotate" && row["answer"] is JsonObject entries)
-                foreach (var entry in entries) Project(entry.Value, Field(question["questions"]![entry.Key]!));
-            else
-            {
-                Project(row["answer"], Field(question));
-                Project(row["detail"], Field(question));
-            }
+            if(row!["status"]!.GetValue<string>()=="failed") result["failed"]!.AsArray().Add(row.DeepClone());
+            else if(row["answer"]!.GetValue<bool>()) result["kept"]!.AsArray().Add(request["records"]![checked((int)row["position"]!.GetValue<ulong>()-1)]?.DeepClone());
         }
-        static void Project(JsonNode? value, string text)
-        {
-            if (value is JsonArray array) foreach (var child in array) Project(child, text);
-            if (value is not JsonObject obj) return;
-            if (obj["start"] is JsonNode start && obj["end"] is JsonNode end)
-            {
-                var runes = text.EnumerateRunes().ToArray();
-                obj["start"] = runes.Take(start.GetValue<int>()).Sum(rune => rune.Utf16SequenceLength);
-                obj["end"] = runes.Take(end.GetValue<int>()).Sum(rune => rune.Utf16SequenceLength);
-            }
-            foreach (var child in obj) Project(child.Value, text);
-        }
+        return result;
     }
 
     private static JsonNode WithoutMessages(JsonNode value)

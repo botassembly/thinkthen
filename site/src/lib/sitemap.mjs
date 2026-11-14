@@ -1,13 +1,13 @@
-// The 45 menu pages in the 2026-11-03 docs rules and sitemap decision.
+// The menu includes the twenty-one published guides alongside existing references.
 // One list supplies navigation and the build's canonical target inventory.
 import { functions } from './function-surfaces.mjs';
 const page = (label, slug) => ({ label, slug, route: slug ? `/${slug}/` : '/' });
-const sdks = [['Python', 'python'], ['TypeScript', 'typescript'], ['Go', 'go'], ['Java', 'java'], ['Kotlin', 'kotlin'], ['C#', 'csharp'], ['R', 'r'], ['Ruby', 'ruby'], ['Rust', 'rust'], ['Swift', 'swift'], ['Zig', 'zig'], ['C', 'c'], ['C++', 'cpp'], ['DuckDB', 'duckdb'], ['SQLite', 'sqlite'], ['PostgreSQL', 'postgresql']];
+const sdks = [['Python', 'python'], ['pandas', 'pandas'], ['Polars', 'polars'], ['TypeScript', 'typescript'], ['Go', 'go'], ['Java', 'java'], ['Kotlin', 'kotlin'], ['C#', 'csharp'], ['R', 'r'], ['Ruby', 'ruby'], ['Rust', 'rust'], ['Swift', 'swift'], ['Zig', 'zig'], ['C', 'c'], ['C++', 'cpp'], ['Shared SQL', 'sql'], ['DuckDB', 'duckdb'], ['SQLite', 'sqlite'], ['PostgreSQL', 'postgresql']];
 export const menu = [
   { label: 'Home', items: [page('Home', '')] },
   { label: 'Start', items: [page('Quickstart', 'quickstart'), page('Installation', 'install'), page('Configuration', 'configuration')] },
   { label: 'Functions', items: functions.map((name) => page(name, `functions/${name}`)) },
-  { label: 'Command line', items: [['File types', 'file-types'], ['JSON Lines', 'json-lines'], ['Exit codes', 'exit-codes'], ['Toolboxes', 'toolboxes'], ['Agents', 'agents']].map(([label, slug]) => page(label, `command-line/${slug}`)) },
+  { label: 'Command line', items: [['Command guide', 'guide'], ['File types', 'file-types'], ['JSON Lines', 'json-lines'], ['Exit codes', 'exit-codes'], ['Toolboxes', 'toolboxes'], ['Agents', 'agents']].map(([label, slug]) => page(label, `command-line/${slug}`)) },
   { label: 'SDKs', items: sdks.map(([label, slug]) => page(label, `sdks/${slug}`)) },
   { label: 'How-tos', items: [
     page('Triage a support inbox', 'how-tos/triage-a-support-inbox'),

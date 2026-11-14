@@ -11,5 +11,8 @@
   "error": {
     "code": "record.missing",
     "message": "the record holds nothing at /text"
+  },
+  "item": {
+    "id": "a4"
   }
 }

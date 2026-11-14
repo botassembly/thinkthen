@@ -7,6 +7,6 @@ try:
     messages["is_refund"] = messages["message"].thinkthen.decide(
         "Does the customer request a refund?"
     )
-except tt.RecordError as failure:
+except tt.Failed as failure:
     outcomes = failure.outcomes
     print(outcomes[["status", "answer", "error_code"]])

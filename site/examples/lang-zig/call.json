@@ -1,5 +1,5 @@
 {
-  "anchor": "    const asks_refund = try client.decide(",
+  "anchor": "    const refund = try client.decide(arena, asks_refund, \"Please refund my order.\", &diag);",
   "before": 0,
-  "after": 2
+  "after": 1
 }

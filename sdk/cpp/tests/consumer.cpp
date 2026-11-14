@@ -4,20 +4,22 @@
 #include <limits>
 namespace tt = thinkthen;
 using json = nlohmann::json;
-using any_question = std::variant<tt::decide, tt::choose, tt::tag, tt::score, tt::filter, tt::rank, tt::find, tt::recognize, tt::relate, tt::annotate>;
+using any_question = std::variant<tt::decide, tt::choose<>, tt::tag<>, tt::score<>, tt::filter, tt::rank<>, tt::find, tt::recognize, tt::relate, tt::annotate>;
 // Feature: annotation construction refuses ranking at the public type boundary.
-static_assert(!std::is_constructible_v<tt::annotation_question, tt::rank>);
+static_assert(!std::is_constructible_v<tt::annotation_question, tt::rank<>>);
 
 template<class Q> Q options(Q q, const json& value) {
     if (value.contains("field")) q = q.field(value.at("field").get<std::string>());
-    if constexpr (std::is_same_v<Q, tt::decide> || std::is_same_v<Q, tt::filter>) {
+    if constexpr (std::is_same_v<Q, tt::decide>) {
         if (value.contains("threshold")) {
             const auto& t = value.at("threshold");
             q = q.threshold(t.is_number() ? tt::threshold::cutoff(t.get<double>()) : tt::threshold::band(t.at("low"), t.at("high")));
         }
-    } else if constexpr (std::is_same_v<Q, tt::choose> || std::is_same_v<Q, tt::tag> || std::is_same_v<Q, tt::find> || std::is_same_v<Q, tt::recognize> || std::is_same_v<Q, tt::relate>) {
+    } else if constexpr (std::is_same_v<Q, tt::filter>) {
+        if(value.contains("threshold"))q=q.threshold(value.at("threshold").get<double>());
+    } else if constexpr (std::is_same_v<Q, tt::choose<>> || std::is_same_v<Q, tt::tag<>> || std::is_same_v<Q, tt::find> || std::is_same_v<Q, tt::recognize> || std::is_same_v<Q, tt::relate>) {
         if (value.contains("threshold")) q = q.threshold(value.at("threshold").get<double>());
-    } else if constexpr (std::is_same_v<Q, tt::rank>) {
+    } else if constexpr (std::is_same_v<Q, tt::rank<>>) {
         if (value.contains("top")) q = q.top(value.at("top").get<std::size_t>());
     }
     return q;
@@ -26,16 +28,16 @@ static any_question question(const json& q) {
     const std::string f = q.at("function");
     const auto text = q.value("question", std::string{});
     if (f == "decide") return options(tt::decide{text}, q);
-    if (f == "choose") return options(tt::choose{text, q.at("choices").get<std::vector<std::string>>()}, q);
-    if (f == "tag") return options(tt::tag{text, q.at("labels").get<std::vector<std::string>>()}, q);
-    if (f == "score") return options(tt::score{text, q.at("levels").get<std::vector<std::string>>()}, q);
+    if (f == "choose") return options(tt::choose<>{text, q.at("choices").get<std::vector<std::string>>()}, q);
+    if (f == "tag") return options(tt::tag<>{text, q.at("labels").get<std::vector<std::string>>()}, q);
+    if (f == "score") return options(tt::score<>{text, q.at("levels").get<std::vector<std::string>>()}, q);
     if (f == "filter") return options(tt::filter{text}, q);
-    if (f == "rank") return options(tt::rank{text, q.at("levels").get<std::vector<std::string>>()}, q);
+    if (f == "rank") return options(tt::rank<>{text, q.at("levels").get<std::vector<std::string>>()}, q);
     if (f == "find") return options(tt::find{text}, q);
     if (f == "recognize") return options(tt::recognize{q.at("kinds").get<std::vector<std::string>>()}, q);
     if (f == "relate") {
         std::vector<tt::rule> rules;
-        for (const auto& r : q.at("rules")) rules.push_back({r.at("relation"), r.at("source"), r.at("target"),
+        for (const auto& r : q.at("rules")) rules.push_back({r.at("source"), r.at("target"), r.at("relation"),
             r.contains("reads") ? std::optional<std::string>{r.at("reads").get<std::string>()} : std::nullopt, r.value("either", false)});
         return options(tt::relate{rules}, q);
     }
@@ -44,7 +46,7 @@ static any_question question(const json& q) {
     for (auto it = q.at("questions").begin(); it != q.at("questions").end(); ++it) {
         std::visit([&](const auto& child) {
             using Q = std::decay_t<decltype(child)>;
-            if constexpr (!std::is_same_v<Q, tt::rank> && !std::is_same_v<Q, tt::annotate>) entries.emplace(it.key(), child);
+            if constexpr (!std::is_same_v<Q, tt::filter> && !std::is_same_v<Q, tt::rank<>> && !std::is_same_v<Q, tt::annotate>) entries.emplace(it.key(), child);
             else assert(false);
         }, question(it.value()));
     }
@@ -68,9 +70,9 @@ static tt::settings settings(const json& value) {
 }
 #include "stress.hpp"
 
-template<class Q> static void append_row(json& rows, json& kept, const tt::row<Q>& row) {
+template<class Q,class T> static void append_row(json& rows, json& kept, const tt::row<Q,T>& row) {
     rows.push_back(row);
-    if constexpr (std::is_same_v<Q, tt::filter>) kept.push_back(row.kept());
+    (void)kept;
 }
 
 int main(int argc, char** argv) {
@@ -84,12 +86,13 @@ int main(int argc, char** argv) {
                 json{{"body", json::binary({3})}}, json{{"body", json::parse("invalid", nullptr, false)}}}) {
             auto rows = conversion_owner.decide_each(tt::decide{"Ready?"}, std::vector<tt::owned_record>{tt::json_record(invalid)});
             auto failed = rows.next();
-            assert(failed && failed->status() == tt::status::failed && failed->failure()->code() == tt::errc::record_invalid);
+            assert(failed && failed->status() == tt::status::failed && failed->error()->code() == tt::errc::record_invalid);
             assert(!rows.next());
         }
         tt::settings s; s.backend = tt::backend::stub;
-        auto row = tt::client{s}.decide(tt::decide{"Ready?"}, tt::missing_record{});
-        assert(row.failure() && row.failure()->code() == tt::errc::record_missing);
+        auto missing_rows = tt::client{s}.decide_each(tt::decide{"Ready?"},std::vector<tt::owned_record>{tt::missing_record{}});
+        auto row = std::move(*missing_rows.next());
+        assert(row.error() && row.error()->code() == tt::errc::record_missing);
         return 0;
     }
     assert(argc == 3 || (argc == 4 && (std::string{argv[3]} == "cancelled" || std::string{argv[3]} == "shortcut")));
@@ -129,13 +132,33 @@ int main(int argc, char** argv) {
         }
         std::visit([&](const auto& value) {
             using Q = std::decay_t<decltype(value)>;
-#define THINKTHEN_COLLECT(QNAME) if constexpr (std::is_same_v<Q, tt::QNAME>) { if (shortcut) append_row(rows, kept, owner.QNAME(value, single, named)); else { auto stream = ([&] { if constexpr (std::is_same_v<Q, tt::filter>) return owner.filter_rows_each(value, records, named); else return owner.QNAME##_each(value, records, named); })(); if (argc == 4) stream.cancel_handle().request_cancel(); for (const auto& row : stream) append_row(rows, kept, row); } }
-            THINKTHEN_COLLECT(decide) THINKTHEN_COLLECT(choose)
-            THINKTHEN_COLLECT(tag) THINKTHEN_COLLECT(score)
-            THINKTHEN_COLLECT(filter) THINKTHEN_COLLECT(rank)
-            THINKTHEN_COLLECT(find) THINKTHEN_COLLECT(recognize)
-            THINKTHEN_COLLECT(relate) THINKTHEN_COLLECT(annotate)
+            if constexpr (std::is_same_v<Q,tt::filter>) {
+                auto encode=[](const tt::record& input)->json {
+                    return std::visit([](const auto& value)->json {
+                        using T=std::decay_t<decltype(value)>;
+                        if constexpr(std::is_same_v<T,tt::missing_record>)return nullptr;
+                        else if constexpr(std::is_same_v<T,tt::text>||std::is_same_v<T,tt::owned_text>)return value.value;
+                        else return json::parse(value.value);
+                    },input);
+                };
+                try {
+                    auto stream=owner.filter_each(value,records,named);
+                    if(argc==4 && !shortcut)stream.cancel_handle().request_cancel();
+                    for(const auto& input:stream)kept.push_back(encode(input));
+                }catch(const tt::filter_error<tt::record>& failure){
+                    for(const auto& row:failure.rows())rows.push_back(row);
+                }
+            } else if constexpr(std::is_same_v<Q,tt::rank<>>) {
+                auto stream=owner.rank_each(value,records,named);if(argc==4 && !shortcut)stream.cancel_handle().request_cancel();
+                for(const auto& row:stream)append_row(rows,kept,row);
+            } else {
+#define THINKTHEN_COLLECT(QNAME,TYPE) if constexpr (std::is_same_v<Q,TYPE>) { if(shortcut)append_row(rows,kept,owner.QNAME(value,single,named)); else {auto stream=owner.QNAME##_each(value,records,named);if(argc==4)stream.cancel_handle().request_cancel();for(const auto& row:stream)append_row(rows,kept,row);} }
+                THINKTHEN_COLLECT(decide,tt::decide) THINKTHEN_COLLECT(choose,tt::choose<>)
+                THINKTHEN_COLLECT(tag,tt::tag<>) THINKTHEN_COLLECT(score,tt::score<>)
+                THINKTHEN_COLLECT(find,tt::find) THINKTHEN_COLLECT(recognize,tt::recognize)
+                THINKTHEN_COLLECT(relate,tt::relate) THINKTHEN_COLLECT(annotate,tt::annotate)
 #undef THINKTHEN_COLLECT
+            }
         }, q);
     } catch (const tt::error& error) {
         json output{{"rows", rows}, {"kept", kept}, {"error", thinkthen_code_name(error.code().value())}};

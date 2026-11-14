@@ -1,5 +1,5 @@
 {
-  "anchor": "    match engine.run(&requested, message)?.into_answer()? {",
+  "anchor": "    let action = engine.run(&requested, message)?;",
   "before": 0,
   "after": 2
 }

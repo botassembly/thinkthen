@@ -2,7 +2,7 @@
 package dev.thinkthen.internal;
 final class Contract {
     private Contract() {}
-    static final int ABI_VERSION = 131076;
+    static final int ABI_VERSION = 327681;
     static final String ABI_CODE = "usage.abi";
     static final String ABI_MESSAGE = "the native ABI is incompatible";
     static final String CLOSED_CODE = "usage.closed";
@@ -15,10 +15,10 @@ final class Contract {
             case 2 -> "choose";
             case 3 -> "tag";
             case 4 -> "score";
-            case 5 -> "filter";
             case 7 -> "find";
             case 8 -> "recognize";
             case 9 -> "relate";
+            case 5 -> "filter";
             case 6 -> "rank";
             case 10 -> "annotate";
             default -> null;

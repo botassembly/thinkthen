@@ -95,6 +95,16 @@ pub(super) struct Output {
     pub check: bool,
 }
 impl Output {
+    pub(super) fn validate_function(&self, function: crate::FunctionName) -> Result<(), Error> {
+        if function == crate::FunctionName::Filter && self.json {
+            return Err(usage(
+                "json",
+                "thinkthen decide --json for every record",
+                "filter --json",
+            ));
+        }
+        Ok(())
+    }
     pub(super) fn resolve(matches: &ArgMatches) -> Result<Self, Error> {
         let selectors = group(matches, &["format", "json"]);
         let mut values = selectors.into_iter();

@@ -4,7 +4,7 @@ const tt = @import("thinkthen");
 pub fn main(init: std.process.Init) !void {
     var stdout = std.Io.File.stdout().writerStreaming(init.io, &.{});
     var diag: tt.Diagnostic = .{};
-    errdefer std.debug.print("{s}\n", .{diag.message()});
+    errdefer std.debug.print("{f}\n", .{diag});
     var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
 
@@ -13,16 +13,10 @@ pub fn main(init: std.process.Init) !void {
         "Where is my parcel?",
         "I was charged twice for one invoice.",
     };
-    // next yields only the kept messages.
-    // A failed message returns its error in its place.
-    var refunds = try client.filterAll(
-        init.gpa,
-        "Does the customer request a refund?",
-        .{ .texts = &messages },
-        .{},
-        &diag,
-    );
+    const asks_refund: tt.Filter = .{ .question = "Does the customer request a refund?" };
+    var refunds = try client.filter(init.gpa, asks_refund, &messages, &diag);
     defer refunds.deinit();
+    // All kept originals arrive before an aggregate failure is reported.
     while (try refunds.next(&diag)) |refund|
-        try stdout.interface.print("{s}\n", .{refund.text});
+        try stdout.interface.print("{s}\n", .{refund});
 }

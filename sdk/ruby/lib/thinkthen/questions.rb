@@ -4,6 +4,7 @@ module ThinkThen
   # An immutable question validated once by the native engine.
   class Question
     attr_reader :value
+    def symbols? = !!@symbols
     def initialize(function, text = nil, **options)
       raise UsageError.new("question must be a String", code: :"usage.question") unless text.nil? || text.is_a?(String)
       ThinkThen.send(:native)
@@ -11,6 +12,11 @@ module ThinkThen
       @value = Values.freeze_copy({"function" => function.to_s, **(text.nil? ? {} : {"question" => text}), **options.transform_keys(&:to_s)})
       Native.validate_question(@value)
       freeze
+    rescue UsageError => error
+      if function == :filter && options[:threshold].is_a?(Hash) && error.code == :"usage.threshold"
+        raise UsageError.new(error.message + "; use ThinkThen.decide_each", code: error.code, http_status: error.http_status)
+      end
+      raise
     end
     def self.field(value)
       return value if value.nil? || value.is_a?(String)
@@ -35,8 +41,8 @@ module ThinkThen
       raise UsageError.new("threshold must be a Float#{band ? ' or inclusive Range' : ''}", code: :"usage.question")
     end
     def self.list(field, values, descriptions = nil)
-      unless values.is_a?(Array) && values.all? { |value| value.is_a?(String) }
-        raise UsageError.new("expected an Array of String", code: :"usage.question")
+      unless values.is_a?(Array) && (values.all? { |value| value.is_a?(String) } || values.all? { |value| value.is_a?(Symbol) })
+        raise UsageError.new("expected an Array of String or an Array of Symbol", code: :"usage.question")
       end
       unless descriptions.nil? || descriptions.is_a?(Hash)
         raise UsageError.new("descriptions must be a Hash", code: :"usage.question")
@@ -56,18 +62,20 @@ module ThinkThen
   # A yes-or-no question with an optional cut or uncertainty band.
   class DecideQuestion < Question
     def initialize(text, threshold: nil, field: nil, yes_means: nil, no_means: nil)
-      super(:decide, text, **{true: yes_means, false: no_means, threshold: Question.threshold(threshold, band: true), field: Question.field(field)}.reject { |_, value| value.nil? })
+      super(:decide, text, **{yes_means: yes_means, no_means: no_means, threshold: Question.threshold(threshold, band: true), field: Question.field(field)}.reject { |_, value| value.nil? })
     end
   end
   # A question selecting one named choice.
   class ChooseQuestion < Question
     def initialize(text, choices:, threshold: nil, field: nil, descriptions: nil)
+      @symbols = choices.is_a?(Array) && choices.all? { |entry| entry.is_a?(Symbol) }
       super(:choose, text, **{**Question.list(:choices, choices, descriptions), threshold: Question.threshold(threshold, band: false), field: Question.field(field)}.reject { |_, value| value.nil? })
     end
   end
   # A question selecting every label above the threshold.
   class TagQuestion < Question
     def initialize(text, labels:, threshold: nil, field: nil, descriptions: nil)
+      @symbols = labels.is_a?(Array) && labels.all? { |entry| entry.is_a?(Symbol) }
       super(:tag, text, **{**Question.list(:labels, labels, descriptions), threshold: Question.threshold(threshold, band: false), field: Question.field(field)}.reject { |_, value| value.nil? })
     end
   end
@@ -80,7 +88,7 @@ module ThinkThen
   # A question deciding which input records to keep.
   class FilterQuestion < Question
     def initialize(text, threshold: nil, field: nil, yes_means: nil, no_means: nil)
-      super(:filter, text, **{true: yes_means, false: no_means, threshold: Question.threshold(threshold, band: true), field: Question.field(field)}.reject { |_, value| value.nil? })
+      super(:filter, text, **{yes_means: yes_means, no_means: no_means, threshold: Question.threshold(threshold, band: true), field: Question.field(field)}.reject { |_, value| value.nil? })
     end
   end
   # A question ordering records against levels, with an optional top count.
@@ -121,8 +129,13 @@ module ThinkThen
       end.freeze
       freeze
     end
-    # Fetch a named question; an unknown name raises KeyError.
-    def [](name) = @questions.fetch(name.to_s)
+    NativeContract::FUNCTION_NAMES.values.reject { |function| function == "annotate" }.each do |function|
+      define_method(function) do |name|
+        native = ThinkThen.send(:native)
+        native.toolbox_json(native.context_dump(@questions.transform_values(&:value), :question), select: [name.to_s, function])
+        @questions.fetch(name.to_s)
+      end
+    end
     # Read a saved toolbox from a UTF-8 JSON file.
     def self.load_file(path) = from_json(File.read(path))
     # Read the canonical saved toolbox JSON format.
@@ -136,7 +149,7 @@ module ThinkThen
         question.instance_variable_set(:@value, Values.freeze_copy(value))
         question.freeze
       end
-      new(questions: questions)
+      self == AnnotationQuestions ? AnnotationQuestions.new(**questions.transform_keys(&:to_sym)) : new(questions: questions)
     end
     def to_json(*_args)
       native = ThinkThen.send(:native)
@@ -146,23 +159,25 @@ module ThinkThen
   # Named questions evaluated together for one record.
   class AnnotationQuestions < Toolbox
     attr_reader :questions
-    def initialize(questions:)
-      super
+    def initialize(**questions)
+      super(questions: questions)
       Native.validate_question({"function" => "annotate", "questions" => value})
     end
     def value = @questions.transform_values(&:value)
   end
   # A reusable annotation form with optional field selection.
   class AnnotateQuestion < Question
+    attr_reader :questions
     def initialize(questions, field: nil)
-      questions = AnnotationQuestions.new(questions: questions) if questions.is_a?(Hash)
+      questions = AnnotationQuestions.new(**questions.transform_keys(&:to_sym)) if questions.is_a?(Hash)
       if questions.is_a?(Toolbox) && !questions.is_a?(AnnotationQuestions)
         # A Toolbox may hold rank questions; AnnotationQuestions refuses them when it is built.
         # @type var held: untyped
         held = questions.questions
-        questions = AnnotationQuestions.new(questions: held)
+        questions = AnnotationQuestions.new(**held)
       end
       raise UsageError.new("expected named annotation questions", code: :"usage.question") unless questions.is_a?(AnnotationQuestions)
+      @questions = questions.questions
       super(:annotate, nil, questions: questions.value, **{field: Question.field(field)}.reject { |_, value| value.nil? })
     end
   end

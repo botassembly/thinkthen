@@ -14,7 +14,7 @@ public final class JavaConcurrencyCases {
              var client = ThinkThen.builder().backend(Backend.SYSTEMONE).url(URI.create(fixture.base()))
                  .apiKey("loopback-only").retry(RetryPolicy.builder().maxRetries(0)
                      .attemptTimeout(Duration.ofSeconds(60)).build()).build()) {
-            var calls = new ArrayList<CompletableFuture<Row<Boolean,NoDetail>>>();
+            var calls = new ArrayList<CompletableFuture<Row<Boolean,String>>>();
             long[] cancelledAt = {0};
             try {
                 for (int i = 0; i < 8; i++) calls.add(client.async().decide("Ready?", "record " + i));

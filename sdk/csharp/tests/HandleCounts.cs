@@ -9,18 +9,18 @@ internal static partial class Program
     private static async Task HandleCountCases()
     {
         using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
-        using var question = DecideQuestion.Create("Ready?");
+        var question = DecideQuestion.Create("Ready?");
         int before = HandleCounts.Live();
         int admitted = HandleCounts.Questions();
         Threshold band = Threshold.Band(0.2, 0.8);
-        Cut cut = Cut.From(0.6);
+        Cut cut = Threshold.Cut(0.6);
         Pointer pointer = Pointer.From("/body");
         Check(HandleCounts.Questions() == admitted, "value factories created native questions for validation");
         for (int i = 0; i < 64; i++)
         {
             Successful(await client.DecideAsync("Ready?", "alpha"));
             Successful(await client.DecideAsync(question, "beta"));
-            using var annotations = AnnotationQuestions.Parse("""{"ready":{"function":"decide","question":"Ready?"}}""");
+            var annotations = AnnotationQuestions.Parse("""{"ready":{"function":"decide","question":"Ready?"}}""");
             Successful(await client.AnnotateAsync(annotations, "alpha"));
             Successful(await client.AnnotateAsync(annotations, JsonSerializer.Deserialize<JsonElement>("""{"body":"beta"}"""), new AnnotateOptions { Field = pointer }));
             await foreach (var row in client.DecideStreamAsync("Ready?", Records(new[] { "alpha", "beta" }))) Successful(row);
@@ -59,7 +59,7 @@ internal static partial class Program
         var converter = new ThrowingConverter(cause);
         json.Converters.Add(converter);
         using var client = new ThinkThenClient(new() { Backend = Backend.Stub, Json = json });
-        var invalid = Case<Failed<bool, NoDetail>>(await client.DecideAsync("Ready?", new BrokenRecord()));
+        var invalid = Case<IFailed>(await CallFailed(client.DecideAsync("Ready?", new BrokenRecord())));
         Check(invalid.Error.ErrorCode == ErrorCode.RecordInvalid && ReferenceEquals(invalid.Error.Cause, cause),
             "record encoding lost the converter cause");
         converter.Failure = new InvalidOperationException("synthetic converter bug");

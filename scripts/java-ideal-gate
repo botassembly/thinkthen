@@ -1,0 +1,62 @@
+#!/bin/sh
+# Build the Java package and execute its literal ideal guide in isolation.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/jvm-env
+unset JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS CLASSPATH
+scripts/jvm-generated
+java_scratch=$(mktemp -d)
+if [ "${1:-}" = --compile-only ]; then
+    python3 scripts/jvm_repository.py seed "$cache/m2" "$java_scratch/m2"
+    exec mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$java_scratch/m2" -pl library compile
+fi
+cargo build --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+java_target=${CARGO_TARGET_DIR:-target}
+case "$java_target" in /*) ;; *) java_target="$PWD/$java_target" ;; esac
+if [ "${1:-}" = --jvm ] || [ "${1:-}" = --jvm-host-only ] || [ "${1:-}" = --jvm-tail ] || [ "${1:-}" = --jvm-guides-checked ] || [ "${1:-}" = --jvm-after-kotlin-abi ]; then
+    scripts/native-fixtures --engine "$java_target/debug/$jvm_library" --output "$java_scratch/abi"
+    export THINKTHEN_NATIVE_FIXTURES="$java_scratch/abi"
+    export THINKTHEN_MALFORMED_ROW_FIXTURES="$java_scratch/malformed"
+    for java_kind in invalid-json unanswered-answer unknown-function; do
+        scripts/abi-minor-check --native "$java_target/debug/$jvm_library" --malformed-row "$java_kind" --output "$THINKTHEN_MALFORMED_ROW_FIXTURES/$java_kind"
+    done
+    if [ "$1" = --jvm-host-only ]; then exec scripts/jvm-gate --java-host-only; fi
+    if [ "$1" = --jvm-after-kotlin-abi ]; then exec scripts/jvm-gate --continue-after-kotlin-abi; fi
+    if [ "$1" = --jvm-guides-checked ]; then exec scripts/jvm-gate --guides-checked; fi
+    if [ "$1" = --jvm-tail ]; then exec scripts/jvm-gate --continue-after-conformance; fi
+    exec scripts/jvm-gate
+fi
+python3 scripts/jvm_repository.py seed "$cache/m2" "$java_scratch/m2"
+rm -rf sdk/java/library/target/classes
+java_resource="sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
+mkdir -p "$java_resource"
+cp "$java_target/debug/$jvm_library" "$java_resource/"
+mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$java_scratch/m2" -pl library install -DskipTests
+mvn -o -B -q -f sdk/java/library/pom.xml -Dmaven.repo.local="$java_scratch/m2" dependency:build-classpath -Dmdep.outputFile="$java_scratch/classpath"
+export THINKTHEN_LOOPBACK="$java_target/debug/loopback"
+java_jar=$(find "$java_scratch/m2/io/github/botassembly/thinkthen-java" -maxdepth 2 -name 'thinkthen-java-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar')
+test -f "$java_jar"
+java_classpath="$java_jar:$(cat "$java_scratch/classpath")"
+mkdir -p "$java_scratch/consumer"
+find sdk/java/consumer/src/main/java -name '*.java' -print > "$java_scratch/consumer-sources"
+javac --release 22 -Xlint:all -Werror -cp "$java_classpath" -d "$java_scratch/consumer" @"$java_scratch/consumer-sources"
+if [ "${1:-}" = --host-only ]; then
+    python3 scripts/java-example-check "$java_classpath" "$java_scratch/consumer" --host-only --consumers
+else
+    python3 scripts/java-example-check "$java_classpath" "$java_scratch/consumer" --consumers
+fi
+for java_control in output branch exit refusal; do
+    if python3 scripts/guide-examples --surface java --java-classpath "$java_classpath" --negative-control "$java_control" > "$java_scratch/control-$java_control.log" 2>&1; then
+        echo "Java guide accepted negative control: $java_control" >&2; exit 1
+    fi
+    case "$java_control" in
+        output) java_expected='java/0/yes: output: expected' ;;
+        branch) java_expected='branch: expected' ;;
+        exit) java_expected='exit: expected 99, got 0' ;;
+        refusal) java_expected='promised refusal was accepted' ;;
+    esac
+    grep -F "$java_expected" "$java_scratch/control-$java_control.log"
+    echo "Java guide rejected negative control: $java_control"
+done
+scripts/day-one-docs-test
+scripts/words

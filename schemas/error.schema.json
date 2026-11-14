@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Error",
+  "description": "A failure with its kind and its message.",
+  "type": "object",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/Code"
+    },
+    "http_status": {
+      "type": "integer",
+      "format": "uint16",
+      "maximum": 65535,
+      "minimum": 0
+    },
+    "message": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "message"
+  ],
+  "$defs": {
+    "Code": {
+      "description": "A stable error identity shared by every caller and backend.",
+      "oneOf": [
+        {
+          "description": "usage.threshold",
+          "type": "string",
+          "const": "usage.threshold"
+        },
+        {
+          "description": "usage.question",
+          "type": "string",
+          "const": "usage.question"
+        },
+        {
+          "description": "usage.name",
+          "type": "string",
+          "const": "usage.name"
+        },
+        {
+          "description": "usage.settings",
+          "type": "string",
+          "const": "usage.settings"
+        },
+        {
+          "description": "usage.backend",
+          "type": "string",
+          "const": "usage.backend"
+        },
+        {
+          "description": "usage.url",
+          "type": "string",
+          "const": "usage.url"
+        },
+        {
+          "description": "usage.key-missing",
+          "type": "string",
+          "const": "usage.key-missing"
+        },
+        {
+          "description": "usage.batch",
+          "type": "string",
+          "const": "usage.batch"
+        },
+        {
+          "description": "usage.pointer",
+          "type": "string",
+          "const": "usage.pointer"
+        },
+        {
+          "description": "usage.sql-policy",
+          "type": "string",
+          "const": "usage.sql-policy"
+        },
+        {
+          "description": "usage.sql-selection",
+          "type": "string",
+          "const": "usage.sql-selection"
+        },
+        {
+          "description": "usage.abi",
+          "type": "string",
+          "const": "usage.abi"
+        },
+        {
+          "description": "usage.closed",
+          "type": "string",
+          "const": "usage.closed"
+        },
+        {
+          "description": "usage.function",
+          "type": "string",
+          "const": "usage.function"
+        },
+        {
+          "description": "usage.record-kind",
+          "type": "string",
+          "const": "usage.record-kind"
+        },
+        {
+          "description": "usage.offsets",
+          "type": "string",
+          "const": "usage.offsets"
+        },
+        {
+          "description": "usage.argument",
+          "type": "string",
+          "const": "usage.argument"
+        },
+        {
+          "description": "usage.option",
+          "type": "string",
+          "const": "usage.option"
+        },
+        {
+          "description": "usage.column",
+          "type": "string",
+          "const": "usage.column"
+        },
+        {
+          "description": "usage.sheet",
+          "type": "string",
+          "const": "usage.sheet"
+        },
+        {
+          "description": "usage.output",
+          "type": "string",
+          "const": "usage.output"
+        },
+        {
+          "description": "usage.table",
+          "type": "string",
+          "const": "usage.table"
+        },
+        {
+          "description": "record.json",
+          "type": "string",
+          "const": "record.json"
+        },
+        {
+          "description": "record.missing",
+          "type": "string",
+          "const": "record.missing"
+        },
+        {
+          "description": "record.too-large",
+          "type": "string",
+          "const": "record.too-large"
+        },
+        {
+          "description": "record.invalid",
+          "type": "string",
+          "const": "record.invalid"
+        },
+        {
+          "description": "record.empty",
+          "type": "string",
+          "const": "record.empty"
+        },
+        {
+          "description": "backend.transport",
+          "type": "string",
+          "const": "backend.transport"
+        },
+        {
+          "description": "backend.status",
+          "type": "string",
+          "const": "backend.status"
+        },
+        {
+          "description": "backend.reply",
+          "type": "string",
+          "const": "backend.reply"
+        },
+        {
+          "description": "local.cancelled",
+          "type": "string",
+          "const": "local.cancelled"
+        },
+        {
+          "description": "local.io",
+          "type": "string",
+          "const": "local.io"
+        },
+        {
+          "description": "local.toolbox",
+          "type": "string",
+          "const": "local.toolbox"
+        },
+        {
+          "description": "local.accounting",
+          "type": "string",
+          "const": "local.accounting"
+        },
+        {
+          "description": "local.request-limit",
+          "type": "string",
+          "const": "local.request-limit"
+        },
+        {
+          "description": "internal.bug",
+          "type": "string",
+          "const": "internal.bug"
+        }
+      ]
+    }
+  }
+}

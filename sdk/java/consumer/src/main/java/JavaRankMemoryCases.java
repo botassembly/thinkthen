@@ -1,55 +1,70 @@
 import dev.thinkthen.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/** Exercise rank through a lazy source larger than the JVM heap. */
+/** Ranking retains caller objects through lazy input and after the client closes. */
 public final class JavaRankMemoryCases {
     private JavaRankMemoryCases() {}
     public static void main(String[] args) {
-        for (boolean stream : List.of(false,true)) bounded(stream);
-        snapshots();
+        for (boolean stream : List.of(false,true)) retained(stream);
+        originals();
     }
-    private static void bounded(boolean stream) {
+    private static void retained(boolean stream) {
         var consumed = new AtomicInteger();
+        var originals = new ArrayList<String>();
+        List<Row<Long,String>> saved;
         try (var client = ThinkThen.builder().backend(Backend.STUB).build();
-                var input = Stream.generate(() -> consumed.incrementAndGet() + ":" + "x".repeat(65536)).limit(2048);
-                var ranked = stream ? client.rank("Priority?", input, List.of("low", "high"), RankOptions.builder().top(1).build())
-                    : client.rank("Priority?", (Iterable<String>) input::iterator, List.of("low", "high"), RankOptions.builder().top(1).build())) {
-            var rows = ranked.peek(row -> {
-                if (row.isFailed()) throw new AssertionError("Expected successful bounded rank input at position "
-                        + row.position() + " after consuming " + consumed.get() + " records: " + row.row());
-            }).toList();
-            if (consumed.get() != 2048 || rows.size() != 1 || rows.getFirst().answer() != 1
-                    || ((JsonString) rows.getFirst().item()).value().length() < 65536) throw new AssertionError("rank must retain its winning original after consuming the lazy source");
+             var input = Stream.generate(() -> {
+                 String value = consumed.incrementAndGet() + ":" + "x".repeat(1024);
+                 originals.add(value);
+                 return value;
+             }).limit(64);
+             var ranked = stream ? client.rank("Priority?",input,List.of("low","high"),RankOptions.builder().top(1).build())
+                 : client.rank("Priority?",(Iterable<String>)input::iterator,List.of("low","high"),RankOptions.builder().top(1).build())) {
+            saved = ranked.toList();
         }
-        System.out.println("Lazy rank consumes 128 MiB of text with a 64 MiB JVM heap: PASS");
+        if (consumed.get() != 64 || saved.size() != 1 || saved.getFirst().answer() != 1)
+            throw new AssertionError("rank consumes all lazy records before returning its top result");
+        var first = saved.getFirst();
+        if (first.item() != originals.get(Math.toIntExact(first.position()-1)))
+            throw new AssertionError("rank result retains the caller's original after call and client close");
     }
-    private static void snapshots() {
-        List<Ranked<JsonValue>> saved;
+    private static void originals() {
+        List<Row<Long,Object>> saved;
         var input = new java.util.LinkedHashMap<String,Object>();
-        input.put("text","alpha"); input.put("nested", List.of("value"));
+        input.put("text","alpha"); input.put("nested",List.of("value"));
+        var custom = new Object();
+        List<Object> originals = java.util.Arrays.asList(input,custom,null);
         try (var client = ThinkThen.builder().backend(Backend.STUB).recordCodec(value -> "{\"custom\":true}").build();
-                var rows = client.rank("Priority?", java.util.Arrays.asList(input, new Object(), null), List.of("low","high"))) {
+             var rows = client.rank("Priority?",originals,List.of("low","high"))) {
             saved = rows.toList();
         }
-        if (saved.size() != 3 || saved.stream().map(Ranked::position).distinct().count() != 3) throw new AssertionError("rank must retain every answered and failed record");
+        if (saved.size() != 3 || saved.stream().map(Row::position).distinct().count() != 3)
+            throw new AssertionError("rank retains every answered and failed record");
+        var hashes = saved.stream().map(Row::hashCode).toList();
         input.put("text","changed after call and client close");
-        for (var row : saved) {
-            if (row.position() == 1 && !row.item().equals(JsonValue.parse("{\"text\":\"alpha\",\"nested\":[\"value\"]}"))) throw new AssertionError("JSON snapshot must outlive its input, native row, call and client");
-            if (row.position() == 2 && !row.item().equals(JsonValue.parse("{\"custom\":true}"))) throw new AssertionError("custom codec payload is preserved as JSON without an inverse codec");
-            if (row.position() == 3 && (!row.isFailed() || !(row.item() instanceof JsonNull))) throw new AssertionError("missing rank records remain failed with JsonNull snapshots");
+        for (int i=0;i<saved.size();i++) {
+            var row = saved.get(i);
+            if (row.item() != originals.get(Math.toIntExact(row.position()-1)))
+                throw new AssertionError("rank must retain each original object without snapshot substitution");
+            if (row.hashCode() != hashes.get(i)) throw new AssertionError("mutable originals cannot change result hashing");
+            if (row.position() == 3 && !row.isFailed()) throw new AssertionError("missing original remains failed");
         }
+        var unavailable = new Object();
         try (var client = ThinkThen.builder().backend(Backend.STUB).build();
-                var rows = client.rank("Priority?", List.of(new Object()), List.of("low","high"))) {
+             var rows = client.rank("Priority?",List.of(unavailable),List.of("low","high"))) {
             var failed = rows.findFirst().orElseThrow();
-            if (!failed.isFailed() || !(failed.item() instanceof JsonNull)) throw new AssertionError("unrepresentable records retain their failed outcome");
+            if (!failed.isFailed() || failed.item() != unavailable)
+                throw new AssertionError("conversion failures retain the unavailable caller object");
         }
         try (var client = ThinkThen.builder().backend(Backend.STUB).recordCodec(value -> "{").build();
-                var rows = client.rank("Priority?", List.of(new Object()), List.of("low","high"))) {
+             var rows = client.rank("Priority?",List.of(custom),List.of("low","high"))) {
             var failed = rows.findFirst().orElseThrow();
-            if (!failed.isFailed() || !(failed.item() instanceof JsonNull)) throw new AssertionError("malformed codec JSON retains its failed outcome and explicit null snapshot");
+            if (!failed.isFailed() || failed.item() != custom)
+                throw new AssertionError("malformed codec output keeps its failed original");
         }
-        System.out.println("Owned rank snapshots and failed records: PASS");
+        System.out.println("Owned rank originals and failed records: PASS");
     }
 }

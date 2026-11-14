@@ -1,4 +1,5 @@
 import dev.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking {

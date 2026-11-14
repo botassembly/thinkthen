@@ -42,6 +42,23 @@ fn a_reused_error_or_row_holds_only_its_latest_result() {
             );
         }
         let held = live() - start;
+        for _ in 0..3 {
+            assert_eq!(
+                thinkthen_run_one(client, question, b" ".as_ptr(), 1, 0, &mut row, &mut error),
+                -2005
+            );
+            assert!(
+                row.private_data.is_null(),
+                "a failed scalar call leaves no row"
+            );
+            assert_eq!(error.code, 2005);
+            assert_eq!(live() - start, 1, "only the error message remains owned");
+            assert_eq!(
+                thinkthen_run_one(client, question, b"ok".as_ptr(), 2, 0, &mut row, &mut error),
+                0
+            );
+            assert_eq!(live() - start, held, "the client and row can be reused");
+        }
         thinkthen_row_free(&mut row);
         thinkthen_error_free(&mut error);
         assert!(held > 0, "the row holds its latest answer");

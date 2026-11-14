@@ -31,16 +31,12 @@ def test_missing_column_rows_keep_engine_positions_and_probability(
         result = source.thinkthen.decide(
             "Ready?", client=client, details=True, errors="coerce"
         )
-        frame = result if library == "pandas" else result.struct.unnest()
+        frame = result
         assert len(frame) == 2
         assert frame["position"].to_list() == [1, 2]
         assert frame["status"].to_list() == ["failed", "answered"]
         assert frame["probability"].to_list()[1] == 0.8123456789012345
-        assert (
-            frame["error_code"].to_list()[0]
-            if library == "pandas"
-            else frame["error"].to_list()[0]["code"]
-        ) == "record.missing"
+        assert frame["error_code"].to_list()[0] == "record.missing"
         assert server.count() == 1
         if library == "pandas":
             assert frame.index.equals(source.index)
@@ -61,7 +57,7 @@ def test_empty_columns_preserve_declared_fields(library: str) -> None:
     result = source.thinkthen.decide(
         "Ready?", client=tt.Client(backend="stub"), details=True, errors="coerce"
     )
-    frame = result if library == "pandas" else result.struct.unnest()
+    frame = result
     assert len(frame) == 0
     assert "probability" in frame.columns and "source" in frame.columns
     assert "p" not in frame.columns
@@ -87,10 +83,7 @@ def test_polars_relate_detail_keeps_recognized_names() -> None:
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
 @pytest.mark.parametrize("backend", ["systemone", "openai"])
-@pytest.mark.parametrize("surface", ["series", "stream"])
-def test_filter_unsure_and_failed_are_not_kept(
-    library: str, backend: str, surface: str
-) -> None:
+def test_filter_unsure_and_failed_are_not_kept(library: str, backend: str) -> None:
     import json
 
     from conformance import admitted
@@ -111,26 +104,10 @@ def test_filter_unsure_and_failed_are_not_kept(
             backend=tt.Backend(backend), url=server.url, api_key="synthetic", batch=32
         ) as client,
     ):
-        if surface == "stream":
-            with client.filter_rows(question, records) as rows:
-                result = getattr(rows, "to_" + library)()
-        else:
-            result = source.thinkthen.filter(
-                question, client=client, details=True, errors="coerce"
-            )
-        frame = (
-            result
-            if library == "pandas"
-            else (
-                result["result"] if isinstance(result, pl.DataFrame) else result
-            ).struct.unnest()
-        )
+        with pytest.raises(tt.Failed) as failure:
+            source.thinkthen.filter(question, client=client)
+        frame = failure.value.outcomes
         assert len(frame) == len(case["expected"])
         for index, expected in enumerate(case["expected"]):
             assert frame["status"].to_list()[index] == expected["status"]
-            kept = frame["kept"].to_list()[index]
-            assert not pd.isna(kept)
-            assert bool(kept) is (
-                expected["status"] == "answered" and expected.get("answer") is True
-            )
         assert server.count() == 1

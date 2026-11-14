@@ -312,7 +312,7 @@
     "backend.transport": {
       "means": "the service could not be reached",
       "when": "ThinkThen cannot connect to the backend's address: the connection is refused, the name does not resolve, the request times out, or TLS fails",
-      "cause": "The request never got an answer from the service. A TLS failure means ThinkThen did not trust the service’s certificate. A transport failure before the first output row stops the command with exit 4. After rows have been written, affected rows fail and the completed stream exits 6, or 4 when every row failed with a backend error.",
+      "cause": "The request never got an answer from the service. A TLS failure means ThinkThen did not trust the service’s certificate. A produced transport-failed result is printed like every other failed result, and the completed command exits 6, including when every message failed.",
       "fix": "Check `--url` and `THINKTHEN_URL`, then try the address with `curl`. For a TLS failure behind a company proxy, add your certificate authority to the operating system store, or name a PEM file in `THINKTHEN_CA_FILE`.",
       "example": "error-transport",
       "also": "error-tls"
@@ -339,6 +339,20 @@
       "cause": "An interrupt cancels the call: ThinkThen stops reading input, stops waiting for the backend, and stops any steps a toolbox started. The `thinkthen` command prints `thinkthen: cancelling; press Ctrl-C again to exit` and ends with exit code 130 instead of printing the code. A language package returns `local.cancelled` when your code cancels a call.",
       "fix": "Nothing is wrong. Run the command again to finish the work. A second Ctrl-C exits at once.",
       "example": "exit-interrupt"
+    },
+    "local.accounting": {
+      "means": "the client usage counters cannot advance safely",
+      "when": "client usage or active-call accounting exceeds its supported range",
+      "cause": "ThinkThen checks its accounting before admitting a call or sending another request. If a counter cannot advance safely, that admission stops. It sends no further request for the refused attempt; earlier work may already have completed.",
+      "fix": "Keep completed answers and usage information. Stop the run and report the code with `thinkthen --version` before deciding which unfinished work to resume.",
+      "instead": "There is no normal input-only reproducer. Preserve the diagnostic if it occurs."
+    },
+    "local.request-limit": {
+      "means": "the client request allowance is exhausted",
+      "when": "the next HTTP attempt would exceed `--max-requests` or `THINKTHEN_MAX_REQUESTS`",
+      "cause": "The allowance counts actual HTTP attempts, including retries, split requests and saved function steps. The refused attempt is not sent. Already reserved attempts may finish, and earlier answers may already have been emitted.",
+      "fix": "Keep completed output and recovery exports, inspect `--usage`, and select only unfinished work for a later invocation. A plain rerun can pay for completed work again. [The request allowance](/reference/troubleshooting/#local-request-limit) explains its scope.",
+      "instead": "An allowance of zero prevents remote sends on a configured client. The code reports incomplete work and does not describe a model answer."
     },
     "local.io": {
       "means": "a file could not be read or written",

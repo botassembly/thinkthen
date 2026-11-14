@@ -23,14 +23,12 @@ from ._types import (
     ErrorCode,
     InternalError,
     Record,
-    RecordError,
     SetupError,
     ThinkThenError,
     UsageError,
 )
 
 T = TypeVar("T")
-Raw = tuple[str, str | None, bool, object, int]
 
 
 def _export(path: str) -> object:
@@ -53,7 +51,7 @@ for _name in ABI_EXPORTS:
     _export(_name)
 
 
-def binding(call: Callable[[], T]) -> T:
+def binding(call: Callable[[], T], *, function: str | None = None) -> T:
     try:
         return call()
     except KeyboardInterrupt:
@@ -67,12 +65,14 @@ def binding(call: Callable[[], T]) -> T:
         except ValueError:
             raise SetupError(ErrorCode(ABI_CODE), ABI_MESSAGE) from None
         kind: type[ThinkThenError] = UsageError if family == "usage" else SetupError
-        if typed is ErrorCode.USAGE_ABI:
+        if typed in {ErrorCode.USAGE_ABI, ErrorCode.USAGE_KEY_MISSING}:
             kind = SetupError
         if typed is ErrorCode.LOCAL_CANCELLED:
             kind = Cancelled
         elif family == "internal":
             kind = InternalError
+        if function == "filter" and typed is ErrorCode.USAGE_THRESHOLD:
+            message += ". Use decide_stream for not-sure results"
         raise kind(typed, message, http_status) from None
 
 
@@ -131,14 +131,6 @@ def single_record(function: str, record: object) -> None:
         raise TypeError(
             f"{function} takes one record; use .thinkthen for a column or {function}_stream for many records"
         )
-
-
-def one_row(row: T) -> T:
-    """Return a one-record call's row; blank input raises its record error."""
-    error = getattr(row, "error", None)
-    if error is not None and error.code is ErrorCode.RECORD_EMPTY:
-        raise RecordError(error.code, error.message, error.http_status)
-    return row
 
 
 def source(

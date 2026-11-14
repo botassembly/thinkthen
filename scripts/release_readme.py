@@ -54,14 +54,18 @@ def readme(name, out, artifact, *, root=ROOT):
     python = 'python' if requirements.get('platform') == 'windows-x86_64' else 'python3'
     if name == 'python':
         dependencies = '../' + wheelhouse(out).relative_to(out).as_posix()
-        body = body.replace('pip install thinkthen', f'{python} -m pip install --no-index --find-links {dependencies} ./{artifact.name}')
+        install = f'{python} -m pip install --no-index --find-links {dependencies} ./{artifact.name}'
+        body = body.replace('Run `python -m pip install thinkthen`.',
+                            f'Install the bundled wheel:\n\n```sh\n{install}\n```\n')
+        body = body.replace('python -m pip install thinkthen', install)
+        body = body.replace('pip install thinkthen', install)
     body = body.replace('npm install thinkthen', f'npm install --offline ./{artifact.name}')
     support = (FLOORS['windows']['support'].rstrip('.') if requirements.get('platform') == 'windows-x86_64' else f'macOS {requirements["macos"]}' if 'macos' in requirements else
                f'Linux glibc >= {requirements["supported_glibc"]}')
     intro = (f'# ThinkThen {version}: {name}\n\n'
              f'{requirements["runtime"]}. {support}.\n\n'
              'Install the bundled file with the normal language tools. '
-             'INSTALL.md gives offline installation and stub example commands. '
+             'Contributors can use INSTALL.md for offline package checks. '
              'Keep the supplied runtime dependencies and their licenses beside the packages.\n\n')
     return (intro + body + '\n').encode()
 

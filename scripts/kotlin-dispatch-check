@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Prove Kotlin registration and selected dispatch with a real fixture-backed negative control."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(__file__).resolve().parent.parent
+classpath, repository = sys.argv[1:]
+classpath = os.pathsep.join(str(Path(part).resolve()) for part in classpath.split(os.pathsep))
+environment = dict(os.environ)
+environment.pop('THINKTHEN_KOTLIN_CLASSPATH', None)
+environment['THINKTHEN_KOTLIN_REPOSITORY'] = repository
+command = [sys.executable, str(root / 'scripts/guide-examples'), '--surface', 'kotlin']
+inventory = subprocess.run([*command, '--inventory'], env=environment, capture_output=True, text=True, timeout=30)
+assert inventory.returncode == 0 and 'ENABLED kotlin: 31 fenced blocks' in inventory.stdout, inventory.stdout + inventory.stderr
+missing = subprocess.run(command, env=environment, capture_output=True, text=True, timeout=30)
+assert missing.returncode == 1 and 'kotlin: --kotlin-classpath or THINKTHEN_KOTLIN_CLASSPATH is required' in missing.stderr, missing.stdout + missing.stderr
+for control in ('output', 'branch', 'exit', 'refusal'):
+    negative = subprocess.run([*command, '--kotlin-classpath', classpath, '--negative-control', control], env=environment, capture_output=True, text=True, timeout=120)
+    mismatch = {
+        'output': 'FAIL kotlin/0/yes: output: expected ' + repr('deliberately wrong output\n') + ', got ' + repr('refund queue\n'),
+        'branch': "branch: expected 'deliberately wrong branch'",
+        'exit': 'exit: expected 99, got 0',
+        'refusal': 'kotlin/refusal/result-if: missing named compiler diagnostic',
+    }[control]
+    assert negative.returncode == 1 and mismatch in negative.stderr, negative.stdout + negative.stderr
+    if control != 'refusal':
+        assert 'KOTLIN DISPATCH kotlin/0/yes requests=1 branch=refund queue' in negative.stdout, negative.stdout + negative.stderr
+    print('Kotlin guide rejected negative control: ' + control, flush=True)
+print('Kotlin inventory, missing configuration and real fixture-backed selected dispatch passed')

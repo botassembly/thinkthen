@@ -218,30 +218,18 @@ impl GoldCase {
     }
 }
 
-/// Decode one current typed row or the CLI's filter item/kept envelope.
+/// Decode one current typed row, including its optional caller-owned item.
 /// # Errors
-/// Refuses malformed rows, other extra fields and inconsistent filter flags.
+/// Refuses malformed rows, duplicate fields and unknown extra fields.
 pub fn decode_row(json: &str) -> Result<AnyRow, Error> {
-    let mut fields: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+    let fields: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
         serde_json::from_str::<Fields>(json)
             .map_err(|_| invalid("the saved result must be an object with unique field names"))?
             .0;
-    let item = fields.remove("item");
-    let kept = fields.remove("kept");
-    if item.is_some() != kept.is_some() {
-        return Err(invalid("a filter envelope requires both item and kept"));
-    }
     let encoded =
         serde_json::to_string(&fields).map_err(|_| invalid("saved row encoding failed"))?;
     let row: AnyRow = serde_json::from_str(&encoded)
         .map_err(|_| invalid("the saved result does not match the current typed row contract"))?;
-    if let Some(kept) = kept {
-        let kept: bool =
-            serde_json::from_str(kept.get()).map_err(|_| invalid("filter kept must be boolean"))?;
-        if !matches!(&row, AnyRow::Filter(row) if row.kept() == kept) {
-            return Err(invalid("filter envelope kept does not match its result"));
-        }
-    }
     Ok(row)
 }
 

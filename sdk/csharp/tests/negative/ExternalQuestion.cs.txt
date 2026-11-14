@@ -1,6 +1,7 @@
+// Expected: error CS0534
 using ThinkThen;
 
-public sealed record ForeignQuestion : Question<bool, NoDetail>
+public sealed class ForeignQuestion : Question<bool, NoDetail>
 {
     public ForeignQuestion(Question<bool, NoDetail> source) : base(source) { }
 }

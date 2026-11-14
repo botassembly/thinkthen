@@ -164,14 +164,22 @@ fn names_complete_only_touching_brackets_opened_inside_the_span() {
         let rows: Vec<_> = engine
             .rows(&Recognize::new(["work"]).unwrap(), [Record::text(text)])
             .unwrap()
-            .map(|row| serde_json::to_value(row.unwrap()).unwrap())
+            .map(|row| {
+                let row = row.unwrap();
+                let names = row.answer().unwrap();
+                let start = text.find(expected).unwrap();
+                assert_eq!(names[0].start(), start);
+                assert_eq!(names[0].end(), start + expected.len());
+                serde_json::to_value(row).unwrap()
+            })
             .collect();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["status"], "answered");
         let names = rows[0]["answer"].as_array().unwrap();
         assert_eq!(names.len(), 1, "{text}: {names:?}");
         let start = text.find(expected).unwrap();
-        let end = start + expected.len();
+        let end = text[..start + expected.len()].chars().count();
+        let start = text[..start].chars().count();
         assert_eq!(
             names[0],
             json!({"text":expected,"start":start,"end":end,"kind":"work","probability":0.8})

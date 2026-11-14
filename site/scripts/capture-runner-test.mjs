@@ -17,11 +17,12 @@ const request = { model: 'test', questions: { q1: { instructions: 'Refund?', typ
 const digest = createHash('sha256').update(JSON.stringify(request)).digest('hex');
 const post = `node -e 'fetch(process.env.THINKTHEN_BASE_URL+"/systemone", {method:"POST",body:JSON.stringify(${JSON.stringify(request)})}).then(r=>{if(!r.ok)process.exitCode=1})'\n`;
 let artifactIndex = 0;
-const run = (...ids) => {
+const execute = (ids, limits = {}) => {
   const artifactDir = path.join(artifacts, String(++artifactIndex));
-  const result = spawnSync(process.execPath, ['scripts/run-examples.mjs', '--replay', ...ids], { cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH, SITE_CAPTURE_FILE: path.join(scratch, 'responses.json'), SITE_CAPTURE_ARTIFACT_DIR: artifactDir } });
+  const result = spawnSync(process.execPath, ['scripts/run-examples.mjs', '--replay', ...ids], { cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH, SITE_CAPTURE_FILE: path.join(scratch, 'responses.json'), SITE_CAPTURE_ARTIFACT_DIR: artifactDir, ...limits } });
   return { ...result, artifactDir };
 };
+const run = (...ids) => execute(ids);
 try {
   // Run the real branch programs with a failed CLI and a successful later tool.
   // A cache hit with an engine failure must not be hidden by shell control flow.
@@ -68,8 +69,8 @@ try {
     assert.equal(result.status, 2, `${id} must refuse runtime compilation before tool/package setup`);
     assert.match(result.stderr, /Use a prepared/);
   }
-  for (const name of ['scripts/run-examples.mjs', 'scripts/windows-example.mjs', 'scripts/bundle-runtimes.mjs', 'scripts/capture-backend.mjs', 'src/lib/binary.mjs', 'src/lib/json-values.mjs', 'src/lib/examples.mjs', 'src/lib/prepared-examples.mjs', 'src/lib/xlsx.mjs']) write(name, fs.readFileSync(name, 'utf8'));
-  write('product.config.mjs', 'export default { binary: "thinkthen", binDir: "../bin", versionArgs: ["--version"], exampleLocalCaptures: ["exit-interrupt", "version", "error-key-missing", "ans-field-piped", "ans-field-piped-missing", "ans-json-on-table"], exampleLocalCaptureCodes: { "error-key-missing": "usage.key", "ans-field-piped": "record.json", "ans-field-piped-missing": "record.missing", "ans-json-on-table": "usage.option" }, exampleLocalCaptureNotices: { "exit-interrupt": "thinkthen: cancelling; press Ctrl-C again to exit" }, exampleKeylessCaptures: ["error-key-missing"], exampleWithheldCaptures: ["backend-wire", "error-reply", "error-status"], exampleEnv: { THINKTHEN_BACKEND: "stub" } };');
+  for (const name of ['scripts/run-examples.mjs', 'scripts/windows-example.mjs', 'scripts/bundle-runtimes.mjs', 'scripts/runtime-examples.py', 'scripts/capture-backend.mjs', 'src/lib/binary.mjs', 'src/lib/json-values.mjs', 'src/lib/examples.mjs', 'src/lib/prepared-examples.mjs', 'src/lib/xlsx.mjs']) write(name, fs.readFileSync(name, 'utf8'));
+  write('product.config.mjs', 'export default { binary: "thinkthen", binDir: "../bin", versionArgs: ["--version"], exampleLocalCaptures: ["exit-interrupt", "version", "error-key-missing", "ans-field-piped", "ans-field-piped-missing", "ans-json-on-table"], exampleLocalCaptureCodes: { "error-key-missing": "usage.key", "ans-field-piped": "record.json", "ans-field-piped-missing": "record.missing", "ans-json-on-table": "usage.option" }, exampleLocalCaptureNotices: { "exit-interrupt": "thinkthen: cancelling; press Ctrl-C again to exit" }, exampleKeylessCaptures: ["error-key-missing"], exampleWithheldCaptures: ["backend-wire", "error-reply", "error-status"], exampleRoutineResults: { "routine-refusal": { exit: 1, stdout: "not sure\\n", stderr: "" } }, exampleEnv: { THINKTHEN_BACKEND: "stub" } };');
   write('src/data/site.json', '{"version":"0.2.0"}');
   fs.mkdirSync(path.join(scratch, 'bin'));
   fs.writeFileSync(path.join(scratch, 'bin/thinkthen'), '#!/bin/sh\nprintf "thinkthen 0.2.0\\n"\n', { mode: 0o755 });
@@ -123,6 +124,13 @@ try {
   assert.equal(run(command, python).status, 0, 'fresh agreeing cells publish');
   assert.equal(fs.readFileSync(path.join(site, `examples/${python}/output.txt`), 'utf8'), 'true\n');
   const routine = (...ids) => spawnSync(process.execPath, ['scripts/run-examples.mjs', '--check', ...ids], { cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH } });
+  write('examples/routine-refusal/run.sh', 'printf "not sure\\n"\nexit 1\n');
+  assert.equal(routine('routine-refusal').status, 0, 'the exact offline refusal branch is exercised');
+  assert.match(run('routine-refusal').stderr, /exit 1, expected 0/, 'offline branch witness cannot authorize public capture');
+  write('examples/routine-refusal/run.sh', 'printf "wrong branch\\n"\nexit 1\n');
+  assert.match(routine('routine-refusal').stderr, /exact routine branch witness/, 'an arbitrary exit one does not prove the branch');
+  write('examples/routine-refusal/run.sh', 'printf "not sure\\n"\nexit 2\n');
+  assert.match(routine('routine-refusal').stderr, /exit 2, expected 1/, 'operational failure is not an uncertainty witness');
   write(`examples/${command}/run.sh`, fabricated);
   write(`examples/${python}/run.sh`, 'printf "false\\n"\nprintf "[false]" > "$SITE_ANSWERS_FILE"\n');
   assert.match(routine(python).stderr, /answers differ from routine command case/, 'a scoped routine run adds a fresh command baseline and rejects disagreement');
@@ -137,7 +145,14 @@ try {
   assert.match(run(command).stderr, /capture.*failed/i, 'a swallowed transport error still fails capture');
   write('examples/ordinary/run.sh', post + 'printf "backend output\\n"\n');
   write('examples/ordinary/unverified', 'No real backend output recorded.\n');
-  assert.equal(run('ordinary').status, 0, 'non-cell examples can capture without semantic cell arrays');
+  const ordinaryReplay = execute(['ordinary'], { SITE_CAPTURE_MAX_CALLS: '99', SITE_CAPTURE_MAX_INPUT_BYTES: '1', SITE_CAPTURE_MAX_BYTES: '300000' });
+  assert.equal(ordinaryReplay.status, 0, 'cached replies consume no paid input allowance');
+  const replayManifest = JSON.parse(fs.readFileSync(path.join(ordinaryReplay.artifactDir, 'manifest.json')));
+  assert.equal(replayManifest.inputBytes, 0);
+  assert.equal(replayManifest.calls, 0);
+  const invalidInputLimit = execute(['ordinary'], { SITE_CAPTURE_MAX_INPUT_BYTES: '0' });
+  assert.notEqual(invalidInputLimit.status, 0);
+  assert.match(invalidInputLimit.stderr, /capture limits must be positive integers/, 'runner passes the configured input limit to transport');
   assert.equal(JSON.parse(fs.readFileSync(path.join(site, 'examples/ordinary/capture.json'))).backend, 'systemone');
   assert.equal(JSON.parse(fs.readFileSync(path.join(site, 'examples/ordinary/capture.json'))).answers, 1);
   const backendMetadata = JSON.parse(fs.readFileSync(path.join(site, 'examples/ordinary/capture.json')));
@@ -208,7 +223,7 @@ exit 2
   write('scripts/source-job.sh', fs.readFileSync('scripts/source-job.sh', 'utf8'));
   write('scripts/node-env.sh', ':\n');
   fs.mkdirSync(path.join(scratch, 'scripts'));
-  fs.writeFileSync(path.join(scratch, 'scripts/native-tools-env'), ':\n');
+  fs.writeFileSync(path.join(scratch, 'scripts/native-tools-env'), 'test -z "${SITE_RUNTIME_BUNDLE:-}" || { touch build-env-entered; exit 99; }\n');
   const generator = path.join(scratch, 'scripts/jvm-generated');
   fs.writeFileSync(generator, 'first generator\n');
   const git = (...args) => {
@@ -220,8 +235,13 @@ exit 2
   git('add', '.');
   git('commit', '-qm', 'Initial fixture');
   const stagedSource = git('rev-parse', 'HEAD');
-  const packages = path.join(scratch, 'packages');
+  const packages = path.join(artifacts, 'packages');
   fs.mkdirSync(packages);
+  fs.mkdirSync(path.join(packages, 'python'));
+  fs.writeFileSync(path.join(packages, 'python/immutable_probe.py'), 'value = "imported"\n');
+  const quoteShell = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
+  const importCode = 'import sys; sys.path.insert(0, ' + JSON.stringify(path.join(packages, 'python')) + '); import immutable_probe; print(immutable_probe.value)';
+  write('examples/python-import/run.sh', post + 'python3 -c ' + quoteShell(importCode) + '\n');
   const reuse = (prefix = packages) => spawnSync('sh', ['scripts/source-job.sh', 'routine', 'version'], { cwd: site, encoding: 'utf8', env: { ...process.env, SITE_PACKAGES: prefix } });
   for (const prefix of [packages, `${packages}-missing`])
     assert.match(reuse(prefix).stderr, /site-packages is incomplete/, 'explicit unmarked package prefixes never fall back to a CLI build');
@@ -305,6 +325,14 @@ exit 2
   const makeRuntimeBundle = (out) => spawnSync(process.execPath, ['scripts/bundle-runtimes.mjs', out], {
     cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH, SITE_PACKAGES: packages, SITE_PREPARED_EXAMPLES: preparedDir },
   });
+  const selectedPython = spawnSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' });
+  assert.equal(selectedPython.status, 0, selectedPython.stderr);
+  fs.writeFileSync(runtimeRoots.python.executable, '#!/bin/sh\nexec ' + quoteShell(selectedPython.stdout.trim()) + ' "$@"\n');
+  fs.chmodSync(runtimeRoots.python.executable, 0o755);
+  // These host launchers exercise bundle admission and replay, not portability.
+  // Keep Node in its installed layout: macOS builds can use adjacent dylibs.
+  fs.writeFileSync(runtimeRoots.node.executable, '#!/bin/sh\nexec ' + quoteShell(process.execPath) + ' "$@"\n');
+  fs.chmodSync(runtimeRoots.node.executable, 0o755);
   const beforePrepared = fs.readFileSync(path.join(preparedDir, 'manifest.json'));
   const bundled = makeRuntimeBundle(runtimeOut);
   assert.equal(bundled.status, 0, bundled.stderr);
@@ -324,9 +352,35 @@ exit 2
   assert.equal(fs.existsSync(path.join(runtimeManifest.mapped.node, 'bin/npm')), false);
   assert.equal(fs.readFileSync(path.join(packages, 'source-commit'), 'utf8'), `${stagedSource}\n`);
   assert.deepEqual(fs.readFileSync(path.join(preparedDir, 'manifest.json')), beforePrepared);
+  const runtimeRun = (...ids) => spawnSync('sh', ['scripts/source-job.sh', 'replay', ...ids], {
+    cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH,
+      SITE_RUNTIME_BUNDLE: runtimeOut, SITE_CAPTURE_FILE: path.join(scratch, 'responses.json'),
+      SITE_CAPTURE_ARTIFACT_DIR: path.join(artifacts, String(++artifactIndex)) },
+  });
+  const copiedRun = runtimeRun('lang-go', 'version', 'python-import');
+  assert.equal(copiedRun.status, 0, copiedRun.stderr);
+  assert.equal(fs.existsSync(path.join(packages, 'python/__pycache__')), false, 'real imports never mutate the frozen SDK prefix');
+  const copiedReplay = runtimeRun('lang-go', 'version', 'python-import');
+  assert.equal(copiedReplay.status, 0, copiedReplay.stderr);
+  assert.equal(fs.existsSync(path.join(scratch, 'build-env-entered')), false, 'runtime entry never sources build setup');
+  assert.equal(fs.existsSync(path.join(site, 'examples/lang-go/compiler-executed')), false);
+  const copiedNode = path.join(runtimeManifest.mapped.node, 'bin/node');
+  const nodeBytes = fs.readFileSync(copiedNode);
+  fs.appendFileSync(copiedNode, 'changed runtime');
+  assert.match(runtimeRun('version').stderr, /Copied runtime bytes or links differ/);
+  fs.writeFileSync(copiedNode, nodeBytes);
+  const commandBytes = fs.readFileSync(path.join(packages, 'bin/thinkthen'));
+  fs.appendFileSync(path.join(packages, 'bin/thinkthen'), 'changed command');
+  assert.match(runtimeRun('version').stderr, /Copied package bytes or links differ/);
+  fs.writeFileSync(path.join(packages, 'bin/thinkthen'), commandBytes);
   runtimeRoots.node.root = '/usr';
   fs.writeFileSync(runtimeFile, JSON.stringify(runtimeRoots));
   assert.match(makeRuntimeBundle(path.join(artifacts, 'broad-runtime')).stderr, /Refuse broad or missing runtime root/);
+  write('examples/aaa-before-compiled/run.sh', post + 'touch request-started\n');
+  assert.match(run('aaa-before-compiled', 'lang-go').stderr, /require a prepared executable bundle/);
+  assert.equal(fs.existsSync(path.join(site, 'examples/aaa-before-compiled/request-started')), false, 'the entire selected plan is refused before its first backend example');
+  assert.match(run('lang-go').stderr, /require a prepared executable bundle/);
+  assert.equal(fs.existsSync(path.join(site, 'examples/lang-go/compiler-executed')), false, 'missing bundle never launches a compiler');
   const runPrepared = (...ids) => spawnSync(process.execPath, ['scripts/run-examples.mjs', '--replay', ...ids], { cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH, SITE_PREPARED_EXAMPLES: preparedDir, SITE_CAPTURE_FILE: path.join(scratch, 'responses.json'), SITE_CAPTURE_ARTIFACT_DIR: path.join(artifacts, String(++artifactIndex)) } });
   assert.equal(runPrepared('lang-go', 'version').status, 0, 'ready entry runs while an interpreted/local runner stays unchanged');
   assert.equal(fs.existsSync(path.join(site, 'examples/lang-go/compiler-executed')), false);

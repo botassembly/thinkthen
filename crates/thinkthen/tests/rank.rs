@@ -39,11 +39,11 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
         })
         .unwrap();
         let engine = settings(&server).engine(|_| None).unwrap();
-        let mut question = Rank::new("Priority?", ["low", "high"])
+        let mut question = Rank::with_strings("Priority?", ["low", "high"])
             .unwrap()
             .field("/body".parse().unwrap());
         if let Some(top) = top {
-            question = question.top(NonZeroUsize::new(top).unwrap()).unwrap();
+            question = question.top(top).unwrap();
         }
         let inputs = [
             "broken",
@@ -54,7 +54,7 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
             "broken-again",
         ];
         let rows = engine
-            .rows(
+            .rank_rows(
                 &question,
                 inputs.map(|text| Record::json(json!({"id":text,"body":text}))),
             )
@@ -91,7 +91,7 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
             );
             assert!(serde_json::to_value(row).unwrap().get("original").is_none());
             if index < length {
-                assert_eq!(row.clone().into_answer().unwrap().get(), index + 1);
+                assert_eq!(row.clone().into_answer().unwrap(), index + 1);
             } else {
                 assert_eq!(row.error().unwrap().code().as_str(), "backend.reply");
             }
@@ -105,6 +105,11 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
 struct Ticket {
     id: u64,
     body: String,
+}
+impl From<&Ticket> for thinkthen::Record {
+    fn from(ticket: &Ticket) -> Self {
+        Self::text(&ticket.body)
+    }
 }
 
 #[test]
@@ -127,9 +132,9 @@ fn rank_returns_each_callers_item_with_its_row_best_first_and_failures_last() {
         })
         .unwrap();
         let engine = settings(&server).engine(|_| None).unwrap();
-        let mut question = Rank::new("Priority?", ["low", "high"]).unwrap();
+        let mut question = Rank::with_strings("Priority?", ["low", "high"]).unwrap();
         if let Some(top) = top {
-            question = question.top(NonZeroUsize::new(top).unwrap()).unwrap();
+            question = question.top(top).unwrap();
         }
         let tickets = ["low", "broken", "high", "broken-again", "middle"]
             .into_iter()
@@ -140,22 +145,20 @@ fn rank_returns_each_callers_item_with_its_row_best_first_and_failures_last() {
             })
             .collect::<Vec<_>>();
         let ranked = engine
-            .rank(&question, tickets, |ticket| ticket.body.clone())
+            .rank(&question, tickets)
             .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
         assert_eq!(
-            ranked
-                .iter()
-                .map(|(ticket, _)| ticket.id)
-                .collect::<Vec<_>>(),
+            ranked.iter().map(|row| row.item().id).collect::<Vec<_>>(),
             expected
         );
         let places = expected.len() - 2;
-        for (index, (ticket, row)) in ranked.into_iter().enumerate() {
+        for (index, row) in ranked.into_iter().enumerate() {
+            let ticket = row.item();
             assert_eq!(row.position(), ticket.id, "{} kept its row", ticket.body);
-            match row.into_answer() {
-                Ok(place) => assert_eq!(place.get(), index + 1, "{} ranked", ticket.body),
+            match row.answer() {
+                Ok(place) => assert_eq!(place, index + 1, "{} ranked", ticket.body),
                 Err(NoAnswer::Failed(error)) => {
                     assert!(index >= places, "{} failed after ranked items", ticket.body);
                     assert_eq!(error.code().as_str(), "backend.reply");
@@ -173,8 +176,8 @@ fn cancelling_a_rank_ends_it_with_one_cancelled_error() {
         .retry(Retry::new(0, Duration::ZERO, Duration::from_secs(30)).unwrap())
         .engine(|_| None)
         .unwrap();
-    let question = Rank::new("Priority?", ["low", "high"]).unwrap();
-    let mut ranked = engine.rank(&question, ["evidence"], |text| *text).unwrap();
+    let question = Rank::with_strings("Priority?", ["low", "high"]).unwrap();
+    let mut ranked = engine.rank(&question, ["evidence"]).unwrap();
     arrived.recv_timeout(Duration::from_secs(10)).unwrap();
     ranked.cancel();
     assert_eq!(
@@ -193,8 +196,8 @@ fn empty_rank_sends_nothing() {
     let engine = settings(&server).engine(|_| None).unwrap();
     assert!(
         engine
-            .rows(
-                &Rank::new("Priority?", ["low", "high"]).unwrap(),
+            .rank_rows(
+                &Rank::with_strings("Priority?", ["low", "high"]).unwrap(),
                 Vec::<Record>::new()
             )
             .unwrap()
@@ -217,7 +220,10 @@ fn cancelled_rank_does_not_read_input() {
     });
     let engine = settings(&server).engine(|_| None).unwrap().cancel(cancel);
     let failure = engine
-        .rows(&Rank::new("Priority?", ["low", "high"]).unwrap(), records)
+        .rank_rows(
+            &Rank::with_strings("Priority?", ["low", "high"]).unwrap(),
+            records,
+        )
         .unwrap_err();
     assert_eq!(failure.code().as_str(), "local.cancelled");
     assert_eq!(read.load(Ordering::SeqCst), 0);
@@ -240,14 +246,14 @@ fn rank_keeps_zero_scores_tied_below_positive_answers() {
         })
         .unwrap();
         let engine = settings(&server).engine(|_| None).unwrap();
-        let mut question = Rank::new("Priority?", ["low", "high"]).unwrap();
+        let mut question = Rank::with_strings("Priority?", ["low", "high"]).unwrap();
         if let Some(top) = top {
-            question = question.top(NonZeroUsize::new(top).unwrap()).unwrap();
+            question = question.top(top).unwrap();
         }
         let records = ["negative-zero", "positive-zero", "positive"]
             .map(|text| Record::text(text).with_id(text.into()));
         let rows = engine
-            .rows(&question, records)
+            .rank_rows(&question, records)
             .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
@@ -291,9 +297,9 @@ fn ranked_top_one_retains_bounded_original_storage_for_a_long_stream() {
         .batch("1".parse().unwrap())
         .engine(|_| None)
         .unwrap();
-    let question = Rank::new("Priority?", ["low", "high"])
+    let question = Rank::with_strings("Priority?", ["low", "high"])
         .unwrap()
-        .top(NonZeroUsize::new(1).unwrap())
+        .top(1)
         .unwrap();
     let records = (0..8192).map(move |index| {
         if index >= 1024 && index % 512 == 0 {
@@ -302,7 +308,7 @@ fn ranked_top_one_retains_bounded_original_storage_for_a_long_stream() {
         thinkthen::records::Record::text(format!("{index}:{}", "x".repeat(32768)))
     });
     let rows = engine
-        .rows(&question, records)
+        .rank_rows(&question, records)
         .unwrap()
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
@@ -315,4 +321,49 @@ fn ranked_top_one_retains_bounded_original_storage_for_a_long_stream() {
         maximum.saturating_sub(first) < 64 * 1024 * 1024,
         "top one retained more than 64 MiB while consuming 256 MiB: first={first}, peak={maximum}"
     );
+}
+
+trait WireRankRows {
+    fn rank_rows<I>(
+        &self,
+        question: &Rank,
+        records: I,
+    ) -> Result<std::vec::IntoIter<Result<thinkthen::Row<Rank>, thinkthen::Error>>, thinkthen::Error>
+    where
+        I: IntoIterator<Item = Record> + Send + 'static,
+        I::IntoIter: Send;
+}
+impl WireRankRows for thinkthen::Engine {
+    fn rank_rows<I>(
+        &self,
+        question: &Rank,
+        records: I,
+    ) -> Result<std::vec::IntoIter<Result<thinkthen::Row<Rank>, thinkthen::Error>>, thinkthen::Error>
+    where
+        I: IntoIterator<Item = Record> + Send + 'static,
+        I::IntoIter: Send,
+    {
+        let request = Request::new(question.clone());
+        let call = self.open_request(&request, thinkthen::OffsetUnit::Utf8)?;
+        let sender = call.sender();
+        let worker = std::thread::spawn(move || {
+            for record in records {
+                if sender.send(record).is_err() {
+                    break;
+                }
+            }
+            sender.close();
+        });
+        let rows = call
+            .rows()
+            .map(|row| {
+                row.map(|row| match row {
+                    thinkthen::AnyRow::Rank(row) => row,
+                    other => panic!("unexpected row {other:?}"),
+                })
+            })
+            .collect::<Vec<_>>();
+        worker.join().unwrap();
+        Ok(rows.into_iter())
+    }
 }

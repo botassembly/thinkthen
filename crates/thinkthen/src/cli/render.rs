@@ -93,12 +93,15 @@ pub(super) fn keyed_row(
         return json_row(row, cancel);
     }
     let mut output = io::stdout().lock();
-    if row.error().is_some() {
-        return Ok(());
-    }
     let value = serde_json::to_value(row).map_err(|_| local("the row could not be encoded"))?;
     let answer = value.get("answer");
-    let text = if matches!(row, AnyRow::Find(_)) {
+    let text = if let Some(error) = row.error() {
+        format!(
+            "failed: {}: {}",
+            error.code(),
+            text(&serde_json::Value::String(error.to_string()))
+        )
+    } else if matches!(row, AnyRow::Find(_)) {
         answer
             .and_then(|answer| answer.get("text"))
             .and_then(serde_json::Value::as_str)
@@ -120,7 +123,18 @@ pub(super) fn keyed_row(
                     .iter()
                     .map(|(name, entry)| {
                         let value = entry.get("answer").map_or_else(
-                            || entry.get("status").map_or_else(|| "unsure".into(), text),
+                            || {
+                                entry.get("error").map_or_else(
+                                    || "unsure".into(),
+                                    |error| {
+                                        format!(
+                                            "failed: {}: {}",
+                                            text(&error["code"]),
+                                            text(&error["message"])
+                                        )
+                                    },
+                                )
+                            },
                             text,
                         );
                         format!(
@@ -150,41 +164,41 @@ pub(super) fn keyed_row(
     result.map_err(|error| output_error(error, cancel))
 }
 
-pub(super) fn item(
-    bytes: &[u8],
-    format: super::input::Format,
-) -> Result<Box<serde_json::value::RawValue>, Error> {
-    let text = std::str::from_utf8(bytes).ok().map(super::field);
-    if format == super::input::Format::Jsonl
-        && let Some(text) = text
-        && let Ok(value) = serde_json::from_str(text)
+pub(super) fn item(row: &AnyRow) -> Result<Box<serde_json::value::RawValue>, Error> {
+    let original = row
+        .original_record()
+        .ok_or_else(|| local("the result has no original record"))?;
+    let (kind, bytes) = original.original();
+    if kind == crate::records::RecordKind::Json
+        && let Ok(value) = serde_json::from_slice(bytes)
     {
         return Ok(value);
     }
+    let text = std::str::from_utf8(bytes).ok().map(super::field);
+    let text = if matches!(
+        kind,
+        crate::records::RecordKind::Text | crate::records::RecordKind::Json
+    ) {
+        text
+    } else {
+        None
+    };
     serde_json::value::to_raw_value(&text)
         .map_err(|_| local("the original item could not be encoded"))
 }
 
-pub(super) fn filter_row(
+pub(super) fn item_row(
     row: &AnyRow,
     item: &serde_json::value::RawValue,
     cancel: &Cancel,
 ) -> Result<(), Error> {
     #[derive(serde::Serialize)]
-    struct FilterRow<'a> {
+    struct ItemRow<'a> {
         #[serde(flatten)]
         row: &'a AnyRow,
         item: &'a serde_json::value::RawValue,
-        kept: bool,
     }
-    json_row(
-        &FilterRow {
-            row,
-            item,
-            kept: keeps(row),
-        },
-        cancel,
-    )
+    json_row(&ItemRow { row, item }, cancel)
 }
 
 fn json_row(value: &impl serde::Serialize, cancel: &Cancel) -> Result<(), Error> {
@@ -200,6 +214,9 @@ fn text(value: &serde_json::Value) -> String {
     use serde_json::Value;
     match value {
         Value::Null => String::new(),
+        Value::Number(number) if number.is_f64() => number
+            .as_f64()
+            .map_or_else(|| number.to_string(), |number| number.to_string()),
         Value::String(s) => terminal_text(&s.replace(['\n', '\r', '\t'], " ")).into_owned(),
         Value::Array(values) => values.iter().map(text).collect::<Vec<_>>().join("\t"),
         Value::Object(fields) => {

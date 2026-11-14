@@ -5,6 +5,6 @@ SELECT position, answer AS urgency, status FROM thinkthen.score('SELECT ''Please
 SELECT position AS refund_request FROM thinkthen.filter('SELECT ''Please refund the duplicate charge.''::text AS record', 'Does the customer request a refund?');
 SELECT position, answer AS urgency_rank, status FROM thinkthen.rank('SELECT ''Please refund the duplicate charge.''::text AS record', 'How urgent is this?', levels => ARRAY['low','medium','high']);
 SELECT position, (answer).text AS meeting_line, status FROM thinkthen.find('SELECT ''Please refund the duplicate charge.''::text AS record', 'When is the meeting?');
-SELECT position, (answer->>'refund')::boolean AS is_refund, status FROM thinkthen.annotate('SELECT ''Please refund the duplicate charge.''::text AS record', toolbox => '{"refund": {"function": "decide", "question": "Does the customer request a refund?"}}'::jsonb);
+SELECT position, (answer->>'refund')::boolean AS is_refund, status FROM thinkthen.annotate('SELECT ''Please refund the duplicate charge.''::text AS record', questions => '{"refund": {"function": "decide", "question": "Does the customer request a refund?"}}'::jsonb);
 SELECT position, answer AS people, status FROM thinkthen.recognize('SELECT ''Ada works for Acme.''::text AS record', kinds => ARRAY['person','organization']);
-SELECT position, answer AS employment, status FROM thinkthen.relate('SELECT ''Ada works for Acme.''::text AS record', rules => ARRAY[ROW('works_for','person','organization',NULL,false)::thinkthen.rule]);
+SELECT position, answer AS employment, status FROM thinkthen.relate('SELECT ''Ada works for Acme.''::text AS record', rules => ARRAY[ROW('person','organization','works_for',NULL,false)::thinkthen.rule]);

@@ -6,7 +6,7 @@ import { sdk, backend, caseFor } from "./support.js";
 function frozen(value) {
   if (value === null || typeof value !== "object") return;
   assert(Object.isFrozen(value));
-  for (const child of Object.values(value)) frozen(child);
+  for (const [name, child] of Object.entries(value)) if (name !== "item") frozen(child);
 }
 
 // Feature: immutable toolboxes preserve the caller's domain and evidence.
@@ -14,7 +14,7 @@ test("toolboxes copy and freeze mutable nested inputs without freezing their own
   const original = {
     topic: { function: "choose", question: "Team?", choices: ["billing", "shipping"], threshold: 0.8, field: ["body"] },
     ready: { function: "decide", question: "Ready?", threshold: { low: 0.2, high: 0.8 } },
-    links: { function: "relate", rules: [{ name: "knows", source: "person", target: "person", symmetric: true }] },
+    links: { function: "relate", rules: [{ relation: "knows", source: "person", target: "person", either: true }] },
   };
   const snapshot = structuredClone(original);
   const toolbox = sdk.defineToolbox(original);
@@ -24,21 +24,21 @@ test("toolboxes copy and freeze mutable nested inputs without freezing their own
   original.topic.choices[0] = "changed";
   original.ready.threshold.low = 0.9;
   original.topic.field[0] = "other";
-  original.links.rules[0].name = "changed";
+  original.links.rules[0].relation = "changed";
   assert.deepEqual(toolbox, snapshot);
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   try {
-    const fromToolbox = await client.choose(toolbox.topic, { body: "Refund" }).row();
+    const fromToolbox = await client.choose(toolbox.topic, { body: "Refund" });
     const direct = await client.choose("Team?", { body: "Refund" }, {
       choices: snapshot.topic.choices, threshold: snapshot.topic.threshold, field: snapshot.topic.field,
-    }).row();
+    });
     assert.deepEqual(fromToolbox, direct);
   } finally { await client.close(); }
 });
 
 // Feature: lazy calls snapshot question aliases before their first pull.
 test("stream creation snapshots options lists and evidence but leaves AbortSignal live", async () => {
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   const controller = new AbortController();
   const options = { choices: ["billing", "shipping"], threshold: 0.8, field: ["body"], signal: controller.signal };
   const record = { body: "Refund", other: "Different" };
@@ -47,7 +47,7 @@ test("stream creation snapshots options lists and evidence but leaves AbortSigna
   options.field[0] = "other";
   try {
     const [actual] = await stream.toArray();
-    const expected = await client.choose("Team?", record, { choices: ["billing", "shipping"], threshold: 0.8, field: ["body"] }).row();
+    const expected = await client.choose("Team?", record, { choices: ["billing", "shipping"], threshold: 0.8, field: ["body"] });
     assert.deepEqual(actual, expected);
     const second = client.chooseStream("Team?", [record], { choices: ["billing", "shipping"], signal: controller.signal });
     controller.abort("after creation");
@@ -61,19 +61,18 @@ test("reused input objects keep their per-yield evidence and original filter ref
     { contains: '"second"', answer: { type: "noul", noul: 0.1 } },
     { answer: { type: "noul", noul: 0.9 } },
   ]));
-  const client = new sdk.ThinkThen({ backend: "systemone", url: server.url, batch: 1 });
+  const client = new sdk.Client({ backend: "systemone", url: server.url, batch: 1 });
   const record = { body: "first" };
   const bodies = ["first", "second", "third"];
   function* records() { for (const body of bodies) { record.body = body; yield record; } }
   try {
-    const rows = await client.filterStream("Ready?", records(), { field: ["body"] }).toArray();
+    const rows = await client.decideStream("Ready?", records(), { field: ["body"] }).toArray();
     assert.equal(rows.length, bodies.length);
     for (const [index, item] of rows.entries()) {
       assert.equal(item.item, record);
-      assert.equal(item.row.status, "answered");
-      assert.equal(item.row.answer, index !== 1);
-      assert.equal(item.kept, index !== 1);
-      assert.equal(item.row.position, index + 1);
+      assert.equal(item.status, "answered");
+      assert.equal(item.answer, index !== 1);
+      assert.equal(item.position, index + 1);
     }
     assert(!Object.isFrozen(record));
     assert.equal(await server.count(), 3);
@@ -83,7 +82,7 @@ test("reused input objects keep their per-yield evidence and original filter ref
 // Feature: JSON conversion failures are record rows and never become backend calls.
 test("missing invalid ids and malformed host values preserve positions and failed single rows", async () => {
   const server = await backend(caseFor({}, [], []));
-  const client = new sdk.ThinkThen({ backend: "systemone", url: server.url });
+  const client = new sdk.Client({ backend: "systemone", url: server.url });
   const invalid = [null, { id: null }, { id: true }, { id: 1.5 }, { id: [] }, { id: {} }, { body: NaN }, { body: undefined }, new Date(0)];
   try {
     const rows = await client.decideStream("Ready?", invalid).toArray();
@@ -93,10 +92,14 @@ test("missing invalid ids and malformed host values preserve positions and faile
       assert.equal(row.function, "decide");
       assert.equal(row.status, "failed");
       assert.equal(row.error.code, index === 0 ? "record.missing" : "record.invalid");
-      for (const field of ["answer", "probability", "detail"]) assert(!Object.hasOwn(row, field));
+      assert.throws(() => row.answer, sdk.FailedError);
+      assert.equal(row.probability, undefined);
+      assert.equal(row.detail, undefined);
       frozen(row);
     }
-    const one = await client.decide("Ready?", { id: false }).row();
+    const error = await client.decide("Ready?", { id: false }).catch(error => error);
+    assert(error instanceof sdk.FailedError);
+    const one = error.row;
     assert.equal(one.status, "failed");
     assert.equal(one.error.code, "record.invalid");
     assert.equal(await server.count(), 0);
@@ -106,14 +109,16 @@ test("missing invalid ids and malformed host values preserve positions and faile
 // Feature: inspectable clients rows and errors cannot reveal explicit keys.
 test("keys never appear in inspect JSON source or errors", async () => {
   const key = "test-secret-never-display-this";
-  const client = new sdk.ThinkThen({ backend: "stub", apiKey: key });
+  const client = new sdk.Client({ backend: "stub", apiKey: key });
   try {
-    const row = await client.decide("Ready?", "evidence").row();
-    const failure = await client.decide("Ready?", null).row();
+    const row = await client.decide("Ready?", "evidence");
+    const error = await client.decide("Ready?", null).catch(error => error);
+    assert(error instanceof sdk.FailedError);
+    const failure = error.row;
     let caught;
     try { await client.decide("", "evidence"); } catch (error) { caught = error; }
     assert(caught instanceof sdk.UsageError);
-    for (const value of [client, row, failure, caught, caught.cause]) {
+    for (const value of [client, row, failure, error, caught, caught.cause]) {
       assert(!inspect(value, { depth: null, showHidden: true }).includes(key));
       assert(!(JSON.stringify(value) ?? "").includes(key));
     }
@@ -129,11 +134,15 @@ test("answered unsure and failed rows map probabilities detail and HTTP status w
     { contains: '"bad"', status: 501, body: {} },
     { answer: { type: "choice", probabilities: { billing: probability, shipping: 1 - probability } } },
   ]));
-  const client = new sdk.ThinkThen({ backend: "systemone", url: server.url, batch: 1 });
+  const client = new sdk.Client({ backend: "systemone", url: server.url, batch: 1 });
   try {
-    const answered = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.5 }).row();
-    const unsure = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.95 }).row();
-    const failed = await client.choose("Team?", "bad", { choices: ["billing", "shipping"] }).row();
+    const answered = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.5 });
+    const unsure = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.95 });
+    const failure = await client.choose("Team?", "bad", { choices: ["billing", "shipping"] }).catch(error => error);
+    assert(failure instanceof sdk.FailedError);
+    assert.equal(failure.code,"backend.status");
+    assert.equal(failure.httpStatus,501);
+    const failed = failure.row;
     assert.equal(answered.status, "answered");
     assert.equal(answered.answer, "billing");
     assert.equal(answered.probability, probability);
@@ -141,11 +150,11 @@ test("answered unsure and failed rows map probabilities detail and HTTP status w
     assert.equal(answered.detail.labels.shipping, 1 - probability);
     assert.equal(unsure.status, "unsure");
     assert.equal(unsure.probability, probability);
-    assert(!Object.hasOwn(unsure, "answer"));
+    assert.throws(() => unsure.answer, sdk.UnsureError);
     assert.equal(failed.status, "failed");
     assert.equal(failed.error.code, "backend.status");
     assert.equal(failed.error.httpStatus, 501);
-    assert(!Object.hasOwn(failed, "answer"));
+    assert.throws(() => failed.answer, sdk.FailedError);
     for (const row of [answered, unsure, failed]) {
       assert.equal(row.function, "choose");
       assert.equal(row.position, 1);
@@ -164,7 +173,7 @@ test("answered unsure and failed rows map probabilities detail and HTTP status w
 
 // Feature: host ids retain string or integer type while position stays independent.
 test("original ids preserve their types and records without ids do not invent one", async () => {
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   const ids = ["17", 17, -17, Number.MAX_SAFE_INTEGER];
   try {
     const rows = await client.decideStream("Ready?", [...ids.map(id => ({ id, body: "evidence" })), { body: "no id" }]).toArray();
@@ -189,29 +198,27 @@ test("installed error code values equal the engine registry", async () => {
 
 // Feature: raw strings preserve empty, NUL and Unicode evidence.
 test("raw and structured evidence retain the same bytes", async () => {
-  const client = new sdk.ThinkThen({backend:"stub"});
+  const client = new sdk.Client({backend:"stub"});
   try {
     const row = async record => (await client.decideStream("Ready?", [record], {field:"/body"}).toArray())[0];
-    for (const text of ["", "a\0b\0", 'quoted "text"\n😀']) assert.deepEqual(await row(text), await row({body:text}));
+    for (const text of ["", "a\0b\0", 'quoted "text"\n😀']) assert.deepEqual(JSON.parse(JSON.stringify(await row(text))), JSON.parse(JSON.stringify(await row({body:text}))));
   } finally { await client.close(); }
 });
 
 // Feature: native ID descriptors retain exact integers while rejecting lossy host values.
 test("bigint is accepted only in a root id and stays exact through native evidence selection", async () => {
-  const client = new sdk.ThinkThen({backend:"stub"});
+  const client = new sdk.Client({backend:"stub"});
   try {
-    for (const [id, expected] of [[0n,0], [9007199254740991n,9007199254740991], [9007199254740992n,9007199254740992n], [-9223372036854775808n,-9223372036854775808n], [18446744073709551615n,18446744073709551615n], ["", ""]]) {
-      const row = await client.decide("Ready?", {id,body:"same"}).row();
+    for (const [id, expected] of [[0n,0n], [9007199254740991n,9007199254740991n], [9007199254740992n,9007199254740992n], [-9223372036854775808n,-9223372036854775808n], [18446744073709551615n,18446744073709551615n], ["", ""]]) {
+      const row = await client.decide("Ready?", {id,body:"same"});
       assert.equal(row.status,"answered");
       assert.equal(row.id,expected);
     }
     for (const record of [{id:9007199254740992},{id:1.5},{id:18446744073709551616n},{id:-9223372036854775809n},{body:{id:1n}}]) {
-      const row = await client.decide("Ready?",record).row();
-      assert.equal(row.status,"failed");
-      assert.equal(row.error.code,"record.invalid");
+      await assert.rejects(client.decide("Ready?",record), error => error instanceof sdk.FailedError && error.code === "record.invalid");
     }
-    const numeric = await client.decide("Ready?",{id:18446744073709551615n},{field:"/id"}).row();
-    const text = await client.decide("Ready?","18446744073709551615",{field:"/id"}).row();
+    const numeric = await client.decide("Ready?",{id:18446744073709551615n},{field:"/id"});
+    const text = await client.decide("Ready?","18446744073709551615",{field:"/id"});
     assert.equal(numeric.probability,text.probability);
     assert.equal(numeric.answer,text.answer);
   } finally { await client.close(); }
@@ -219,15 +226,15 @@ test("bigint is accepted only in a root id and stays exact through native eviden
 
 // Feature: execution names remain separate from typed toolbox selection.
 test("named calls carry source names while selecting a question never supplies one", async () => {
-  const client = new sdk.ThinkThen({backend:"stub"});
+  const client = new sdk.Client({backend:"stub"});
   const toolbox = sdk.defineToolbox({topic:{function:"choose",question:"Team?",choices:["billing","shipping"]}});
   try {
-    const selected = await client.choose(toolbox.topic,"Refund").row();
+    const selected = await client.choose(toolbox.topic,"Refund");
     assert(!Object.hasOwn(selected.source,"name"));
-    const named = await client.choose(toolbox.topic,"Refund",{name:"triage"}).row();
+    const named = await client.choose(toolbox.topic,"Refund",{name:"triage"});
     assert.equal(named.source.name,"triage");
     assert.notEqual(named.source.questionIdentity,selected.source.questionIdentity);
-    const direct = await client.choose("Team?","Refund",{choices:["billing","shipping"],name:"triage"}).row();
+    const direct = await client.choose("Team?","Refund",{choices:["billing","shipping"],name:"triage"});
     assert.deepEqual(named,direct);
     const rows = await client.chooseStream(toolbox.topic,["Refund"],{name:"batch-triage"}).toArray();
     assert.equal(rows.length,1);
@@ -239,14 +246,14 @@ test("named calls carry source names while selecting a question never supplies o
 
 // Feature: host field translation never changes caller-defined labels or toolbox names.
 test("labels and annotation entries keep names that match native field names", async () => {
-  const client = new sdk.ThinkThen({backend:"stub"});
+  const client = new sdk.Client({backend:"stub"});
   const labels = ["function","question_identity","http_status","either"];
   try {
-    const chosen = await client.choose("Which?","evidence",{choices:labels}).row();
+    const chosen = await client.choose("Which?","evidence",{choices:labels});
     assert.equal(chosen.status,"answered");
     assert.deepEqual(Object.keys(chosen.detail.labels).sort(),[...labels].sort());
     const toolbox = sdk.defineToolbox(Object.fromEntries(labels.map(name => [name,{function:"choose",question:"Which?",choices:labels}])));
-    const annotated = await client.annotate(toolbox,"evidence").row();
+    const annotated = await client.annotate(toolbox,"evidence");
     assert.equal(annotated.status,"answered");
     assert.deepEqual(Object.keys(annotated.answer).sort(),[...labels].sort());
     for (const name of labels) assert.deepEqual(Object.keys(annotated.answer[name].detail.labels).sort(),[...labels].sort());
@@ -255,7 +262,7 @@ test("labels and annotation entries keep names that match native field names", a
 
 // Feature: record encoding captures each property once before native evidence selection.
 test("record getters cannot change evidence between validation and encoding", async () => {
-  const client = new sdk.ThinkThen({backend:"stub"});
+  const client = new sdk.Client({backend:"stub"});
   let idReads = 0;
   let bodyReads = 0;
   const record = {
@@ -263,23 +270,22 @@ test("record getters cannot change evidence between validation and encoding", as
     get body() { bodyReads++; return bodyReads === 1 ? "first" : NaN; },
   };
   try {
-    const actual = await client.decide("Ready?",record,{field:"/body"}).row();
-    const expected = await client.decide("Ready?",{id:17,body:"first"},{field:"/body"}).row();
-    assert.deepEqual(actual,expected);
+    const actual = await client.decide("Ready?",record,{field:"/body"});
+    const expected = await client.decide("Ready?",{id:17,body:"first"},{field:"/body"});
+    assert.equal(actual.item,record);
+    assert.deepEqual(JSON.parse(JSON.stringify(actual)),JSON.parse(JSON.stringify(expected)));
     assert.equal(idReads,1);
     assert.equal(bodyReads,1);
     const date = new Date(0);
     date.id = 17n;
-    const invalid = await client.decide("Ready?",date).row();
-    assert.equal(invalid.status,"failed");
-    assert.equal(invalid.error.code,"record.invalid");
+    await assert.rejects(client.decide("Ready?",date), error => error instanceof sdk.FailedError && error.code === "record.invalid");
   } finally { await client.close(); }
 });
 
 // Feature: conversion errors preserve settings/question/record contexts without retaining caller secrets.
 test("unsupported host values produce coded secret-free errors before requests or input pulls", async () => {
   const server = await backend(caseFor({},[],[]));
-  const client = new sdk.ThinkThen({url:server.url});
+  const client = new sdk.Client({url:server.url});
   const secret = "private-conversion-failure-do-not-retain";
   const cycle = {}; cycle.self = cycle;
   const throwing = {toJSON(){throw new Error(secret);}};
@@ -292,7 +298,7 @@ test("unsupported host values produce coded secret-free errors before requests o
   };
   try {
     for (const value of failures) {
-      assert.throws(()=>new sdk.ThinkThen({url:server.url,apiKey:secret,batch:value}),usage("usage.settings"));
+      assert.throws(()=>new sdk.Client({url:server.url,apiKey:secret,batch:value}),usage("usage.settings"));
       await assert.rejects(client.decide("Ready?","evidence",{threshold:value}),usage("usage.question"));
       await assert.rejects(client.annotate({ready:{function:"decide",question:"Ready?",threshold:value}},"evidence"),usage("usage.question"));
       await assert.rejects(client.annotate({ready:value},"evidence"),usage("usage.question"));
@@ -300,7 +306,9 @@ test("unsupported host values produce coded secret-free errors before requests o
       const source = {[Symbol.iterator](){return this;},next(){pulled++;return {done:true};}};
       await assert.rejects(client.decideStream("Ready?",source,{threshold:value}).next(),usage("usage.question"));
       assert.equal(pulled,0);
-      const row = await client.decide("Ready?",{body:value}).row();
+      const failure = await client.decide("Ready?",{body:value}).catch(error => error);
+      assert(failure instanceof sdk.FailedError);
+      const row = failure.row;
       assert.equal(row.status,"failed");
       assert.equal(row.error.code,"record.invalid");
       assert(!inspect(row,{depth:null,showHidden:true}).includes(secret));
@@ -312,35 +320,35 @@ test("unsupported host values produce coded secret-free errors before requests o
 });
 
 // Feature: unordered relation rules translate direction in both input and output.
-test("symmetric relation rules retain the native direction flag", async () => {
+test("either relation rules retain the native direction flag", async () => {
   const {readFile} = await import("node:fs/promises");
   const fixture = JSON.parse(await readFile(new URL("../../../conformance/typed/relate-rounds.json",import.meta.url),"utf8"));
   const server = await backend({replies:fixture.replies});
-  const client = new sdk.ThinkThen({url:server.url});
+  const client = new sdk.Client({url:server.url});
   try {
-    const rules = fixture.request.question.rules.map(({relation,reads,either,...rule})=>({...rule,name:relation,symmetric:true}));
+    const rules = fixture.request.question.rules.map(rule=>({...rule,either:true}));
     const text = fixture.request.records[0];
-    const row = await client.relate(rules,text).row();
+    const row = await client.relate(text, {rules});
     assert.equal(row.status,"answered");
     assert.equal(row.answer.length,1);
-    assert.equal(row.answer[0].symmetric,true);
+    assert.equal(row.answer[0].either,true);
     assert.equal(text.slice(row.answer[0].source.start,row.answer[0].source.end),row.answer[0].source.text);
   } finally {await client.close();await server.close();}
 });
 
 // Feature: the public spelling reaches shared allowance admission without precision loss.
 test("maxRequests settings preserve zero and reject unsupported host precision", async () => {
-  const client = new sdk.ThinkThen({backend:"stub",maxRequests:0});
-  try { assert.equal((await client.decide("Ready?", "alpha").row()).status,"answered"); }
+  const client = new sdk.Client({backend:"stub",maxRequests:0});
+  try { assert.equal((await client.decide("Ready?", "alpha")).status,"answered"); }
   finally { await client.close(); }
-  assert.throws(()=>new sdk.ThinkThen({backend:"stub",maxRequests:-1}), error=>error.code === "usage.settings");
-  assert.throws(()=>new sdk.ThinkThen({backend:"stub",maxRequests:Number.MAX_SAFE_INTEGER+1}), error=>error.code === "usage.settings");
+  assert.throws(()=>new sdk.Client({backend:"stub",maxRequests:-1}), error=>error.code === "usage.settings");
+  assert.throws(()=>new sdk.Client({backend:"stub",maxRequests:Number.MAX_SAFE_INTEGER+1}), error=>error.code === "usage.settings");
 });
 
 
 test("maxRequests representable invalid values retain the engine diagnostic", () => {
   for (const value of [0.5, true, "1", -1]) {
-    assert.throws(() => new sdk.ThinkThen({backend:"stub",maxRequests:value}), error =>
+    assert.throws(() => new sdk.Client({backend:"stub",maxRequests:value}), error =>
       error.code === "usage.settings" && error.message.includes("max_requests"));
   }
 });
@@ -348,6 +356,6 @@ test("maxRequests representable invalid values retain the engine diagnostic", ()
 
 test("maxRequests rejects nonfinite host values before JSON can erase them", () => {
   for (const value of [NaN, Infinity, -Infinity]) {
-    assert.throws(() => new sdk.ThinkThen({backend:"stub",maxRequests:value}), {code:"usage.settings"});
+    assert.throws(() => new sdk.Client({backend:"stub",maxRequests:value}), {code:"usage.settings"});
   }
 });

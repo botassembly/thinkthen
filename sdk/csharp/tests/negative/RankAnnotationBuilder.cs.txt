@@ -1,3 +1,4 @@
+// Expected: error CS1503
 using ThinkThen;
 public static class InvalidRankForm
 {

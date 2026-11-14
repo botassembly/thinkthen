@@ -74,7 +74,7 @@ fn a_pair_round_spanning_two_requests_keeps_every_relation() {
     })
     .unwrap();
     let question = Relate::new(vec![
-        RelationRule::new("knows", "person", "person").unwrap(),
+        RelationRule::new("person", "person", "knows").unwrap(),
     ])
     .unwrap();
     let mut rows = Vec::new();
@@ -125,7 +125,8 @@ fn a_pair_round_spanning_two_requests_keeps_every_relation() {
 fn one_oversized_ask_fails_its_row_before_the_round_sends() {
     let server = Loopback::noul(0.9).unwrap();
     let question =
-        thinkthen::Tag::new("What applies?", ["short".to_owned(), "x".repeat(96_000)]).unwrap();
+        thinkthen::Tag::with_strings("What applies?", ["short".to_owned(), "x".repeat(96_000)])
+            .unwrap();
     let mut rows = Vec::new();
     engine(&server)
         .rows(&question, [Record::text("one")])
@@ -162,7 +163,7 @@ fn one_records_labels_span_the_adapters_question_limit() {
         Reply::json(200, &json!({"answers": questions.iter().map(|_| json!({"type":"predicate","probability":0.9})).collect::<Vec<_>>()}))
     }).unwrap();
     let labels: Vec<_> = (0..401).map(|n| format!("label{n}")).collect();
-    let question = thinkthen::Tag::new("What applies?", labels.clone()).unwrap();
+    let question = thinkthen::Tag::with_strings("What applies?", labels.clone()).unwrap();
     let engine = Settings::default()
         .with_backend(BackendName::OpenAi)
         .url(server.base())
@@ -195,10 +196,9 @@ fn one_records_labels_span_the_adapters_question_limit() {
 fn an_omitted_request_reply_fails_instead_of_reading_incomplete_answers() {
     let server = Loopback::start(|_| Reply::json(200, &json!({"answers":{}}))).unwrap();
     let question = thinkthen::Decide::new("Is it relevant?").unwrap();
-    let row = engine(&server)
+    let error = engine(&server)
         .run(&question, Record::text("evidence"))
-        .unwrap();
-    assert_eq!(row.error().unwrap().code().as_str(), "backend.reply");
+        .unwrap_err();
+    assert_eq!(error.code().as_str(), "backend.reply");
     assert_eq!(server.count(), 1);
-    assert!(serde_json::to_value(row).unwrap().get("answer").is_none());
 }

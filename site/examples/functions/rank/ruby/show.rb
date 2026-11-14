@@ -9,5 +9,5 @@ ThinkThen::Client.open do |client|
   # Your own messages, most urgent first.
   by_urgency = client.rank("How urgent is the request?", messages,
                            levels: ["routine", "urgent"])
-  by_urgency.each.with_index(1) { |message, rank| puts "#{rank} #{message}" }
+  by_urgency.each { |ranked| puts "#{ranked.answer} #{ranked.item}" }
 end

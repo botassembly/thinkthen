@@ -24,7 +24,7 @@ if [ -z "${THINKTHEN_SQL_ARCHIVE:-}" ]; then
 fi
 : "${THINKTHEN_LOOPBACK:?Provide the matching fixture loopback}"
 export THINKTHEN_DUCKDB_DEPS="$HOME/.local/share/thinkthen-build-tools/duckdb/$duckdb_version"
-export THINKTHEN_SQL_ARCHIVE
+export THINKTHEN_SQL_ARCHIVE THINKTHEN_LOOPBACK
 if [ "${1:-}" = --full ]; then
     fixture_archive=$THINKTHEN_SQL_ARCHIVE
     cargo build --offline --locked -p thinkthen-ffi --lib --target-dir "$CARGO_TARGET_DIR/ordinary"

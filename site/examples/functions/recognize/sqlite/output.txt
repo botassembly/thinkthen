@@ -1,1 +1,2 @@
-[{"msg_id":1,"names":"[{\"text\":\"Morgan\",\"kind\":\"person\",\"start_offset\":0,\"end_offset\":6,\"probability\":1.0},{\"text\":\"Example Group\",\"kind\":\"organization\",\"start_offset\":17,\"end_offset\":30,\"probability\":0.9702}]","status":"answered"}]
+[{"position":1,"msg_id":1,"status":"answered","name":"Morgan","kind":"person"},
+{"position":1,"msg_id":1,"status":"answered","name":"Example Group","kind":"organization"}]

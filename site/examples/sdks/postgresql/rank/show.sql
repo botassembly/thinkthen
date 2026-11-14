@@ -4,4 +4,4 @@ FROM thinkthen.rank(
    WHERE msg_id <= 3',
   'How urgent is the request?',
   levels => ARRAY['routine', 'urgent'])
-ORDER BY urgency_rank;
+ORDER BY urgency_rank NULLS LAST;

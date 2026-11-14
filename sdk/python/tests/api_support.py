@@ -63,6 +63,17 @@ def client(server: Loopback, **settings: Any) -> tt.Client:
     )
 
 
+def async_client(server: Loopback, **settings: Any) -> tt.AsyncClient:
+    return tt.AsyncClient(
+        backend="systemone",
+        url=server.url,
+        api_key="synthetic-loopback-key",
+        batch=1,
+        retry=tt.RetryPolicy(max_retries=0),
+        **settings,
+    )
+
+
 class Held:
     """Observe arrival and socket closure through the existing fixture protocol."""
 

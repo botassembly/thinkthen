@@ -257,6 +257,35 @@ pub unsafe extern "C" fn thinkthen_toolbox_definitions_json(
     }
 }
 
+/// Write the admitted toolbox names as a JSON array in canonical UTF8 order.
+///
+/// This metadata projection preserves byte-distinct names as array values for hosts whose
+/// object keys use Unicode equivalence. An empty toolbox writes []. Returns THINKTHEN_OK
+/// with *out written, or a negative code with *out empty. The caller owns the new buffer
+/// independently of toolbox and frees it with thinkthen_buffer_free. Old *out is not freed.
+/// # Safety
+/// Any thread may call this while no thread changes or frees toolbox. out is writable.
+/// error is NULL or initialized with THINKTHEN_ERROR_INIT. Reuse frees its previous diagnostic;
+/// free it with thinkthen_error_free after its last use.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_toolbox_names_json(
+    toolbox: *const ToolboxHandle,
+    out: *mut crate::Buffer,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the caller lends a live handle and exclusive outputs.
+    unsafe {
+        operation(error, || {
+            out.write(crate::Buffer::default());
+            let names = live(toolbox)?.0.names().collect::<Vec<_>>();
+            let json =
+                serde_json::to_string(&names).map_err(|_| thinkthen::native::internal_error())?;
+            out.write(crate::Buffer::new(json));
+            Ok(THINKTHEN_OK)
+        })
+    }
+}
+
 /// Write a complete question's JSON definition to *out.
 ///
 /// Returns THINKTHEN_OK with *out written, or a negative code with *out empty:

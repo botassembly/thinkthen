@@ -1,0 +1,55 @@
+{
+  "request": {
+    "question": {
+      "function": "rank",
+      "question": "How urgent is the request?",
+      "levels": [
+        "routine",
+        "urgent"
+      ]
+    },
+    "records": [
+      "Please refund my order.",
+      "Where is my parcel?",
+      "I was charged twice for one invoice."
+    ]
+  },
+  "rows": [
+    {
+      "function": "rank",
+      "position": 3,
+      "status": "answered",
+      "answer": 1,
+      "detail": {
+        "levels": [
+          0.19,
+          0.81
+        ]
+      }
+    },
+    {
+      "function": "rank",
+      "position": 1,
+      "status": "answered",
+      "answer": 2,
+      "detail": {
+        "levels": [
+          0.38,
+          0.62
+        ]
+      }
+    },
+    {
+      "function": "rank",
+      "position": 2,
+      "status": "answered",
+      "answer": 3,
+      "detail": {
+        "levels": [
+          0.71,
+          0.29
+        ]
+      }
+    }
+  ]
+}

@@ -1,20 +1,28 @@
 #![cfg(test)]
-//! Filter callers retain originals and every independent row outcome.
+//! Filtering retains successful records before one aggregate failure.
 #[path = "../../loopback/src/lib.rs"]
 pub mod loopback;
-
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{Filter, Key, Record, Settings, Threshold};
+use thinkthen::{Cut, Filter, Key, Record, Settings};
 
+#[derive(Debug, PartialEq)]
+struct Text(&'static str);
+impl From<&Text> for Record {
+    fn from(text: &Text) -> Self {
+        if text.0 == "invalid" {
+            Self::from_json("invalid")
+        } else {
+            Self::text(text.0)
+        }
+    }
+}
 #[test]
-fn filter_pairs_every_original_with_its_row_and_keeps_only_answered_true() {
+fn filter_keeps_successes_then_reports_every_failed_original() {
     let server = Loopback::answering(|question| {
         let text = question["instructions"].as_str().unwrap();
         let p = if text.contains("yes") {
             0.9
-        } else if text.contains("maybe") {
-            0.5
         } else if text.contains("broken") {
             2.0
         } else {
@@ -31,43 +39,43 @@ fn filter_pairs_every_original_with_its_row_and_keeps_only_answered_true() {
         .unwrap();
     let question = Filter::new("Keep?")
         .unwrap()
-        .threshold(Threshold::band(0.2, 0.8).unwrap());
-    let original = ["yes first", "no", "maybe", "broken", "yes last", "invalid"];
-    let rows = engine
-        .filter_items(&question, original, |text| {
-            if *text == "invalid" {
-                Record::from_json("invalid")
-            } else {
-                Record::text(*text)
-            }
-        })
-        .unwrap()
-        .collect::<Result<Vec<_>, _>>()
+        .threshold(Cut::new(0.8).unwrap());
+    let mut kept = engine
+        .filter(
+            &question,
+            ["yes first", "no", "broken", "yes last", "invalid"].map(Text),
+        )
         .unwrap();
-    assert_eq!(rows.len(), 6);
+    assert_eq!(kept.next().unwrap().unwrap().0, "yes first");
+    assert_eq!(kept.next().unwrap().unwrap().0, "yes last");
+    let error = kept.next().unwrap().unwrap_err();
+    assert!(error.to_string().starts_with(
+        "2 of 5 records failed; the first, at position 3, failed with backend.reply:"
+    ));
     assert_eq!(
-        rows.iter().map(|(_, row)| row.kept()).collect::<Vec<_>>(),
-        [true, false, false, false, true, false]
-    );
-    assert_eq!(
-        rows.iter().map(|(text, _)| *text).collect::<Vec<_>>(),
-        original
-    );
-    assert_eq!(
-        rows.iter()
-            .filter(|(_, row)| row.kept())
-            .map(|(text, _)| *text)
+        error
+            .rows()
+            .iter()
+            .map(|row| (
+                row.item().0,
+                row.position(),
+                row.error().unwrap().code().as_str()
+            ))
             .collect::<Vec<_>>(),
-        ["yes first", "yes last"]
+        [
+            ("broken", 3, "backend.reply"),
+            ("invalid", 5, "record.json")
+        ]
     );
-    assert_eq!(rows[2].1.status(), thinkthen::Status::Unsure);
-    assert_eq!(rows[3].1.error().unwrap().code().as_str(), "backend.reply");
-    assert_eq!(rows[5].1.error().unwrap().code().as_str(), "record.json");
-    assert_eq!(
-        rows.iter()
-            .filter(|(_, row)| row.kept())
-            .map(|(_, row)| row.position())
-            .collect::<Vec<_>>(),
-        [1, 5]
-    );
+    assert!(kept.next().is_none());
+    assert!(kept.next().is_none());
+}
+
+#[test]
+fn a_saved_filter_band_is_refused_before_execution() {
+    let error = serde_json::from_value::<Filter>(
+        json!({"question":"Keep?", "threshold":{"low":0.2,"high":0.8}}),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("decide"));
 }

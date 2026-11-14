@@ -1,5 +1,5 @@
 messages.thinkthen.csv
 message,refund,topic,urgency
 Please refund my order.,TRUE,billing,0.05
-Where is my parcel?,FALSE,shipping,0.14
-I was charged twice for one invoice.,TRUE,billing,0.45
+Where is my parcel?,FALSE,shipping,0.16
+I was charged twice for one invoice.,TRUE,billing,0.46

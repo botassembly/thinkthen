@@ -25,9 +25,9 @@ static int stress_main(int argc, char** argv) {
             assert(json(row).at("id") == "record-" + std::to_string(offset + received - 1));
             if (row.status() == tt::status::failed) {
                 ++failed;
-                assert(std::string{thinkthen_code_name(row.failure()->code().value())} == argv[5]);
+                assert(std::string{thinkthen_code_name(row.error()->code().value())} == argv[5]);
             } else {
-                assert(row.status() == tt::status::answered && row.answer() && *row.answer());
+                assert(row.status() == tt::status::answered && row.answer());
                 assert(row.probability() && *row.probability() == std::stod(argv[6]));
             }
         }

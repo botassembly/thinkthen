@@ -80,7 +80,7 @@ def ruby_options(question)
                    value.is_a?(Hash) ? value.fetch("low")..value.fetch("high") : value
                  when "rules"
                    value.map do |rule|
-                     translated = rule.to_h { |key, entry| [{"reads" => :phrase, "either" => :symmetric}.fetch(key, key.to_sym), entry] }
+                     translated = rule.to_h { |key, entry| [key.to_sym, entry] }
                      ThinkThen::RelationRule.new(**translated)
                    end
                  else value
@@ -106,11 +106,11 @@ def invoke_rows(client, request, cancel: nil)
   options[:cancel] = cancel unless cancel.nil?
   if function == "annotate"
     questions = question.fetch("questions").transform_values { |entry| typed_question(entry) }
-    client.annotate_each(ThinkThen::AnnotationQuestions.new(questions: questions), records, **options)
+    client.annotate_each(ThinkThen::AnnotationQuestions.new(**questions), records, **options)
   elsif %w[recognize relate].include?(function)
     client.public_send("#{function}_each", records, **options)
   else
-    client.public_send("#{function}_each", question.fetch("question"), records, **options)
+    client.public_send(function == "rank" ? :rank : "#{function}_each", question.fetch("question"), records, **options)
   end
 end
 
@@ -119,21 +119,21 @@ def assert_typed_row(row, expected)
   function = expected.fetch("function")
   equal(function.to_sym, row.function, "typed function")
   equal(expected.fetch("status").to_sym, row.status, "typed status")
-  klass = {"answered" => ThinkThen::Answered, "unsure" => ThinkThen::Unsure, "failed" => ThinkThen::Failed}.fetch(expected.fetch("status"))
-  assert(row.is_a?(klass) && row.is_a?(Data), "status Data variant")
+  klass = function == "filter" ? ThinkThen::Result : ThinkThen.const_get("#{function.capitalize}Row")
+  assert(row.is_a?(klass), "function result class")
   equal([row.status == :answered, row.status == :unsure, row.status == :failed],
         [row.answered?, row.unsure?, row.failed?], "status predicates")
   assert(row.frozen?, "immutable row")
   assert(row.source.is_a?(ThinkThen::Source), "typed source")
   assert(!row.respond_to?(:p), "no old probability spelling")
   unless row.answered?
-    raises(row.unsure? ? ThinkThen::UnsureError : ThinkThen::RecordError) { row.answer }
+    raises(row.unsure? ? ThinkThen::UnsureError : ThinkThen::FailedError) { row.answer }
     assert(!row.to_h.key?("answer"), "non-answer wire shape omits answer")
   end
   if row.failed?
     assert(row.error.is_a?(ThinkThen::RowError), "typed row error")
     equal(expected.fetch("error").fetch("code").to_sym, row.error.code, "typed error code")
-    assert(!row.respond_to?(:probability), "failed variant has no probability")
+    assert(row.probability.nil?, "failed result has no probability")
     return
   end
   return unless row.answered?
@@ -143,7 +143,7 @@ def assert_typed_row(row, expected)
                    "annotate" => Hash, "recognize" => Array, "relate" => Array}
   assert(answer.is_a?(expected_type.fetch(function)), "function answer type") if expected_type.key?(function)
   assert([true, false].include?(answer), "boolean answer") if %w[decide filter].include?(function)
-  assert(answer.nil? || answer.is_a?(ThinkThen::Found), "typed found answer") if function == "find"
+  assert(answer.nil? || answer.is_a?(ThinkThen::Span), "typed found answer") if function == "find"
   if function == "recognize"
     answer.each { |name| assert(name.is_a?(ThinkThen::Name), "typed recognized name") }
   elsif function == "relate"
@@ -153,8 +153,9 @@ def assert_typed_row(row, expected)
     end
   elsif function == "annotate"
     answer.each_value do |entry|
-      assert(entry.is_a?(Data), "typed annotation entry")
-      assert(!entry.respond_to?(:position), "annotation omits enclosing metadata")
+      assert(entry.is_a?(ThinkThen::Result), "typed annotation entry")
+      equal(row.position, entry.position, "entry keeps parent position")
+      assert(entry.item.equal?(row.item), "entry keeps original record")
       assert(entry.error.is_a?(ThinkThen::RowError), "typed child failure") if entry.failed?
     end
   end
@@ -171,16 +172,32 @@ def execute_case(test, settings)
     policy = config[:retry].transform_keys(&:to_sym)
     policy[:initial_backoff] = policy.delete(:initial_backoff_ms) / 1000.0 if policy.key?(:initial_backoff_ms)
     policy[:attempt_timeout] = policy.delete(:attempt_timeout_ms) / 1000.0 if policy.key?(:attempt_timeout_ms)
-    config[:retry] = ThinkThen::Retry.new(**policy)
+    config[:retry] = ThinkThen::RetryPolicy.new(**policy)
   end
   ThinkThen::Client.open(**config) do |client|
-    cancel = ThinkThen::CancelToken.new
+    cancel = ThinkThen::Cancel.new
     cancel.cancel if test["cancelled"]
+    if test.fetch("request").fetch("question").fetch("function") == "filter"
+      request = test.fetch("request")
+      definition = request.fetch("question")
+      kept, failures = [], []
+      begin
+        options = ruby_options(definition)
+        options[:name] = request["name"] if request.key?("name")
+        client.filter(definition.fetch("question"), request.fetch("records", []), **options, cancel: cancel) do |item|
+          assert(request.fetch("records").any? { |record| record.equal?(item) }, "filter keeps caller object identity")
+          kept << item
+        end
+      rescue ThinkThen::FailedError => error
+        failures = error.rows
+        failures.each { |row| assert(row.item.equal?(request.fetch("records")[row.position - 1]), "failed filter keeps original object") }
+      end
+      return {"kept" => kept, "failures" => failures.map(&:to_h)}
+    end
     stream = invoke_rows(client, test.fetch("request"), cancel: cancel)
     begin
       stream.each do |value|
-        row = value.is_a?(ThinkThen::FilterRow) || value.is_a?(ThinkThen::RankRow) ? value.row : value
-        equal(row.answered? && row.answer == true, value.kept?, "filter kept") if value.is_a?(ThinkThen::FilterRow)
+        row = value
         expected = test.fetch("expected", test.fetch("expected_rows", []))[output.length]
         assert_typed_row(row, expected) if expected
         output << row.to_h
@@ -193,6 +210,15 @@ def execute_case(test, settings)
 rescue ThinkThen::Error => error
   equal(test.fetch("expected_rows"), output, "rows before call failure") if test.key?("expected_rows")
   {"error" => error.code.to_s, "http_status" => error.http_status}.compact
+end
+
+# Filter exposes original kept records and retained failed results, never its raw decisions.
+def expected_projection(test)
+  expected = test.fetch("expected")
+  return expected unless expected.is_a?(Array) && test.fetch("request").fetch("question").fetch("function") == "filter"
+  records = test.fetch("request").fetch("records", [])
+  {"kept" => expected.select { |row| row["status"] == "answered" && row["answer"] == true }.map { |row| records[row.fetch("position") - 1] },
+   "failures" => expected.select { |row| row["status"] == "failed" }}
 end
 
 def normalized_contract(value)
@@ -241,10 +267,11 @@ def shared_cases
         ThinkThen.const_get(:NativeContract)::CODE_NAMES, "generated code mapping")
   registry.fetch("codes").each do |code|
     equal(code.fetch("family"), ThinkThen.send(:native).thinkthen_code_family(code.fetch("value")), "ABI error family")
-    expected_class = {"usage" => ThinkThen::UsageError, "backend" => ThinkThen::BackendError,
-                      "internal" => ThinkThen::InternalError, "record" => ThinkThen::RecordError,
-                      "local" => ThinkThen::LocalError}.fetch(code.fetch("family"))
+    expected_class = {"usage" => ThinkThen::UsageError, "backend" => ThinkThen::SetupError,
+                      "internal" => ThinkThen::InternalError, "record" => ThinkThen::FailedError,
+                      "local" => ThinkThen::SetupError}.fetch(code.fetch("family"))
     expected_class = ThinkThen::CancelledError if code.fetch("name") == "local.cancelled"
+    expected_class = ThinkThen::SetupError if code.fetch("name") == "usage.key-missing"
     equal(expected_class, ThinkThen.send(:native).send(:error_class, code.fetch("value"), code.fetch("name")), "public error family class")
   end
   equal(nil, ThinkThen.send(:native).thinkthen_code_family(2147483647), "unknown ABI code has no family")
@@ -271,7 +298,7 @@ def shared_cases
   Process.wait(pid)
   assert($?.success?, "shared case through module shortcuts")
   stub = JSON.parse(File.read(ENV.fetch("THINKTHEN_STUB_CASES"), encoding: Encoding::UTF_8), max_nesting: false)
-  stub.each { |test| equal(test.fetch("expected"), execute_case(test, test.fetch("client")), "stub contract") }
+  stub.each { |test| equal(expected_projection(test), execute_case(test, test.fetch("client")), "stub contract") }
   manifest.fetch("backends").each do |backend_name|
     manifest.fetch("cases").each do |filename|
       path = File.join(folder, filename)
@@ -286,7 +313,7 @@ def shared_cases
             strict_row_contract(expected, actual, backend_name, settings.fetch("model"))
           end
         else
-          strict_contract(test.fetch("expected"), rows)
+          strict_contract(normalized_contract(expected_projection(test)), normalized_contract(rows))
         end
         equal(test.fetch("requests"), backend.command("count").to_i, "#{backend_name}: #{filename} request count")
       end
@@ -317,7 +344,7 @@ def admission_cases
       when "settings"
         options = input.transform_keys(&:to_sym)
         options[:backend] = options[:backend].to_sym if options[:backend]
-        options[:retry] = ThinkThen::Retry.new(**options.fetch(:retry).transform_keys(&:to_sym))
+        options[:retry] = ThinkThen::RetryPolicy.new(**options.fetch(:retry).transform_keys(&:to_sym))
         ThinkThen::Client.open(**options) { raise "malformed settings admitted" }
       else
         raise "unclassified admission boundary: #{boundary}"
@@ -340,7 +367,7 @@ def shared_options
       end
       equal(test.fetch("expected_error"), error.code.to_s, "shared saved-question admission")
     else
-      strict_contract(test.fetch("expected"), execute_case(test, test.fetch("client")))
+      strict_contract(normalized_contract(expected_projection(test)), normalized_contract(execute_case(test, test.fetch("client"))))
     end
     puts "Settings options: #{test.fetch('name')}"
   end

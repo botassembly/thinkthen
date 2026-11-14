@@ -22,7 +22,7 @@ internal static partial class Program
             var client = provider.GetRequiredService<ThinkThenClient>();
             Check(ReferenceEquals(client, provider.GetRequiredService<ThinkThenClient>()),
                 "DI registration must share one client snapshot");
-            Row<bool, NoDetail> row = await client.DecideAsync("Ready?", "alpha");
+            Row<bool, string> row = await client.DecideAsync("Ready?", "alpha");
             Check(row.Source.Backend == Backend.Stub, "DI options did not reach the client");
             Check(!Row(row).ToJsonString().Contains(secret, StringComparison.Ordinal), "row source leaked a key");
             await Code(ErrorCode.UsageQuestion, async () => { await client.DecideAsync("", "alpha"); });

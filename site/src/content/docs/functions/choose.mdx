@@ -1,10 +1,10 @@
 ---
 title: choose
 description: choose picks the one choice from your list that fits a piece of text, or says not sure when no choice is clear enough.
-goal: A newcomer who must sort a text into one of a few choices leaves able to get the choice, read not sure, see the chance of each choice, move the bar, branch a script on the choice, and choose for every row of a CSV file.
+goal: A newcomer who must sort a text into one of a few choices leaves able to get the choice, read not sure, see the chance of each choice, move the bar, branch a script on the choice, and choose for every result of a CSV file.
 reader: Someone at the command line who needs to sort a text into one of a few fixed choices
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "choose: pick one answer from your list"
@@ -13,80 +13,65 @@ import Example from '../../../components/Example.astro';
 import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
 
-choose picks the one choice from your list that best fits a piece of text, and prints it. When even the best choice falls short of the bar, it says not sure (`unsure`).
+choose asks a bounded question about text and returns an answered, not-sure or failed result.
 
-<Example id="choose-pick" />
+<Example id="functions/choose/command" />
 
-billing: the message asks for money back.
+Name each choice with `--choice`. The answer comes back as one of them.
 
-## Another choice
+```bash
+team_for() {
+  case "$1" in
+    billing) echo "billing team" ;;
+    shipping) echo "warehouse" ;;
+    other) echo "front desk" ;;
+    *) echo "no team for: $1" >&2; return 2 ;;
+  esac
+}
 
-<Example id="choose-other" />
+status=0
+topic=$(thinkthen choose --check 'What is the message about?' \
+  --text 'I was charged twice for one invoice.' \
+  --choice billing --choice shipping --choice other) || status=$?
 
-shipping: the message asks about a delivery.
+case $status in
+  3) echo "a person reads it" ;;
+  0) team_for "$topic" ;;
+  *) exit "$status" ;;
+esac
+```
 
-## Not sure
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check for exit code 3 before reading the answer. `--threshold 0.3` moves the bar.
 
-choose picks the choice with the highest chance. If that chance is below the bar, it says not sure. The bar is 0.5 unless you set `--threshold`.
+The choices (`billing`, `shipping`, `other`) are the words the model reads, so make them plain words or short phrases, not codes.
 
-<Example id="choose-unsure" />
+Bash has no list of choices it can check a `case` against. Add a choice and nothing points at `team_for`, so its `*)` branch fails loudly instead of guessing.
 
-Not sure: the message is about billing and shipping at once, so neither choice reaches 0.9. Send not sure to a person. Never send it to a default choice.
+With `--check`, choose exits 0 when it chose and 3 when it was not sure. That is "is there an answer", not a yes or a no, so read the code in a `case` as above and don't put a choose call in an `if`. Don't compare the printed word with `unsure` either: one of your own choices could be that word. The exit code is never ambiguous.
+
+<span id="choose-for-every-row-of-a-csv-file"></span>
+
+## Choose for every CSV row
+
+<details class="example-disclosure">
+<summary>Read the CSV file and save its answers</summary>
+
+`--column` selects the CSV column to judge; `--into` names the answer column. Check the exit status before using the saved file.
+
+<ExampleFile id="functions/choose/files" file="messages.csv" />
+
+<Example id="functions/choose/files" />
+
+</details>
 
 ## See why
 
 <details class="example-disclosure">
-<summary>See why</summary>
+<summary>Read the model’s numbers with the answer state</summary>
 
-`--json` prints the details. This `jq` keeps the chance of each choice.
+The state distinguishes an answer from not sure and failure. These are the actual numbers returned for the shown message.
 
 <Example id="choose-why" />
-
-billing has 0.98, well above the bar of 0.5, so choose picks it. [JSON output](/reference/json-output/) lists every field.
-
-</details>
-
-## Move the bar
-
-<details class="example-disclosure">
-<summary>Move the bar</summary>
-
-Raise the bar to 0.99 and the same clear message is not sure, because billing has 0.98.
-
-<Example id="choose-bar" />
-
-Lower the bar to accept a closer call. Raise it to answer only when one choice clearly wins.
-
-</details>
-
-## Use the answer in a script
-
-<details class="example-disclosure">
-<summary>Use the answer in a script</summary>
-
-`--check` turns the answer into the exit code, and the choice still prints.
-
-<Example id="choose-script" />
-
-| Answer | Exit code with `--check` |
-|---|---|
-| a choice | 0 |
-| `unsure` | 3 |
-
-Without `--check`, choose exits 0 whenever it answers. [Exit codes](/command-line/exit-codes/) lists every code.
-
-</details>
-
-## Choose for every row of a CSV file
-
-<details class="example-disclosure">
-<summary>Choose for every row of a CSV file</summary>
-
-<ExampleFile id="choose-into" file="messages.csv" />
-
-<Example id="choose-into" />
-
-`--column` names the column to read, and `--into` names the new answer column. A row that is not sure gets an empty cell. [File types](/command-line/file-types/) covers TSV, Excel and other files.
 
 </details>
 
@@ -98,9 +83,3 @@ Without `--check`, choose exits 0 whenever it answers. [Exit codes](/command-lin
 <FunctionOptions name="choose" />
 
 </details>
-
-If choose can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#choose) · [TypeScript](/sdks/typescript/#choose) · [Go](/sdks/go/#choose) · [Java](/sdks/java/#choose) · [Kotlin](/sdks/kotlin/#choose) · [C#](/sdks/csharp/#choose) · [R](/sdks/r/#choose) · [Ruby](/sdks/ruby/#choose) · [Rust](/sdks/rust/#choose) · [Swift](/sdks/swift/#choose) · [Zig](/sdks/zig/#choose) · [C](/sdks/c/#choose) · [C++](/sdks/cpp/#choose) · [DuckDB](/sdks/duckdb/#choose) · [SQLite](/sdks/sqlite/#choose) · [PostgreSQL](/sdks/postgresql/#choose)
-
-Next: [filter](/functions/filter/) keeps only the lines that answer yes.

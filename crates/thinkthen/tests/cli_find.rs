@@ -128,6 +128,6 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
     );
     assert_eq!(
         rows[1],
-        json!({"function":"find","position":2,"id":"empty","status":"failed","error":{"code":"record.empty","message":"the record is empty"}})
+        json!({"function":"find","position":2,"id":"empty","item":{"id":"empty","body":""},"status":"failed","error":{"code":"record.empty","message":"the record is empty"}})
     );
 }

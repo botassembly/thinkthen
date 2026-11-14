@@ -18,7 +18,27 @@ public final class Toolbox {
     }
     private static Toolbox admit(String json, boolean saved) {
         try { return new Toolbox(saved ? dev.thinkthen.internal.DriverToolbox.load(json) : dev.thinkthen.internal.DriverToolbox.definitions(json)); }
-        catch (dev.thinkthen.internal.DriverException error) { throw Values.error(error); }
+        catch (dev.thinkthen.internal.DriverException error) {
+            var translated=Values.error(error);
+            if (error.error().name().equals("usage.threshold") && filterBandContext(json,saved)) {
+                var diagnostic=error.error();
+                throw new UsageException(new RowError(ErrorCode.USAGE_THRESHOLD,diagnostic.message()+"; in Java use decideStream for a band",diagnostic.httpStatus()==null ? java.util.OptionalInt.empty() : java.util.OptionalInt.of(diagnostic.httpStatus())),error);
+            }
+            throw translated;
+        }
+    }
+    // This is syntax guidance after engine refusal, not a second admission rule.
+    private static boolean filterBandContext(String json,boolean saved) {
+        try {
+            var definitions=Values.parse(json);
+            if (saved) definitions=definitions.path("entries");
+            for (var entry:definitions) {
+                var question=saved ? entry.path("question") : entry;
+                if (question.path("function").asText().equals("filter") && question.path("threshold").isObject()
+                        && question.path("threshold").has("low") && question.path("threshold").has("high")) return true;
+            }
+        } catch (IllegalArgumentException ignored) { /* The engine already owns malformed JSON diagnostics. */ }
+        return false;
     }
     /**
      * Read the saved entries format as JSON.
@@ -85,53 +105,68 @@ public final class Toolbox {
      * @param name the caller-visible name
      * @return the decide result
      */
-    public java.util.Optional<DecideQuestion> decide(String name) { return entries.get(name) instanceof DecideQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public DecideQuestion decide(String name) { if (entries.get(name) instanceof DecideQuestion value) return value; throw missing(name,"decide"); }
     /**
      * Choose one label for the record.
      * @param name the caller-visible name
      * @return the choose result
      */
-    public java.util.Optional<ChooseQuestion> choose(String name) { return entries.get(name) instanceof ChooseQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public ChooseQuestion<String> choose(String name) {
+        var question = entries.get(name);
+        if (question instanceof ChooseQuestion<?> value) {
+            return new ChooseQuestion<>(value.definition(),value.name(),Domain.strings(value.domain().words()));
+        }
+        throw missing(name,"choose");
+    }
     /**
      * Select the matching labels for the record.
      * @param name the caller-visible name
      * @return the tag result
      */
-    public java.util.Optional<TagQuestion> tag(String name) { return entries.get(name) instanceof TagQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public TagQuestion<String> tag(String name) {
+        var question = entries.get(name);
+        if (question instanceof TagQuestion<?> value) {
+            return new TagQuestion<>(value.definition(),value.name(),Domain.strings(value.domain().words()));
+        }
+        throw missing(name,"tag");
+    }
     /**
      * Score the record against the required levels.
      * @param name the caller-visible name
      * @return the score result
      */
-    public java.util.Optional<ScoreQuestion> score(String name) { return entries.get(name) instanceof ScoreQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public ScoreQuestion score(String name) { if (entries.get(name) instanceof ScoreQuestion value) return value; throw missing(name,"score"); }
     /**
      * Return the filter value.
      * @param name the caller-visible name
      * @return the filter result
      */
-    public java.util.Optional<FilterQuestion> filter(String name) { return entries.get(name) instanceof FilterQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public FilterQuestion filter(String name) { if (entries.get(name) instanceof FilterQuestion value) return value; throw missing(name,"filter"); }
     /**
      * Return the rank value.
      * @param name the caller-visible name
      * @return the rank result
      */
-    public java.util.Optional<RankQuestion> rank(String name) { return entries.get(name) instanceof RankQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public RankQuestion rank(String name) { if (entries.get(name) instanceof RankQuestion value) return value; throw missing(name,"rank"); }
     /**
      * Find a matching text span.
      * @param name the caller-visible name
      * @return the find result
      */
-    public java.util.Optional<FindQuestion> find(String name) { return entries.get(name) instanceof FindQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public FindQuestion find(String name) { if (entries.get(name) instanceof FindQuestion value) return value; throw missing(name,"find"); }
     /**
      * Recognize typed mentions in the record.
      * @param name the caller-visible name
      * @return the recognize result
      */
-    public java.util.Optional<RecognizeQuestion> recognize(String name) { return entries.get(name) instanceof RecognizeQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public RecognizeQuestion recognize(String name) { if (entries.get(name) instanceof RecognizeQuestion value) return value; throw missing(name,"recognize"); }
     /**
      * Find the allowed relations in the record.
      * @param name the caller-visible name
      * @return the relate result
      */
-    public java.util.Optional<RelateQuestion> relate(String name) { return entries.get(name) instanceof RelateQuestion value ? java.util.Optional.of(value) : java.util.Optional.empty(); }
+    public RelateQuestion relate(String name) { if (entries.get(name) instanceof RelateQuestion value) return value; throw missing(name,"relate"); }
+    private UsageException missing(String name,String function) {
+        return new UsageException(new RowError(ErrorCode.USAGE_ARGUMENT,"No " + function + " question named " + name + "; available names: " + entries.keySet(),java.util.OptionalInt.empty()),null);
+    }
 }

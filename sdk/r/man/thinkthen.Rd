@@ -3,7 +3,7 @@
 \alias{thinkthen}
 \docType{package}
 \title{Ask typed questions about records}
-\description{Judge vectors and structured records with admitted questions. Calls return typed answers. The _rows forms retain every outcome.}
+\description{Judge vectors and structured records with admitted questions. Calls return typed answers. Add details = TRUE to retain every outcome. Filter returns only kept originals.}
 \details{Use a named backend with \code{tt_client()}. Required answer domains follow the question. Arguments after dots must be named. Thresholds are numeric cuts or numeric low and high pairs for decide and filter. Field selects a JSON Pointer. An execution name is independent of toolbox selection.
 
 Question constructors admit immutable values. A matching question carries its domain into its call. Toolboxes hold named questions; annotation accepts a toolbox or \code{tt_annotation_questions()} collection. Relation domains accept a single rule or a list of rules.

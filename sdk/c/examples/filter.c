@@ -47,23 +47,26 @@ int main(void) {
             client, asks_refund, NULL, messages, count, sizeof messages[0],
             THINKTHEN_OFFSET_UTF8, &call, &error);
     /* Each pass frees the row it held, so one variable serves the loop. */
-    while (rc == THINKTHEN_OK
-           || refund_request.status == THINKTHEN_STATUS_FAILED) {
+    while (rc == THINKTHEN_OK) {
         rc = thinkthen_call_next_kept(call, &refund_request, &error);
-        if (rc == THINKTHEN_OK) {
+        if (rc == THINKTHEN_OK)
             print_message(&refund_request);
-        } else if (refund_request.status == THINKTHEN_STATUS_FAILED) {
-            fprintf(stderr, "message %" PRIu64 " failed: ",
-                    refund_request.position);
-            report(&error);
+    }
+    const int failed = rc != THINKTHEN_END;
+    if (failed) {
+        report(&error);
+        while (call != NULL
+               && thinkthen_call_next_failed(call, &refund_request, &error)
+                      == THINKTHEN_OK) {
+            fprintf(stderr, "message %" PRIu64 " failed: %s\n",
+                    refund_request.position,
+                    thinkthen_code_name(refund_request.error_code));
         }
     }
-    if (rc != THINKTHEN_END)
-        report(&error);
     thinkthen_row_free(&refund_request);
     thinkthen_error_free(&error);
     thinkthen_call_free(call);
     thinkthen_question_free(asks_refund);
     thinkthen_client_free(client);
-    return rc == THINKTHEN_END ? EXIT_SUCCESS : EXIT_FAILURE;
+    return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }

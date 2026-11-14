@@ -1,5 +1,5 @@
 {
-  "anchor": "            .find(requested,",
+  "anchor": "    const auto action = client.find(asks_action,",
   "before": 0,
   "after": 2
 }

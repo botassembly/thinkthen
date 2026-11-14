@@ -60,6 +60,7 @@ type Error struct {
 	message    string
 	cause      error
 	httpStatus int
+	noAnswer   bool
 }
 
 // Code returns the stable engine error code.
@@ -81,6 +82,9 @@ func (e *Error) HTTPStatus() (int, bool) { return e.httpStatus, e.httpStatus != 
 
 // Is matches an exact code or an error family.
 func (e *Error) Is(target error) bool {
+	if target == ErrNoAnswer {
+		return e.noAnswer
+	}
 	if code, ok := target.(Code); ok {
 		return e.code == code
 	}
@@ -221,3 +225,12 @@ func codeForName(name string) (Code, bool) {
 }
 
 func abiError() error { return &Error{code: CodeUsageABI, message: C.THINKTHEN_ABI_ERROR_MESSAGE} }
+
+// ErrNoAnswer matches uncertainty and failures read from results.
+var ErrNoAnswer = errors.New("thinkthen: no answer")
+
+// UnsureError reports an uncertain result's probability.
+type UnsureError struct{ Probability float64 }
+
+func (e *UnsureError) Error() string        { return "thinkthen: unsure" }
+func (e *UnsureError) Is(target error) bool { return target == ErrUnsure || target == ErrNoAnswer }

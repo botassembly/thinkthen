@@ -8,7 +8,7 @@ with tt.recognize_stream(
     documents, kinds=["person", "organization"], field="/text"
 ) as recognitions:
     for recognized in recognitions:
-        for name in recognized:
+        for name in recognized.answer:
             print(
                 recognized.id, name.kind, repr(name.text),
                 name.start, name.end,

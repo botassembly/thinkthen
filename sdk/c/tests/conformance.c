@@ -9,12 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void member(const char *name, thinkthen_buffer value) {
-    if (!value.len) return;
-    printf(",\"%s\":", name);
-    assert(fwrite(value.data, 1, value.len, stdout) == value.len);
-}
-
 #include "stress.h"
 
 int main(int argc, char **argv) {
@@ -46,20 +40,14 @@ int main(int argc, char **argv) {
                 unsigned char *grown = realloc(kept, kept_count + 1);
                 assert(grown != NULL);
                 kept = grown;
-                kept[kept_count++] = row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0;
+                thinkthen_value *value=NULL;assert(thinkthen_row_values(&row,&value,&error)==THINKTHEN_OK);
+                uint8_t answer=0;
+                if(row.status==THINKTHEN_STATUS_ANSWERED)assert(thinkthen_value_bool(value,&answer,&error)==THINKTHEN_OK);
+                kept[kept_count++]=answer!=0;thinkthen_value_free(value);
             }
             if (count++) putchar(',');
-            const char *state = row.status == THINKTHEN_STATUS_ANSWERED ? "answered"
-                : row.status == THINKTHEN_STATUS_UNSURE ? "unsure" : "failed";
-            printf("{\"function\":%u,\"position\":%llu,\"status\":\"%s\"",
-                   row.function, (unsigned long long)row.position, state);
-            member("id", row.id);
-            member("answer", row.answer);
-            member("detail", row.detail);
-            member("source", row.source);
-            member("error", row.error);
-            if (!isnan(row.probability)) printf(",\"probability\":%.17g", row.probability);
-            putchar('}');
+            thinkthen_buffer json={0};assert(thinkthen_row_host_json(&row,&json,&error)==THINKTHEN_OK);
+            assert(fwrite(json.data,1,json.len,stdout)==json.len);thinkthen_buffer_free(&json);
         }
         thinkthen_row_free(&row);
     }

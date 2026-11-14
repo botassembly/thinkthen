@@ -1,6 +1,6 @@
-# Runs the shown command, then runs it again with JSON output and writes the
-# answers that every other language's example must match.
+# Compare the one-bar filter's kept original records, without a second JSON view.
 set -e
-bash -o pipefail show.sh
-THINKTHEN_JSON=true bash -o pipefail show.sh |
-  jq -s -c 'map(select(.kept) | .item)' > "$SITE_ANSWERS_FILE"
+kept=$(mktemp)
+trap 'status=$?; trap - EXIT; rm -f "$kept"; exit "$status"' EXIT
+bash -o pipefail show.sh | tee "$kept"
+jq -Rsc 'split("\n") | .[:-1]' "$kept" > "$SITE_ANSWERS_FILE"

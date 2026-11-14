@@ -1,0 +1,600 @@
+---
+title: Command guide
+description: The ten functions and their result states from Bash.
+goal: Use every function and handle missing answers explicitly.
+reader: A developer using the command line
+kind: how-to
+verified: 2026-11-13
+---
+import Example from '../../../components/Example.astro';
+
+
+ThinkThen is a classifier you run like any other command. It reads text, answers one bounded question, and hands back a word you can read and an exit code you can branch on.
+
+<Example id="functions/decide/command" />
+
+Use Bash. Run `curl -fsSL https://thinkthen.dev/install.sh | sh`, or `brew install botassembly/thinkthen/thinkthen`. Set `THINKTHEN_API_KEY` in the environment first. A few examples also use `jq` to read JSON.
+
+Every result is in exactly one of three states:
+
+- **answered**: there is an answer, and the command prints it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the message could not be judged, or the service did not respond.
+
+Every result prints as one line:
+
+| Result | What is printed |
+| --- | --- |
+| yes | `true` |
+| no | `false` |
+| one of your choices | the choice, such as `billing` |
+| tag's labels | the labels that fit, with a tab between them, such as `billing	shipping`. An empty line when none fit |
+| a score | the number, such as `0.62` |
+| a rank | the rank, such as `1` |
+| the line find found | the line's text, such as `Please refund my order.`. An empty line when no line answers |
+| recognize's names | each name as its kind, `: `, its text and its offsets, with a tab between names, such as `person: Morgan (0..6)	organization: Example Group (17..30)`. An empty line when there are none |
+| relate's relations | each relation as `source --relation--> target`, with a tab between relations, such as `Morgan --works_for--> Example Group`. An empty line when there are none |
+| a form | each entry as its name, `=`, and the entry as it prints, with a tab between entries, in the order of their names, such as `refund=true	topic=unsure	urgency=0.74` |
+| not sure | `unsure` |
+| failed | `failed: ` then the error code, `: `, and the message, such as `failed: record.missing: the record holds nothing at /text` |
+
+Every ThinkThen library prints a result in these same words. Two things differ in the command itself, because it prints messages and not results there: `thinkthen filter` prints your kept messages, and `thinkthen rank` prints your messages in rank order. Use `--json` to see each rank. For one message with no line, `thinkthen find` prints nothing at all.
+
+Three rules hold for every function on this page.
+
+1. **Branch on the exit code, never on the printed word.** Add `--check` and the exit code is 0 for yes, 1 for no, 3 for not sure and 6 for failed. A missing answer never exits 0 or 1, so it never reads as "yes" or "no".
+2. **Asking never loses a result.** `--json` writes one result for every message in every state, with its `status`, and its `probability` or its `error`.
+3. **Printing never fails.** Every result prints: the answer, `unsure`, or `failed:` with the reason.
+
+The scripts on this page start with `set -euo pipefail`. Under it, a result that failed stops the script unless you catch its exit code.
+
+## decide
+
+### The simplest if
+
+A decide call with `--check` goes straight into an `if`. `-q` keeps the word off the screen, as with `grep -q`.
+
+```bash
+if thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Please refund my order.'; then
+  echo "refund queue"
+fi
+```
+
+The `then` branch runs only on a yes. If the message could not be judged, the command exits 6 and says why on standard error. It never exits 0.
+
+Don't add a plain `else` to this `if`. In a shell, `else` runs for every exit code that is not 0: no, not sure and failed alike. To act on a no, read the exit code:
+
+```bash
+status=0
+thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Please refund my order.' || status=$?
+
+case $status in
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  *) exit "$status" ;;
+esac
+```
+
+### Yes, no, or something else
+
+Set two bars and decide can also be not sure. Exit codes 0 and 1 are the yes and the no. Codes 3 and 6 both mean there is no answer to read.
+
+```bash
+status=0
+thinkthen decide --check -q 'Does the customer request a refund?' \
+  --text 'Where is my parcel?' --low 0.2 --high 0.8 || status=$?
+
+case $status in
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  3 | 6) echo "a person reads it" ;;
+  *) exit "$status" ;;
+esac
+```
+
+`3 | 6` covers both not sure and failed. The last branch is for a mistake in the call itself, such as a misspelled option, which exits 2.
+
+### Not sure or failed
+
+Replace `-q` with `--json` to keep the result as well as the exit code.
+
+```bash
+status=0
+is_refund=$(thinkthen decide --check --json \
+  'Does the customer request a refund?' \
+  --text 'Where is my parcel?' --low 0.2 --high 0.8) || status=$?
+
+case $status in
+  3) echo "a person reads it" \
+    "$(jq -r '.probability' <<< "$is_refund")" ;;
+  6) echo "try again later" "$(jq -r '.error.code' <<< "$is_refund")" ;;
+  0) echo "refund queue" ;;
+  1) echo "inbox" ;;
+  *) exit "$status" ;;
+esac
+```
+
+Yes and no are the two answers. Not sure and failed are the two ways of having none. Bash can't check that a `case` names every state, so end each one with a `*)` branch that stops the script.
+
+The result's `status` field holds the same state as a word: `answered`, `unsure` or `failed`.
+
+### Did it work
+
+Without `--check`, the exit code answers only "did it work". It is 0 for yes, no and not sure, and 6 when the result failed.
+
+```bash
+if ! is_refund=$(thinkthen decide \
+  'Does the customer request a refund?' \
+  --text 'Please refund my order.'); then
+  echo "could not judge it: $is_refund"
+fi
+```
+
+When the service cannot judge the message, this reports the failure and its reason. Not sure counts as working: ThinkThen did its job, and the answer was "not sure".
+
+### Raise if it failed
+
+```bash
+set -euo pipefail
+
+is_refund=$(thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.')
+```
+
+Under `set -e` this line stops the script at once when the result failed, with the command's exit code. Otherwise the script goes on, and `$is_refund` holds the printed word.
+
+### Both bars and the probability
+
+```bash
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Where is my parcel?' \
+  --low 0.2 --high 0.8 --json | jq '.probability'
+```
+
+- No bar option: one bar at 0.5. The answer is always yes or no.
+- `--threshold 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `--low 0.2 --high 0.8`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. A result has no `probability` only when the result failed.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `thinkthen decide --json`, save the results, and compare them with your labels using `thinkthen audit`, described at the end of this page.
+
+## choose with your own choices
+
+Name each choice with `--choice`. The answer comes back as one of them.
+
+```bash
+team_for() {
+  case "$1" in
+    billing) echo "billing team" ;;
+    shipping) echo "warehouse" ;;
+    other) echo "front desk" ;;
+    *) echo "no team for: $1" >&2; return 2 ;;
+  esac
+}
+
+status=0
+topic=$(thinkthen choose --check 'What is the message about?' \
+  --text 'I was charged twice for one invoice.' \
+  --choice billing --choice shipping --choice other) || status=$?
+
+case $status in
+  3) echo "a person reads it" ;;
+  0) team_for "$topic" ;;
+  *) exit "$status" ;;
+esac
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check for exit code 3 before reading the answer. `--threshold 0.3` moves the bar.
+
+The choices (`billing`, `shipping`, `other`) are the words the model reads, so make them plain words or short phrases, not codes.
+
+Bash has no list of choices it can check a `case` against. Add a choice and nothing points at `team_for`, so its `*)` branch fails loudly instead of guessing.
+
+With `--check`, choose exits 0 when it chose and 3 when it was not sure. That is "is there an answer", not a yes or a no, so read the code in a `case` as above and don't put a choose call in an `if`. Don't compare the printed word with `unsure` either: one of your own choices could be that word. The exit code is never ambiguous.
+
+## Many messages
+
+Give any function a file of messages and it gives one result per message, in order. `--from lines` reads one message per line. With `--json`, each result carries your own message as `item`.
+
+```bash
+printf '%s\n' \
+  'Please refund my order.' \
+  'Where is my parcel?' \
+  'I was charged twice for one invoice.' > messages.txt
+
+thinkthen decide \
+  'Does the customer request a refund?' messages.txt --from lines \
+  --low 0.2 --high 0.8 --json |
+  jq -r '
+    if .status == "unsure" then "a person reads it: \(.item)"
+    elif .status == "failed" then "try again later: \(.item)"
+    elif .answer then "refund queue: \(.item)"
+    else "inbox: \(.item)"
+    end'
+```
+
+Test `status` first. In `jq` a result with no answer gives `null` for `.answer`, and `null` counts as false, so a test of `.answer` alone would send not-sure and failed messages to the inbox.
+
+One failed message does not stop the stream. Each result keeps its own state, with `position` counted from 1 and the message's `id` when it has one. After the last result the command exits 6 if any message failed, and 0 otherwise. Not sure never changes the exit code of a stream.
+
+Pass the whole file to one command so ThinkThen can send the messages in batches. Don't start one command per message.
+
+To save every result, send the results to a file: `--json > outcomes.jsonl`. Each line includes the state, so nothing is lost.
+
+Without `--json`, a stream prints one line per message: the message's `id` or position, a tab, and the result as it prints.
+
+
+## filter
+
+filter means "give me the yeses". It prints your own messages, in order.
+
+```bash
+thinkthen filter 'Does the customer request a refund?' messages.txt |
+  while IFS= read -r refund_request; do
+    echo "refund queue: $refund_request"
+  done
+```
+
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `--threshold 0.7` moves the bar. `--low` and `--high` are refused with exit code 2 and a message that names `thinkthen decide`: when you want not sure, use decide over the same file, as in the section above.
+
+If a message fails, you still get every kept message. filter names each failed message on standard error, with its position and `id`, and exits 6 after the last message.
+
+```bash
+status=0
+thinkthen filter \
+  'Does the customer request a refund?' \
+  messages.txt > refunds.txt || status=$?
+
+if [ "$status" -eq 6 ]; then
+  echo "try again later: some messages could not be judged"
+fi
+```
+
+filter prints your messages and nothing else, so it has no `--json`. To get each failed message back with its error code, run `thinkthen decide --json` over the same file.
+
+With `--check`, filter answers "did any message say yes", as `grep -q` does: 0 when one did, 1 when none did, 6 when a message failed.
+
+## tag
+
+Labels work as choices do. The answer is the list of labels that fit, and it can be empty.
+
+```bash
+topics=$(thinkthen tag 'Which topics appear?' \
+  --text 'I was charged twice and my parcel is late again.' \
+  --label billing --label shipping --json)
+
+if jq -e '.answer | index("billing")' <<< "$topics" > /dev/null; then
+  echo "billing team"
+fi
+jq -r '.answer[]' <<< "$topics"
+```
+
+tag is never not sure. `--threshold` sets how likely a label must be to count. Without `--json`, tag prints the labels on one line with tabs between them, and an empty line when none fit.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it.
+
+```bash
+urgency=$(thinkthen score 'How urgent is the request?' \
+  --text 'Please refund my order.' \
+  --level routine --level urgent)
+
+if awk -v urgency="$urgency" 'BEGIN { exit !(urgency > 0.5) }'; then
+  echo "answer today"
+fi
+printf '%.2f\n' "$urgency"
+```
+
+The score is a position between your levels, not one of them, so it is a number and there is nothing to put in a `case`. To get exactly one level back, ask with `thinkthen choose`. score is never not sure.
+
+## rank
+
+rank puts many messages in order along your levels, highest first.
+
+```bash
+thinkthen rank 'How urgent is the request?' messages.txt \
+  --level routine --level urgent --json |
+  jq -r 'select(.status == "answered") | "\(.answer) \(.item)"'
+```
+
+`answer` is the rank, starting at 1, and `item` is your message. rank reads the whole file before it prints anything. `--top 5` selects the five highest-ranked messages after judging the collection. A failed message comes after the ranked ones, with `status` set to `failed`. Without `--json`, rank prints your messages in rank order.
+
+## find
+
+find points to the one line that answers.
+
+```bash
+message=$'Morgan works for Example Group.\nPlease refund my order.'
+
+status=0
+action=$(thinkthen find --check \
+  'Which line states the requested action?' \
+  --text "$message") || status=$?
+
+case $status in
+  3) echo "a person reads it" ;;
+  1) echo "no line answers" ;;
+  0) echo "$action" ;;
+  *) exit "$status" ;;
+esac
+```
+
+With `--check`, find exits 0 when it found a line, 1 when no line answers, and 3 when it was not sure. Like choose, find can be not sure with no bar set.
+
+Without `--json`, find prints the line it found. With `--json`, the answer has `text`, `start` and `end`, or is `null` when no line answers. The offsets count characters, so `${message:start:end-start}` is the line.
+
+## recognize
+
+```bash
+thinkthen recognize --text 'Morgan works for Example Group.' \
+  --kind person --kind organization --json |
+  jq -r '
+    if .status == "failed" then
+      "failed: \(.error.code): \(.error.message)"
+    else .answer[] | "\(.kind) \(.text)" end'
+```
+
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure. Without `--json`, recognize prints the names on one line, as `person: Morgan (0..6)`, with tabs between them.
+
+## relate
+
+```bash
+message=$'Morgan works for Example Group.\nPlease refund my order.'
+
+thinkthen relate \
+  --text "$message" --rule person organization works_for --json |
+  jq -r '
+    if .status == "failed" then
+      "failed: \(.error.code): \(.error.message)"
+    else .answer[] |
+      "\(.source.text) \(.relation) \(.target.text)"
+    end'
+```
+
+A rule is the kind it starts from, then the kind it points to, then the relation name. Each relation has `source`, `target`, `relation`, `probability` and `either`. The result's `detail.names` holds every name found, including names in no relation. Without `--json`, relate prints the relations on one line, as `Morgan --works_for--> Example Group`, with tabs between them.
+
+## annotate
+
+annotate asks several questions of each message and gives back one form per message. The questions go in a file. Save this as `questions.json`:
+
+```json
+{
+  "questions": {
+    "refund": {"function": "decide", "question": "Does the customer request a refund?"},
+    "topic": {"function": "choose", "question": "What is the message about?", "choices": ["billing", "shipping", "other"]},
+    "urgency": {"function": "score", "question": "How urgent is the request?", "levels": ["routine", "urgent"]}
+  }
+}
+```
+
+```bash
+thinkthen annotate questions.json messages.txt --json |
+  jq -r '
+    if .status == "failed" then "try again later: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | any(.status == "failed")) then
+      "try again later: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | any(.status == "unsure")) then
+      "a person reads it: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | all(.status == "answered")) then
+      if .answer.refund.answer then
+        "refund queue: \(.answer.topic.answer)" +
+        " \(.answer.urgency.answer * 100 | round / 100)"
+      else empty
+      end
+    else empty
+    end'
+```
+
+Each entry of a form is a result of its own function, with its own `status`. One entry can be not sure while the others answer. The example checks every entry it uses before reading any answer. The command exits 6 when a form or any entry in it failed; a not-sure entry is not a failure. Without `--json`, a form prints one tab-separated line of names and their printed result states.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```bash
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'I was charged twice for one invoice.' \
+  --yes-means \
+    'the customer wants money back, including for a duplicate charge' \
+  --no-means 'the customer wants anything else'
+
+thinkthen choose 'What is the message about?' \
+  --text 'I was charged twice for one invoice.' \
+  --choice billing --choice shipping --choice other \
+  --describe 'billing=charges, invoices and refunds' \
+  --describe 'shipping=parcels and delivery'
+```
+
+decide and filter take `--yes-means` and `--no-means`. choose, tag, score and rank take `--describe`, which names one of your choices, labels or levels, then `=`, then its description.
+
+## Messages and fields
+
+A message is a piece of text or a JSON value. `--from` says how a file is bar into messages:
+
+- `--from text`: the whole file is one message.
+- `--from lines`: each line that is not blank is one message.
+- `--from jsonl`: each line is one JSON value.
+
+A file named `.jsonl` is read as JSON Lines. Otherwise filter, rank and annotate read lines, and every other function reads the whole file as one text. Say `--from` whenever a pipe's format matters. With no file, the command reads standard input.
+
+`--field /text` picks one field of a JSON message. Without it, ThinkThen judges the whole message.
+
+```bash
+printf '%s\n' '{"id":"a1","text":"Please refund my order."}' |
+  thinkthen decide \
+    'Does the customer request a refund?' \
+    --from jsonl --field /text --json
+```
+
+Give JSON messages an `id`. Each result carries it back as `id`.
+
+`--check` on decide, choose and find takes exactly one message. Given a stream of messages, it is refused with exit code 2.
+
+Blank text given to a one-message call, such as `--text ''` or an empty file, exits 2, and nothing is sent to the service. A script gets a code it can act on before any work is done. A blank message inside a stream gives a failed result with code `record.empty`, and the other messages go on.
+
+## Tables
+
+Give the command a CSV, TSV or Excel file and it writes a new file with an answer column.
+
+```bash
+thinkthen decide 'Does the customer request a refund?' messages.csv \
+  --column text --into is_refund --low 0.2 --high 0.8
+```
+
+`--column` names the column to judge, and `--into` names the new answer column. The command writes `messages.thinkthen.csv` beside the source and prints its path. `--output` names another file. `--in-place` replaces the source and keeps a backup.
+
+You get one answer per result. Where there is no answer the cell holds the table's missing value: an empty cell in CSV and TSV, `#N/A` in Excel. Tables treat missing values their own way. An Excel formula over `#N/A` fails instead of reading the result as `FALSE`, for example.
+
+To see why an answer is missing, ask for the details:
+
+```bash
+thinkthen decide 'Does the customer request a refund?' messages.csv \
+  --column text --into is_refund --low 0.2 --high 0.8 --details
+```
+
+`--details` adds `is_refund_status`, `is_refund_probability` and `is_refund_error` beside the answer, so `is_refund_status` shows which results need a person.
+
+A plain column can't hold a failure. So if any result fails, the command still writes the file, names each failed result on standard error, and exits 6 after every result is judged.
+
+`thinkthen filter ... --column text --into is_refund` writes only the results that answered yes. In Excel it hides the other results instead of removing them, so formulas still work. Like every filter, it takes one bar. With `--in-place`, a filter that had any failed result changes nothing.
+
+`thinkthen annotate questions.json messages.xlsx --column text` writes one column per question.
+
+## Saved questions
+
+A toolbox is a JSON file of named questions, so many scripts can share one definition. Save this as `toolbox.json`:
+
+```json
+{
+  "entries": {
+    "refund": {
+      "question": {
+        "function": "decide",
+        "question": "Does the customer request a refund?",
+        "threshold": {"low": 0.2, "high": 0.8},
+        "field": "/text"
+      }
+    }
+  }
+}
+```
+
+```bash
+printf '%s\n' '{"id":"a1","text":"Please refund my order."}' |
+  thinkthen run toolbox.json refund --json
+```
+
+`thinkthen run TOOLBOX NAME FILE` runs one named entry over a file, with the same output and exit codes as the function it names. The same file loads as a toolbox in every ThinkThen library.
+
+## Settings
+
+The command reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, add options to any call.
+
+```bash
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.' \
+  --model '...' --batch 16
+```
+
+The options are `--backend`, `--url`, `--model` and `--batch`. Each also has an environment variable, such as `THINKTHEN_MODEL`, and an option on the command line wins. The key is read only from the environment. Keep it out of your scripts.
+
+## Usage
+
+```bash
+thinkthen decide 'Does the customer request a refund?' \
+  --text 'Please refund my order.' --usage
+```
+
+`--usage` prints one line of JSON on standard error when the command ends: attempts, retries, bytes sent, and tokens in and out as the service reported them. Standard output is unchanged.
+
+## Cancel
+
+Press Ctrl-C to stop a call. The command stops reading, stops asking, and exits 130. Results already printed stay printed. From a script, `kill -INT` does the same.
+
+## Errors
+
+| What happened | Exit code | What you see |
+| --- | --- | --- |
+| It worked. With `--check`, the answer was yes | 0 | The result |
+| The answer was no, with `--check` | 1 | `false`, or nothing for find |
+| Not sure, with `--check` | 3 | `unsure` |
+| A message could not be judged, or the service failed | 6 | `failed: code: message` for that message, and a line on standard error |
+| A mistake in the call, such as a bad threshold, `--low` and `--high` on filter, or no API key | 2 | A message on standard error. Nothing is sent |
+| Blank text in a one-message call | 2 | A message on standard error. Nothing is sent |
+| The command could not read or write a file | 5 | A message on standard error |
+| The call was cancelled | 130 | |
+| The reader of a pipe closed it early, as `head -1` does | 141 | |
+
+Two groups let you branch by meaning:
+
+- `3 | 6` in a `case` covers not sure and failed: there was no answer to read.
+- Without `--check`, any exit code but 0 means it did not work. Not sure exits 0 there, because not sure is a result and not an error.
+
+In a stream, a failed message wins over everything else: the exit code is 6 whatever the other messages answered. With `--check` on filter, a yes then wins over a no.
+
+Every message on standard error starts with `thinkthen:` and a code, such as `thinkthen: usage.threshold: ...`. A failed message's line also gives its position, its `id` and its file.
+
+Under `set -o pipefail`, a pipeline returns the command's exit code even when `jq` or `while` comes after it.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 crate’s command source](https://static.crates.io/crates/thinkthen/thinkthen-0.1.2.crate). Every result now prints, `--check` turns the answer into the exit code, and several options have new names. That release already has `--field` and `--backend`.
+
+| 0.1 | Now |
+| --- | --- |
+| `--true`, `--false` | `--yes-means`, `--no-means` |
+| `--threshold 0.2:0.8` | `--low 0.2 --high 0.8` |
+| `--lines` | `--from lines` |
+| `--details` on a plain call | `--json` |
+| `--option billing`, `--option 'billing=charges'` | `--choice billing`, and `--describe 'billing=charges'` |
+| `--label 'billing=charges'` | `--label billing`, and `--describe 'billing=charges'` |
+| find picked one message out of many | find picks one line inside each message. Send the candidates as one message, one per line |
+| Answers were cached between runs | Each run asks the service again. Save the results to reuse them |
+
+## Check saved answers against labels
+
+[Current audit arguments and flags](/reference/options/#audit).
+
+`thinkthen audit` grades results you have saved against labels you trust. It reads no key and calls no model.
+
+```bash
+thinkthen decide 'Does the customer request a refund?' messages.jsonl \
+  --field /text --json > outcomes.jsonl
+
+thinkthen audit outcomes.jsonl --manifest run.json --key labels.jsonl
+```
+
+`run.json` names the question, the service, the model and every message `id` you expected. `labels.jsonl` holds one label per line, such as `{"case_id":"a1","question_identity":"...","gold":true}`. The `question_identity` is in each saved result's `source`.
+
+audit prints one JSON report: how many answers were right, how many messages were not sure, failed or missing, and how the probabilities compare with the labels in ten bins. Not sure, failed and missing stay separate counts and are never scored as "no". It works on saved decide, choose and find results. A poor score still exits 0, because the audit itself worked.
+
+## Compare saved answers
+
+[Current diff arguments and flags](/reference/options/#diff).
+
+`thinkthen diff` shows what moving a bar would change, from the probabilities you already saved. It calls no model.
+
+```bash
+thinkthen diff outcomes.jsonl --manifest run.json \
+  --threshold 0.8 --key labels.jsonl
+thinkthen diff outcomes.jsonl --manifest run.json \
+  --low 0.2 --high 0.8 --key labels.jsonl
+```
+
+This works for decide results. To compare two real runs, such as two models, give both:
+
+```bash
+thinkthen diff left.jsonl --left-manifest left-run.json \
+  --right right.jsonl --right-manifest right-run.json --key labels.jsonl
+```
+
+The report lists each message whose state or answer changed, and with labels, which changes were for the better.
+
+---

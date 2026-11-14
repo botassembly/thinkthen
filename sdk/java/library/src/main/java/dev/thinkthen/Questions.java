@@ -2,6 +2,11 @@ package dev.thinkthen;
 
 final class Questions {
     private Questions() {}
+    static java.util.List<String> words(com.fasterxml.jackson.databind.JsonNode value,String key) {
+        var words = new java.util.ArrayList<String>();
+        value.path(key).forEach(word -> words.add(word.isTextual() ? word.asText() : word.path("name").asText()));
+        return java.util.List.copyOf(words);
+    }
     static java.util.List<?> options(java.util.List<String> names, java.util.Map<String,Object> values) {
         Object raw = values.remove("descriptions");
         if (raw == null) return java.util.List.copyOf(names);
@@ -15,8 +20,8 @@ final class Questions {
     static com.fasterxml.jackson.databind.JsonNode definition(Question<?,?> question) {
         return switch (question) {
             case DecideQuestion value -> value.definition();
-            case ChooseQuestion value -> value.definition();
-            case TagQuestion value -> value.definition();
+            case ChooseQuestion<?> value -> value.definition();
+            case TagQuestion<?> value -> value.definition();
             case ScoreQuestion value -> value.definition();
             case FilterQuestion value -> value.definition();
             case RankQuestion value -> value.definition();
@@ -28,8 +33,8 @@ final class Questions {
     static @org.jspecify.annotations.Nullable String name(Question<?,?> question) {
         return switch (question) {
             case DecideQuestion value -> value.name();
-            case ChooseQuestion value -> value.name();
-            case TagQuestion value -> value.name();
+            case ChooseQuestion<?> value -> value.name();
+            case TagQuestion<?> value -> value.name();
             case ScoreQuestion value -> value.name();
             case FilterQuestion value -> value.name();
             case RankQuestion value -> value.name();
@@ -41,8 +46,8 @@ final class Questions {
     static @org.jspecify.annotations.Nullable Question<?,?> decode(com.fasterxml.jackson.databind.JsonNode value) {
         return switch (value.path("function").asText()) {
             case "decide" -> new DecideQuestion(value,null);
-            case "choose" -> new ChooseQuestion(value,null);
-            case "tag" -> new TagQuestion(value,null);
+            case "choose" -> new ChooseQuestion<>(value,null,Domain.strings(words(value,"choices")));
+            case "tag" -> new TagQuestion<>(value,null,Domain.strings(words(value,"labels")));
             case "score" -> new ScoreQuestion(value,null);
             case "filter" -> new FilterQuestion(value,null);
             case "rank" -> new RankQuestion(value,null);

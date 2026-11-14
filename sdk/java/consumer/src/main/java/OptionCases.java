@@ -6,6 +6,7 @@ import java.nio.file.Path;
 public final class OptionCases {
     private OptionCases() {}
     public static JsonNode execute(ThinkThen client, JsonNode request) throws Exception {
+        if (request.path("question").path("function").asText().equals("filter")) return ConformanceCases.filterResult(client,request,true);
         var output = ConsumerCases.JSON.createArrayNode();
         try (var rows = ConformanceCases.execute(client, request)) {
             rows.forEach(row -> output.add(ConsumerCases.canonicalRow(row)));
@@ -34,8 +35,8 @@ public final class OptionCases {
                     : execute(client, sample.get("equivalent_request"));
                 ConsumerCases.equal(actual, expected, sample.get("name").asText());
                 if (!sample.has("expected_error")) {
-                    ConsumerCases.equal(actual, sample.get("expected"), "canonical option rows retain source identity");
-                    ConsumerCases.equal(actual.size(), sample.get("expected").size(), "option rows");
+                    ConsumerCases.equal(actual, sample.get("request").path("question").path("function").asText().equals("filter") ? ConformanceCases.expectedFilter(sample.get("request"),sample.get("expected")) : sample.get("expected"), "canonical option results retain source identity");
+                    if (!sample.get("request").path("question").path("function").asText().equals("filter")) ConsumerCases.equal(actual.size(), sample.get("expected").size(), "option rows");
                 }
             }
         }

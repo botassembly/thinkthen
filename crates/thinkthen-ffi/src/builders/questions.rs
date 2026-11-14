@@ -24,12 +24,12 @@ pub struct TextView {
 #[repr(C)]
 #[derive(Debug)]
 pub struct RuleInput {
-    /// The relation's name, such as "works_for".
-    pub relation: TextView,
     /// The kind of name the relation starts from.
     pub source: TextView,
     /// The kind of name it points to.
     pub target: TextView,
+    /// The relation's name, such as "works_for".
+    pub relation: TextView,
     /// How the model should read the relation; data NULL to leave it out.
     pub reads: TextView,
     /// 1 when the relation runs both ways, 0 when it runs from source to target.
@@ -225,9 +225,9 @@ pub(crate) unsafe fn relation_rule(
     /* SAFETY: the caller lends each counted rule field until return. */
     unsafe {
         let mut value = questions::RelationRule::new(
-            text(rule.relation.data, rule.relation.len)?,
             text(rule.source.data, rule.source.len)?,
             text(rule.target.data, rule.target.len)?,
+            text(rule.relation.data, rule.relation.len)?,
         )?
         .either(rule.either != 0);
         if !rule.reads.data.is_null() {

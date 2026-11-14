@@ -10,7 +10,7 @@ source = Path(__file__).resolve().parents[3] / 'scripts/tests/thread-start-audit
 support = Path(__file__).with_name('support.js').resolve().as_uri()
 program = '''
 const {sdk} = await import(process.env.THINKTHEN_AUDIT_SUPPORT);
-const client = new sdk.ThinkThen({backend: "stub"});
+const client = new sdk.Client({backend: "stub"});
 try {
   async function* records() { for (let i = 0; i < 1000; i++) yield "record"; }
   let count = 0;

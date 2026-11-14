@@ -8,7 +8,7 @@ test("finite arrays batch valid records and preserve intervening failed position
   const server = await backend(caseFor({}, [], [yes]));
   let client;
   try {
-    client = new sdk.ThinkThen({ url: server.url, batch: 16 });
+    client = new sdk.Client({ url: server.url, batch: 16 });
     const input = [{ id: "first", body: "first" }, { id: true }, null, { id: "last", body: "last" }];
     const original = structuredClone(input);
     const rows = [];
@@ -27,7 +27,7 @@ test("finite arrays batch valid records and preserve intervening failed position
 
 // Request admission wins before any caller-provided iterator or record access.
 test("invalid questions cannot invoke array getters proxy traps or iterator getters", async () => {
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   let accessed = 0;
   const array = [];
   Object.defineProperty(array, 0, { get() { accessed++; return "evidence"; } });
@@ -53,7 +53,7 @@ for (const kind of ["own iterator", "async iterator", "subclass iterator"]) {
     const server = await backend(caseFor({}, [], [yes]));
     let client;
     try {
-      client = new sdk.ThinkThen({ url: server.url, batch: 1 });
+      client = new sdk.Client({ url: server.url, batch: 1 });
       let pulled = 0;
       let returned = 0;
       class Input extends Array {}
@@ -83,7 +83,7 @@ for (const when of ["before", "during"]) {
     const server = await backend(caseFor({}, [], [yes]));
     let client;
     try {
-      client = new sdk.ThinkThen({ url: server.url, batch: 16 });
+      client = new sdk.Client({ url: server.url, batch: 16 });
       const controller = new AbortController();
       let first = 0;
       let second = 0;

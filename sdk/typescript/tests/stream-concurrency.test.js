@@ -23,7 +23,7 @@ test("a pending input read allows rows and early return", { timeout: 10000 }, as
     },
     return() { returned++; return Promise.resolve({ done: true }); },
   };
-  const client = new sdk.ThinkThen({ backend: "stub", batch: 1 });
+  const client = new sdk.Client({ backend: "stub", batch: 1 });
   const stream = client.decideStream("Ready?", input);
   try {
     const first = stream.next();
@@ -44,7 +44,7 @@ test("a pending input read allows rows and early return", { timeout: 10000 }, as
 
 // Feature: each lazy stream owns independent bounded input and output.
 test("100 concurrent async streams complete with ordered rows", { timeout: 30000 }, async () => {
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   try {
     await Promise.all(Array.from({ length: 100 }, async (_, stream) => {
       async function* records() {

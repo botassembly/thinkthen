@@ -115,7 +115,7 @@ with long_path_scratch('thinkthen-source-install-', 'Source install') as scratch
                         archive.write(path, module + '@' + label + '/' + str(relative))
             go = scratch / 'go-consumer'
             shutil.copytree(ROOT / 'sdk/go/tests', go)
-            (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.23\n\nrequire ' + module + ' ' + label + '\n', encoding='utf-8')
+            (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.27\n\nrequire ' + module + ' ' + label + '\n', encoding='utf-8')
             go_env = env | {'GOPROXY': (scratch / 'proxy').as_uri(), 'GOMODCACHE': str(scratch / 'go-modules'),
                             'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
                             'THINKTHEN_CASES': str(ROOT / 'conformance')}

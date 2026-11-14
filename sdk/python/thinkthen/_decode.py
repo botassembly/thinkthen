@@ -107,7 +107,7 @@ def result(
     kwargs: dict[str, Any] = {
         "function": t.Function(function),
         "status": t.Status(value["status"]),
-        "answer": answer,
+        "_answer": answer,
         "probability": value.get("probability"),
         "error": t.RowError(
             t.ErrorCode(error["code"]), error["message"], error.get("http_status")
@@ -128,10 +128,7 @@ def result(
                 source.get("name"),
             ),
         )
-        if function == "filter":
-            kwargs["item"] = item
-        elif function == "rank":
-            kwargs["_item"] = item if available else t.UNAVAILABLE
+        kwargs["item"] = item
     return (_OUTCOMES if child else _ROWS)[function](**kwargs)
 
 
@@ -163,13 +160,31 @@ def row_from_json(
 
 def plain(value: Any) -> Any:
     """Project typed values for column libraries without losing integer ids."""
+    if isinstance(value, t._Result):
+        result = {
+            name: plain(getattr(value, name))
+            for name in (
+                "function",
+                "status",
+                "position",
+                "id",
+                "source",
+                "probability",
+                "error",
+                "detail",
+            )
+            if getattr(value, name, None) is not None
+        }
+        if value.answered:
+            result["answer"] = plain(value._answer)
+        return result
     if isinstance(value, Enum):
         return value.value
     if is_dataclass(value) and not isinstance(value, type):
         return {
             field.name: plain(getattr(value, field.name))
             for field in fields(value)
-            if not field.name.startswith("_")
+            if not field.name.startswith("_") and getattr(value, field.name) is not None
         }
     if isinstance(value, (dict, MappingProxyType)):
         return {plain(key): plain(item) for key, item in value.items()}

@@ -50,8 +50,8 @@ fn record_failures_keep_positions_and_exact_ids_without_becoming_call_errors() {
         assert_eq!(value["source"]["backend"], "stub");
     }
     assert!(matches!(rows[0].outcome(), Outcome::Answered { .. }));
-    let row = engine.run(&question, Record::missing()).unwrap();
-    assert_eq!(row.status(), Status::Failed);
+    let error = engine.run(&question, Record::missing()).unwrap_err();
+    assert_eq!(error.code(), Code::RecordMissing);
     let encoded = serde_json::to_string(&rows[0]).unwrap();
     let restored: AnyRow = serde_json::from_str(&encoded).unwrap();
     assert_eq!(
@@ -75,24 +75,20 @@ fn push_close_does_not_wait_for_output_and_filter_keeps_failed_originals() {
     sender.close();
     let rows: Vec<_> = call.rows().collect::<Result<_, _>>().unwrap();
     assert_eq!(rows.len(), 5);
-    let filter = questions::Filter::new("Keep?").unwrap();
+    let decision = questions::Decide::new("Keep?").unwrap();
+    let records = vec![
+        Record::text("first"),
+        Record::missing(),
+        Record::text("last"),
+    ];
     let rows: Vec<_> = engine
-        .filter_items(&filter, vec!["first", "missing", "last"], |item| {
-            if *item == "missing" {
-                Record::missing()
-            } else {
-                Record::text(*item)
-            }
-        })
+        .rows(&decision, records)
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    assert_eq!(
-        rows.iter().map(|(item, _)| *item).collect::<Vec<_>>(),
-        ["first", "missing", "last"]
-    );
-    assert_eq!(rows[1].1.status(), Status::Failed);
-    assert!(!rows[1].1.kept());
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[1].status(), Status::Failed);
+    assert_eq!(rows[1].position(), 2);
 }
 
 #[test]
@@ -135,8 +131,8 @@ fn cancellation_releases_a_push_sender_and_finishes_once_without_poisoning_the_e
         Ok(0) | Err(_)
     ));
     assert_eq!(
-        engine.run(&question, Record::missing()).unwrap().status(),
-        Status::Failed
+        engine.run(&question, Record::missing()).unwrap_err().code(),
+        Code::RecordMissing
     );
 }
 
@@ -246,8 +242,13 @@ fn one_thread_fills_input_with_try_send_and_drains_every_row_in_order() {
 #[test]
 fn one_thread_rank_tries_again_on_a_full_queue_and_reads_after_close() {
     without_a_stall(|| {
-        let question = questions::Rank::new("How much?", ["low", "high"]).unwrap();
-        let call = stub_engine().open(&question).unwrap();
+        let question = questions::Rank::with_strings("How much?", ["low", "high"]).unwrap();
+        let call = stub_engine()
+            .open_request(
+                &thinkthen::Request::new(question),
+                thinkthen::OffsetUnit::Utf8,
+            )
+            .unwrap();
         let sender = call.sender();
         let rows = call.rows();
         for index in 0..200 {
@@ -267,7 +268,7 @@ fn one_thread_rank_tries_again_on_a_full_queue_and_reads_after_close() {
 
 #[test]
 fn try_send_on_a_stopped_call_gives_the_record_back_even_when_input_is_full() {
-    type Rows = thinkthen::Rows<questions::Decide>;
+    type Rows = thinkthen::RecordRows<questions::Decide>;
     let stops: [fn(&thinkthen::RecordSender, &Rows); 2] =
         [|sender, _| sender.close(), |_, rows| rows.cancel()];
     for stop in stops {
@@ -334,7 +335,7 @@ fn the_last_sender_owner_closes_input_and_a_general_toolbox_can_execute_rank() {
     assert_eq!(rows.collect::<Result<Vec<_>, _>>().unwrap().len(), 1);
     let toolbox = questions::Toolbox::new(BTreeMap::from([(
         "priority".to_owned(),
-        questions::Rank::new("How much?", ["low", "high"])
+        questions::Rank::with_strings("How much?", ["low", "high"])
             .unwrap()
             .into(),
     )]))
@@ -392,12 +393,11 @@ fn host_conversion_failures_are_record_rows_and_transport_retains_its_cause() {
             assert_eq!(row.error().unwrap().code(), Code::RecordInvalid);
             assert_eq!(row.source().backend(), backend);
         }
-        let row = engine.run(&question, Record::text("ready")).unwrap();
-        let error = row.error().unwrap();
+        let error = engine.run(&question, Record::text("ready")).unwrap_err();
         assert_eq!(error.code(), Code::BackendTransport);
         assert!(error.source().is_some());
         assert_eq!(
-            serde_json::to_value(error).unwrap()["code"],
+            serde_json::to_value(&error).unwrap()["code"],
             "backend.transport"
         );
     }
@@ -462,4 +462,82 @@ fn abandoned_calls_do_not_cancel_the_attached_external_signal() {
     );
     assert!(rows.next().is_none());
     assert!(external.is_cancelled());
+}
+
+#[test]
+fn many_rows_keep_nonclone_records_without_including_items_in_value_equality() {
+    #[derive(Debug)]
+    struct Ticket {
+        text: String,
+        mutable: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    }
+    impl From<&Ticket> for Record {
+        fn from(ticket: &Ticket) -> Self {
+            Record::text(&ticket.text)
+        }
+    }
+    let engine = stub_engine();
+    let question = questions::Decide::new("Ready?").unwrap();
+    let state = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let first = engine
+        .rows(
+            &question,
+            vec![Ticket {
+                text: "same evidence".into(),
+                mutable: state.clone(),
+            }],
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
+    let second = engine
+        .rows(
+            &question,
+            vec![Ticket {
+                text: "same evidence".into(),
+                mutable: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(91)),
+            }],
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
+    assert!(std::sync::Arc::ptr_eq(&first.item().mutable, &state));
+    assert_eq!(first, second);
+    let text_item = engine
+        .rows(&question, vec![String::from("same evidence")])
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
+    assert_eq!(first, text_item);
+    state.store(42, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(first, second);
+    assert_eq!(
+        first
+            .into_item()
+            .mutable
+            .load(std::sync::atomic::Ordering::SeqCst),
+        42
+    );
+}
+
+#[test]
+fn typed_push_rows_move_the_original_admitted_record_into_item() {
+    let engine = stub_engine();
+    let question = questions::Decide::new("Ready?").unwrap();
+    let call = engine.open(&question).unwrap();
+    let sender = call.sender();
+    let record = Record::from_json(r#"{ "id":"original", "body":"evidence" }"#);
+    let expected = record.original().1.to_vec();
+    sender.send(record).unwrap();
+    sender.close();
+    let mut rows = call.rows();
+    let row = rows.next().unwrap().unwrap();
+    assert_eq!(row.item().original().1, expected);
+    assert_eq!(row.item().id(), row.id());
+    assert!(rows.next().is_none());
+    let returned = row.into_item();
+    assert_eq!(returned.original().1, expected);
 }

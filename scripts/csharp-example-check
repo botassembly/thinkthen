@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Run the C# guide or focused host/compiler checks against the installed candidate."""
+import argparse
+from guide_csharp import run_csharp
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('stage')
+parser.add_argument('--host-only',action='store_true')
+args=parser.parse_args()
+run_csharp(args.stage,host_only=args.host_only)

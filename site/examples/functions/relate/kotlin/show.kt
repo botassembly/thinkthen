@@ -8,8 +8,8 @@ fun main() = runBlocking {
     ThinkThen().use { client ->
         val relations = client.relate(message, listOf(worksFor)).answer()
         for (relation in relations) {
-            println("${relation.source.span.text} --${relation.relation}--> " +
-                relation.target.span.text)
+            println("${relation.source.text} --${relation.relation}--> " +
+                relation.target.text)
         }
     }
 }

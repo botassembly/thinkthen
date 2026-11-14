@@ -1,7 +1,6 @@
 #![cfg(test)]
 //! Rank limits fit every host count type before saved toolbox hydration.
 use serde_json::json;
-use std::num::NonZeroUsize;
 use thinkthen::{Code, Rank, Request, Toolbox};
 
 #[test]
@@ -17,10 +16,10 @@ fn runtime_and_saved_rank_top_share_portable_bounds() {
     ] {
         let entry = json!({"question":{"function":"rank","question":"Priority?","levels":["low","high"],"top":top}});
         assert_eq!(validator.is_valid(&entry), accepted, "schema {top}");
-        if let Ok(value) = usize::try_from(top)
-            && let Some(value) = NonZeroUsize::new(value)
-        {
-            let constructed = Rank::new("Priority?", ["low", "high"]).unwrap().top(value);
+        if let Ok(value) = usize::try_from(top) {
+            let constructed = Rank::with_strings("Priority?", ["low", "high"])
+                .unwrap()
+                .top(value);
             if accepted {
                 assert_eq!(
                     serde_json::to_value(constructed.unwrap()).unwrap()["top"],

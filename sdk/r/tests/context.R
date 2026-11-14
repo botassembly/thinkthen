@@ -47,19 +47,19 @@ for (backend in c("systemone", "openai")) {
 
   # Every question route preserves the call-level context before record admission.
   question_calls <- list(
-    function() tt_decide_rows("text", opaque, client = client),
-    function() tt_decide_rows("text", NA_character_, client = client),
-    function() tt_decide_rows("text", "Ready?", threshold = NA_real_, client = client),
-    function() tt_decide_rows("text", "Ready?", threshold = c(.2, Inf), client = client),
-    function() tt_decide_rows("text", "Ready?", field = NA_character_, client = client),
-    function() tt_choose_rows("text", "Which?", choices = c("a", NA_character_), client = client),
-    function() tt_tag_rows("text", "Tags?", labels = NA_character_, client = client),
-    function() tt_score_rows("text", "How?", levels = list("low", opaque), client = client),
-    function() tt_rank_rows("text", "How?", levels = c("low", "high"), top = Inf, client = client),
-    function() tt_find_rows("text", "Where?", threshold = NaN, client = client),
-    function() tt_recognize_rows("text", kinds = c("person", NA_character_), client = client),
-    function() tt_relate_rows("text", list(list(source = "person", target = "person", relation = opaque)), client = client),
-    function() tt_annotate_rows("text", list(q = list(`function` = "decide", question = opaque)), client = client),
+    function() tt_decide(details = TRUE, "text", opaque, client = client),
+    function() tt_decide(details = TRUE, "text", NA_character_, client = client),
+    function() tt_decide(details = TRUE, "text", "Ready?", threshold = NA_real_, client = client),
+    function() tt_decide(details = TRUE, "text", "Ready?", threshold = c(.2, Inf), client = client),
+    function() tt_decide(details = TRUE, "text", "Ready?", field = NA_character_, client = client),
+    function() tt_choose(details = TRUE, "text", "Which?", choices = c("a", NA_character_), client = client),
+    function() tt_tag(details = TRUE, "text", "Tags?", labels = NA_character_, client = client),
+    function() tt_score(details = TRUE, "text", "How?", levels = list("low", opaque), client = client),
+    function() tt_rank(details = TRUE, "text", "How?", levels = c("low", "high"), top = Inf, client = client),
+    function() tt_find(details = TRUE, "text", "Where?", threshold = NaN, client = client),
+    function() tt_recognize(details = TRUE, "text", kinds = c("person", NA_character_), client = client),
+    function() tt_relate(details = TRUE, "text", list(list(source = "person", target = "person", relation = opaque)), client = client),
+    function() tt_annotate(details = TRUE, "text", list(q = list(`function` = "decide", question = opaque)), client = client),
     function() tt_question(list(q = list(`function` = "decide", question = NA_character_)), "q"),
     function() tt_question(list(q = list(`function` = "decide", question = "Ready?", threshold = Inf)), "q"),
     function() tt_question(list(q = list(`function` = "decide", question = "Ready?")), NA_character_),
@@ -77,20 +77,20 @@ for (backend in c("systemone", "openai")) {
   expect_usage(do.call(tt_client, args), "usage.settings")
 
   # Finite semantic validation still belongs to the engine.
-  error <- tryCatch(tt_decide_rows("text", "Ready?", threshold = 2, client = client), error = identity)
+  error <- tryCatch(tt_decide(details = TRUE, "text", "Ready?", threshold = 2, client = client), error = identity)
   stopifnot(inherits(error, "thinkthen_usage_error"), identical(error$code, "usage.threshold"))
   optional <- do.call(tt_client, c(settings, list(model = NULL, batch = NULL)))
-  stopifnot(nrow(tt_decide_rows(character(), "Ready?", threshold = NULL, field = NULL, client = optional)) == 0L)
+  stopifnot(nrow(tt_decide(details = TRUE, character(), "Ready?", threshold = NULL, field = NULL, client = optional)) == 0L)
 
   # The same unrepresentable value is a failed row when it belongs to a record.
-  rows <- tt_decide_rows(list(NULL, opaque, NA_character_), "Ready?", client = client)
+  rows <- tt_decide(details = TRUE, list(NULL, opaque, NA_character_), "Ready?", client = client)
   stopifnot(nrow(rows) == 3L, identical(rows$position, c(1, 2, 3)),
             all(rows$status == "failed"),
             identical(as.character(rows$error_code),
                       c("record.missing", "record.invalid", "record.missing")),
             !any(grepl(secret, capture.output(str(rows$error_message)), fixed = TRUE)))
-  expect_caller_error(tt_decide_rows(structure(list("text"), class = "broken_records"), "Ready?", client = client))
-  expect_caller_error(tt_decide_rows(character(), stop("caller iteration failed", call. = FALSE), client = client))
+  expect_caller_error(tt_decide(details = TRUE, structure(list("text"), class = "broken_records"), "Ready?", client = client))
+  expect_caller_error(tt_decide(details = TRUE, character(), stop("caller iteration failed", call. = FALSE), client = client))
   expect_caller_error(tt_client(backend = "stub", model = stop("caller iteration failed", call. = FALSE)))
 }
 cat("R settings, question and record conversion contexts passed\n")

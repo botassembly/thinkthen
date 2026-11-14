@@ -288,7 +288,7 @@ def native_languages():
     unpack(only('cpp/*.tar.gz'), SCRATCH / 'cpp')
     binary = SCRATCH / 'bin/cpp-consumer'
     shutil.copy2(CHECKS / 'cpp-consumer', binary)
-    run(sys.executable, CHECKS / 'native_cases.py', binary, CHECKS / 'stub.json', CHECKS / 'contract.json', 'utf8')
+    run(sys.executable, CHECKS / 'native_cases.py', binary, CHECKS / 'stub.json', CHECKS / 'contract.json', 'cpp')
     print('candidate C++: shared stub cases pass without a compiler', flush=True)
 
 

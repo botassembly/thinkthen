@@ -1,22 +1,11 @@
 package dev.thinkthen;
 
-/**
- * A record that failed, retaining the shared engine error.
- * @param info the info value
- * @param error the error value
-     * @param <A> the answer type
-     * @param <D> the detail type
-     */
-public record Failed<A,D extends Detail>(RowInfo info, RowError error) implements Row<A,D> {
-    /**
-     * Return the probability when present. For decide and filter, it is the probability of yes.
-     * @return the probability result
-     */
+/** An immutable failed result. The original item is excluded from value equality. */
+public record Failed<A,T>(RowInfo info, @org.jspecify.annotations.Nullable T item, RowError error) implements Row<A,T> {
+    public Status status() { return Status.FAILED; }
     public java.util.OptionalDouble probability() { return java.util.OptionalDouble.empty(); }
-    /**
-     * Return whether this outcome is answered, unsure or failed.
-     * @return the status result
-     */
-    public Status status() { return Status.FAILED; }     /** Return a compact outcome without the full source identity. */
-    @Override public String toString() { return "Failed[" + "code=" + error.code().wireName() + ", position=" + info.position() + "]"; }
+    public Detail detail() { return NoDetail.INSTANCE; }
+    @Override public boolean equals(Object other) { return ResultValues.equal(this,other); }
+    @Override public int hashCode() { return ResultValues.hash(this); }
+    @Override public String toString() { return ResultValues.print(this); }
 }

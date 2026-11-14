@@ -11,4 +11,4 @@ by_urgency = tt.rank(
     levels=["routine", "urgent"],
 ).to_list()
 for rank in by_urgency:
-    print(rank, messages[rank.position - 1])
+    print(rank.answer, rank.item)

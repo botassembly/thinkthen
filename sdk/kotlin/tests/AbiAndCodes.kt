@@ -37,7 +37,7 @@ fun main(args: Array<String>) = runBlocking {
         }
         "row" -> {
             ThinkThen { backend = Backend.STUB }.use { client ->
-                try { client.decide<String>("Ready?",if ((args.getOrNull(1) == "unanswered-answer" || args.getOrNull(1)?.startsWith("failed-") == true)) null else "alpha"); error("Accepted a malformed native row") }
+                try { client.decide<String?>("Ready?",if ((args.getOrNull(1) == "unanswered-answer" || args.getOrNull(1)?.startsWith("failed-") == true)) null else "alpha"); error("Accepted a malformed native row") }
                 catch (error: ThinkThenException) { check(error.code.wireName == "usage.abi") }
             }
         }

@@ -1,5 +1,5 @@
 {
-  "anchor": "        rc = thinkthen_find(client, \"Which line states the requested action?\",",
+  "anchor": "        rc = thinkthen_run_one(client, question, \"Morgan works for Example Group.\\nPlease refund my order.\",",
   "before": 0,
   "after": 2
 }

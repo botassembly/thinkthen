@@ -56,7 +56,7 @@
       "install": "go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0",
       "installLang": "sh",
       "installWindows": "$env:CGO_ENABLED = \"1\"\ngo mod init example\ngo get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0\ngo build -o example.exe .\n.\\example.exe",
-      "requires": "Go 1.23 or later with cgo enabled and a C compiler"
+      "requires": "Go 1.27 or later with cgo enabled and a C compiler"
     },
     "java": {
       "name": "Java",
@@ -103,10 +103,10 @@
       "name": "C++",
       "page": "/sdks/cpp/",
       "package": "the C++ and C archives from the release",
-      "install": "c++ -std=c++17 -Wall -Wextra -Werror example.cpp -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
+      "install": "c++ -std=c++20 -Wall -Wextra -Werror example.cpp -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
       "installLang": "sh",
-      "installWindows": "$flags = \"/nologo\", \"/std:c++17\", \"/EHsc\", \"/MD\", \"/Ithinkthen\\include\"\n$lib = \"thinkthen\\lib\\thinkthen_ffi.lib\"\nclang-cl @flags example.cpp /Fe:example.exe /link $lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
-      "requires": "A C++17 compiler and the matching C library"
+      "installWindows": "$flags = \"/nologo\", \"/std:c++20\", \"/EHsc\", \"/MD\", \"/Ithinkthen\\include\"\n$lib = \"thinkthen\\lib\\thinkthen_ffi.lib\"\nclang-cl @flags example.cpp /Fe:example.exe /link $lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
+      "requires": "A C++20 compiler (GCC 13/libstdc++ or Clang 20/libc++ 20) and the matching C library"
     },
     "ruby": {
       "name": "Ruby",
@@ -143,7 +143,7 @@
     },
     "pandas": {
       "name": "pandas",
-      "page": "/sdks/python/#pandas",
+      "page": "/sdks/pandas/",
       "package": "thinkthen with pandas",
       "install": "python -m pip install \"thinkthen[pandas]==0.2.0\"",
       "installLang": "sh",
@@ -151,7 +151,7 @@
     },
     "polars": {
       "name": "Polars",
-      "page": "/sdks/python/#polars",
+      "page": "/sdks/polars/",
       "package": "thinkthen with polars",
       "install": "python -m pip install \"thinkthen[polars]==0.2.0\"",
       "installLang": "sh",

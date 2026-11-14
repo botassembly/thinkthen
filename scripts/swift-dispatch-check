@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Exercise the global Swift registration with its real prepared consumer."""
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+root = Path(__file__).resolve().parent.parent
+consumer = str(Path(sys.argv[1]).resolve())
+env = dict(os.environ)
+env.pop('THINKTHEN_SWIFT_GUIDE_CONSUMER', None)
+command = [sys.executable, str(root / 'scripts/guide-examples'), '--surface', 'swift']
+inventory = subprocess.run([*command, '--inventory'], env=env, capture_output=True, text=True, timeout=30)
+assert inventory.returncode == 0 and 'ENABLED swift: 26 fenced blocks' in inventory.stdout, inventory.stdout + inventory.stderr
+missing = subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
+assert missing.returncode == 1 and 'swift: --swift-consumer or THINKTHEN_SWIFT_GUIDE_CONSUMER is required' in missing.stderr, missing.stdout + missing.stderr
+with tempfile.TemporaryDirectory(prefix='swift-mapper-missing-') as temporary:
+    scripts = Path(temporary) / 'scripts'
+    scripts.mkdir()
+    shutil.copy2(root / 'scripts/guide-examples', scripts / 'guide-examples')
+    for path in (root / 'scripts').glob('*.py'):
+        if path.name != 'swift_guide_examples.py':
+            (scripts / path.name).symlink_to(path)
+    absent = subprocess.run([sys.executable, str(scripts / 'guide-examples'), '--surface', 'swift'],
+                            env=env, capture_output=True, text=True, timeout=30)
+    assert absent.returncode == 1 and 'swift: guide runner not enabled' in absent.stderr, absent.stdout + absent.stderr
+positive = subprocess.run([*command, '--swift-consumer', consumer], env=env, capture_output=True, text=True, timeout=600)
+assert positive.returncode == 0 and 'Guides PASS;' in positive.stdout, positive.stdout + positive.stderr
+print('Swift global dispatch: all literal scenarios, output, branches and refusals passed', flush=True)
+for control in ('output', 'branch', 'exit', 'refusal'):
+    negative = subprocess.run([*command, '--swift-consumer', consumer, '--negative-control', control],
+                              env=env, capture_output=True, text=True, timeout=120)
+    label = 'swift/refusal/result-in-if' if control == 'refusal' else 'swift/0/yes'
+    assert negative.returncode == 1 and ('FAIL ' + label) in negative.stderr, (control, negative.stdout, negative.stderr)
+    assert 'guide runner not enabled' not in negative.stderr
+    print('Swift real-consumer negative control refused:', control, flush=True)
+print('Swift registration, configuration refusal and missing-module guard passed', flush=True)

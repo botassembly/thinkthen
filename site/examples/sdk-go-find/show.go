@@ -16,10 +16,9 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	actionQuestion := tt.NewFind(
-		"Which line states the requested action?")
-	message := tt.Text("Morgan works for Example Group.\n" +
-		"Please refund my order.")
+	actionQuestion := tt.FindQuestion{Question: "Which line states the requested action?"}
+	message := "Morgan works for Example Group.\n" +
+		"Please refund my order."
 	action, err := tt.Answer(
 		client.Find(ctx, actionQuestion, message))
 	if err != nil {

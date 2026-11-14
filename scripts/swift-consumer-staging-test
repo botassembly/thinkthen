@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # swift-gate comes first: every other caller must stage what it builds.
 CALLERS = ('swift-gate', 'release-candidate', 'release_windows.py', 'source-install-check',
            'toolbox-native-development')
-GENERATED = {'Readme': 'readme.py', 'Examples': 'docs.py', 'Guide': 'surface-example'}
+GENERATED = {'Readme': 'readme.py', 'Examples+Guide': 'docs.py', 'LiteralGuide': 'ideal.py'}
 
 
 def run(*arguments, **options):
@@ -48,7 +48,7 @@ def check_consumer(consumer):
             assert path.is_dir(), f'manifest target directory absent: {folder}'
             assert list(path.glob('*.swift')), f'no Swift sources: {folder}'
     assert 'import ThinkThen' in (consumer / 'Examples/Examples.swift').read_text()
-    assert 'entries' in json.loads((consumer / 'Examples/toolbox.json').read_text())
+    assert 'let messages' in (consumer / 'Guide/Guide.swift').read_text()
 
 
 def stage(name, revision, root, scratch, package=None):
@@ -128,7 +128,7 @@ def staging(revision):
                     check_consumer(stage(name, revision, folder / part, folder / (part + '-stage') / name))
                     failures.append(name + ': passed after the shared step lost ' + part)
                 except AssertionError as error:
-                    if part not in str(error):
+                    if not any(target in str(error) for target in part.split('+')):
                         failures.append(name + ': failed without ' + part + ' for another reason: ' + str(error))
         if not failures:
             print('Removing any generated part from the shared step fails every caller', flush=True)

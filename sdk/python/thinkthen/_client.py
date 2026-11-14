@@ -8,7 +8,7 @@ import logging
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import fields
 from threading import Event, RLock
-from typing import Any, Literal, TypeVar, cast, overload
+from typing import Any, TypeVar, cast, overload
 from weakref import WeakSet
 
 from typing_extensions import TypeForm
@@ -34,8 +34,8 @@ from ._questions import (
     choice_members,
     definition,
 )
-from ._runtime import Cancel, binding, encode, one_row, single_record, source
-from ._streams import Errors, KeptStream, RowStream, coerce_errors
+from ._runtime import Cancel, binding, encode, single_record, source
+from ._streams import KeptStream, RowStream
 from ._types import (
     AnnotateRow,
     Backend,
@@ -45,7 +45,6 @@ from ._types import (
     ClientSettings,
     DecideRow,
     Descriptions,
-    FilterRow,
     FindRow,
     RankRow,
     RecognizeRow,
@@ -239,6 +238,8 @@ class Client:
                     )
                 question = question._definitions()
             admitted = definition(function, question, **options)
+            if function == "choose":
+                shape_question = admitted
             payload = {"question": admitted, "name": name}
         request = encode(payload, _native.reject_question_conversion)
         handle = cancel if cancel is not None else Cancel()
@@ -257,9 +258,10 @@ class Client:
                     request,
                     source(records, failures, convert),
                     handle._native,
-                    function == "filter",
+                    True,
                     loaded,
-                )
+                ),
+                function=function,
             )
             stream: RowStream[Any] = RowStream(
                 native,
@@ -282,7 +284,8 @@ class Client:
             row = next(rows)
             for _ in rows:
                 pass
-            return one_row(row)
+            row._raise_own_failure()
+            return row
 
     def _invoke(
         self,
@@ -411,31 +414,6 @@ class Client:
         question: FilterQuestion,
         records: Iterable[T],
         *,
-        errors: Literal["raise"] = "raise",
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> KeptStream[T]: ...
-    @overload
-    def filter(
-        self,
-        question: FilterQuestion,
-        records: Iterable[T],
-        *,
-        errors: Literal["coerce"],
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> KeptStream[T | FilterRow[T]]: ...
-    @overload
-    def filter(
-        self,
-        question: str,
-        records: Iterable[T],
-        *,
-        threshold: Threshold | None = None,
-        field: str | None = None,
-        yes_means: str | None = None,
-        no_means: str | None = None,
-        errors: Literal["raise"] = "raise",
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> KeptStream[T]: ...
@@ -445,14 +423,13 @@ class Client:
         question: str,
         records: Iterable[T],
         *,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         yes_means: str | None = None,
         no_means: str | None = None,
-        errors: Literal["coerce"],
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> KeptStream[T | FilterRow[T]]: ...
+    ) -> KeptStream[T]: ...
     def filter(
         self,
         question: Any,
@@ -462,19 +439,13 @@ class Client:
         field: Any = None,
         yes_means: Any = None,
         no_means: Any = None,
-        errors: Errors = "raise",
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
-        """Stream the kept records, as passed in; not-sure records are left out.
-
-        A failed record raises one ``RecordError`` after every kept record is
-        delivered; ``errors="coerce"`` yields each failed ``FilterRow`` in its
-        place instead. ``filter_rows`` keeps every row.
-        """
-        coerce = coerce_errors(errors)
+        """Yield kept original records, then raise once for accumulated failures."""
         return KeptStream(
-            self.filter_rows(
+            self._rows(
+                "filter",
                 question,
                 records,
                 threshold=threshold,
@@ -483,55 +454,7 @@ class Client:
                 no_means=no_means,
                 name=name,
                 cancel=cancel,
-            ),
-            coerce,
-        )
-
-    @overload
-    def filter_rows(
-        self,
-        question: FilterQuestion,
-        records: Iterable[T],
-        *,
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> RowStream[FilterRow[T]]: ...
-    @overload
-    def filter_rows(
-        self,
-        question: str,
-        records: Iterable[T],
-        *,
-        threshold: Threshold | None = None,
-        field: str | None = None,
-        yes_means: str | None = None,
-        no_means: str | None = None,
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> RowStream[FilterRow[T]]: ...
-    def filter_rows(
-        self,
-        question: Any,
-        records: Any,
-        *,
-        threshold: Any = None,
-        field: Any = None,
-        yes_means: Any = None,
-        no_means: Any = None,
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Any:
-        """Stream every filter row, kept or not, with its original ``item``."""
-        return self._rows(
-            "filter",
-            question,
-            records,
-            threshold=threshold,
-            field=field,
-            yes_means=yes_means,
-            no_means=no_means,
-            name=name,
-            cancel=cancel,
+            )
         )
 
     @overload

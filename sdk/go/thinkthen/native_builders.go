@@ -32,6 +32,19 @@ func newNative(cfg Config) (nativeClient, error) {
 	if cfg.Backend == 0 && present {
 		fields["backend"] = backend
 	}
+	if r := cfg.Retry; r != nil {
+		if r.MaxRetries < 0 || uint64(r.MaxRetries) > uint64(^uint32(0)) || r.InitialBackoff < 0 || r.AttemptTimeout < 0 || r.InitialBackoff%time.Millisecond != 0 || r.AttemptTimeout%time.Millisecond != 0 {
+			return nativeClient{}, &Error{code: CodeUsageSettings, message: "Retry requires a nonnegative uint32 retry count and nonnegative whole-millisecond durations"}
+		}
+		retry := map[string]any{"max_retries": r.MaxRetries}
+		if r.InitialBackoff != 0 {
+			retry["initial_backoff_ms"] = r.InitialBackoff / time.Millisecond
+		}
+		if r.AttemptTimeout != 0 {
+			retry["attempt_timeout_ms"] = r.AttemptTimeout / time.Millisecond
+		}
+		fields["retry"] = retry
+	}
 	data, err := json.Marshal(fields)
 	if err != nil {
 		return nativeClient{}, conversionError(true)
@@ -80,14 +93,7 @@ func newNative(cfg Config) (nativeClient, error) {
 			return nativeClient{}, err
 		}
 	}
-	if r := cfg.Retry; r != nil {
-		if r.MaxRetries < 0 || uint64(r.MaxRetries) > uint64(^uint32(0)) || r.InitialBackoff < 0 || r.AttemptTimeout < 0 || r.InitialBackoff%time.Millisecond != 0 || r.AttemptTimeout%time.Millisecond != 0 {
-			return nativeClient{}, &Error{code: CodeUsageSettings, message: "Retry requires a nonnegative uint32 retry count and nonnegative whole-millisecond durations"}
-		}
-		if err := nativeResult(C.tt_settings_set_retry(settings, C.uint32_t(r.MaxRetries), C.uint64_t(r.InitialBackoff/time.Millisecond), C.uint64_t(r.AttemptTimeout/time.Millisecond), &e), &e); err != nil {
-			return nativeClient{}, err
-		}
-	}
+
 	var ptr *C.thinkthen_client
 	if err := nativeResult(C.tt_client_open(settings, &ptr, &e), &e); err != nil {
 		return nativeClient{}, err
@@ -180,8 +186,8 @@ func ownedText(s string) (C.thinkthen_text, func()) {
 	data := C.CBytes(append([]byte(s), 0))
 	return C.thinkthen_text{data: (*C.char)(data), len: C.size_t(len(s))}, func() { C.free(data) }
 }
-func addRule(q *C.thinkthen_question, rule Rule) error {
-	name, f1 := ownedText(rule.Name)
+func addRule(q *C.thinkthen_question, rule RelationRule) error {
+	name, f1 := ownedText(rule.Relation)
 	defer f1()
 	source, f2 := ownedText(rule.Source)
 	defer f2()
@@ -191,15 +197,15 @@ func addRule(q *C.thinkthen_question, rule Rule) error {
 	if rule.Either {
 		r.either = 1
 	}
-	if rule.Reads != nil {
-		reads, f := ownedText(*rule.Reads)
+	if rule.Reads != "" {
+		reads, f := ownedText(rule.Reads)
 		defer f()
 		r.reads = reads
 	}
 	e := nativeError()
 	return nativeResult(C.tt_question_add_rule(q, &r, &e), &e)
 }
-func (c nativeClient) open(q question, input Input) (nativeCall, error) {
+func (c nativeClient) open(q question) (nativeCall, error) {
 	builder, err := buildQuestion(q)
 	if err != nil {
 		return nativeCall{}, err
@@ -213,12 +219,7 @@ func (c nativeClient) open(q question, input Input) (nativeCall, error) {
 	}
 	var ptr *C.thinkthen_call
 	e := nativeError()
-	var status C.int32_t
-	if input.finite {
-		status = openFinite(c.ptr, builder, name, input.records, &ptr, &e)
-	} else {
-		status = C.tt_call_open_question(c.ptr, builder, name, C.THINKTHEN_OFFSET_UTF8, &ptr, &e)
-	}
+	status := C.tt_call_open_question(c.ptr, builder, name, C.THINKTHEN_OFFSET_UTF8, &ptr, &e)
 	if err = nativeResult(status, &e); err != nil {
 		return nativeCall{}, err
 	}

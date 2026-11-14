@@ -65,10 +65,14 @@ def test_native_answer_column(
         actual = getattr(source.thinkthen, function)(
             question, client=selected, **options
         )
-        details = getattr(source.thinkthen, function)(
-            question, client=selected, details=True, **options
+        details = (
+            None
+            if function == "filter"
+            else getattr(source.thinkthen, function)(
+                question, client=selected, details=True, **options
+            )
         )
-        if function == "filter" and dataframe:
+        if function == "annotate" or (function == "filter" and dataframe):
             assert isinstance(
                 actual, pd.DataFrame if library == "pandas" else pl.DataFrame
             )
@@ -81,10 +85,11 @@ def test_native_answer_column(
             assert actual.index.isin(source.index).all()
             if function != "filter":
                 assert actual.index.equals(source.index)
-            assert isinstance(details, pd.DataFrame)
+            if function != "filter":
+                assert isinstance(details, pd.DataFrame)
             expected_dtype = {
                 "decide": "boolean",
-                "choose": "string",
+                "choose": "category",
                 "score": "Float64",
                 "rank": "Int64",
             }.get(function)
@@ -92,13 +97,11 @@ def test_native_answer_column(
                 assert isinstance(actual, pd.Series)
                 assert str(actual.dtype) == expected_dtype
         else:
-            if dataframe:
+            if function != "filter":
                 assert isinstance(details, pl.DataFrame)
-            else:
-                assert isinstance(details.dtype, pl.Struct)
             expected = {
                 "decide": pl.Boolean,
-                "choose": pl.String,
+                "choose": pl.Enum(["a", "b"]),
                 "score": pl.Float64,
                 "rank": pl.Int64,
             }.get(function)
@@ -119,8 +122,13 @@ def test_native_answer_column(
             )
             assert actual_values == expected_values
         elif function == "annotate":
-            values = source_answers(actual)
-            assert all(isinstance(value["ready"], bool) for value in values)
+            expected_forms = selected.annotate_stream(question, records).to_list()
+            assert actual["ready"].to_list() == [
+                row.answer["ready"].answer
+                if row.answered and row.answer["ready"].answered
+                else None
+                for row in expected_forms
+            ]
         else:
             assert len(actual) == 2
             stream_name = function if function == "rank" else function + "_stream"
@@ -134,14 +142,20 @@ def test_native_answer_column(
             expected_answers = [None, None]
             for row in canonical:
                 expected_answers[row.position - 1] = (
-                    row.answer if library == "pandas" else row.to_dict()["answer"]
+                    (row.answer if row.answered else None)
+                    if library == "pandas"
+                    else row.to_dict().get("answer")
                 )
             values = source_answers(actual)
             for answer, expected_answer in zip(values, expected_answers):
                 if expected_answer is None:
-                    assert answer is pd.NA if library == "pandas" else answer is None
+                    assert pd.isna(answer) if library == "pandas" else answer is None
                 else:
-                    assert answer == expected_answer
+                    assert answer == (
+                        list(expected_answer)
+                        if isinstance(expected_answer, tuple)
+                        else expected_answer
+                    )
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
@@ -152,18 +166,16 @@ def test_unsure_failure_and_kept_subset(tmp_path: Path, library: str) -> None:
         else pl.Series("body", ["first", None, "third"])
     )
     with backend(tmp_path, yes(0.5)) as server, client(server) as selected:
-        with pytest.raises(tt.RecordError):
+        with pytest.raises(tt.Failed):
             source.thinkthen.decide("Ready?", client=selected, threshold=(0.2, 0.8))
         answers = source.thinkthen.decide(
             "Ready?", client=selected, threshold=(0.2, 0.8), errors="coerce"
         )
         assert answers.isna().all() if library == "pandas" else answers.is_null().all()
-        with pytest.raises(tt.RecordError):
+        with pytest.raises(tt.UsageError):
             source.thinkthen.filter("Ready?", client=selected, threshold=(0.2, 0.8))
-        subset = source.thinkthen.filter(
-            "Ready?", client=selected, threshold=(0.2, 0.8), errors="coerce"
-        )
-        assert len(subset) == 0
+        with pytest.raises(tt.Failed):
+            source.thinkthen.filter("Ready?", client=selected, threshold=0.8)
     with backend(tmp_path, yes()) as server, client(server) as selected:
         frame: Any = source.to_frame()
         if library == "pandas":
@@ -172,9 +184,8 @@ def test_unsure_failure_and_kept_subset(tmp_path: Path, library: str) -> None:
         else:
             frame = frame.with_columns(pl.Series("id", [1, True, 3], dtype=pl.Object))
             before = frame.clone()
-        kept = frame.thinkthen.filter(
-            "Ready?", field="/body", client=selected, errors="coerce"
-        )
+        valid = frame.iloc[[0, 2]] if library == "pandas" else frame[[0, 2]]
+        kept = valid.thinkthen.filter("Ready?", field="/body", client=selected)
         expected = frame.iloc[[0, 2]] if library == "pandas" else frame[[0, 2]]
         if library == "pandas":
             assert kept.equals(expected)
@@ -206,18 +217,26 @@ def test_every_function_raises_or_coerces_failed_rows(
     )
     with tt.Client(backend="stub") as selected:
         operation = getattr(source.thinkthen, function)
-        for details in (False, True):
-            with pytest.raises(tt.RecordError):
-                operation(question, client=selected, details=details, **options)
+        if function == "filter":
+            with pytest.raises(tt.Failed):
+                operation(question, client=selected, **options)
+            return
+        with pytest.raises(tt.Failed):
+            operation(question, client=selected, **options)
+        details = operation(question, client=selected, details=True, **options)
+        assert details["status"].to_list().count("failed") == 1
         with pytest.warns(tt.FailedRowsWarning):
             answers = operation(question, client=selected, errors="coerce", **options)
         assert answers.thinkthen.failures()["position"].to_list() == [1]
-        if function == "filter":
-            assert None not in list(answers)
+        if function == "annotate":
+            assert (
+                answers["ready"].isna().iloc[0]
+                if library == "pandas"
+                else answers["ready"].is_null()[0]
+            )
         elif library == "pandas":
-            assert answers.iloc[0] is pd.NA
+            assert pd.isna(answers.iloc[0])
         else:
-            # Polars 1.0 reads a null struct back as a struct of nulls.
             assert answers.is_null()[0]
 
 
@@ -258,20 +277,11 @@ def test_coerce_keeps_failures_apart_from_not_sure(
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
-def test_coerced_filter_lists_failures_and_a_clean_call_lists_none(
-    library: str,
-) -> None:
-    values = ["first", None, ""]
-    source: Any = pd.Series(values) if library == "pandas" else pl.Series(values)
+def test_a_clean_call_lists_no_failures(library: str) -> None:
+    source: Any = pd.Series(["first"]) if library == "pandas" else pl.Series(["first"])
     with tt.Client(backend="stub") as selected:
-        with pytest.warns(tt.FailedRowsWarning):
-            kept = source.thinkthen.filter("Ready?", client=selected, errors="coerce")
-        assert kept.thinkthen.failures()["position"].to_list() == [2, 3]
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            # A subset of an earlier result starts with no failures of its own.
-            clean = kept.thinkthen.filter("Ready?", client=selected, errors="coerce")
-            plain = kept.thinkthen.decide("Ready?", client=selected, errors="coerce")
+        clean = source.thinkthen.filter("Ready?", client=selected)
+        plain = source.thinkthen.decide("Ready?", client=selected)
     for result in (clean, plain):
         failures = result.thinkthen.failures()
         assert len(failures) == 0
@@ -385,7 +395,7 @@ def test_rank_top_is_aligned_to_the_whole_input(library: str) -> None:
             assert ranked.iloc[int(details["position"].iloc[0]) - 1] == 1
         else:
             assert ranked.is_not_null().sum() == 1
-            assert ranked[details.struct.field("position")[0] - 1] == 1
+            assert ranked[details["position"][0] - 1] == 1
 
 
 @pytest.mark.parametrize("function, options", FUNCTIONS)
@@ -409,7 +419,11 @@ def test_empty_answer_columns_keep_their_name_and_type(
         answers = getattr(source.thinkthen, function)(
             question, client=selected, **options
         )
-    assert len(answers) == 0 and answers.name == "text"
+    assert len(answers) == 0
+    if function == "annotate":
+        assert list(answers.columns) == ["ready"]
+    else:
+        assert answers.name == "text"
 
 
 @pytest.mark.parametrize("values", [[], [None]])
@@ -423,9 +437,9 @@ def test_polars_annotation_mapping_keeps_schema_without_answered_rows(
             client=selected,
             errors="coerce",
         )
-    assert answers.name == "body" and len(answers) == len(source)
-    assert answers.dtype == pl.Struct({"ready": pl.Boolean})
-    assert answers.is_null().all()
+    assert len(answers) == len(source)
+    assert answers.schema == {"ready": pl.Boolean}
+    assert answers["ready"].is_null().all()
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
@@ -437,7 +451,7 @@ def test_raised_frame_error_keeps_completed_outcomes(library: str) -> None:
     )
     with (
         tt.Client(backend="stub") as selected,
-        pytest.raises(tt.RecordError) as raised,
+        pytest.raises(tt.Failed) as raised,
     ):
         source.thinkthen.decide("Ready?", client=selected)
     outcomes = cast(Any, raised.value).outcomes
@@ -446,8 +460,8 @@ def test_raised_frame_error_keeps_completed_outcomes(library: str) -> None:
         assert outcomes["status"].tolist() == ["failed", "answered"]
         assert outcomes["answer"].iloc[1] in (True, False)
     else:
-        assert outcomes.struct.field("status").to_list() == ["failed", "answered"]
-        assert outcomes.struct.field("answer")[1] in (True, False)
+        assert outcomes["status"].to_list() == ["failed", "answered"]
+        assert outcomes["answer"][1] in (True, False)
 
 
 def test_pandas_float_ids_are_integers_and_null_or_fractional_ids_fail_their_row(
@@ -474,7 +488,7 @@ def test_pandas_float_ids_are_integers_and_null_or_fractional_ids_fail_their_row
     with (
         backend(tmp_path, yes() * 2) as server,
         client(server) as selected,
-        pytest.raises(tt.RecordError) as raised,
+        pytest.raises(tt.Failed) as raised,
     ):
         source.thinkthen.decide("Ready?", field="/body", client=selected)
     assert raised.value.code is tt.ErrorCode.RECORD_INVALID

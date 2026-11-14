@@ -1,0 +1,605 @@
+[
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "source": {
+        "question_identity": "5b1c0a4e9d3f27a86c0e41d7f2a9b6c3e8d05f1a7b4c2e9d6f3a0b8c5d2e7f14",
+        "backend": "systemone",
+        "model": "example-model"
+      },
+      "status": "answered",
+      "answer": true,
+      "probability": 0.97
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": false,
+      "probability": 0.05
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.status",
+        "message": "the service answered 503",
+        "http_status": 503
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.91
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": false,
+      "probability": 0.05
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "unsure",
+      "probability": 0.55
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.transport",
+        "message": "the service could not be reached"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.status",
+        "message": "the service answered 503",
+        "http_status": 503
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "choose",
+      "position": 1,
+      "status": "answered",
+      "answer": "billing",
+      "probability": 0.88,
+      "detail": {
+        "labels": {
+          "billing": 0.88,
+          "other": 0.04,
+          "shipping": 0.08
+        }
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "choose",
+      "position": 1,
+      "status": "unsure",
+      "probability": 0.41,
+      "detail": {
+        "labels": {
+          "billing": 0.41,
+          "other": 0.24,
+          "shipping": 0.35
+        }
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "choose",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.reply",
+        "message": "the service's reply did not answer the request"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.97
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 2,
+      "status": "answered",
+      "answer": false,
+      "probability": 0.05
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 3,
+      "status": "unsure",
+      "probability": 0.55
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 2,
+      "status": "failed",
+      "error": {
+        "code": "record.missing",
+        "message": "the record is missing"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "filter",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.97
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "filter",
+      "position": 2,
+      "status": "answered",
+      "answer": false,
+      "probability": 0.05
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "filter",
+      "position": 3,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.55
+    }
+  },
+  {
+    "mode": "error",
+    "value": {
+      "code": "usage.threshold",
+      "message": "threshold: expected a single numeric cut; received a low/high band. filter takes one bar. To see not sure, send the same records with function decide"
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "filter",
+      "position": 2,
+      "status": "failed",
+      "error": {
+        "code": "record.missing",
+        "message": "the record is missing"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "tag",
+      "position": 1,
+      "status": "answered",
+      "answer": [
+        "billing",
+        "shipping"
+      ],
+      "detail": {
+        "labels": {
+          "billing": 0.93,
+          "shipping": 0.89
+        }
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "tag",
+      "position": 1,
+      "status": "answered",
+      "answer": [],
+      "detail": {
+        "labels": {
+          "billing": 0.12,
+          "shipping": 0.08
+        }
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "tag",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.transport",
+        "message": "the service could not be reached"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "score",
+      "position": 1,
+      "status": "answered",
+      "answer": 0.62,
+      "detail": {
+        "levels": [
+          0.38,
+          0.62
+        ]
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "score",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.status",
+        "message": "the service answered 503",
+        "http_status": 503
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "rank",
+      "position": 3,
+      "status": "answered",
+      "answer": 1,
+      "detail": {
+        "levels": [
+          0.19,
+          0.81
+        ]
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "rank",
+      "position": 1,
+      "status": "answered",
+      "answer": 2,
+      "detail": {
+        "levels": [
+          0.38,
+          0.62
+        ]
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "rank",
+      "position": 2,
+      "status": "answered",
+      "answer": 3,
+      "detail": {
+        "levels": [
+          0.71,
+          0.29
+        ]
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "rank",
+      "position": 2,
+      "status": "failed",
+      "error": {
+        "code": "record.missing",
+        "message": "the record is missing"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "find",
+      "position": 1,
+      "status": "answered",
+      "answer": {
+        "text": "Please refund my order.",
+        "start": 32,
+        "end": 55
+      },
+      "probability": 0.94
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "find",
+      "position": 1,
+      "status": "answered",
+      "answer": null,
+      "probability": 0.83
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "find",
+      "position": 1,
+      "status": "unsure",
+      "probability": 0.44
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "find",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "record.empty",
+        "message": "the record is empty"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "recognize",
+      "position": 1,
+      "status": "answered",
+      "answer": [
+        {
+          "text": "Morgan",
+          "start": 0,
+          "end": 6,
+          "kind": "person",
+          "probability": 0.98
+        },
+        {
+          "text": "Example Group",
+          "start": 17,
+          "end": 30,
+          "kind": "organization",
+          "probability": 0.95
+        }
+      ]
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "recognize",
+      "position": 1,
+      "status": "answered",
+      "answer": []
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "recognize",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.transport",
+        "message": "the service could not be reached"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "relate",
+      "position": 1,
+      "status": "answered",
+      "answer": [
+        {
+          "source": {
+            "text": "Morgan",
+            "start": 0,
+            "end": 6,
+            "kind": "person"
+          },
+          "target": {
+            "text": "Example Group",
+            "start": 17,
+            "end": 30,
+            "kind": "organization"
+          },
+          "relation": "works_for",
+          "probability": 0.91
+        }
+      ]
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "relate",
+      "position": 1,
+      "status": "answered",
+      "answer": []
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "relate",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.reply",
+        "message": "the service's reply did not answer the request"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "annotate",
+      "position": 3,
+      "status": "answered",
+      "answer": {
+        "refund": {
+          "function": "decide",
+          "status": "answered",
+          "answer": true,
+          "probability": 0.71
+        },
+        "topic": {
+          "function": "choose",
+          "status": "unsure",
+          "probability": 0.46,
+          "detail": {
+            "labels": {
+              "billing": 0.46,
+              "other": 0.13,
+              "shipping": 0.41
+            }
+          }
+        },
+        "urgency": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.74,
+          "detail": {
+            "levels": [
+              0.26,
+              0.74
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "annotate",
+      "position": 3,
+      "status": "answered",
+      "answer": {
+        "refund": {
+          "function": "decide",
+          "status": "answered",
+          "answer": true,
+          "probability": 0.71
+        },
+        "topic": {
+          "function": "choose",
+          "status": "failed",
+          "error": {
+            "code": "backend.status",
+            "message": "the service answered 503",
+            "http_status": 503
+          }
+        },
+        "urgency": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.74,
+          "detail": {
+            "levels": [
+              0.26,
+              0.74
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "annotate",
+      "position": 2,
+      "status": "failed",
+      "error": {
+        "code": "record.missing",
+        "message": "the record is missing"
+      }
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 1,
+      "id": "a1",
+      "status": "answered",
+      "answer": true,
+      "probability": 0.97
+    }
+  },
+  {
+    "mode": "row",
+    "value": {
+      "function": "decide",
+      "position": 2,
+      "id": 42,
+      "status": "answered",
+      "answer": false,
+      "probability": 0.05
+    }
+  }
+]

@@ -52,7 +52,7 @@ void tt_question(TtOwner *owner, FunctionCallInfo fcinfo, const char *function)
     int index;
     int code;
     int word = argument(fcinfo, "question");
-    int structured = argument(fcinfo, !strcmp(function, "annotate") ? "toolbox" : "rules");
+    int structured = argument(fcinfo, !strcmp(function, "annotate") ? "questions" : "rules");
     StringInfoData encoded;
     char *json;
     size_t length;
@@ -117,14 +117,14 @@ void tt_question(TtOwner *owner, FunctionCallInfo fcinfo, const char *function)
             appendStringInfo(&encoded, ",\"descriptions\":%s", JsonbToCString(NULL, &descriptions->root, 0));
     }
     if (structured >= 0) {
-        if (!supplied(fcinfo, structured)) null_argument(owner, !strcmp(function, "annotate") ? "toolbox" : "rules");
+        if (!supplied(fcinfo, structured)) null_argument(owner, !strcmp(function, "annotate") ? "questions" : "rules");
         json = !strcmp(function, "annotate") ? JsonbToCString(NULL, &PG_GETARG_JSONB_P(structured)->root, 0)
             : TextDatumGetCString(DirectFunctionCall1(array_to_json, PG_GETARG_DATUM(structured)));
         appendStringInfo(&encoded, ",\"%s\":%s", !strcmp(function, "annotate") ? "questions" : "rules", json);
     }
     {
         const char *names[] = {"yes_means", "no_means"};
-        const char *keys[] = {"true", "false"};
+        const char *keys[] = {"yes_means", "no_means"};
         for (index = 0; index < 2; index++) {
             int slot = argument(fcinfo, names[index]);
             if (supplied(fcinfo, slot)) {
@@ -154,15 +154,8 @@ void tt_question(TtOwner *owner, FunctionCallInfo fcinfo, const char *function)
         TT_BRIDGE(code = thinkthen_question_set_field(owner->question, field.data, field.len, &owner->error));
         tt_check(owner, code);
     }
-    index = argument(fcinfo, "failures");
-    if (index >= 0) {
-        char *failures;
-        if (!supplied(fcinfo, index)) null_argument(owner, "failures");
-        failures = TextDatumGetCString(PG_GETARG_DATUM(index));
-        if (strcmp(failures, "raise") != 0 && strcmp(failures, "row") != 0)
-            tt_raise(THINKTHEN_CODE_USAGE_OPTION, "failures must be 'raise' or 'row'", NULL);
-        owner->keep_failures = !strcmp(failures, "row");
-    }
+    index = argument(fcinfo, "raise_if_failed");
+    owner->raise_if_failed = supplied(fcinfo, index) && PG_GETARG_BOOL(index);
     index = argument(fcinfo, "top");
     if (supplied(fcinfo, index)) {
         int64 top = PG_GETARG_INT64(index);

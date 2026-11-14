@@ -18,7 +18,7 @@ thinkthen.set_default_client(thinkthen.Client(backend=backend))
 
 shown = runpy.run_path("show.py")
 action = shown["action"]
-answers = [None if action.answer is None else action.answer.text]
+answers = [None if not action.answered or action.answer is None else action.answer.text]
 with open(os.environ["SITE_ANSWERS_FILE"], "w", encoding="utf-8") as out:
     json.dump(answers, out)
 PY

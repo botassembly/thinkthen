@@ -222,11 +222,10 @@ fn c_selector_values_map_to_shared_offset_units() {
 }
 
 #[test]
-fn c_single_record_admission_failure_returns_a_row_without_a_call_error() {
+fn c_single_record_admission_failure_is_a_call_error() {
     let output = run_mode("single", &json!({"backend":"stub"}), &json!({}), &[]);
     assert_eq!(output.len(), 2);
-    assert_eq!(output[0]["fields"]["error"]["code"], "record.missing");
-    assert_eq!(output[0]["position"], 1);
+    assert_eq!(output[0], json!({"error":{"code":"record.missing"}}));
     assert_eq!(output[1], json!({"end":true}));
 }
 

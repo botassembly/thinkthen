@@ -1,68 +1,31 @@
 ---
 title: recognize
 description: recognize picks out every name of the kinds you list in a piece of text, such as people and organizations, with the kind and place of each.
-goal: A newcomer who needs the names in a text leaves able to get each name with its kind and place, read no names, see the chance of each name, move the bar, and recognize names in every row of a CSV file.
+goal: A newcomer who needs the names in a text leaves able to get each name with its kind and place, read no names, see the chance of each name, move the bar, and recognize names in every result of a CSV file.
 reader: Someone at the command line who needs the names of people, companies or other kinds in a text
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "recognize: the names in a text, by kind"
 ---
 import Example from '../../../components/Example.astro';
-import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
 
-recognize picks out every name in a piece of text that belongs to one of the kinds you list, whether there are several or none. It prints each name with its kind and where it sits in the text, separated by tabs.
+recognize asks a bounded question about text and returns an answered, not-sure or failed result.
 
-<Example id="recognize-names" />
+<Example id="functions/recognize/command" />
 
-Two names: Morgan is a person, from character 0 to 6, and Example Group is an organization, from character 17 to 30.
+```bash
+thinkthen recognize --text 'Morgan works for Example Group.' \
+  --kind person --kind organization --json |
+  jq -r '
+    if .status == "failed" then
+      "failed: \(.error.code): \(.error.message)"
+    else .answer[] | "\(.kind) \(.text)" end'
+```
 
-## No names
-
-<Example id="recognize-none" />
-
-The message names no person and no organization, so the answer is empty.
-
-## See why
-
-<details class="example-disclosure">
-<summary>See why</summary>
-
-`--json` prints the details. This `jq` keeps each name, its kind and its chance.
-
-<Example id="recognize-why" />
-
-recognize keeps each name whose chance reaches the bar, 0.5 by default. [JSON output](/reference/json-output/) lists every field.
-
-</details>
-
-## Move the bar
-
-<details class="example-disclosure">
-<summary>Move the bar</summary>
-
-Raise the bar to 0.99 and only Morgan is kept, because Example Group has 0.9702.
-
-<Example id="recognize-bar" />
-
-Lower the bar to catch more names. Raise it to keep only the clear ones.
-
-</details>
-
-## Recognize names in every row of a CSV file
-
-<details class="example-disclosure">
-<summary>Recognize names in every row of a CSV file</summary>
-
-<ExampleFile id="recognize-into" file="messages.csv" />
-
-<Example id="recognize-into" />
-
-`--column` names the column to read, and `--into` names the new answer column. Each cell lists its names as `name (kind)`, joined by `; `. [File types](/command-line/file-types/) covers TSV, Excel and other files.
-
-</details>
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure. Without `--json`, recognize prints the names on one line, as `person: Morgan (0..6)`, with tabs between them.
 
 ## Options
 
@@ -72,9 +35,3 @@ Lower the bar to catch more names. Raise it to keep only the clear ones.
 <FunctionOptions name="recognize" />
 
 </details>
-
-If recognize can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#recognize) · [TypeScript](/sdks/typescript/#recognize) · [Go](/sdks/go/#recognize) · [Java](/sdks/java/#recognize) · [Kotlin](/sdks/kotlin/#recognize) · [C#](/sdks/csharp/#recognize) · [R](/sdks/r/#recognize) · [Ruby](/sdks/ruby/#recognize) · [Rust](/sdks/rust/#recognize) · [Swift](/sdks/swift/#recognize) · [Zig](/sdks/zig/#recognize) · [C](/sdks/c/#recognize) · [C++](/sdks/cpp/#recognize) · [DuckDB](/sdks/duckdb/#recognize) · [SQLite](/sdks/sqlite/#recognize) · [PostgreSQL](/sdks/postgresql/#recognize)
-
-Next: [relate](/functions/relate/) finds how the names in a text are connected.

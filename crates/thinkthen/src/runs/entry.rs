@@ -107,6 +107,14 @@ impl RunEntry {
         })
     }
 
+    /// The admitted function of the terminal step, when it is not a shell.
+    pub(crate) fn final_function(&self) -> Option<crate::FunctionName> {
+        match self.0.last()? {
+            Step::Function(request) => Some(request.question().function()),
+            Step::Shell { .. } => None,
+        }
+    }
+
     /// Whether the last step is a shell step, whose output is the caller's.
     pub(crate) fn final_shell(&self) -> bool {
         matches!(self.0.last(), Some(Step::Shell { .. }))

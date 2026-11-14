@@ -294,7 +294,7 @@ fn filter_writes_only_kept_rows_in_file_order() {
     let entry = directory.path().join("filter.json");
     fs::write(
         &entry,
-        r#"{"question":{"function":"filter","question":"Keep?","threshold":{"low":0.2,"high":0.8}}}"#,
+        r#"{"question":{"function":"filter","question":"Keep?","threshold":0.8}}"#,
     )
     .unwrap();
     let server = loopback::Loopback::answering(|question| {
@@ -910,7 +910,7 @@ fn backend_only_table_failures_exit_four_for_direct_and_saved_calls() {
             .unwrap();
         assert_eq!(
             output.status.code(),
-            Some(4),
+            Some(6),
             "saved={saved}, stderr={:?}",
             output.stderr
         );

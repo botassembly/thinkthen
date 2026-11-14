@@ -1,6 +1,3 @@
+// Expected: error CS0246
 using ThinkThen;
-
-public sealed record ForeignEntry : AnnotationEntry
-{
-    public ForeignEntry(AnnotationEntry source) : base(source) { }
-}
+public sealed class InvalidEntry { public AnnotationEntry? Entry {get;set;} }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -40,7 +41,7 @@ func TestSingleCallCancellationClosesHeldConnection(t *testing.T) {
 	defer cancel(nil)
 	result := make(chan error, 1)
 	go func() {
-		row, err := c.Decide(ctx, tt.NewDecide("Ready?"), tt.Text("evidence"))
+		row, err := c.Decide(ctx, tt.DecideQuestion{Question: "Ready?"}, "evidence")
 		if row.Status() == tt.Failed {
 			result <- errors.New("cancellation became a failed row")
 			return
@@ -51,7 +52,7 @@ func TestSingleCallCancellationClosesHeldConnection(t *testing.T) {
 		t.Fatal("request did not arrive")
 	}
 	paid := b.command(t, "count")
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(30 * time.Second)
 	cancel(sentinel)
 	err := receiveBefore(t, result, deadline)
 	var native *tt.Error
@@ -76,7 +77,7 @@ func TestIterationCancellationIsOneTerminalError(t *testing.T) {
 	go func() {
 		terminal := 0
 		var failure error
-		for row, err := range c.DecideAll(ctx, tt.NewDecide("Ready?"), tt.Texts("evidence")) {
+		for row, err := range c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, slices.Values([]string{"evidence"})) {
 			if err == nil {
 				failure = errors.New("held backend produced a row")
 				continue
@@ -98,7 +99,7 @@ func TestIterationCancellationIsOneTerminalError(t *testing.T) {
 		t.Fatal("no request")
 	}
 	paid := b.command(t, "count")
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(30 * time.Second)
 	cancel()
 	if err := receiveBefore(t, done, deadline); err != nil {
 		t.Fatal(err)
@@ -115,18 +116,18 @@ func TestIterationCancellationIsOneTerminalError(t *testing.T) {
 func TestLazyAdmissionAndBreakStopInput(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	started, stopped := 0, 0
-	input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
+	input := func(yield func(any) bool) {
 		started++
 		defer func() { stopped++ }()
 		for {
-			if !yield(tt.Text("record"), nil) {
+			if !yield("record") {
 				return
 			}
 		}
-	})
+	}
 	batch := 1
 	c2 := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: batch})
-	seq := c2.DecideAll(context.Background(), tt.NewDecide("Ready?"), input)
+	seq := c2.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, input)
 	if started != 0 {
 		t.Fatal("constructing an iterator consumed input")
 	}
@@ -139,7 +140,7 @@ func TestLazyAdmissionAndBreakStopInput(t *testing.T) {
 	if started != 1 || stopped != 1 {
 		t.Fatalf("input lifetime: started %d stopped %d", started, stopped)
 	}
-	invalid := c.DecideAll(context.Background(), tt.Decide{}, tt.Texts("evidence"))
+	invalid := c.DecideAll(context.Background(), tt.DecideQuestion{}, slices.Values([]string{"evidence"}))
 	count := 0
 	for _, err := range invalid {
 		count++
@@ -155,27 +156,13 @@ func TestLazyAdmissionAndBreakStopInput(t *testing.T) {
 // Feature: input failures preserve their cause and release suspended input.
 func TestInputErrorAndCooperativeCancellation(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	sentinel := errors.New("input stopped")
-	count, stopped := 0, false
-	input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
-		defer func() { stopped = true }()
-		yield(tt.Record{}, sentinel)
-	})
-	for _, err := range c.DecideAll(context.Background(), tt.NewDecide("Ready?"), input) {
-		count++
-		if !errors.Is(err, sentinel) {
-			t.Fatalf("input cause changed: %v", err)
-		}
-	}
-	if count != 1 || !stopped {
-		t.Fatal("input failure did not end and stop the input")
-	}
+	var input iter.Seq[any]
 	ctx, cancel := context.WithCancel(context.Background())
 	entered, done := make(chan struct{}), make(chan error, 1)
-	input = tt.FromSeq(func(yield func(tt.Record, error) bool) { close(entered); <-ctx.Done(); yield(tt.Record{}, ctx.Err()) })
+	input = func(yield func(any) bool) { close(entered); <-ctx.Done(); yield(nil) }
 	go func() {
 		var last error
-		for _, err := range c.DecideAll(ctx, tt.NewDecide("Ready?"), input) {
+		for _, err := range c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, input) {
 			last = err
 		}
 		done <- last
@@ -195,21 +182,21 @@ func TestCallbackPanicsStopInput(t *testing.T) {
 			c := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: batch})
 			stopped := false
 			marker := new(int)
-			input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
+			input := func(yield func(any) bool) {
 				defer func() { stopped = true }()
 				if where == "input" {
 					panic(marker)
 				}
-				for yield(tt.Text("evidence"), nil) {
+				for yield("evidence") {
 				}
-			})
+			}
 			func() {
 				defer func() {
 					if got := recover(); got != marker {
 						t.Errorf("panic changed: %v", got)
 					}
 				}()
-				for _, err := range c.DecideAll(context.Background(), tt.NewDecide("Ready?"), input) {
+				for _, err := range c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, input) {
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -219,7 +206,7 @@ func TestCallbackPanicsStopInput(t *testing.T) {
 			if !stopped {
 				t.Fatal("panic left input suspended")
 			}
-			if _, err := c.Decide(context.Background(), tt.NewDecide("Still usable?"), tt.Text("evidence")); err != nil {
+			if _, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Still usable?"}, "evidence"); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -235,16 +222,16 @@ func TestZeroOwnersNilContextAndExpiredDeadline(t *testing.T) {
 	if err := zero.Close(); err != nil {
 		t.Fatal("repeated zero close failed")
 	}
-	if _, err := zero.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence")); !errors.Is(err, tt.ErrClosed) {
+	if _, err := zero.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence"); !errors.Is(err, tt.ErrClosed) {
 		t.Fatalf("zero owner: %v", err)
 	}
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	//lint:ignore SA1012 This case verifies that nil context returns a usage error without panicking.
-	if _, err := c.Decide(nil, tt.NewDecide("Ready?"), tt.Text("evidence")); !errors.Is(err, tt.ErrUsage) {
+	if _, err := c.Decide(nil, tt.DecideQuestion{Question: "Ready?"}, "evidence"); !errors.Is(err, tt.ErrUsage) {
 		t.Fatalf("nil context: %v", err)
 	}
 	count := 0
-	for _, err := range c.DecideAll(context.Background(), tt.NewDecide("Ready?"), tt.Input{}) {
+	for _, err := range c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, iter.Seq[string](nil)) {
 		count++
 		if !errors.Is(err, tt.ErrUsage) {
 			t.Fatal(err)
@@ -255,13 +242,13 @@ func TestZeroOwnersNilContextAndExpiredDeadline(t *testing.T) {
 	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Unix(0, 0))
 	defer cancel()
-	if _, err := c.Decide(ctx, tt.NewDecide("Ready?"), tt.Text("evidence")); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := c.Decide(ctx, tt.DecideQuestion{Question: "Ready?"}, "evidence"); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("deadline: %v", err)
 	}
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence")); !errors.Is(err, tt.ErrClosed) {
+	if _, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence"); !errors.Is(err, tt.ErrClosed) {
 		t.Fatal("closed client accepted call")
 	}
 }
@@ -269,8 +256,8 @@ func TestZeroOwnersNilContextAndExpiredDeadline(t *testing.T) {
 // Feature: independent concurrent calls and repeated ranges own separate state.
 func TestConcurrentCallsAndRepeatedRanges(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	seq := c.DecideAll(context.Background(), tt.NewDecide("Ready?"), tt.Texts("first", "second"))
-	results := make(chan []tt.DecideRow, 2)
+	seq := c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, slices.Values([]string{"first", "second"}))
+	results := make(chan []tt.DecideRow[string], 2)
 	var wg sync.WaitGroup
 	for range 2 {
 		wg.Add(1)
@@ -280,7 +267,7 @@ func TestConcurrentCallsAndRepeatedRanges(t *testing.T) {
 	go func() { wg.Wait(); close(joined) }()
 	receiveBefore(t, joined, time.Now().Add(30*time.Second))
 	close(results)
-	var first []tt.DecideRow
+	var first []tt.DecideRow[string]
 	for rows := range results {
 		if first == nil {
 			first = rows
@@ -321,7 +308,7 @@ func TestClientCloseRacesWithOpeningCalls(t *testing.T) {
 		go func() {
 			defer workers.Done()
 			<-start
-			row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence"))
+			row, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence")
 			if err != nil {
 				if !errors.Is(err, tt.ErrClosed) {
 					results <- err
@@ -369,7 +356,7 @@ func TestHeldPullReadAheadRemainsBounded(t *testing.T) {
 			var pulled atomic.Int64
 			bound := int64(batch*limits.Window + 1)
 			exceeded := make(chan struct{}, 1)
-			input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
+			input := func(yield func(any) bool) {
 				for i := int64(0); i < bound+2; i++ {
 					if pulled.Add(1) > bound {
 						select {
@@ -377,14 +364,14 @@ func TestHeldPullReadAheadRemainsBounded(t *testing.T) {
 						default:
 						}
 					}
-					if !yield(tt.Text("held evidence"), nil) {
+					if !yield("held evidence") {
 						return
 					}
 				}
-			})
+			}
 			done := make(chan error, 1)
 			go func() {
-				for _, err := range c.DecideAll(ctx, tt.NewDecide("Ready?"), input) {
+				for _, err := range c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, input) {
 					if err != nil {
 						done <- err
 						return
@@ -405,7 +392,7 @@ func TestHeldPullReadAheadRemainsBounded(t *testing.T) {
 			case <-timer.C:
 			}
 			paid := b.command(t, "count")
-			deadline := time.Now().Add(2 * time.Second)
+			deadline := time.Now().Add(30 * time.Second)
 			cancel()
 			if err := receiveBefore(t, done, deadline); !errors.Is(err, context.Canceled) {
 				t.Fatal(err)

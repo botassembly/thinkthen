@@ -1,2 +1,2 @@
 thinkthen relate \
-  --rule works_for person organization message.txt
+  --rule person organization works_for message.txt

@@ -14,6 +14,7 @@ import json
 import os
 import runpy
 
+import pandas as pd
 import thinkthen
 
 # show.py calls the module functions, which use the shared default client, as a
@@ -23,7 +24,7 @@ backend = os.environ.get("THINKTHEN_BACKEND", "systemone")
 thinkthen.set_default_client(thinkthen.Client(backend=backend))
 
 shown = runpy.run_path("show.py")
-answers = [{"refund": bool(form["refund"]), "topic": str(form["topic"]), "urgency": float(form["urgency"])} for form in shown["forms"]]
+answers = [{name: None if pd.isna(value) else value for name, value in form.items()} for form in shown["forms"].to_dict(orient="records")]
 with open(os.environ["SITE_ANSWERS_FILE"], "w", encoding="utf-8") as out:
     json.dump(answers, out)
 PY

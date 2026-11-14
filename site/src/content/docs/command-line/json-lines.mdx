@@ -35,7 +35,7 @@ An object without an `id` is still judged, and its answer starts with its place 
 
 Each message keeps its `id` and `text`, and gains `is_refund`.
 
-filter with `--into` gives back only the objects that answer yes. When some lines were not sure or failed, it then prints one line on standard error that counts each, so a not sure line never drops out unseen. `--quiet` hides that count, and the objects, but still prints each failure's error with its `id` and file.
+filter with `--into` gives back only the objects that answer yes. Filter takes one bar and never returns not sure. When any input fails, it reports the failure and exits 6. Use decide with two bars when you need to retain uncertainty. `--quiet` hides that count, and the objects, but still prints each failure's error with its `id` and file.
 
 Every line must be a JSON object that doesn't already hold the new field; otherwise the command names the line, stops with exit code 2, and asks nothing.
 

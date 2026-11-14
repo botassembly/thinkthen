@@ -1,5 +1,5 @@
 {
-  "anchor": "for try await annotated in client.annotate(",
-  "before": 0,
+  "anchor": "for try await annotated in client.annotate(questions, records: messages) {",
+  "before": 6,
   "after": 2
 }

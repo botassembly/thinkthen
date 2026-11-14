@@ -6,7 +6,6 @@ from threading import Event, Thread
 from urllib.request import Request, urlopen
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,6 +19,7 @@ consumer, root, loopback = sys.argv[1:]
 root = Path(root)
 not_applicable = 0
 sys.path.insert(0, str(root / "scripts"))
+from filter_contract import expected_filter
 from test_control import read_line, request as fixture_request
 with tempfile.TemporaryDirectory() as folder:
     broken = Path(folder) / "broken-engine"
@@ -50,9 +50,6 @@ def fixture(*args):
 
 def normalize(row, backend, model):
     row = dict(row)
-    if row["function"] == "filter":
-        kept = row.pop("kept")
-        assert type(kept) is bool and kept == (row.get("answer") is True), row
     source = row.pop("source", None)
     if source is not None:
         assert source["backend"] == backend and source["model"] == model, source
@@ -90,12 +87,17 @@ with tempfile.TemporaryDirectory() as folder:
             with fixture(str(path)) as (server, url):
                 result = subprocess.run([consumer, str(request_path), url], env=network_env, check=True, capture_output=True, text=True, timeout=120)
                 actual = json.loads(result.stdout)
-                if isinstance(actual, dict):
-                    assert not actual.get("rows"), (entry, actual)
-                    actual = {key: actual[key] for key in ("error", "http_status") if key in actual}
+                if case['request']['question']['function'] == 'filter' and isinstance(actual, dict) and 'kept' in actual:
+                    actual['failed'] = [normalize(row, backend, settings['model']) for row in actual['failed']]
+                    expected = expected_filter(case)
                 else:
-                    actual = [normalize(row, backend, settings["model"]) for row in actual]
-                assert actual == case["expected"], (entry, backend, actual, case["expected"])
+                    if isinstance(actual, dict):
+                        assert not actual.get('rows'), (entry, actual)
+                        actual = {key: actual[key] for key in ('error', 'http_status') if key in actual}
+                    else:
+                        actual = [normalize(row, backend, settings['model']) for row in actual]
+                    expected = case['expected']
+                assert actual == expected, (entry, backend, actual, expected)
                 assert int(command(server, "count")) == case["requests"], (entry, backend)
     for function, (entry, case) in single_cases.items():
         for backend in manifest["backends"]:
@@ -126,7 +128,7 @@ for index, case in enumerate(json.loads((root / "construction/options.json").rea
             result = subprocess.run([consumer, str(path)], env=env, check=True,
                                     capture_output=True, text=True, timeout=30)
             actual = json.loads(result.stdout)
-        expected = {"error": case["expected_error"]} if "expected_error" in case else case["expected"]
+        expected = {"error": case["expected_error"]} if "expected_error" in case else expected_filter(case) if case["request"]["question"]["function"] == "filter" else case["expected"]
         assert actual == expected, (case["name"], actual, expected)
 print("Installed Swift: every shared construction option case passed")
 
@@ -209,38 +211,7 @@ result = subprocess.run([consumer, "surface"], env=env, capture_output=True, tex
 assert result.returncode == 0, (result.stdout, result.stderr)
 assert result.stdout == "Swift public interface passed\n", result.stdout
 
-# Test the packaged lookup, not the override. Replace the installed resource in each
-# fresh process, so refused fixtures abort if layout access precedes the handshake.
-fixture_path = os.environ["THINKTHEN_NATIVE_FIXTURES"]
-cases = json.loads((Path(fixture_path) / "manifest.json").read_text())["cases"]
-filename = "libthinkthen_ffi.dylib" if sys.platform == "darwin" else "thinkthen_ffi.dll" if sys.platform == "win32" else "libthinkthen_ffi.so"
-resources = list(Path(consumer).parent.rglob(filename))
-assert len(resources) == 1, resources
-library = resources[0]
-
-
-def replace_library(source):
-    # Give signed code a new inode before the next process loads it.
-    with tempfile.TemporaryDirectory(dir=library.parent) as folder:
-        staged = Path(folder) / library.name
-        shutil.copy2(source, staged)
-        os.replace(staged, library)
-
-
-with tempfile.TemporaryDirectory() as folder:
-    original = Path(folder) / library.name
-    shutil.copy2(library, original)
-    try:
-        for case in cases:
-            replace_library(case["library"])
-            result = subprocess.run([consumer, "abi"], env=env, capture_output=True, text=True, check=True)
-            if case["accept"]:
-                assert result.stdout.strip() == "accepted", (case["name"], result.stdout)
-            elif case.get("missing"):
-                assert case["missing"] in result.stdout, (case["name"], result.stdout)
-            else:
-                assert result.stdout.strip() == "version", (case["name"], result.stdout)
-    finally:
-        replace_library(original)
+from abi import check_abi
+check_abi(consumer, env)
 print("Installed Swift consumer: typed manifest through both wires, exact IDs, cancellation, owned rows and ABI checks pass")
 print(f"Swift: {not_applicable} shared cases not applicable")

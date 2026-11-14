@@ -56,6 +56,15 @@ impl QuestionBuilder {
             top: None,
         })
     }
+    /// Validate the host's actual generated columns before opening a table call.
+    /// # Errors
+    /// Returns the shared admission error, including `usage.column` naming a clash.
+    pub fn validate_table_columns(&self, columns: &[&str], suffixes: &[&str]) -> Result<(), Error> {
+        if let Question::Annotate(question) = self.build()? {
+            question.validate_table_columns(columns, suffixes)?;
+        }
+        Ok(())
+    }
     /// Snapshot an admitted question without parsing or dropping required lists.
     #[must_use]
     pub fn snapshot(question: &Question) -> Self {
@@ -129,6 +138,19 @@ impl QuestionBuilder {
     /// # Errors
     /// Rejects a setter for another domain, a bad leaf or duplicate entry unchanged.
     pub fn add_item(&mut self, domain: FunctionName, text: &str) -> Result<(), Error> {
+        self.check_domain(domain)?;
+        let item = crate::core::ChoiceOption::new(text)?;
+        if self.items.iter().any(|item| item.label() == text) {
+            return Err(question_error(crate::core::diagnostic::requirement(
+                "domain",
+                "distinct entries",
+                "a repeated entry (contents redacted)",
+            )));
+        }
+        self.items.push(item);
+        Ok(())
+    }
+    fn check_domain(&self, domain: FunctionName) -> Result<(), Error> {
         let matches = matches!(
             (domain, self.function),
             (FunctionName::Choose, FunctionName::Choose)
@@ -146,16 +168,46 @@ impl QuestionBuilder {
                 "a domain for another function",
             )));
         }
-        let item = crate::core::ChoiceOption::new(text)?;
-        if self.items.iter().any(|item| item.label() == text) {
-            return Err(question_error(crate::core::diagnostic::requirement(
-                "domain",
-                "distinct entries",
-                "a repeated entry (contents redacted)",
-            )));
-        }
-        self.items.push(item);
         Ok(())
+    }
+    /// Replace one admitted domain atomically, retaining all other question options.
+    /// # Errors
+    /// Refuses invalid words, incomplete domains and setters for another function.
+    pub fn set_items(&mut self, domain: FunctionName, words: &[&str]) -> Result<(), Error> {
+        self.check_domain(domain)?;
+        let mut draft = self.clone();
+        draft.items.clear();
+        for word in words {
+            draft.add_item(domain, word)?;
+        }
+        draft.build()?;
+        *self = draft;
+        Ok(())
+    }
+    /// Verify that a saved question's words match a host enum in the same order.
+    /// # Errors
+    /// Returns the shared question refusal on a different domain.
+    pub fn expect_items(&self, words: &[&str]) -> Result<(), Error> {
+        if !matches!(
+            self.function,
+            FunctionName::Choose | FunctionName::Tag | FunctionName::Score | FunctionName::Rank
+        ) {
+            return Err(question_error(
+                "this question has no choice, label or level domain",
+            ));
+        }
+        let question = self.build()?;
+        if super::question_words(&question)
+            .iter()
+            .map(String::as_str)
+            .eq(words.iter().copied())
+        {
+            Ok(())
+        } else {
+            Err(question_error(
+                "the saved question's words must match the caller's words in the same order",
+            ))
+        }
     }
     /// Set a validated numeric threshold for a threshold-taking function.
     /// # Errors
@@ -178,12 +230,23 @@ impl QuestionBuilder {
         self.threshold = Some(cut.into());
         Ok(())
     }
-    /// Set an ordered band only for decide and filter.
+    /// Set an ordered band only for decide.
     /// # Errors
     /// Returns the shared threshold error and preserves the prior state.
     pub fn set_band(&mut self, low: f64, high: f64) -> Result<(), Error> {
+        self.set_band_for(low, high, "decide")
+    }
+    pub(crate) fn set_band_for(
+        &mut self,
+        low: f64,
+        high: f64,
+        alternative: &str,
+    ) -> Result<(), Error> {
         let threshold = Threshold::band(low, high)?;
-        if !matches!(self.function, FunctionName::Decide | FunctionName::Filter) {
+        if self.function == FunctionName::Filter {
+            threshold.filter_cut_for(alternative)?;
+        }
+        if self.function != FunctionName::Decide {
             return Err(Error::from_contract(
                 Code::UsageThreshold,
                 crate::core::diagnostic::requirement(
@@ -282,7 +345,8 @@ impl QuestionBuilder {
                 finish!(Decide, value)
             }
             FunctionName::Filter => {
-                let mut value = questions::Filter::new(&self.text)?.threshold(threshold);
+                let mut value =
+                    questions::Filter::new(&self.text)?.threshold(threshold.filter_cut()?);
                 value.inner.yes = self.yes.clone();
                 value.inner.no = self.no.clone();
                 finish!(Filter, value)
@@ -377,6 +441,10 @@ impl ToolboxBuilder {
     /// Returns the shared question error for an empty collection.
     pub fn definitions_json(&self) -> Result<String, Error> {
         questions::Toolbox::new(self.0.clone())?.definitions_json()
+    }
+    /// Borrow admitted names in canonical UTF8 order without projecting object keys.
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.0.keys().map(String::as_str)
     }
     /// Select a snapshot of the requested function.
     /// # Errors

@@ -1,5 +1,5 @@
 {
-  "anchor": "        rc = thinkthen_tag(client, \"Which topics appear?\", labels, 2,",
+  "anchor": "        rc = thinkthen_run_one(client, question, \"I was charged twice and my parcel is late again.\",",
   "before": 0,
   "after": 2
 }

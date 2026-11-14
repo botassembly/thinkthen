@@ -8,8 +8,13 @@ use crate::core::{Cut, Error, ErrorKind, Pointer, Threshold};
 mod annotation;
 mod choose_execution;
 pub(crate) use choose_execution::complete_choice;
+mod choice;
 mod collection;
 mod domains;
+pub use choice::{Choice, Choices};
+#[doc(hidden)]
+#[path = "choice_support.rs"]
+pub mod __choice;
 mod option;
 pub use option::AnswerOption;
 use option::OptionWire;
@@ -18,6 +23,7 @@ mod predicates;
 pub(crate) mod recording;
 mod relations;
 mod saved;
+mod selectors;
 #[cfg(feature = "command")]
 pub(crate) use saved::validate_saved_name;
 #[cfg(feature = "command")]
@@ -49,9 +55,46 @@ fn question_error(message: impl Into<String>) -> Error {
     Error::new(ErrorKind::Question, message)
 }
 
+macro_rules! question_into {
+    ($target:ident, Choose) => {
+        impl<C: Choice> From<Choose<C>> for $target {
+            fn from(value: Choose<C>) -> Self {
+                Self::Choose(value.erase())
+            }
+        }
+    };
+    ($target:ident, Tag) => {
+        impl<C: Choice> From<Tag<C>> for $target {
+            fn from(value: Tag<C>) -> Self {
+                Self::Tag(value.erase())
+            }
+        }
+    };
+    ($target:ident, Score) => {
+        impl<C: Choice> From<Score<C>> for $target {
+            fn from(value: Score<C>) -> Self {
+                Self::Score(value.erase())
+            }
+        }
+    };
+    ($target:ident, Rank) => {
+        impl<C: Choice> From<Rank<C>> for $target {
+            fn from(value: Rank<C>) -> Self {
+                Self::Rank(value.erase())
+            }
+        }
+    };
+    ($target:ident, $question:ident) => {
+        impl From<$question> for $target {
+            fn from(value: $question) -> Self {
+                Self::$question(value)
+            }
+        }
+    };
+}
 macro_rules! functions {
-    (annotatable { $($member:ident : $member_wire:ident = $member_abi:literal => $member_command:expr),+ $(,)? } collection { $rank:ident : $rank_wire:ident = $rank_abi:literal => $rank_command:expr } annotation { $annotate_command:expr }) => {
-        functions!(@all [$($member:$member_wire=$member_abi => $member_command,)+ $rank:$rank_wire=$rank_abi => $rank_command] [$($member:$member_wire),+] $annotate_command);
+    (annotatable { $($member:ident : $member_wire:ident = $member_abi:literal => $member_command:expr),+ $(,)? } collection { $($rank:ident : $rank_wire:ident = $rank_abi:literal => $rank_command:expr),+ $(,)? } annotation { $annotate_command:expr }) => {
+        functions!(@all [$($member:$member_wire=$member_abi => $member_command,)+ $( $rank:$rank_wire=$rank_abi => $rank_command),+] [$($member:$member_wire),+] $annotate_command);
     };
     (@all [$($variant:ident:$wire:ident=$abi:literal => $command:expr),+] [$($member:ident:$member_wire:ident),+] $annotate_command:expr) => {
         /// A question's stable function discriminator.
@@ -92,7 +135,7 @@ macro_rules! functions {
         /// A per-record question that may be nested under annotation.
         /// ```compile_fail
         /// use thinkthen::questions::{AnnotatableQuestion, Rank};
-        /// let question = Rank::new("How much?", ["low", "high"]).unwrap();
+        /// let question = Rank::with_strings("How much?", ["low", "high"]).unwrap();
         /// let _: AnnotatableQuestion = question.into();
         /// ```
         /// ```compile_fail
@@ -124,7 +167,7 @@ macro_rules! functions {
         impl TryFrom<SimpleQuestion> for AnnotatableQuestion {
             type Error = Error;
             fn try_from(value: SimpleQuestion) -> Result<Self, Error> {
-                match value { $(SimpleQuestion::$member(value) => Ok(Self::$member(value)),)+ SimpleQuestion::Rank(_) => Err(question_error(crate::core::diagnostic::requirement("entries", "annotatable questions", "a rank question"))) }
+                match value { $(SimpleQuestion::$member(value) => Ok(Self::$member(value)),)+ SimpleQuestion::Filter(_) | SimpleQuestion::Rank(_) => Err(question_error(crate::core::diagnostic::requirement("entries", "annotatable questions", "a filter or rank question"))) }
             }
         }
         impl AnnotatableQuestion {
@@ -135,7 +178,7 @@ macro_rules! functions {
                 match self { $(Self::$member(value) => value.field.as_ref(),)+ }
             }
         }
-        $(impl From<$member> for AnnotatableQuestion { fn from(value: $member) -> Self { Self::$member(value) } })+
+        $(question_into!(AnnotatableQuestion, $member);)+
 
         /// Any admitted function with its own required domain and options.
         #[non_exhaustive]
@@ -179,8 +222,7 @@ macro_rules! functions {
         impl From<SimpleQuestion> for Question {
             fn from(value: SimpleQuestion) -> Self { match value { $(SimpleQuestion::$variant(value) => Self::$variant(value),)+ } }
         }
-        $(impl From<$variant> for Question { fn from(value: $variant) -> Self { Self::$variant(value) } }
-          impl From<$variant> for SimpleQuestion { fn from(value: $variant) -> Self { Self::$variant(value) } })+
+        $(question_into!(Question, $variant); question_into!(SimpleQuestion, $variant);)+
         impl Question {
             /// The function this admitted question names.
             #[must_use]
@@ -204,12 +246,12 @@ functions! {
         Choose: ChooseWire=2 => ("Choose one answer from ordered choices", command::ThresholdOption::Cut, true, Some(("choice", "choices", "THINKTHEN_CHOICES", "Choice; repeat in order"))),
         Tag: TagWire=3 => ("Assign labels to records", command::ThresholdOption::Cut, false, Some(("label", "labels", "THINKTHEN_LABELS", "Label; repeat in order"))),
         Score: ScoreWire=4 => ("Score records on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high"))),
-        Filter: FilterWire=5 => ("Keep records that answer a question", command::ThresholdOption::Band, true, None),
         Find: FindWire=7 => ("Find the record unit that answers a question", command::ThresholdOption::Cut, true, None),
         Recognize: RecognizeWire=8 => ("Recognize named kinds in records", command::ThresholdOption::Cut, false, Some(("kind", "kinds", "THINKTHEN_KINDS", "Kind; repeat in order"))),
         Relate: RelateWire=9 => ("Find relations between recognized names", command::ThresholdOption::Cut, false, None)
     }
     collection {
+        Filter: FilterWire=5 => ("Keep records that answer a question", command::ThresholdOption::Cut, true, None),
         Rank: RankWire=6 => ("Rank records on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high")))
     }
     annotation { ("Answer named questions about each record", command::ThresholdOption::None, false, None) }

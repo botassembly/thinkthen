@@ -1,7 +1,6 @@
 """Count paid requests through PostgreSQL joins and its materializing LIMIT."""
 import json
 from pathlib import Path
-import re
 import tempfile
 import uuid
 
@@ -31,12 +30,12 @@ def verify(options, server, query, set_settings, child_environment):
                 set_settings(database, {'backend': 'openai', 'batch': 32, 'retry': {'max_retries': 0}})
                 assert query(database, statement) == [(value,)], statement
                 assert int(command(loopback, 'count')) == requests, statement
-    # Run the guide's literal save-and-join example, including its typed id cast.
-    guide = Path(__file__).resolve().parents[3] / 'docs/surfaces/postgresql.md'
-    examples = [block for block in re.findall(r'```sql\n(.*?)\n```', guide.read_text(), re.S)
-                if block.startswith('CREATE TABLE refund_answers AS')]
-    assert len(examples) == 1, examples
-    save, join, *_ = examples[0].split(';')
+    # Materializing answers pays once; repeated joins preserve typed IDs and
+    # make no additional requests. Literal guide coverage lives in ideal.py.
+    save = ("CREATE TABLE refund_answers AS SELECT id::integer AS msg_id, answer "
+            "FROM thinkthen.decide('SELECT msg_id AS id, body AS record FROM messages "
+            "WHERE msg_id < 4 ORDER BY msg_id', 'Refund?')")
+    join = "SELECT msg_id, body, answer FROM messages JOIN refund_answers USING(msg_id) ORDER BY msg_id"
     with fixture(options.loopback, '--stress', 'healthy') as (loopback, url):
         environment = dict(child_environment(), THINKTHEN_TEST_LOOPBACK_URL=url,
                            THINKTHEN_API_KEY='loopback-test-key', OPENAI_API_KEY='loopback-test-key')

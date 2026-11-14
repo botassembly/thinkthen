@@ -6,13 +6,16 @@ pub const Function = enum { decide, choose, tag, score, filter, rank, find, reco
 /// When decide and filter answer: one cut, or a band whose middle is not sure.
 pub const Threshold = union(enum) {
     /// Answer yes at or above this probability.
-    cut: f64,
+    value: f64,
     /// Not sure between `low` and `high`.
     bounds: struct { low: f64, high: f64 },
     /// Read a parsed JSON value, for `std.json.parseFromValue`.
     pub fn jsonParseFromValue(allocator: std.mem.Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!Threshold {
         if (value == .object) return .{ .bounds = try std.json.innerParseFromValue(@FieldType(Threshold, "bounds"), allocator, value, options) };
-        return .{ .cut = try std.json.innerParseFromValue(f64, allocator, value, options) };
+        return .{ .value = try std.json.innerParseFromValue(f64, allocator, value, options) };
+    }
+    pub fn cut(value: f64) Threshold {
+        return .{ .value = value };
     }
     /// A band: no below `low`, yes above `high`, not sure between.
     pub fn band(low: f64, high: f64) Threshold {
@@ -21,7 +24,7 @@ pub const Threshold = union(enum) {
     /// Write as JSON, for `std.json.Stringify`.
     pub fn jsonStringify(self: Threshold, writer: anytype) !void {
         switch (self) {
-            .cut => |value| try writer.write(value),
+            .value => |value| try writer.write(value),
             .bounds => |value| try writer.write(value),
         }
     }
@@ -60,6 +63,7 @@ pub const Settings = struct {
     batch: ?u32 = null,
     /// Client send allowance; null is unlimited and zero forbids sends.
     max_requests: ?u64 = null,
+    cancel: ?*const @import("thinkthen.zig").Cancel = null,
     /// Retry limits.
     retry: ?Retry = null,
     /// Write as JSON, for `std.json.Stringify`.
@@ -142,12 +146,12 @@ pub const Choice = struct {
 pub const RelationRule = struct {
     /// Read a parsed JSON value, for `std.json.parseFromValue`.
     pub fn jsonParseFromValue(allocator: std.mem.Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!RelationRule {
-        const Wire = struct { relation: []const u8, source: []const u8, target: []const u8, reads: ?[]const u8 = null, either: ?bool = null };
+        const Wire = struct { relation: []const u8, source: []const u8, target: []const u8, reads: ?[]const u8 = null, either: bool = false };
         const wire = try std.json.innerParseFromValue(Wire, allocator, value, options);
-        return .{ .name = wire.relation, .source = wire.source, .target = wire.target, .reads = wire.reads, .either = wire.either };
+        return .{ .relation = wire.relation, .source = wire.source, .target = wire.target, .reads = wire.reads, .either = wire.either };
     }
     /// The relation's name.
-    name: []const u8,
+    relation: []const u8,
     /// The kind of the source name.
     source: []const u8,
     /// The kind of the target name.
@@ -155,10 +159,10 @@ pub const RelationRule = struct {
     /// How the relation reads in a sentence, such as "pays money to".
     reads: ?[]const u8 = null,
     /// True when the relation holds in either direction.
-    either: ?bool = null,
+    either: bool = false,
     /// Write as JSON, for `std.json.Stringify`.
     pub fn jsonStringify(self: RelationRule, writer: anytype) !void {
-        try writer.write(.{ .relation = self.name, .source = self.source, .target = self.target, .reads = self.reads, .either = self.either });
+        try writer.write(.{ .relation = self.relation, .source = self.source, .target = self.target, .reads = self.reads, .either = self.either });
     }
 };
 
@@ -171,3 +175,17 @@ pub fn choices(comptime names: []const []const u8) []const Choice {
     };
     return &result;
 }
+
+/// A single probability bar.
+pub const Cut = struct {
+    value: f64,
+    pub fn jsonParseFromValue(allocator: std.mem.Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!Cut {
+        return .cut(try std.json.innerParseFromValue(f64, allocator, value, options));
+    }
+    pub fn cut(value: f64) Cut {
+        return .{ .value = value };
+    }
+    pub fn jsonStringify(self: Cut, writer: anytype) !void {
+        try writer.write(self.value);
+    }
+};

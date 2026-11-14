@@ -1,6 +1,5 @@
 """Generate the Zig error enum from the engine registry into package output."""
 import json
-from pathlib import Path
 
 
 def generate(root, destination):
@@ -12,7 +11,9 @@ def generate(root, destination):
     lines.extend(f'    {tag(code)} = {code["value"]},' for code in codes)
     lines += ['    _,', '    pub fn name(self: ErrorCode) []const u8 { return switch (self) {']
     lines.extend(f'        .{tag(code)} => "{code["name"]}",' for code in codes)
-    lines += ['        _ => "unknown",', '    }; }', '''    pub fn jsonStringify(self: ErrorCode, writer: anytype) !void { try writer.write(self.name()); }
+    lines += ['        _ => "unknown",', '    }; }', '    pub const Family = enum { usage, record, backend, local, internal };', '    pub fn family(self: ErrorCode) Family { return switch (self) {']
+    lines.extend(f'        .{tag(code)} => .{code["family"]},' for code in codes)
+    lines += ['        _ => .internal,', '    }; }', '''    pub fn jsonStringify(self: ErrorCode, writer: anytype) !void { try writer.write(self.name()); }
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!ErrorCode {
         const value = try std.json.innerParse([]const u8, allocator, source, options);
         return fromName(value);

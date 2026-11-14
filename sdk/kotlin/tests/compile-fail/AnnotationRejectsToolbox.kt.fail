@@ -1,3 +1,3 @@
 package consumer.rejected
 import dev.thinkthen.kotlin.*
-suspend fun rejectedToolbox(client: ThinkThen) { client.annotate(Toolbox(mapOf("ready" to Decide("Ready?"))), "x") }
+suspend fun rejectedToolbox(client: ThinkThen) { client.annotate(Toolbox(mapOf("ready" to DecideQuestion("Ready?"))), "x") }

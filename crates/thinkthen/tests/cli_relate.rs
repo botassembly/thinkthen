@@ -43,11 +43,11 @@ fn server(p: f64) -> Loopback {
 #[test]
 fn bare_output_has_one_relation_per_line_and_empty_success() {
     for (p, args, expected) in [
-        (0.8, vec!["--rule", "works_for", "person", "company"], true),
-        (0.4, vec!["--rule", "works_for", "person", "company"], false),
+        (0.8, vec!["--rule", "person", "company", "works_for"], true),
+        (0.4, vec!["--rule", "person", "company", "works_for"], false),
         (
             0.8,
-            vec!["--rule", "works_for", "person", "company", "--either"],
+            vec!["--rule", "person", "company", "works_for", "--either"],
             true,
         ),
     ] {
@@ -83,7 +83,7 @@ fn details_and_record_streams_keep_rows() {
         ),
     ] {
         let server = server(0.8);
-        let mut command = vec!["--rule", "works_for", "person", "company"];
+        let mut command = vec!["--rule", "person", "company", "works_for"];
         command.extend(args);
         let output = run(&server, &command, input);
         assert_eq!(
@@ -109,19 +109,19 @@ fn invalid_rules_fail_before_sending() {
         vec!["works_for"],
         vec![
             "--rule",
-            "works_for",
             "person",
             "company",
+            "works_for",
             "--rule",
-            "works_for",
             "person",
             "company",
+            "works_for",
         ],
         vec![
             "--rule",
-            "works_for",
             "person",
             "company",
+            "works_for",
             "also=company:person",
             "--threshold",
             "bad",
@@ -129,9 +129,9 @@ fn invalid_rules_fail_before_sending() {
         vec!["works_for=*:company"],
         vec![
             "--rule",
-            "works_for",
             "person",
             "company",
+            "works_for",
             "--threshold",
             "0.2:0.8",
         ],

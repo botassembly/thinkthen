@@ -26,8 +26,10 @@ int main(void) {
                                "I was charged twice for one invoice.",
                                THINKTHEN_NUL_TERMINATED, THINKTHEN_RECORD_TEXT,
                                &result, &error);
+    bool yes=false;
+    if(rc==THINKTHEN_OK) rc=thinkthen_row_answer_bool(&result,&yes,&error);
     if (rc == THINKTHEN_OK)
-        puts(result.answer_bool ? "true" : "false");
+        puts(yes ? "true" : "false");
     else if (rc == THINKTHEN_UNSURE)
         printf("not sure (%g): ask a person\n", result.probability);
     else

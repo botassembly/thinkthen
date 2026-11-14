@@ -44,7 +44,9 @@ def test_transport_message_is_unchanged(arguments: list[str], cause: str) -> Non
             api_key=key,
             retry=tt.RetryPolicy(max_retries=0, attempt_timeout=0.2),
         ) as client:
-            row = client.decide("Ready?", "evidence")
+            with pytest.raises(tt.Failed) as raised:
+                client.decide("Ready?", "evidence")
+            row = raised.value.rows[0]
         assert row.status == "failed"
         assert row.error is not None
         assert row.error.code == "backend.transport"
@@ -77,7 +79,9 @@ def test_failed_reply_message_is_unchanged(tmp_path: Path, status: int) -> None:
                 message = str(raised.value)
                 shown = repr(raised.value)
             else:
-                row = client.decide("Ready?", "evidence")
+                with pytest.raises(tt.Failed) as raised_failure:
+                    client.decide("Ready?", "evidence")
+                row = raised_failure.value.rows[0]
                 assert row.status == "failed" and row.error is not None
                 assert row.error.code == "backend.status"
                 assert row.error.http_status == status

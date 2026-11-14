@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterable, Iterable
-from typing import Any, Literal, TypeVar, overload
+from typing import Any, TypeVar, overload
 from weakref import WeakKeyDictionary
 
 from typing_extensions import TypeForm
@@ -31,7 +31,6 @@ from ._types import (
     ChooseRow,
     DecideRow,
     Descriptions,
-    FilterRow,
     FindRow,
     RankRow,
     RecognizeRow,
@@ -131,31 +130,6 @@ def filter(
     question: FilterQuestion,
     records: Iterable[T] | AsyncIterable[T],
     *,
-    errors: Literal["raise"] = "raise",
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: AsyncClient | None = None,
-) -> AsyncKeptStream[T]: ...
-@overload
-def filter(
-    question: FilterQuestion,
-    records: Iterable[T] | AsyncIterable[T],
-    *,
-    errors: Literal["coerce"],
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: AsyncClient | None = None,
-) -> AsyncKeptStream[T | FilterRow[T]]: ...
-@overload
-def filter(
-    question: str,
-    records: Iterable[T] | AsyncIterable[T],
-    *,
-    threshold: Threshold | None = None,
-    field: str | None = None,
-    yes_means: str | None = None,
-    no_means: str | None = None,
-    errors: Literal["raise"] = "raise",
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -165,44 +139,17 @@ def filter(
     question: str,
     records: Iterable[T] | AsyncIterable[T],
     *,
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     yes_means: str | None = None,
     no_means: str | None = None,
-    errors: Literal["coerce"],
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncKeptStream[T | FilterRow[T]]: ...
+) -> AsyncKeptStream[T]: ...
 def filter(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
     """Stream the kept records; see ``AsyncClient.filter``."""
     return (_default() if client is None else client).filter(*args, **kwargs)
-
-
-@overload
-def filter_rows(
-    question: FilterQuestion,
-    records: Iterable[T] | AsyncIterable[T],
-    *,
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: AsyncClient | None = None,
-) -> AsyncRowStream[FilterRow[T]]: ...
-@overload
-def filter_rows(
-    question: str,
-    records: Iterable[T] | AsyncIterable[T],
-    *,
-    threshold: Threshold | None = None,
-    field: str | None = None,
-    yes_means: str | None = None,
-    no_means: str | None = None,
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: AsyncClient | None = None,
-) -> AsyncRowStream[FilterRow[T]]: ...
-def filter_rows(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
-    return (_default() if client is None else client).filter_rows(*args, **kwargs)
 
 
 @overload
@@ -641,7 +588,6 @@ __all__ = [
     "choose_stream",
     "decide",
     "decide_stream",
-    "filter_rows",
     "find",
     "find_stream",
     "rank",

@@ -4,6 +4,14 @@ pub(crate) mod driver;
 mod execute;
 pub(crate) use execute::identity;
 mod filtered;
+mod items;
+mod pushed;
+#[cfg(feature = "stream")]
+pub use items::ItemStream;
+pub use items::Items;
+#[cfg(feature = "stream")]
+pub use pushed::RecordRowStream;
+pub use pushed::RecordRows;
 #[cfg(feature = "native")]
 pub mod native;
 mod queue;
@@ -18,7 +26,9 @@ use crate::core::{
 };
 use crate::engine::RecordEvent;
 use crate::{Cancel, Engine, Error, OffsetUnit, Question, Request};
-pub use filtered::{FilterError, Filtered, Kept};
+#[cfg(feature = "stream")]
+pub use filtered::KeptStream;
+pub use filtered::{FilterError, Kept};
 use queue::{Queue, Received};
 pub use ranked::Ranked;
 use std::marker::PhantomData;
@@ -254,13 +264,13 @@ impl<F: Function> Call<F> {
     }
     /// Consume the output side and release this call's own input owner.
     #[must_use]
-    pub fn rows(self) -> Rows<F> {
-        self.rows
+    pub fn rows(self) -> RecordRows<F> {
+        RecordRows(self.rows)
     }
 }
 impl Engine {
-    /// Evaluate one record. Blank field is a `record.empty` error; every other
-    /// record failure is returned as an ordinary row.
+    /// Evaluate one record, returning its failure at the call.
+    /// An answered form keeps its entries, including failed entries.
     ///
     /// The record is anything that converts into a [`Record`]: text as `&str` or
     /// `String`, a [`serde_json::Value`], or a built [`Record`]. A list is refused
@@ -271,22 +281,20 @@ impl Engine {
     /// let row = engine.run(&refund, vec!["Refund me.", "Thanks!"]);
     /// ```
     /// # Errors
-    /// Returns a call-level error, or `record.empty` for blank field.
-    pub fn run<F: Function>(
+    /// Returns a call-level error or the record's own failure. Not sure is
+    /// returned successfully; failed entries do not fail an answered form.
+    pub fn run<F: results::SingleFunction>(
         &self,
         question: &F,
         record: impl Into<Record>,
     ) -> Result<Row<F>, Error> {
-        let mut rows = self.rows(question, [record.into()])?;
+        let mut rows = self.rows_without_items(question, [record.into()])?;
         let row = rows.next().unwrap_or_else(|| Err(results::mismatch()))?;
         if let Some(result) = rows.next() {
             result?;
             return Err(results::mismatch());
         }
-        if let Some(error) = row
-            .error()
-            .filter(|error| error.code() == crate::Code::RecordEmpty)
-        {
+        if let Some(error) = row.error() {
             return Err(error.clone());
         }
         Ok(row)
@@ -297,7 +305,11 @@ impl Engine {
     /// keeps reads them, so they must be owned: collect borrowed items into a `Vec` first.
     /// # Errors
     /// Returns call setup or pre-existing cancellation errors.
-    pub fn rows<F: Function, I>(&self, question: &F, records: I) -> Result<Rows<F>, Error>
+    pub(crate) fn rows_without_items<F: Function, I>(
+        &self,
+        question: &F,
+        records: I,
+    ) -> Result<Rows<F>, Error>
     where
         I: IntoIterator + Send + 'static,
         I::Item: Into<Record>,
@@ -330,7 +342,7 @@ impl Engine {
     /// iterator, prefer [`Engine::rows`], which owns input production.
     /// # Errors
     /// Returns call setup or pre-existing cancellation errors.
-    pub fn open<F: Function>(&self, question: &F) -> Result<Call<F>, Error> {
+    pub fn open<F: results::SingleFunction>(&self, question: &F) -> Result<Call<F>, Error> {
         let call = self.open_any(
             question.clone().into(),
             self.name.clone(),

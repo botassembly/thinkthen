@@ -15,11 +15,9 @@ SETTINGS.update({key: (True, value) for key, value in CLIENT['$defs']['Retry']['
 def arguments(function):
     row = FUNCTIONS[function]
     names = set(row['properties']) - {'function'}
-    if 'questions' in names:
-        names.remove('questions')
-        names.add('toolbox')
     threshold = row['properties'].get('threshold', {})
-    if 'anyOf' in threshold or threshold.get('$ref', '').endswith('/Threshold'):
+    # Keep filter's band names visible so the engine can explain their refusal.
+    if function == 'filter' or 'anyOf' in threshold or threshold.get('$ref', '').endswith('/Threshold'):
         names.update(('low', 'high'))
     return names
 

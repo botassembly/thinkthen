@@ -5,13 +5,14 @@ import { createHash } from 'node:crypto';
 
 class CaptureError extends Error {}
 
-export async function captureBackend({ file, key, upstream = 'https://api.typesafe.ai/v1', maxCalls = 100, maxBytes = 300_000, replayOnly = false }) {
+export async function captureBackend({ file, key, upstream = 'https://api.typesafe.ai/v1', maxCalls = 99, maxInputBytes = 10_000, maxBytes = 300_000, replayOnly = false }) {
   if (typeof file !== 'string' || file.trim().length === 0) throw new CaptureError('capture requires an explicit cache file');
-  for (const limit of [maxCalls, maxBytes]) if (!Number.isSafeInteger(limit) || limit <= 0) throw new CaptureError('capture limits must be positive integers');
+  for (const limit of [maxCalls, maxInputBytes, maxBytes]) if (!Number.isSafeInteger(limit) || limit <= 0) throw new CaptureError('capture limits must be positive integers');
   const canonical = (value) => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((name) => [name, canonical(value[name])])) : value;
   const entries = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
   let calls = 0;
   let bytes = 0;
+  let inputBytes = 0;
   let served = 0;
   let pending = Promise.resolve();
   let failure = null;
@@ -44,8 +45,9 @@ export async function captureBackend({ file, key, upstream = 'https://api.typesa
               throw new CaptureError('saved response is missing');
             }
             const requestBytes = Buffer.byteLength(encoded);
-            if (calls >= maxCalls || bytes + requestBytes >= maxBytes) throw new CaptureError('capture budget exhausted');
+            if (calls >= maxCalls || inputBytes + requestBytes >= maxInputBytes || bytes + requestBytes >= maxBytes) throw new CaptureError('capture budget exhausted');
             calls++;
+            inputBytes += requestBytes;
             bytes += requestBytes;
             const reply = await fetch(`${upstream.replace(/\/$/, '')}${request.url}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` }, body: encoded, signal: AbortSignal.timeout(60_000) });
             const parts = [];
@@ -76,5 +78,5 @@ export async function captureBackend({ file, key, upstream = 'https://api.typesa
     pending = pending.then(handle, handle);
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  return { url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((resolve) => server.close(resolve)), usage: () => ({ calls, bytes }), served: () => served, failure: () => failure };
+  return { url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((resolve) => server.close(resolve)), usage: () => ({ calls, bytes, inputBytes }), served: () => served, failure: () => failure };
 }

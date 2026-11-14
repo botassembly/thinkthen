@@ -9,8 +9,7 @@ import { libcRefusal } from "./libc.js";
 /** @typedef {(error: Error | null, kind: string, data: string, reply: Reply) => void} Callback */
 /** @typedef {{cancel(): void, close(): void, reference(): void, unreference(): void}} Operation */
 /** @typedef {{usage(): string, settledUsage(): string, beginClose(): void, start(request: string, callback: Callback): Operation, startFinite(request: string, callback: Callback): Operation, close(): void}} NativeClient */
-/** @typedef {{Client: new (settings: string) => NativeClient, parseToolbox(json: string): string, serializeToolbox(json: string): string, rejectRecordKind(): never, rejectCancellation(): never, rejectSettingsConversion(): never, rejectQuestionConversion(): never}} Native */
-export const RULE_FIELDS = Object.freeze({ name: "relation", phrase: "reads", symmetric: "either" });
+/** @typedef {{Client: new (settings: string) => NativeClient, parseToolbox(json: string): string, serializeToolbox(json: string): string, toolboxQuestion(json: string, name: string, expected: string): string, rejectRecordKind(): never, rejectCancellation(): never, rejectSettingsConversion(): never, rejectQuestionConversion(): never}} Native */
 export class ThinkThenError extends Error {
   /** @param {{code: ErrorCode, message: string, httpStatus?: number}} error @param {ErrorOptions} [options] */
   constructor(error, options) {
@@ -21,29 +20,32 @@ export class ThinkThenError extends Error {
   }
 }
 export class UsageError extends ThinkThenError {}
-export class BackendError extends ThinkThenError {}
+export class SetupError extends ThinkThenError {}
+export class InternalError extends ThinkThenError {}
 export class CancelledError extends ThinkThenError {
   /** @param {ConstructorParameters<typeof ThinkThenError>[0]} error @param {ErrorOptions} [options] */
   constructor(error, options) { super(error, options); this.name = "AbortError"; }
 }
-/** @param {unknown} value @returns {ThinkThenError} */
-export function engineError(value) {
+/** @param {unknown} value @param {string} [operation] @returns {ThinkThenError} */
+export function engineError(value, operation) {
   if (!value || typeof value !== "object" || !("code" in value) || !("message" in value)
     || !ERROR_CODES.includes(/** @type {ErrorCode} */(value.code)) || typeof value.message !== "string") {
-    return new UsageError({ code: ABI_CODE, message: ABI_MESSAGE });
+    return new SetupError({ code: ABI_CODE, message: ABI_MESSAGE });
   }
   const code = /** @type {ErrorCode} */(value.code);
   const family = "family" in value ? value.family : undefined;
-  const Kind = code === "local.cancelled" ? CancelledError : family === "usage" ? UsageError
-    : family === "backend" ? BackendError : ThinkThenError;
-  return new Kind({ code, message: value.message,
+  const Kind = code === "local.cancelled" ? CancelledError : code === "usage.key-missing" || code === "usage.abi" ? SetupError
+    : family === "usage" ? UsageError : family === "internal" ? InternalError : SetupError;
+  const message = value.message + (operation === "filter" && code === "usage.threshold"
+    ? "; TypeScript: use decideStream for two thresholds" : "");
+  return new Kind({ code, message,
     ...("http_status" in value && typeof value.http_status === "number" ? {httpStatus: value.http_status} : {}) });
 }
 /** @param {unknown} error @returns {ThinkThenError} */
 export function nativeError(error) {
   if (error instanceof ThinkThenError) return error;
   try { return engineError(/** @type {unknown} */(JSON.parse(error instanceof Error ? error.message : ""))); }
-  catch { return new UsageError({ code: ABI_CODE, message: ABI_MESSAGE }); }
+  catch { return new SetupError({ code: ABI_CODE, message: ABI_MESSAGE }); }
 }
 const require = createRequire(import.meta.url);
 /** @type {Native | undefined} */
@@ -53,11 +55,11 @@ export function loadNative() {
   if (cached) return cached;
   if (process.platform === "linux") {
     const refusal = libcRefusal(process.report.getReport());
-    if (refusal) throw new ThinkThenError({code: "local.io", message: refusal});
+    if (refusal) throw new SetupError({code: "local.io", message: refusal});
   }
   /** @type {unknown} */ let loaded;
   try { loaded = require("./thinkthen.node"); }
-  catch (error) { throw new ThinkThenError({ code: "local.io", message: `cannot load native engine ${fileURLToPath(new URL("./thinkthen.node", import.meta.url))}: ${error instanceof Error ? error.message : String(error)}` }); }
+  catch (error) { throw new SetupError({ code: "local.io", message: `cannot load native engine ${fileURLToPath(new URL("./thinkthen.node", import.meta.url))}: ${error instanceof Error ? error.message : String(error)}` }); }
   /** @param {string} path @returns {unknown} */
   const member = path => {
     let value = loaded;
@@ -77,7 +79,7 @@ export function loadNative() {
         && ABI_EXPORTS.every(path => typeof member(path) === "function");
     }
   } catch { /* Refuse malformed modules before settings admission. */ }
-  if (!compatible) throw new UsageError({ code: ABI_CODE, message: ABI_MESSAGE });
+  if (!compatible) throw new SetupError({ code: ABI_CODE, message: ABI_MESSAGE });
   cached = /** @type {Native} */(loaded);
   return cached;
 }
@@ -142,10 +144,7 @@ export function hostValue(value) {
     }
   }
   if (typeof fields.relation === "string" && fields.source !== null && typeof fields.source === "object"
-    && fields.target !== null && typeof fields.target === "object" && RULE_FIELDS.symmetric in fields) {
-    const {[RULE_FIELDS.symmetric]: symmetric, ...relation} = fields;
-    return Object.freeze({...relation, symmetric});
-  }
+    && fields.target !== null && typeof fields.target === "object" && !Object.hasOwn(fields, "either")) fields.either = false;
   return Object.freeze(fields);
 }
 /** @param {unknown} value @returns {unknown} */

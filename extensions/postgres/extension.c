@@ -46,6 +46,17 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
         thinkthen_client *client;
         thinkthen_text name = {NULL, 0};
         tt_question(owner, fcinfo, function);
+        if (owner->function == THINKTHEN_FUNCTION_ANNOTATE) {
+            int column;
+            thinkthen_text *names = palloc(sizeof(*names) * result->setDesc->natts);
+            for (column = 0; column < result->setDesc->natts; column++) {
+                names[column].data = NameStr(TupleDescAttr(result->setDesc, column)->attname);
+                names[column].len = strlen(names[column].data);
+            }
+            TT_BRIDGE(code = thinkthen_question_validate_table_columns(owner->question,
+                names, result->setDesc->natts, NULL, 0, &owner->error));
+            tt_check(owner, code);
+        }
         if (SPI_connect() != SPI_OK_CONNECT)
             elog(ERROR, "cannot open source SPI scope");
         owner->spi_connected = true;
@@ -60,6 +71,8 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
         }
         TT_BRIDGE(code = thinkthen_sql_call_open_question(client, owner->question,
             PG_ARGISNULL(last - 4) ? NULL : &name, &owner->call, &owner->error));
+        tt_check(owner, code);
+        TT_BRIDGE(code = thinkthen_sql_call_set_raise_if_failed(owner->call, owner->raise_if_failed, &owner->error));
         tt_check(owner, code);
         owner->admitting = false;
         for (;;) {
@@ -84,7 +97,6 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
             elog(ERROR, "cannot close source SPI scope");
         owner->spi_connected = false;
         tt_release(owner);
-        tt_finish(owner);
     }
     PG_CATCH();
     {

@@ -41,9 +41,15 @@ def test_all_functions_use_the_stub_without_backend_requests() -> None:
                             max_retries=settings["retry"]["max_retries"]
                         ),
                     ) as client,
-                    request_stream(client, request, cancel) as stream,
                 ):
-                    return list(stream)
+                    kept: list[Any] = []
+                    try:
+                        with request_stream(client, request, cancel) as stream:
+                            kept.extend(stream)
+                    except tt.Failed as error:
+                        assert request["question"]["function"] == "filter"
+                        assert error.rows and all(row.failed for row in error.rows)
+                    return kept
 
             # The stub sends no request, so a backend's refusal never reaches it.
             if isinstance(case["expected"], dict) and not case["requests"]:
@@ -52,6 +58,12 @@ def test_all_functions_use_the_stub_without_backend_requests() -> None:
                 assert failure.value.code == case["expected"]["error"]
                 continue
             rows = consume()
-            assert all(row.source is not None for row in rows)
-            assert all(row.position >= 1 for row in rows)
+            if request["question"]["function"] == "filter":
+                assert all(
+                    any(item is original for original in request["records"])
+                    for item in rows
+                )
+            else:
+                assert all(row.source is not None for row in rows)
+                assert all(row.position >= 1 for row in rows)
         assert len(functions) == 10 and server.count() == 0

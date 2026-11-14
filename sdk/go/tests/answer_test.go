@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
+	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -25,28 +27,28 @@ func batchValue(value *int) int {
 func TestAnswerNeverSilencesUncertainty(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
-	if _, err := tt.Answer(c.Decide(ctx, tt.NewDecide("Ready?"), tt.Text("evidence"))); err != nil {
+	if _, err := tt.Answer(c.Decide(ctx, tt.DecideQuestion{Question: "Ready?"}, "evidence")); err != nil {
 		t.Fatal(err)
 	}
-	q := tt.NewDecide("Ready?").WithThreshold(tt.Band(0.01, 1))
-	row, err := c.Decide(ctx, q, tt.Text("evidence"))
+	q := tt.DecideQuestion{Question: "Ready?", Threshold: tt.Band(0.01, 1)}
+	row, err := c.Decide(ctx, q, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := row.Answer(); !errors.Is(err, tt.ErrUnsure) {
 		t.Fatalf("not sure hidden: %v", err)
 	}
-	if _, err := tt.Answer(c.Decide(ctx, q, tt.Text("evidence"))); !errors.Is(err, tt.ErrUnsure) {
+	if _, err := tt.Answer(c.Decide(ctx, q, "evidence")); !errors.Is(err, tt.ErrUnsure) {
 		t.Fatalf("one-line not sure hidden: %v", err)
 	}
-	if _, err := tt.Answer(c.Decide(ctx, tt.NewDecide("Ready?"), tt.Missing())); !errors.Is(err, tt.CodeRecordMissing) || !errors.Is(err, tt.ErrRecord) {
+	if _, err := tt.Answer(c.Decide(ctx, tt.DecideQuestion{Question: "Ready?"}, any(nil))); !errors.Is(err, tt.CodeRecordMissing) || !errors.Is(err, tt.ErrRecord) {
 		t.Fatalf("record error hidden: %v", err)
 	}
 	original := errors.New("call admission")
-	if _, err := tt.Answer(tt.DecideRow{}, original); err != original {
+	if _, err := tt.Answer(tt.DecideRow[any]{}, original); err != original {
 		t.Fatal("call error replaced")
 	}
-	row2, err := c.Annotate(ctx, tt.NewAnnotate(map[string]tt.AnnotationQuestion{"ready": q}), tt.Text("evidence"))
+	row2, err := c.Annotate(ctx, tt.AnnotateQuestion{Questions: map[string]tt.AnnotationQuestion{"ready": q}}, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,34 +69,34 @@ func TestAnswerNeverSilencesUncertainty(t *testing.T) {
 func TestKeptFilterAndFullRows(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
-	records := tt.Records(tt.Text("first"), tt.Missing(), tt.Text("last"))
-	rows := collect(t, c.FilterRowsAll(ctx, tt.NewFilter("Ready?"), records))
-	var want []int
-	for _, row := range rows {
-		if row.Kept() || row.Err() != nil {
-			want = append(want, row.Position())
+	records := []any{"first", nil, "last"}
+	checks := collect(t, c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, slices.Values(records)))
+	var want, got []any
+	for _, row := range checks {
+		if row.IsAnswered() {
+			yes, err := row.Answer()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if yes {
+				want = append(want, row.Item())
+			}
 		}
 	}
-	var got []int
-	for row, err := range c.FilterAll(ctx, tt.NewFilter("Ready?"), records) {
-		got = append(got, row.Position())
-		if row.Position() == 2 && (!errors.Is(err, tt.ErrRecord) || !errors.Is(err, tt.CodeRecordMissing)) {
-			t.Fatalf("failure hidden: %v", err)
-		}
-		if row.Position() != 2 && (err != nil || !row.Kept()) {
-			t.Fatalf("dropped row leaked: %v %v", row, err)
-		}
-	}
-	if len(got) != len(want) {
-		t.Fatalf("positions %v want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("positions %v want %v", got, want)
+	var final *tt.FilterError[any]
+	for item, err := range c.Filter(ctx, tt.FilterQuestion{Question: "Ready?"}, slices.Values(records)) {
+		if err != nil {
+			if !errors.As(err, &final) || !errors.Is(err, tt.CodeRecordMissing) {
+				t.Fatal(err)
+			}
+		} else {
+			if final != nil {
+				t.Fatal("kept item after error")
+			}
+			got = append(got, item)
 		}
 	}
-	unsure := tt.NewFilter("Ready?").WithThreshold(tt.Band(0.01, 1))
-	for row, err := range c.FilterAll(ctx, unsure, tt.Texts("evidence")) {
-		t.Fatalf("unsure leaked: %v %v", row, err)
+	if !reflect.DeepEqual(got, want) || final == nil || len(final.Rows) != 1 || final.Rows[0].Position() != 2 || final.Rows[0].Item() != nil {
+		t.Fatalf("filter lost records: %v %v", got, final)
 	}
 }

@@ -20,3 +20,26 @@ pub fn client_with_policy(
 ) -> Result<Engine, Error> {
     thinkthen::native::sql_engine(settings, allowed, variable)
 }
+
+// These are the shared SQL result columns; question answers and details stay nested.
+// Hosts validate additional input-column collisions when binding their physical schema.
+pub(crate) fn validate_table(request: &thinkthen::Request) -> Result<(), Error> {
+    if let thinkthen::Question::Annotate(question) = request.question() {
+        question.validate_table_columns(
+            &[
+                "position",
+                "id",
+                "answer",
+                "probability",
+                "status",
+                "error_code",
+                "error_message",
+                "error_http_status",
+                "source",
+                "detail",
+            ],
+            &[],
+        )?;
+    }
+    Ok(())
+}

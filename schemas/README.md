@@ -1,6 +1,6 @@
 # Generated contracts
 
-The public Rust types generate `client.schema.json`, `request.schema.json` and `row.schema.json`. `Settings::from_json` admits client settings; `Request::from_json` admits calls. The engine's `Code` registry generates every error name, ABI integer, family and record flag in `contract.json`.
+The public Rust types generate `client.schema.json`, `request.schema.json`, `row.schema.json` and `error.schema.json`. `Settings::from_json` admits client settings; `Request::from_json` admits calls. The engine's `Code` registry generates every error name, ABI integer, family and record flag in `contract.json`.
 
 The settings schema includes backend, model, address, secret, batch and bounded retry settings. A request holds its tagged question, optional name and records. The row schema describes each function's typed answer and optional metadata. The [0.2 rulings](../sdlc/planning/api-0-2-0/rulings.md) describe the surface conventions.
 

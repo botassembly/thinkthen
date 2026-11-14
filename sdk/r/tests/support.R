@@ -4,19 +4,20 @@ library(thinkthen)
 condition <- function(expr, class, code = NULL) {
   value <- tryCatch({ force(expr); NULL }, error = identity)
   stopifnot(inherits(value, class), inherits(value, "thinkthen_error"))
+  if (identical(class, "thinkthen_failed")) stopifnot(inherits(value, "thinkthen_no_answer"), !inherits(value, "thinkthen_record_error"))
   if (!is.null(code)) stopifnot(identical(as.character(value$code), code))
   invisible(value)
 }
 
 warned <- function(expr) {
-  error <- tryCatch(force(expr), thinkthen_failed_rows = identity)
-  stopifnot(inherits(error, "thinkthen_failed_rows"))
-  plain(tt_answer(error$rows, errors = "na"))
+  error <- tryCatch(force(expr), thinkthen_failed = identity)
+  stopifnot(inherits(error, "thinkthen_failed"))
+  plain(tt_answer(error$outcomes, errors = "na"))
 }
 
 # Remove what errors = "na" adds, leaving the value a caller compares.
 plain <- function(expr) {
-  value <- suppressWarnings(expr, classes = "thinkthen_failed_rows_warning")
+  value <- suppressWarnings(expr, classes = "thinkthen_record_warning")
   attr(value, ".thinkthen_failures") <- NULL
   value
 }
@@ -32,21 +33,20 @@ caught <- function(expr) {
 }
 
 check_rows <- function(rows, verb, n) {
-  stopifnot(inherits(rows, paste0("tt_", verb, "_rows")),
-            inherits(rows, "tt_rows"), inherits(rows, "tbl_df"), nrow(rows) == n,
+  stopifnot(inherits(rows, "tt_details"), inherits(rows, "tbl_df"), nrow(rows) == n,
             is.double(rows$position), is.factor(rows$status),
             identical(levels(rows$status), c("answered", "unsure", "failed")),
-            is.double(rows$probability), is.factor(rows$error_code),
+            is.double(rows$probability), is.character(rows$error_code),
             is.character(rows$error_message), is.integer(rows$error_http_status),
             is.list(rows$detail), is.list(rows$source), is.list(rows$id),
             !any(c("p", "adapter", "raw", "response") %in% names(rows)))
   valid_answer <- switch(verb,
     decide = is.logical(rows$answer), filter = is.logical(rows$answer),
-    choose = is.character(rows$answer), score = is.double(rows$answer),
+    choose = is.factor(rows$answer), score = is.double(rows$answer),
     rank = is.double(rows$answer), tag = inherits(rows$answer, "vctrs_list_of"),
     find = inherits(rows$answer, "tt_span"),
     recognize = is.list(rows$answer), relate = is.list(rows$answer),
-    annotate = is.list(rows$answer))
+    annotate = all(names(attr(rows,".thinkthen_children")) %in% names(rows)))
   stopifnot(valid_answer)
   if (verb %in% c("recognize", "relate")) {
     type <- if (verb == "recognize") "tt_name" else "tt_relation"
@@ -76,10 +76,11 @@ question <- function(q) {
 
 invoke <- function(records, q, client, name = NULL, vector = FALSE) {
   arg <- switch(q[["function"]], recognize = "kinds", relate = "rules",
-                annotate = "toolbox", "question")
+                annotate = "questions", "question")
   options <- list(client = client, .progress = FALSE, name = name)
+  if (!vector && q[["function"]] != "filter") options$details <- TRUE
   if (q[["function"]] == "annotate") options$field <- q$field
-  do.call(get(paste0("tt_", q[["function"]], if (vector) "" else "_rows")),
+  do.call(get(paste0("tt_", q[["function"]], "")),
           c(list(x = records), setNames(list(question(q)), arg), options))
 }
 

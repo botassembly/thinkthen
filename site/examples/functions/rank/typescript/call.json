@@ -1,5 +1,5 @@
 {
-  "anchor": "  const byUrgency = tt.rankStream(\"How urgent is the request?\", messages, {",
+  "anchor": "  const byUrgency = tt.rank(\"How urgent is the request?\", messages, {",
   "before": 0,
   "after": 2
 }

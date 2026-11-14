@@ -4,6 +4,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import runpy
 from pathlib import Path
 import shutil
 import subprocess
@@ -209,6 +210,41 @@ shutil.copy(os.environ['MAVEN_ARCHIVE'], target)
         self.assertEqual(len(self.requests), 2)
         self.assertEqual(path.read_bytes(), self.bodies['/shared'])
         self.assertFalse(list(self.root.glob('*.partial')))
+
+    def test_windows_site_replay_uses_the_validated_final_installer_binary(self):
+        package = self.root / '0.2.0/windows-x86_64'
+        package.mkdir(parents=True)
+        import zipfile
+        with zipfile.ZipFile(package / 'thinkthen-0.2.0-windows-x86_64.zip', 'w') as archive:
+            archive.writestr('thinkthen.exe', b'final candidate executable')
+        source = 'a' * 40
+        def execute(*arguments):
+            self.assertEqual(arguments[0], 'node')
+            self.assertEqual(arguments[1], ROOT / 'site/scripts/windows-example.mjs')
+            self.assertEqual(Path(arguments[3]).read_bytes(), b'final candidate executable')
+            self.assertEqual(arguments[4:], ('--source', source, '--cache',
+                ROOT / 'site/examples/start/decide-branch-ps/replay-cache.json', '--evidence',
+                ROOT / 'target/windows-cli-diagnostics/site-example'))
+        with patch('release_workflow.version', return_value='0.2.0'), \
+             patch('release_workflow.validate') as validate, \
+             patch('release_workflow.run', side_effect=execute) as run, \
+             patch.object(sys, 'argv', ['release-installer-check', 'windows-x86_64', str(self.root), source, '--site-replay']):
+            with self.assertRaises(SystemExit) as exit:
+                runpy.run_path(str(ROOT / 'scripts/release-installer-check'), run_name='__main__')
+            self.assertEqual(exit.exception.code, 0)
+            validate.assert_called_once_with(package, 'windows-x86_64', source)
+            run.assert_called_once()
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load_file(ARGV[0], aliases: true))',
+            ROOT / '.github/workflows/native-qualification.yml'], text=True))
+        windows = workflow['jobs']['windows-check']
+        self.assertEqual(windows['runs-on'], 'windows-2022')
+        step = next(step for step in windows['steps'] if step.get('id') == 'windows-site-example')
+        self.assertEqual(step['if'], 'always()')
+        self.assertEqual(step['env']['RELEASE_SHA'], '${{ inputs.revision }}')
+        self.assertEqual(step['run'], 'python3 scripts/release-installer-check windows-x86_64 windows-installed "$RELEASE_SHA" --site-replay')
+        upload = next(step for step in windows['steps'] if step.get('with', {}).get('name') == 'windows-cli-diagnostics')
+        self.assertEqual(upload['with']['path'], 'target/windows-cli-diagnostics/')
 
     def test_every_restorable_tool_cache_prefix_includes_the_pin_table(self):
         source = ROOT / '.github/workflows/native-qualification.yml'

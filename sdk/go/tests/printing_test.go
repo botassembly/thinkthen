@@ -2,7 +2,9 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,18 +16,15 @@ func TestReadableResults(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
 	for _, status := range []tt.Status{tt.Answered, tt.Unsure, tt.Failed} {
-		q := tt.NewDecide("Ready?")
-		record := tt.RawJSON([]byte(`{"id":"case-a","body":"evidence"}`))
+		q := tt.DecideQuestion{Question: "Ready?"}
+		record := json.RawMessage([]byte(`{"id":"case-a","body":"evidence"}`))
 		if status == tt.Unsure {
-			q = q.WithThreshold(tt.Band(0.01, 1))
+			q.Threshold = tt.Band(0.01, 1)
 		}
 		if status == tt.Failed {
-			q = q.WithField("/missing")
+			q.Field = "/missing"
 		}
-		row, err := c.Decide(ctx, q, record)
-		if err != nil {
-			t.Fatal(err)
-		}
+		row := collect(t, c.DecideAll(ctx, q, slices.Values([]json.RawMessage{record})))[0]
 		printed := fmt.Sprint(row)
 		if strings.HasPrefix(printed, "{{") || len(printed) > 160 {
 			t.Fatalf("unreadable row: %s", printed)
@@ -44,7 +43,7 @@ func TestReadableResults(t *testing.T) {
 			t.Fatalf("unreadable ID: %v", id)
 		}
 	}
-	row, err := c.Annotate(ctx, tt.NewAnnotate(map[string]tt.AnnotationQuestion{"ready": tt.NewDecide("Ready?")}), tt.Text("evidence"))
+	row, err := c.Annotate(ctx, tt.AnnotateQuestion{Questions: map[string]tt.AnnotationQuestion{"ready": tt.DecideQuestion{Question: "Ready?"}}}, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +52,7 @@ func TestReadableResults(t *testing.T) {
 		t.Fatal("missing annotations")
 	}
 	printed := fmt.Sprint(annotations)
-	if !strings.Contains(printed, "ready:") || len(printed) > 160 {
+	if !strings.Contains(printed, "ready=") || len(printed) > 160 {
 		t.Fatalf("unreadable annotations: %s", printed)
 	}
 }

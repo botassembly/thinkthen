@@ -1,2 +1,2 @@
 echo 'Please refund my order.' |
-  thinkthen relate --rule works_for person organization
+  thinkthen relate --rule person organization works_for

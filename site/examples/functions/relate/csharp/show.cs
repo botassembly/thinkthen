@@ -7,9 +7,9 @@ var worksFor = new RelationRule
 {
     Source = "person",
     Target = "organization",
-    Name = "works_for",
+    Relation = "works_for",
 };
-ValueList<Relation> relations = await client.RelateAsync(message, [worksFor]);
-foreach (Relation relation in relations)
-    Console.WriteLine($"{relation.Source.Span.Text} --{relation.Name}--> "
-        + $"{relation.Target.Span.Text}");
+var relations = await client.RelateAsync(message, [worksFor]);
+foreach (var relation in relations.Answer)
+    Console.WriteLine($"{relation.Source.Text} --{relation.Relation}--> "
+        + $"{relation.Target.Text}");

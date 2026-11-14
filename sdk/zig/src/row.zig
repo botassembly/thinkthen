@@ -1,6 +1,4 @@
 const std = @import("std");
-const c = @import("c");
-const native = @import("native.zig");
 const t = @import("types.zig");
 const d = @import("diagnostic.zig");
 const Allocator = std.mem.Allocator;
@@ -49,21 +47,21 @@ pub const RecordId = union(enum) {
     }
 };
 /// A piece of the record's text. Offsets are UTF-8 byte offsets into the field.
-pub const Span = struct { text: []const u8, start: u64, end: u64 };
+pub const Span = struct { text: []const u8, start: usize, end: usize };
 /// A recognized name, with its kind and probability.
-pub const Name = struct { text: []const u8, start: u64, end: u64, kind: []const u8, probability: f64 };
+pub const Name = struct { kind: []const u8, text: []const u8, start: usize, end: usize, probability: f64 };
 /// One end of a relation.
-pub const Endpoint = struct { text: []const u8, start: u64, end: u64, kind: []const u8 };
+pub const Endpoint = struct { kind: []const u8, text: []const u8, start: usize, end: usize };
 /// A relation found between two names.
-pub const Relation = struct { source: Endpoint, target: Endpoint, relation: []const u8, probability: f64, either: ?bool = null };
+pub const Relation = struct { source: Endpoint, target: Endpoint, relation: []const u8, probability: f64, either: bool = false };
 /// Choose and tag detail: each label's probability.
 pub const LabelDetail = struct { labels: std.json.ArrayHashMap(f64) };
 /// Score and rank detail: each level's probability, in level order.
 pub const LevelDetail = struct { levels: []const f64 };
 /// A piece of text with each kind's probability.
-pub const Piece = struct { text: []const u8, start: u64, end: u64, tags: std.json.ArrayHashMap(f64) };
+pub const Piece = struct { text: []const u8, start: usize, end: usize, tags: std.json.ArrayHashMap(f64) };
 /// A candidate name with each kind's probability.
-pub const KindDetail = struct { text: []const u8, start: u64, end: u64, kinds: std.json.ArrayHashMap(f64) };
+pub const KindDetail = struct { text: []const u8, start: usize, end: usize, kinds: std.json.ArrayHashMap(f64) };
 /// Recognize detail.
 pub const RecognizeDetail = struct { pieces: []const Piece, names: []const KindDetail };
 /// Relate detail: the names found and every pair judged.
@@ -109,7 +107,10 @@ pub fn Outcome(comptime function: t.Function) type {
                     if (diag) |target| target.setUnsure(value.probability);
                     return error.Unsure;
                 },
-                .failed => |failure| d.promote(failure, diag),
+                .failed => |failure| {
+                    if (diag) |target| target.set(failure);
+                    return error.Failed;
+                },
             };
         }
         /// The probability, when the outcome has one.
@@ -131,18 +132,57 @@ pub fn Outcome(comptime function: t.Function) type {
         /// Print the answer and probability, such as `true (0.97)`, `unsure (0.50)` or `failed record.missing: ...`.
         pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
             switch (self) {
-                .answered => |value| {
-                    try std.json.Stringify.value(value.answer, .{}, writer);
-                    if (value.probability) |p| try writer.print(" ({d:.2})", .{p});
+                .failed => |failure| {
+                    try writer.writeAll("failed: ");
+                    try folded(failure.name(), writer);
+                    try writer.writeAll(": ");
+                    try folded(failure.message, writer);
                 },
-                .unsure => |value| try writer.print("unsure ({d:.2})", .{value.probability}),
-                .failed => |failure| try writer.print("failed {s}: {s}", .{ failure.name(), failure.message }),
+                .unsure => try writer.writeAll("unsure"),
+                .answered => |value| {
+                    const item = value.answer;
+                    switch (function) {
+                        .decide, .filter => try writer.writeAll(if (item) "true" else "false"),
+                        .choose => try folded(item, writer),
+                        .score, .rank => try writer.print("{d}", .{item}),
+                        .tag => for (item, 0..) |word, index| {
+                            if (index != 0) try writer.writeByte('\t');
+                            try folded(word, writer);
+                        },
+                        .find => if (item) |span| {
+                            try folded(span.text, writer);
+                        },
+                        .recognize => for (item, 0..) |name, index| {
+                            if (index != 0) try writer.writeByte('\t');
+                            try folded(name.kind, writer);
+                            try writer.writeAll(": ");
+                            try folded(name.text, writer);
+                            try writer.print(" ({d}..{d})", .{ name.start, name.end });
+                        },
+                        .relate => for (item, 0..) |relation, index| {
+                            if (index != 0) try writer.writeByte('\t');
+                            try folded(relation.source.text, writer);
+                            try writer.writeAll(" --");
+                            try folded(relation.relation, writer);
+                            try writer.writeAll("--> ");
+                            try folded(relation.target.text, writer);
+                        },
+                        .annotate => for (item.entries, 0..) |entry, index| {
+                            if (index != 0) try writer.writeByte('\t');
+                            try folded(entry.name, writer);
+                            try writer.writeByte('=');
+                            switch (entry.value) {
+                                inline else => |child| try child.format(writer),
+                            }
+                        },
+                    }
+                },
             }
         }
     };
 }
 /// One annotate question's outcome, by function.
-pub const Annotation = union(enum) { decide: Outcome(.decide), choose: Outcome(.choose), tag: Outcome(.tag), score: Outcome(.score), filter: Outcome(.filter), find: Outcome(.find), recognize: Outcome(.recognize), relate: Outcome(.relate) };
+pub const Annotation = union(enum) { decide: Outcome(.decide), choose: Outcome(.choose), tag: Outcome(.tag), score: Outcome(.score), find: Outcome(.find), recognize: Outcome(.recognize), relate: Outcome(.relate) };
 /// One annotate question's name and outcome.
 pub const NamedAnnotation = struct { name: []const u8, value: Annotation };
 /// Annotate's answer: each question's outcome, read by name with `get`.
@@ -209,9 +249,14 @@ fn answer(comptime function: t.Function, allocator: Allocator, value: std.json.V
         }
         if (!found) return error.InvalidEnumTag;
     }
+    std.mem.sort(NamedAnnotation, result, {}, struct {
+        fn less(_: void, left: NamedAnnotation, right: NamedAnnotation) bool {
+            return std.mem.lessThan(u8, left.name, right.name);
+        }
+    }.less);
     return .{ .entries = result };
 }
-fn outcome(comptime function: t.Function, allocator: Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!Outcome(function) {
+pub fn outcome(comptime function: t.Function, allocator: Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!Outcome(function) {
     const status = try field(Status, allocator, value, "status", options);
     return switch (status) {
         .answered => .{ .answered = .{ .answer = try answer(function, allocator, value, options), .probability = try optional(f64, allocator, value, "probability", options), .detail = try optional(Detail(function), allocator, value, "detail", options) } },
@@ -321,41 +366,9 @@ fn writeOutcome(comptime function: t.Function, value: Outcome(function), writer:
         },
     }
 }
-/// A row of any function.
-pub const AnyRow = union(t.Function) { decide: Row(.decide), choose: Row(.choose), tag: Row(.tag), score: Row(.score), filter: Row(.filter), find: Row(.find), recognize: Row(.recognize), relate: Row(.relate), rank: Row(.rank), annotate: Row(.annotate) };
-fn parse(comptime T: type, arena: Allocator, buffer: c.thinkthen_buffer) d.Error!T {
-    const decoded = std.json.parseFromSliceLeaky(T, arena, d.bytes(buffer), .{ .allocate = .alloc_always, .parse_numbers = false }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
-    return decoded;
-}
-pub fn take(comptime function: t.Function, arena: Allocator, row: c.thinkthen_row) d.Error!Row(function) {
-    const detail: ?Detail(function) = if (Detail(function) == void or row.detail.len == 0) null else try parse(?Detail(function), arena, row.detail);
-    const result: Outcome(function) = switch (row.status) {
-        c.THINKTHEN_STATUS_ANSWERED => .{ .answered = .{ .answer = if (function == .annotate) try annotationAnswer(arena, row.answer) else try parse(Answer(function), arena, row.answer), .probability = if (std.math.isNan(row.probability)) null else row.probability, .detail = detail } },
-        c.THINKTHEN_STATUS_UNSURE => .{ .unsure = .{ .probability = row.probability, .detail = detail } },
-        c.THINKTHEN_STATUS_FAILED => blk: {
-            var failure = try parse(d.Failure, arena, row.@"error");
-            failure.code = @as(d.ErrorCode, @fromBackingInt(@intCast(row.error_code)));
-            break :blk .{ .failed = failure };
-        },
-        else => return error.Internal,
-    };
-    const original: if (function == .rank) t.Record else void = if (function == .rank) blk: {
-        var view: c.thinkthen_record_view = .{};
-        var err = d.emptyError();
-        try d.check(native.function("thinkthen_row_original")(&row, &view, &err), &err, null);
-        const bytes = if (view.len == 0) "" else view.data[0..view.len];
-        break :blk switch (view.kind) {
-            c.THINKTHEN_RECORD_TEXT => .{ .text = try arena.dupe(u8, bytes) },
-            c.THINKTHEN_RECORD_JSON => .{ .json = try arena.dupe(u8, bytes) },
-            c.THINKTHEN_RECORD_MISSING => .missing,
-            else => return error.Internal,
-        };
-    } else {};
-    return .{ .item = original, .position = row.position, .id = if (row.id.len == 0) null else try parse(?RecordId, arena, row.id), .source = try parse(Source, arena, row.source), .outcome = result };
-}
-fn annotationAnswer(arena: Allocator, buffer: c.thinkthen_buffer) d.Error!Annotations {
-    const children = try parse(std.json.Value, arena, buffer);
-    var wrapper: std.json.ObjectMap = .empty;
-    try wrapper.put(arena, "answer", children);
-    return answer(.annotate, arena, .{ .object = wrapper }, .{ .allocate = .alloc_always }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
+fn folded(text: []const u8, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+    for (text) |byte| try writer.writeByte(switch (byte) {
+        '\r', '\n', '\t' => ' ',
+        else => byte,
+    });
 }

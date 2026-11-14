@@ -18,6 +18,7 @@ from streaming_cases import first_response, streaming, rank_wide_memory
 argument_order()
 
 PACKAGE, LOOPBACK = map(Path, sys.argv[1:3])
+IDEAL_ONLY = sys.argv[3:] == ['--ideal-guides']
 LIMIT_ONLY = sys.argv[3:] == ['--limit-only']
 STREAMING_ONLY = sys.argv[3:] == ['--streaming-only']
 ADMISSION_ONLY = sys.argv[3:] == ['--admission-only']
@@ -26,7 +27,7 @@ UNION_BENCHMARK = sys.argv[3:] == ['--union-benchmark']
 RETENTION_ONLY = sys.argv[3:] == ['--retention-only']
 WIDE_ONLY = sys.argv[3:] == ['--wide-only']
 INTERFACE_ONLY = sys.argv[3:] == ['--interface-only']
-assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY or UNION_ONLY or UNION_BENCHMARK or INTERFACE_ONLY or WIDE_ONLY or RETENTION_ONLY, sys.argv[3:]
+assert not sys.argv[3:] or IDEAL_ONLY or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY or UNION_ONLY or UNION_BENCHMARK or INTERFACE_ONLY or WIDE_ONLY or RETENTION_ONLY, sys.argv[3:]
 
 
 class Host:
@@ -73,8 +74,6 @@ class Host:
 
     def call(self, request):
         call = invocation(request)
-        if request['question']['function'] == 'filter':
-            call = call[:-1] + ", failures := 'row')"
         rows = self.query('SELECT to_json(t) AS result FROM ' + call + ' AS t')
         output = []
         for item in rows:
@@ -100,6 +99,14 @@ class Host:
                 self.process.kill()
                 self.process.wait()
 
+
+if IDEAL_ONLY:
+    from ideal_guides import run
+    run(PACKAGE, LOOPBACK)
+    interface(Host)
+    blank_inputs(Host, LOOPBACK)
+    admission(SimpleNamespace(package=PACKAGE))
+    sys.exit(0)
 
 if UNION_BENCHMARK:
     benchmark(Host)
@@ -176,7 +183,7 @@ with Host() as host:
     assert host.query("SELECT kept FROM thinkthen_filter((SELECT 'evidence' AS record, true AS kept), 'Ready?')") in ([], [{'kept': 'true'}])
     host.failure("SELECT * FROM thinkthen_choose((SELECT 'evidence' AS record), 'Ready?')", 'usage.question')
     host.failure("SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?', threshold := 0.7, low := 0.2, high := 0.8)", 'usage.threshold')
-    host.failure("SELECT * FROM thinkthen_annotate((SELECT 'evidence' AS record), toolbox := '{\"bad\":{\"function\":\"rank\",\"question\":\"Order?\",\"levels\":[\"low\",\"high\"]}}'::JSON)", 'usage.question')
+    host.failure("SELECT * FROM thinkthen_annotate((SELECT 'evidence' AS record), questions := '{\"bad\":{\"function\":\"rank\",\"question\":\"Order?\",\"levels\":[\"low\",\"high\"]}}'::JSON)", 'usage.question')
     ranked = query("SELECT * FROM thinkthen_rank((SELECT range AS document_id, range::VARCHAR AS record, struct_pack(copy := range) AS original FROM range(20)), 'Order?', levels := ['low','medium','high'])")
     assert [row['document_id'] for row in ranked] != list(range(20)), ranked
     assert len(ranked) == 20 and {row['position'] for row in ranked} == set(range(1, 21))

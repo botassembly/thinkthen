@@ -44,7 +44,7 @@ func (c *Client) Close() error {
 	}
 	return c.usageError
 }
-func (c *Client) open(ctx context.Context, q question, input Input) (nativeCall, error) {
+func (c *Client) open(ctx context.Context, q question) (nativeCall, error) {
 	if ctx == nil {
 		return nativeCall{}, &Error{code: CodeUsageArgument, message: "context must not be nil"}
 	}
@@ -56,18 +56,18 @@ func (c *Client) open(ctx context.Context, q question, input Input) (nativeCall,
 	if c.native == nil {
 		return nativeCall{}, &Error{code: CodeUsageClosed, message: "thinkthen: closed"}
 	}
-	return c.native.open(q, input)
+	return c.native.open(q)
 }
 
 // drive owns every native driving operation; the watcher only cancels.
-func drive[R any](c *Client, ctx context.Context, q question, input Input, convert func(wireRow, Record) (R, error)) iter.Seq2[R, error] {
+func drive[R any](c *Client, ctx context.Context, q question, input inputValue, convert func(wireRow) (R, error)) iter.Seq2[R, error] {
 	return func(yield func(R, error) bool) {
 		var zero R
-		if !input.finite && input.sequence == nil {
-			yield(zero, &Error{code: CodeUsageArgument, message: "input has no source; use Records, Texts, or FromSeq"})
+		if input.sequence == nil {
+			yield(zero, &Error{code: CodeUsageArgument, message: "input must be an iterator"})
 			return
 		}
-		native, err := c.open(ctx, q, input)
+		native, err := c.open(ctx, q)
 		if err != nil {
 			yield(zero, err)
 			return
@@ -86,17 +86,8 @@ func drive[R any](c *Client, ctx context.Context, q question, input Input, conve
 			}
 		}()
 		defer func() { native.cancel(); close(done); <-joined; native.free() }()
-		var next func() (Record, error, bool)
-		if !input.finite {
-			var stop func()
-			next, stop = iter.Pull2(input.sequence)
-			defer stop()
-		}
-		var position uint64
-		var pending map[uint64]Record
-		if q.function == FunctionFilter && !input.finite {
-			pending = make(map[uint64]Record)
-		}
+		next, stop := iter.Pull(input.sequence)
+		defer stop()
 		terminal := func(err error) {
 			if native, ok := err.(*Error); ok && native.code == CodeLocalCancelled && ctx.Err() != nil {
 				native.cause = ctx.Err()
@@ -117,16 +108,7 @@ func drive[R any](c *Client, ctx context.Context, q question, input Input, conve
 					terminal(abiError())
 					return
 				}
-				item := pending[row.position]
-				delete(pending, row.position)
-				if input.finite && q.function == FunctionFilter {
-					if row.position == 0 || row.position > uint64(len(input.records)) {
-						terminal(abiError())
-						return
-					}
-					item = input.records[row.position-1]
-				}
-				value, err := convert(row, item)
+				value, err := convert(row)
 				if err != nil {
 					terminal(err)
 					return
@@ -139,26 +121,14 @@ func drive[R any](c *Client, ctx context.Context, q question, input Input, conve
 			if !needsInput {
 				return
 			}
-			if input.finite {
-				terminal(abiError())
-				return
-			}
-			record, inputError, more := next()
+			record, more := next()
 			if ctx.Err() != nil {
 				native.cancel()
 				continue
 			}
-			if inputError != nil {
-				terminal(inputError)
-				return
-			}
 			if !more {
 				native.end()
 				continue
-			}
-			position++
-			if pending != nil {
-				pending[position] = record
 			}
 			if err = native.send(serialize(record)); err != nil {
 				terminal(err)
@@ -177,8 +147,8 @@ func single[R interface{ Err() error }](seq iter.Seq2[R, error]) (R, error) {
 			result = row
 		}
 	}
-	if errors.Is(result.Err(), CodeRecordEmpty) {
-		return result, result.Err()
+	if failure == nil {
+		failure = result.Err()
 	}
 	return result, failure
 }

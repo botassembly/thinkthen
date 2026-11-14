@@ -15,13 +15,14 @@ OLD = 'thinkthen\\_%'
 FUNCTIONS = {'decide': 'boolean', 'choose': 'text', 'tag': 'text[]', 'score': 'double precision',
              'filter': 'boolean', 'rank': 'bigint', 'find': 'thinkthen.span',
              'recognize': 'thinkthen.recognized_name[]', 'relate': 'thinkthen.relation[]', 'annotate': 'jsonb'}
-SHARED = [('position', 'bigint'), ('id', 'jsonb'), ('answer', None), ('probability', 'double precision'),
+SHARED = [('position', 'bigint'), ('id', 'jsonb'), ('record', 'text'), ('answer', None), ('probability', 'double precision'),
           ('status', 'thinkthen.status'), ('error_code', 'thinkthen.error_code'), ('error_message', 'text'),
           ('error_http_status', 'integer'), ('source', 'thinkthen.source'), ('detail', 'jsonb')]
-FIELDS = {'rule': ['relation', 'source', 'target', 'reads', 'either'],
+FIELDS = {'rule': ['source', 'target', 'relation', 'reads', 'either'],
           'span': ['text', 'start_offset', 'end_offset'],
-          'recognized_name': ['text', 'kind', 'start_offset', 'end_offset', 'probability'],
-          'endpoint': ['text', 'kind', 'start_offset', 'end_offset']}
+          'recognized_name': ['kind', 'text', 'start_offset', 'end_offset', 'probability'],
+          'endpoint': ['kind', 'text', 'start_offset', 'end_offset'],
+          'relation': ['source', 'target', 'relation', 'probability', 'either']}
 
 
 def shape(database, query):
@@ -55,18 +56,16 @@ def help_text(database, query):
 
 
 def kept_only(database, query, failure):
-    # Feature: filter returns kept rows, raises after judging every record, or returns failures as rows.
+    # Filter failure is always a statement error; decide is the complete-row route.
     source = "SELECT * FROM (VALUES (1, 'Please refund me.'), (2, NULL), (3, 'Thanks.'), (4, 'Refund the fee.')) s(id, record)"
     error = failure(database, "SELECT * FROM thinkthen.filter(%s, 'Refund?')", '22000', 'record.missing', (source,))
     assert error.diag.message_primary.startswith('1 of 4 records failed; the first, at position 2, failed with record.missing: '), error
-    assert 'failures' in error.diag.message_hint, error.diag.message_hint
-    rows = query(database, "SELECT position, id, answer, status, error_code FROM thinkthen.filter(%s, 'Refund?', failures => 'row')", (source,))
-    assert [row for row in rows if row[3] == 'failed'] == [(2, 2, None, 'failed', 'record.missing')], rows
-    # The stub's answers per record are checked against the engine in typed_api's conformance loop.
-    assert {row[0] for row in rows if row[3] != 'failed'} <= {1, 3, 4}, rows
-    assert all(row[2:4] == (True, 'answered') for row in rows if row[3] != 'failed'), rows
-    failure(database, "SELECT * FROM thinkthen.filter('SELECT ''x''::text AS record', 'Refund?', failures => 'all')", '22023')
-    failure(database, "SELECT * FROM thinkthen.filter('SELECT ''x''::text AS record', 'Refund?', failures => NULL)", '22004')
+    assert not error.diag.message_hint, error.diag.message_hint
+    rows = query(database, "SELECT position, id, answer, status, error_code FROM thinkthen.decide(%s, 'Refund?')", (source,))
+    assert len(rows) == 4 and rows[1] == (2, 2, None, 'failed', 'record.missing'), rows
+    failure(database, "SELECT * FROM thinkthen.filter('SELECT ''x''::text AS record', 'Refund?', failures => 'row')", '42883')
+    error = failure(database, "SELECT * FROM thinkthen.filter('SELECT ''x''::text AS record', 'Refund?', low => .2, high => .8)", '22023', 'usage.threshold')
+    assert error.diag.message_hint == 'Use thinkthen.decide for not-sure results', error
 
 
 def ids(database, query, failure):
@@ -152,27 +151,8 @@ def answer_options(database, query, failure):
         duplicate = statement.replace("ARRAY['low','high']", "ARRAY['low','low']")
         actual = failure(database, duplicate, parameters=(source, '{"low":"routine"}'))
         assert diagnostic(actual) == diagnostic(expected), (function, diagnostic(actual), diagnostic(expected))
-    failure(database, "SELECT * FROM thinkthen.filter(%s, 'Refund?', failures => 'all')", '22023', 'usage.option', (source,))
+    failure(database, "SELECT * FROM thinkthen.filter(%s, 'Refund?', failures => 'all')", '42883', parameters=(source,))
 
-
-def modifier_examples(database, query):
-    # Run the authored modifier examples verbatim against the installed extension.
-    query(database, 'CREATE TEMP TABLE messages(msg_id integer, body text)')
-    query(database, "INSERT INTO messages VALUES (1,'Please refund me.'),(2,'Where is my parcel?'),(3,'Thanks.')")
-    root = HERE.parents[2]
-    examples = []
-    for path in (root / 'docs/surfaces/postgresql.md', root / 'extensions/postgres/README.md'):
-        for block in re.findall(r'```sql\n(.*?)\n```', path.read_text(), re.S):
-            if 'yes_means =>' in block or 'descriptions =>' in block:
-                rows = query(database, block)
-                assert len(rows) == 3, (path, block, rows)
-                examples.append(block)
-    # Both modifier families must execute; their owning guide need not be
-    # duplicated in the introductory README.
-    assert any('thinkthen.decide(' in block and 'yes_means =>' in block
-               and 'no_means =>' in block for block in examples), examples
-    assert any('thinkthen.choose(' in block and 'descriptions =>' in block
-               for block in examples), examples
 
 
 def settings(database, query, failure):
@@ -273,7 +253,7 @@ def verify(database, query, failure):
     # Run every check and report each failure in one pass.
     failed = []
     for check, arguments in [(shape, ()), (kept_only, (failure,)), (help_text, ()), (ids, (failure,)),
-                             (settings, (failure,)), (answer_options, (failure,)), (modifier_examples, ()), (upgrade, ())]:
+                             (settings, (failure,)), (answer_options, (failure,)), (upgrade, ())]:
         try:
             check(database, query, *arguments)
         except Exception:

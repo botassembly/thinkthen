@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using ThinkThen;
 
 const string refund = "Please refund my order.";
@@ -25,15 +24,15 @@ if (HasAnswer("decide", decision))
 var filterOptions = new FilterOptions { Field = field };
 try
 {
-    // Only the messages that answer yes; not sure messages are left out.
+    // One bar: each message is yes or no; failures are reported after kept messages.
     await foreach (var message in
-        client.FilterAsync(asksRefund, Stream(messages), filterOptions))
+        client.FilterAsync(asksRefund, messages, filterOptions))
         Console.WriteLine($"filter: {message["id"]}");
 }
-catch (ThinkThenException failure) when (failure.FailedRows.Count > 0)
+catch (FailedException failure)
 {
     // The kept messages come first, then every failed message.
-    foreach (var failedMessage in failure.FailedRows)
+    foreach (var failedMessage in failure.Rows)
         Console.Error.WriteLine(
             $"filter {failedMessage.Position}: {failedMessage}");
     Environment.ExitCode = 1;
@@ -57,9 +56,9 @@ if (HasAnswer("score", score))
 
 var rankOptions = new RankOptions { Field = field };
 await foreach (var ranked in
-    client.RankAsync(howUrgent, Stream(messages), urgency, rankOptions))
-    if (HasAnswer($"rank {ranked.Row.Position}", ranked.Row))
-        Console.WriteLine($"rank: {ranked.Row.Answer} {ranked.Item["id"]}");
+    client.RankAsync(howUrgent, messages, urgency, rankOptions))
+    if (HasAnswer($"rank {ranked.Position}", ranked))
+        Console.WriteLine($"rank: {ranked.Answer} {ranked.Item["id"]}");
 
 var action = await client.FindAsync(
     "Which line states the requested action?", text);
@@ -71,75 +70,46 @@ var names = await client.RecognizeAsync(
 if (HasAnswer("recognize", names))
     foreach (var name in names.Answer)
         Console.WriteLine(
-            $"recognize: {name.Mention.Kind} {name.Mention.Span.Text}");
+            $"recognize: {name.Kind} {name.Text}");
 
 RelationRule[] rules =
 [
     new()
     {
-        Source = "person", Target = "organization", Name = "works_for",
+        Source = "person", Target = "organization", Relation = "works_for",
     },
 ];
 var relations = await client.RelateAsync(text, rules);
 if (HasAnswer("relate", relations))
     foreach (var relation in relations.Answer)
         Console.WriteLine(
-            $"relate: {relation.Source.Span.Text} {relation.Name} "
-            + $"{relation.Target.Span.Text}");
+            $"relate: {relation.Source.Text} {relation.Relation} "
+            + $"{relation.Target.Text}");
 
-using var questions = AnnotationQuestions.Create(
-    new Dictionary<string, AnnotationQuestion>
-    {
-        ["refund"] = new AnnotationQuestion.Decide(
-            DecideQuestion.Create(asksRefund)),
-        ["topic"] = new AnnotationQuestion.Choose(
-            ChooseQuestion.Create("What is the message about?", topics)),
-    });
+var questions = new AnnotationQuestions
+{
+    { "refund", DecideQuestion.Create(asksRefund) },
+    { "topic", ChooseQuestion.Create("What is the message about?", topics) },
+};
 var form = await client.AnnotateAsync(questions, refund);
 if (HasAnswer("annotate", form))
 {
-    // Each question has its own outcome, which can be not sure or failed.
-    var refundCheck = ((DecideEntry)form.Answer["refund"]).Outcome;
-    if (EntryHasAnswer("annotate refund", refundCheck))
+    var refundCheck = form.Answer.Decide("refund");
+    var topicChoice = form.Answer.Choose("topic");
+    if (HasAnswer("annotate refund", refundCheck))
         Console.WriteLine($"annotate: refund {refundCheck.Answer}");
-    var topicChoice = ((ChooseEntry)form.Answer["topic"]).Outcome;
-    if (EntryHasAnswer("annotate topic", topicChoice))
+    if (HasAnswer("annotate topic", topicChoice))
         Console.WriteLine($"annotate: topic {topicChoice.Answer}");
 }
 
 // True for an answered row. A not sure or failed row is written to
 // standard error, such as "decide: unsure", and its answer is never read.
+// Scalar calls throw FailedException before this helper; failed rows remain
+// available from bulk calls and form entries.
 static bool HasAnswer<A, D>(string label, Row<A, D> row)
 {
     if (row.IsAnswered) return true;
     Console.Error.WriteLine($"{label}: {row}");
     if (row.IsFailed) Environment.ExitCode = 1;
     return false;
-}
-
-// The same for one question's outcome inside an annotate answer.
-static bool EntryHasAnswer<A, D>(string label, EntryOutcome<A, D> outcome)
-{
-    if (outcome.Status == RowStatus.Answered) return true;
-    if (outcome is EntryFailed<A, D> failed)
-    {
-        Console.Error.WriteLine(
-            $"{label}: failed: {failed.Error.Code}: {failed.Error.Message}");
-        Environment.ExitCode = 1;
-    }
-    else
-        Console.Error.WriteLine($"{label}: unsure");
-    return false;
-}
-
-static async IAsyncEnumerable<T> Stream<T>(
-    IEnumerable<T> items,
-    [EnumeratorCancellation] CancellationToken cancel = default)
-{
-    foreach (var item in items)
-    {
-        cancel.ThrowIfCancellationRequested();
-        yield return item;
-    }
-    await Task.CompletedTask;
 }

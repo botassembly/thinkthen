@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("client", schemars::schema_for!(thinkthen::Settings)),
         ("request", schemars::schema_for!(thinkthen::Request)),
         ("row", schemars::schema_for!(thinkthen::results::AnyRow)),
+        ("error", schemars::schema_for!(thinkthen::Error)),
     ] {
         emit(directory, name, &schema, check)?;
     }

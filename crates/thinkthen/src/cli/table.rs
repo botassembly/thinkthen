@@ -274,18 +274,7 @@ fn render(
             if receipt.failures.is_empty() {
                 Ok(0)
             } else {
-                Ok(
-                    if receipt.answered == 0
-                        && receipt
-                            .failed
-                            .iter()
-                            .all(|(family, _)| *family == crate::Family::Backend)
-                    {
-                        4
-                    } else {
-                        6
-                    },
-                )
+                Ok(6)
             }
         }
         Err(FileError::Engine(error)) => Err(error),

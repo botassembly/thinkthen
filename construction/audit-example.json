@@ -1,0 +1,40 @@
+[
+  {
+    "version": 1,
+    "question": {
+      "function": "decide",
+      "question": "Is it ready?",
+      "threshold": 0.5
+    },
+    "name": null,
+    "question_identity": "d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0",
+    "function": "decide",
+    "backend": "openai",
+    "model": "example-model",
+    "input_representation": "text/v1",
+    "offset_unit": "utf8",
+    "expected_cases": [
+      1,
+      2,
+      3
+    ]
+  },
+  {
+    "function": "decide",
+    "position": 1,
+    "id": 1,
+    "source": {
+      "question_identity": "d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0",
+      "backend": "openai",
+      "model": "example-model"
+    },
+    "status": "answered",
+    "answer": false,
+    "probability": 0.2
+  },
+  {
+    "case_id": 1,
+    "question_identity": "d159e3b0338c379d4e598ab19d7dfcb227203b698818b383d399d3c53b51b8c0",
+    "gold": false
+  }
+]

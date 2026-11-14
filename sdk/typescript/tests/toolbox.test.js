@@ -9,13 +9,13 @@ test("saved toolbox round trip preserves host question fields and shared errors"
   const loaded = sdk.parseToolbox(JSON.stringify(original));
   assert.equal(Object.keys(loaded).length, 9);
   assert.equal(loaded.ready.function, "filter");
-  assert.equal(loaded.names.rules[0].name, "pays");
-  assert.equal(loaded.names.rules[0].phrase, "pays money to");
-  assert.equal(loaded.names.rules[0].symmetric, true);
+  assert.equal(loaded.names.rules[0].relation, "pays");
+  assert.equal(loaded.names.rules[0].reads, "pays money to");
+  assert.equal(loaded.names.rules[0].either, true);
   assert(Object.isFrozen(loaded));
   assert(Object.isFrozen(loaded.names.rules));
   assert.deepEqual(JSON.parse(sdk.serializeToolbox(loaded)), original);
-  const client = new sdk.ThinkThen({backend: "stub"});
+  const client = new sdk.Client({backend: "stub"});
   try {
     const originalQuestion = {function: "choose", question: "Which topic?", choices: ["billing", "shipping"], threshold: 0.7, field: "/body"};
     const actual = await client.chooseStream(loaded.topic, [{body: "Bill"}]).toArray();

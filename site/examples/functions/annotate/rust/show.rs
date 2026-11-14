@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         (
             "topic",
-            Choose::new(
+            Choose::with_strings(
                 "What is the message about?",
                 ["billing", "shipping", "other"],
             )?
@@ -24,16 +24,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         (
             "urgency",
-            Score::new("How urgent is the request?", ["routine", "urgent"])?
+            Score::with_strings("How urgent is the request?", ["routine", "urgent"])?
                 .into(),
         ),
     ])?;
     for annotated in engine.rows(&triage, messages)? {
-        // Each answer prints bare, or as unsure or failed with its code.
-        let answers = annotated?.into_answer()?;
+        let entries = annotated?.err_if_failed()?.into_answer()?;
+        let is_refund = entries.decide("refund")?;
+        let topic = entries.choose::<String>("topic")?;
+        let urgency = entries.score("urgency")?;
         println!(
             "{} {} {}",
-            answers["refund"], answers["topic"], answers["urgency"]
+            is_refund, topic, urgency
         );
     }
     Ok(())

@@ -59,16 +59,17 @@ static STRESS_RETURN stress_drive(void *raw) {
             }
         } else if (status == THINKTHEN_OK) {
             assert(row.position == ++received);
-            work->identifier_width_mask |= UINT64_C(1) << (row.id.len - 2);
+            thinkthen_id actual_id={0};assert(thinkthen_row_id(&row,&actual_id,&error)==THINKTHEN_OK);
+            work->identifier_width_mask |= UINT64_C(1) << actual_id.text.len;
             char id[64];
-            int n = snprintf(id, sizeof id, "\"record-%zu\"", work->offset + received - 1);
-            assert(row.id.len == (size_t)n && memcmp(row.id.data, id, (size_t)n) == 0);
+            int n=snprintf(id,sizeof id,"record-%zu",work->offset+received-1);
+            assert(actual_id.kind==THINKTHEN_ID_STRING && actual_id.text.len==(size_t)n && !memcmp(actual_id.text.data,id,(size_t)n));
             if (row.status == THINKTHEN_STATUS_FAILED) {
                 ++failed;
                 assert(strcmp(thinkthen_code_name(row.error_code), work->code) == 0);
             } else {
                 assert(row.status == THINKTHEN_STATUS_ANSWERED);
-                assert(row.answer.len == 4 && memcmp(row.answer.data, "true", 4) == 0);
+                bool answer=false;assert(thinkthen_row_answer_bool(&row,&answer,&error)==THINKTHEN_OK && answer);
                 assert(row.probability == work->probability);
             }
         }

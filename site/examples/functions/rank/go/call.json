@@ -1,5 +1,5 @@
 {
-  "anchor": "\tfor ranked, err := range client.RankAll(",
-  "before": 0,
-  "after": 2
+  "anchor": "\tfor ranked, err := range client.Rank(",
+  "before": 1,
+  "after": 1
 }

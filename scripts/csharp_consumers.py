@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
 import subprocess
 import sys
@@ -53,8 +54,9 @@ def negative(stage):
         shutil.copyfile(case, folder / 'Invalid.cs')
         result = subprocess.run(['dotnet', 'build', str(reference), '--no-restore', '--nologo'],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        if result.returncode == 0 or 'error CS' not in result.stdout or 'error NU' in result.stdout:
-            raise RuntimeError(f'negative compilation did not reject {case.name}:\n{result.stdout}')
+        expected=re.search(r'^// Expected: (.+)$',case.read_text(),re.M)
+        if result.returncode == 0 or 'error CS' not in result.stdout or 'error NU' in result.stdout or (expected and not re.search(expected[1],result.stdout)):
+            raise RuntimeError(f'negative compilation did not reject {case.name} at its intended boundary:\n{result.stdout}')
         print('C# rejected invalid consumer:', case.name, flush=True)
 
 
@@ -92,36 +94,41 @@ def readme(stage):
         print('C# README example passed:', number, flush=True)
 
 
-def guide(stage, rank_only=False):
-    if not rank_only:
-        folder = stage / 'guide'
-        reference = project(folder, 'Example')
-        helper = ROOT / 'scripts/surface-example'
-        run(sys.executable, helper, 'prepare', 'csharp', folder)
-        configuration = config(stage, folder)
-        run('dotnet', 'restore', reference, '--configfile', configuration)
-        subprocess.run([sys.executable, str(helper), 'check', 'csharp', 'dotnet', 'run',
-                        '--no-restore', '--project', str(reference)], cwd=folder,
-                       env=example_environment(), check=True)
-    text = (ROOT / 'docs/surfaces/csharp.md').read_text()
-    snippets = list(re.finditer(r'```csharp\n(.*?)\n```', text, re.S))
-    client = re.search(r'^using ThinkThen;.*?^await using var client.*?;$', snippets[0][1], re.S | re.M)
-    if client is None:
-        raise RuntimeError('C# guide must state the client context for its snippets')
-    messages = next(block[1] for block in snippets if re.match(r'string\[\] messages\s*=', block[1]))
-    toolbox = next(block for block in re.findall(r'```json\n(.*?)\n```', text, re.S) if '"entries"' in block)
-    for number, block in enumerate(snippets, 1):
-        if rank_only and 'client.RankAsync(' not in block[1]:
-            continue
-        if 'records.jsonl' in block[1]:
-            continue  # The unchanged six-record check above owns this example.
-        destination = stage / ('guide-snippet-' + str(number))
-        code = block[1]
-        if not re.search(r'^using [\w.]+;', code, re.M):
-            code = client[0] + '\n' + ('' if code == messages else messages + '\n') + code
-        example(stage, destination, code, toolbox=toolbox)
-        # A saved toolbox is input to the final snippet, not C# source.
-        print('C# guide snippet passed:', number, flush=True)
+def guide(stage):
+    from guide_csharp import run_csharp
+    run_csharp(stage)
+
+
+def build_consumer(stage):
+    folder=stage / 'consumer'
+    reference=project(folder,'Consumer')
+    for source in (ROOT / 'sdk/csharp/tests').glob('*.cs'):
+        shutil.copyfile(source,folder / source.name)
+    configuration=config(stage,folder)
+    run('dotnet','build',reference,'--configfile',configuration,'--nologo','-o',stage / 'consumer-bin')
+    return stage / 'consumer-bin/Consumer.dll'
+
+
+def consumer(stage):
+    run('dotnet',build_consumer(stage),ROOT / 'construction/stub.json',ROOT / 'conformance',os.environ['THINKTHEN_LOOPBACK'])
+
+
+def projection(stage):
+    from guide_examples import scenario
+    assembly=build_consumer(stage)
+    for name in ('yes','unsure','failed','relations'):
+        with scenario(name) as (work, environment):
+            subprocess.run(['dotnet',str(assembly),'--ideal-host',name],cwd=work,env=environment,check=True)
+    producer=runpy.run_path(str(ROOT / 'scripts/abi-minor-check'))
+    filename='libthinkthen_ffi.dylib' if sys.platform=='darwin' else 'libthinkthen_ffi.so'
+    engine,=assembly.parent.rglob(filename)
+    original=stage / 'projection-original' / filename
+    original.parent.mkdir()
+    shutil.copy2(engine,original)
+    fixtures=stage / 'malformed'
+    for kind in ('invalid-json','unanswered-answer','unknown-function'):
+        producer['malformed_fixture'](original,fixtures / kind,kind)
+    run(sys.executable,ROOT / 'sdk/csharp/tests/malformed.py',assembly.parent,fixtures)
 
 
 def metadata(stage):
@@ -131,7 +138,9 @@ def metadata(stage):
     configuration = config(stage, folder)
     run('dotnet', 'publish', reference, '--configfile', configuration, '-o', stage / 'aot-bin')
     executable = 'AotConsumer.exe' if os.name == 'nt' else 'AotConsumer'
-    run(stage / 'aot-bin' / executable)
+    from guide_examples import scenario
+    with scenario('yes') as (_, environment):
+        subprocess.run([str(stage / 'aot-bin' / executable)], env=environment, check=True)
     print('C# Native AOT metadata consumer passed', flush=True)
 
 
@@ -160,8 +169,10 @@ if __name__ == '__main__':
         guide(stage)
     elif sys.argv[1] == 'readme':
         readme(stage)
-    elif sys.argv[1] == 'guide-rank':
-        guide(stage, rank_only=True)
+    elif sys.argv[1] == 'consumer':
+        consumer(stage)
+    elif sys.argv[1] == 'projection':
+        projection(stage)
     elif sys.argv[1] == 'metadata':
         metadata(stage)
     elif sys.argv[1] == 'abi':
@@ -169,4 +180,4 @@ if __name__ == '__main__':
     elif sys.argv[1] == 'interface':
         negative(stage)
     else:
-        raise SystemExit('usage: csharp_consumers.py examples|readme|guide-rank|metadata|abi|interface STAGE')
+        raise SystemExit('usage: csharp_consumers.py examples|readme|consumer|projection|metadata|abi|interface STAGE')

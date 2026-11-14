@@ -83,11 +83,11 @@
   reference_title: thinkthen decide
   reader: A shell scripter who wants the answer as a value, not an exit code
   answer: |
-    Capture the command's text output with `$(...)`. In text mode ThinkThen {version} prints the answer and nothing else, such as `true`, `false` or `unsure`, so the variable holds exactly the answer.
+    Capture the command's text output with `$(...)` and check its exit status before using the value. A successful decide call prints `true`, `false` or `unsure`; a produced failed result prints failure text and exits 6.
   why: |
-    Text output is the default. For decide it is one line per record holding `true`, `false` or `unsure`, and notices and errors go to standard error, so `$(...)` captures only the answer.
+    Text output is the default. Without `--quiet`, decide prints the result on standard output and diagnostics on standard error. Command substitution captures the result text, including a failure's code and reason when a result failed.
   limits: |
-    A failed record prints nothing on standard output, and its error goes to standard error. The command exits 6, or 4 when the backend failed and no record was answered, so check `$?` or compare against all three values. Empty or blank input exits 2 before any request. For a plain yes-or-no branch, `--check` and the exit code are shorter. The model judges each message on its own, so handle `false` and `unsure` too.
+    A produced failed result prints `failed:` with its actual code and reason on standard output, reports its diagnostic on standard error, and exits 6, including a service outage. A call-level service refusal before any result can exit 4 with no result output. Check the substitution's exit status before branching; failure text is not `false` or `unsure`. Empty or blank input exits 2 before any request. For a plain yes-or-no branch, `--check` and the exit code are shorter. The model judges each message on its own, so handle `false` and `unsure` too.
   examples:
     - id: ans-shell-variable
       says: "Capture the answer in `$answer` and branch on it:"

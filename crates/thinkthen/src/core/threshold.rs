@@ -52,6 +52,10 @@ impl schemars::JsonSchema for Cut {
     fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
         let mut schema = Probability::json_schema(generator);
         let fields = schema.ensure_object();
+        fields.insert(
+            "description".into(),
+            "A finite decision cut above 0 and at most 1.".into(),
+        );
         if let Some(minimum) = fields.remove("minimum") {
             fields.insert("exclusiveMinimum".into(), minimum);
         }
@@ -95,6 +99,21 @@ impl Threshold {
             Rule::Band(..) => Err(invalid()),
         }
     }
+    pub(crate) fn filter_cut(self) -> Result<Cut, Error> {
+        self.filter_cut_for("decide")
+    }
+    pub(crate) fn filter_cut_for(self, alternative: &str) -> Result<Cut, Error> {
+        match self.0 {
+            Rule::Cut(value) => Ok(Cut(value)),
+            Rule::Band(..) => Err(Error::new(
+                ErrorKind::Threshold,
+                format!(
+                    "filter takes one numeric cut; use {alternative} over the records with a low/high band"
+                ),
+            )),
+        }
+    }
+
     /// Construct a single cut: yes at or above `value`, otherwise no.
     ///
     /// # Errors

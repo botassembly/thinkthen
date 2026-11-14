@@ -4,65 +4,70 @@ description: annotate asks several named questions about every line at once, eac
 goal: A newcomer with a file of messages and several questions about them leaves able to write a questions file, get every answer for each line, read not sure for one question, see the chance behind one answer, and add an answer column for each question to a CSV file.
 reader: Someone at the command line who needs several answers about every message in a file
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "annotate: several questions about each line at once"
 ---
 import Example from '../../../components/Example.astro';
-import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
 
-annotate asks several named questions about every line of its input at once. Each question uses one of the other functions, such as decide, choose or score, and annotate prints the line's number and then each answer as `name=answer`.
+annotate asks a form of named questions and preserves each entry’s state.
 
 <Example id="functions/annotate/command" />
 
-Each line holds three answers: whether the message asks for a refund, what it is about, and how urgent it is from 0 to 1. The questions live in a file. Each has a name, a function, and that function's question and choices or levels:
-
-<details class="example-disclosure">
-<summary>questions.json</summary>
+<ExampleFile id="functions/annotate/command" file="messages.txt" />
 
 <ExampleFile id="functions/annotate/command" file="questions.json" />
 
-</details>
+annotate asks several questions of each message and gives back one form per message. The questions go in a file. Save this as `questions.json`:
 
-<ExampleFile id="functions/annotate/command" file="messages.txt" />
+```json
+{
+  "questions": {
+    "refund": {"function": "decide", "question": "Does the customer request a refund?"},
+    "topic": {"function": "choose", "question": "What is the message about?", "choices": ["billing", "shipping", "other"]},
+    "urgency": {"function": "score", "question": "How urgent is the request?", "levels": ["routine", "urgent"]}
+  }
+}
+```
 
-## Not sure
+```bash
+thinkthen annotate questions.json messages.txt --json |
+  jq -r '
+    if .status == "failed" then "try again later: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | any(.status == "failed")) then
+      "try again later: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | any(.status == "unsure")) then
+      "a person reads it: \(.item)"
+    elif ([.answer.refund, .answer.topic, .answer.urgency]
+      | all(.status == "answered")) then
+      if .answer.refund.answer then
+        "refund queue: \(.answer.topic.answer)" +
+        " \(.answer.urgency.answer * 100 | round / 100)"
+      else empty
+      end
+    else empty
+    end'
+```
 
-A question in the file takes the same bars as its function. Here the refund question gets a low bar of 0.2 and a high bar of 0.8:
-
-<ExampleFile id="annotate-unsure" file="questions.json" />
-
-<Example id="annotate-unsure" />
-
-Line 3, the double charge, is not sure on refund, while its other answers stand. Send not sure to a person. Never treat it as a no.
-
-## See why
-
-<details class="example-disclosure">
-<summary>See why</summary>
-
-`--json` prints the details of every answer. This `jq` keeps two for the refund question.
-
-<Example id="annotate-why" />
-
-The double charge has 0.7, between the bars, so its refund answer is not sure. [JSON output](/reference/json-output/) lists every field.
-
-</details>
+Each entry of a form is a result of its own function, with its own `status`. One entry can be not sure while the others answer. The example checks every entry it uses before reading any answer. The command exits 6 when a form or any entry in it failed; a not-sure entry is not a failure. Without `--json`, a form prints one tab-separated line of names and their printed result states.
 
 ## Add an answer column for each question to a CSV file
 
 <details class="example-disclosure">
-<summary>Add an answer column for each question to a CSV file</summary>
+<summary>Read the CSV file and save its answers</summary>
 
-<ExampleFile id="annotate-csv" file="questions.json" />
+`--column` selects the CSV column to judge; `--into` names the answer column. Check the exit status before using the saved file.
 
-<ExampleFile id="annotate-csv" file="messages.csv" />
+<ExampleFile id="functions/annotate/files" file="messages.csv" />
 
-<Example id="annotate-csv" />
+<ExampleFile id="functions/annotate/files" file="questions.json" />
 
-`--column` names the column to read. annotate adds one column per question, named after it. [File types](/command-line/file-types/) covers TSV, Excel and other files, and [Toolboxes](/command-line/toolboxes/) covers the questions file.
+<Example id="functions/annotate/files" />
 
 </details>
 
@@ -74,9 +79,3 @@ The double charge has 0.7, between the bars, so its refund answer is not sure. [
 <FunctionOptions name="annotate" />
 
 </details>
-
-If annotate can't answer a line, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#annotate) · [TypeScript](/sdks/typescript/#annotate) · [Go](/sdks/go/#annotate) · [Java](/sdks/java/#annotate) · [Kotlin](/sdks/kotlin/#annotate) · [C#](/sdks/csharp/#annotate) · [R](/sdks/r/#annotate) · [Ruby](/sdks/ruby/#annotate) · [Rust](/sdks/rust/#annotate) · [Swift](/sdks/swift/#annotate) · [Zig](/sdks/zig/#annotate) · [C](/sdks/c/#annotate) · [C++](/sdks/cpp/#annotate) · [DuckDB](/sdks/duckdb/#annotate) · [SQLite](/sdks/sqlite/#annotate) · [PostgreSQL](/sdks/postgresql/#annotate)
-
-Next: [Triage a support inbox](/how-tos/triage-a-support-inbox/) puts these answers to work on a whole inbox.

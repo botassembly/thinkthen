@@ -11,7 +11,7 @@ internal static partial class Program
         Check(loaded.Filter("ready").Text == "Ready?", "saved filter lookup");
         _ = loaded.Relate("names");
         await using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
-        var original = ChooseQuestion.Create("Which topic?", new[] { "billing", "shipping" }, new() { Threshold = Cut.From(0.7), Field = Pointer.From("/body") });
+        var original = ChooseQuestion.Create("Which topic?", new[] { "billing", "shipping" }, new() { Threshold = Threshold.Cut(0.7), Field = Pointer.From("/body") });
         var record = new { body = "Bill" };
         Check(JsonNode.DeepEquals(Row(await client.ChooseAsync(loaded.Choose("topic"), record)), Row(await client.ChooseAsync(original, record))), "loaded execution changed");
         var saved = Toolbox.Create(new Dictionary<string, ToolboxQuestion> { ["topic"] = new AnnotationQuestion.Choose(original) });

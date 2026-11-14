@@ -21,10 +21,9 @@ func main() {
 	defer client.Close()
 
 	// Every label that fits, possibly none.
-	topicsQuestion := tt.NewTag("Which topics appear?",
-		[]string{"billing", "shipping"})
+	topicsQuestion := tt.TagQuestion[string]{Question: "Which topics appear?", Labels: []string{"billing", "shipping"}}
 	topics, err := tt.Answer(client.Tag(context.Background(), topicsQuestion,
-		tt.Text(string(message))))
+		string(message)))
 	if err != nil {
 		log.Fatal(err)
 	}

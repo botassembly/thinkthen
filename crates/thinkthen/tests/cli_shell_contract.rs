@@ -52,7 +52,7 @@ fn text_streams_name_ids_positions_and_text_files() {
 }
 
 #[test]
-fn failed_text_has_no_answer_and_diagnostics_name_its_record() {
+fn failed_text_prints_its_state_and_diagnostics_name_its_record() {
     let server = Loopback::noul(0.9).unwrap();
     let folder = tempfile::tempdir().unwrap();
     let path = folder.path().join("records.jsonl");
@@ -69,7 +69,10 @@ fn failed_text_has_no_answer_and_diagnostics_name_its_record() {
         b"",
     );
     assert_eq!(output.status.code(), Some(6));
-    assert!(output.stdout.is_empty());
+    assert_eq!(
+        output.stdout,
+        b"bad\tfailed: record.missing: the record holds nothing at /body\n"
+    );
     let error = String::from_utf8(output.stderr).unwrap();
     assert!(error.contains("position 1"));
     assert!(error.contains("bad"));
@@ -86,9 +89,18 @@ fn quiet_suppresses_scalar_original_and_json_answers() {
             let mut args = vec![function, "Ready?", "-q", "--check"];
             args.extend(extra.iter().copied());
             let output = run(&server, &args, b"one\ntwo");
-            assert_eq!(output.status.code(), Some(0), "{output:?}");
-            assert!(output.stdout.is_empty());
-            assert!(output.stderr.is_empty());
+            if function == "filter" && !extra.is_empty() {
+                assert_eq!(output.status.code(), Some(2), "{output:?}");
+                assert_eq!(support::reported(&output), "usage.option");
+                assert!(
+                    String::from_utf8_lossy(&output.stderr).contains("thinkthen decide --json")
+                );
+                assert!(output.stdout.is_empty());
+            } else {
+                assert_eq!(output.status.code(), Some(0), "{output:?}");
+                assert!(output.stdout.is_empty());
+                assert!(output.stderr.is_empty());
+            }
         }
     }
 }
@@ -206,8 +218,8 @@ fn quiet_tables_and_saved_runs_complete_without_stdout() {
 }
 
 #[test]
-fn table_backend_failures_exit_four_only_when_no_row_was_answered() {
-    for (body, expected) in [("broken\n", 4), ("broken\nhealthy\n", 6)] {
+fn table_backend_failures_exit_six_with_or_without_answered_rows() {
+    for (body, expected) in [("broken\n", 6), ("broken\nhealthy\n", 6)] {
         let server = Loopback::start(|request| {
             let body = request.json().unwrap();
             if body.to_string().contains("broken") {
@@ -281,4 +293,20 @@ fn blank_single_text_is_usage_while_blank_stream_rows_continue() {
     assert_eq!(rows[0]["error"]["code"], "record.empty");
     assert_eq!(rows[1]["answer"], true);
     assert_eq!(server.count(), 1);
+}
+
+#[test]
+fn failed_text_keeps_a_message_with_record_controls_on_one_line() {
+    let server = Loopback::noul(0.9).unwrap();
+    let output = run(
+        &server,
+        &["decide", "Ready?", "--field", "/missing\nfield"],
+        br#"{"id":"bad","body":"evidence"}"#,
+    );
+    assert_eq!(output.status.code(), Some(6));
+    assert_eq!(
+        output.stdout,
+        b"failed: record.missing: the record holds nothing at /missing\\nfield\n"
+    );
+    assert_eq!(server.count(), 0);
 }

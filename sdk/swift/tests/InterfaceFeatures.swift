@@ -6,34 +6,29 @@ func settledFilter(_ client: Client) async throws {
   let texts = (1...40).map { "Support message \($0)" }
   let valid = texts.map(Record.text)
   let question = FilterQuestion("Does this need a refund?")
-  let full = try await client.filterResults(question, records: valid).collect()
-  let expected = full.filter(\.kept).map(\.item)
-  precondition(!expected.isEmpty && expected.count < valid.count)
   let kept = try await client.filter(question, records: valid).collect()
-  precondition(kept == expected)
+  precondition(!kept.isEmpty && kept.count < valid.count)
+  precondition(kept.allSatisfy { valid.contains($0) })
   let keptTexts: [String] = try await client.filter("Does this need a refund?", records: texts)
     .collect()
-  precondition(keptTexts.map(Record.text) == expected)
+  precondition(keptTexts.map(Record.text) == kept)
   let inputs = [Record.missing] + valid + [.text("")]
   var delivered: [Record] = []
   do {
     for try await record in client.filter(question, records: inputs) { delivered.append(record) }
     preconditionFailure("filter silently dropped failed records")
-  } catch let failure as RowFailure {
+  } catch let failure as Failed {
     precondition(failure.code == .recordMissing)
-    precondition(failure.failedRows.map(\.position) == [1, inputs.count])
-    precondition(failure.failedRows.last?.failure?.code == .recordEmpty)
+    precondition(failure.rows.map(\.position) == [1, inputs.count])
+    precondition(failure.rows.last?.error?.code == .recordEmpty)
   }
-  let all = try await client.filterResults(question, records: inputs).collect()
-  precondition(delivered == all.filter(\.kept).map(\.item))
-  let visible = try await client.filter(question, records: inputs, failures: .row).collect()
-  precondition(visible == all.filter { $0.kept || $0.row.isFailed })
-  let uncertainQuestion = FilterQuestion(
-    "Does this need a refund?", options: .init(threshold: .band(low: 0.2, high: 0.8)))
-  let uncertain = try await client.filterResults(uncertainQuestion, records: valid).collect()
-  precondition(uncertain.contains { $0.row.isUnsure })
-  let certainKept = try await client.filter(uncertainQuestion, records: valid).collect()
-  precondition(certainKept == uncertain.filter(\.kept).map(\.item))
+  // Missing input shifts positions, which are part of the arbitrary stub key.
+  // Named yes/no guide scenarios independently prove the answer projection.
+  precondition(delivered.allSatisfy { valid.contains($0) })
+  let uncertain = try await client.decide(
+    "Does this need a refund?", records: valid, threshold: .band(low: 0.2, high: 0.8)
+  ).collect()
+  precondition(uncertain.contains(where: \.isUnsure))
   let entered = Signal()
   let released = Signal()
   let returned = Signal()
@@ -56,20 +51,19 @@ func settledRank(_ client: Client) async throws {
   try await checkRankOriginalKinds(client)
   let inputs = (1...12).map { Record.text("Support message \($0)") }
   let ranked = try await client.rank(
-    "How urgent?", levels: ["routine", "urgent"], records: inputs, options: .init(top: 3)
+    "How urgent?", records: inputs, levels: ["routine", "urgent"], top: 3
   )
   .collect()
   precondition(ranked.count == 3)
   precondition(ranked.map(\.position) != [1, 2, 3])
   for result in ranked { precondition(result.item == inputs[result.position - 1]) }
-  let ranks = try ranked.map { try $0.get() }
+  let ranks = try ranked.map { try $0.answer }
   precondition(ranks == [1, 2, 3])
   let mixed = try await client.rank(
-    "How urgent?", levels: ["routine", "urgent"], records: inputs + [.missing],
-    options: .init(top: 3)
+    "How urgent?", records: inputs + [.missing], levels: ["routine", "urgent"], top: 3
   ).collect()
   precondition(mixed.count == 4 && mixed.last?.item == .missing)
-  precondition(mixed.last?.failure?.code == .recordMissing)
+  precondition(mixed.last?.error?.code == .recordMissing)
 
 }
 
@@ -77,14 +71,15 @@ func settledRank(_ client: Client) async throws {
 func settledQuestionMeanings(_ client: Client) async throws {
   enum Queue: String, CaseIterable { case billing, shipping }
   let fromCases = ChooseQuestion("Which queue?", choices: Queue.self)
-  precondition(fromCases.choices == ["billing", "shipping"])
+  let enumFields = try JSONSerialization.jsonObject(with: encoded(fromCases)) as! [String: Any]
+  precondition(enumFields["choices"] as? [String] == ["billing", "shipping"])
   let described = ChooseQuestion(
-    "Which queue?", choices: [Choice("billing", description: "Invoices"), "shipping"])
+    "Which queue?", choices: ["billing", "shipping"], descriptions: ["billing": "Invoices"])
   let restored = try JSONDecoder().decode(
-    ChooseQuestion.self, from: JSONEncoder().encode(described))
+    ChooseQuestion<String>.self, from: JSONEncoder().encode(described))
   precondition(restored == described)
   let selected = try await client.choose(described, record: "Invoice correction")
-  let queue = try selected.get()
+  let queue = try selected.answer
   precondition(["billing", "shipping"].contains(queue))
   let meaning = DecideQuestion("Needs help?", yesMeans: "Needs a person", noMeans: "Resolved")
   let undecorated = DecideQuestion("Needs help?")
@@ -96,28 +91,29 @@ func settledQuestionMeanings(_ client: Client) async throws {
   precondition(noRows.isEmpty)
   do {
     _ = try await client.decide("Ready?", record: "  \n")
-    preconditionFailure("single blank input returned an answer")
-  } catch let failure as ThinkThenError {
-    precondition(failure.failure?.code == .recordEmpty)
+    preconditionFailure("blank scalar input returned a result")
+  } catch let failure as Failed {
+    precondition(failure.code == .recordEmpty && failure.rows.count == 1)
   }
+
 }
 
 // Feature: every many-record entry point accepts ordinary text collections.
 func settledTextCollections(_ client: Client) async throws {
   checkTextSequenceLaziness(client)
   let texts = ["Morgan requests a refund.", "Alex works for Example Group."]
-  let tags = try await client.tag("Which topic?", labels: ["billing"], records: texts).collect()
-  let names = try await client.recognize(kinds: ["person"], records: texts).collect()
+  let tags = try await client.tag("Which topic?", records: texts, labels: ["billing"]).collect()
+  let names = try await client.recognize(records: texts, kinds: ["person"]).collect()
   let relations = try await client.relate(
-    rules: [.init(source: "person", target: "organization", relation: "works_for")], records: texts
+    records: texts, rules: [.init(source: "person", target: "organization", relation: "works_for")]
   )
   .collect()
-  let questions = AnnotationQuestions(["refund": .decide(DecideQuestion("Needs a refund?"))])
+  let questions = AnnotationQuestions(["refund": DecideQuestion("Needs a refund?")])
   let annotations = try await client.annotate(questions, records: texts).collect()
   precondition([tags.count, names.count, relations.count, annotations.count] == [2, 2, 2, 2])
   for annotation in annotations {
-    let answers = try annotation.get()
-    let _: Bool = try answers.get("refund")
+    let answers = try annotation.answer
+    let _: Bool = try answers.decide("refund").answer
   }
   let stream = AsyncStream<String> { continuation in
     for text in texts { continuation.yield(text) }

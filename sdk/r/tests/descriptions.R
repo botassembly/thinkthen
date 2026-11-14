@@ -9,7 +9,7 @@ for (verb in c("choose", "tag", "score", "rank")) {
   # Raw engine admission is the reference; the public calls below exercise mapping.
   expected <- .Call("wrap__r_admit", jsonlite::toJSON(list(question = definition), auto_unbox = TRUE), 0L, PACKAGE = "thinkthen")$error
   stopifnot(!is.null(expected))
-  actual <- condition(do.call(get(paste0("tt_", verb, "_rows")), list("alpha", "Which?", c("a", "b"), descriptions = c(a = "", other = "unknown"), client = client)), "thinkthen_usage_error")
+  actual <- condition(do.call(get(paste0("tt_", verb)), list("alpha", "Which?", c("a", "b"), descriptions = c(a = "", other = "unknown"), client = client, details=TRUE)), "thinkthen_usage_error")
   stopifnot(identical(actual$code, expected$code), identical(conditionMessage(actual), expected$message))
   constructor <- get(paste0("tt_", verb, "_question"))
   actual <- condition(constructor("Which?", c("a", "b"), descriptions = c(other = "unknown")), "thinkthen_usage_error")

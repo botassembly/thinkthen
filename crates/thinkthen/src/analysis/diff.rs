@@ -286,20 +286,14 @@ fn report(
 enum Selection<'a> {
     Boolean(bool),
     Label(&'a str),
-    Found(Option<&'a crate::Found>),
+    Span(Option<&'a crate::Span>),
 }
 fn selection(row: &AnyRow) -> Option<Selection<'_>> {
     match row {
-        AnyRow::Decide(row) => row.answer().ok().map(|value| Selection::Boolean(*value)),
-        AnyRow::Filter(row) => row.answer().ok().map(|value| Selection::Boolean(*value)),
-        AnyRow::Choose(row) => row
-            .answer()
-            .ok()
-            .map(|value| Selection::Label(value.as_str())),
-        AnyRow::Find(row) => row
-            .answer()
-            .ok()
-            .map(|value| Selection::Found(value.as_ref())),
+        AnyRow::Decide(row) => row.answer().ok().map(Selection::Boolean),
+        AnyRow::Filter(row) => row.answer().ok().map(Selection::Boolean),
+        AnyRow::Choose(row) => row.answer().ok().map(Selection::Label),
+        AnyRow::Find(row) => row.answer().ok().map(Selection::Span),
         _ => None,
     }
 }
@@ -321,7 +315,7 @@ pub fn compare_threshold(
     let mut right = run.manifest.clone();
     right.question = match right.question {
         Question::Decide(question) => question.threshold(threshold).into(),
-        Question::Filter(question) => question.threshold(threshold).into(),
+        Question::Filter(question) => question.threshold(threshold.filter_cut()?).into(),
         _ => {
             return Err(invalid(
                 "threshold-only diff supports decide/filter; saved unsure choose/find rows do not identify their winner",

@@ -11,6 +11,7 @@ int main(int argc, char** argv) {
         assert(false);
     } catch (const thinkthen::error& error) {
         assert(error.unknown_code() && error.raw_code() == 2147483647);
-        assert(std::string(error.what()) == argv[1]);
+        const auto* name=thinkthen_code_name(error.raw_code());
+        assert(std::string(error.what()) == std::string(name?name:THINKTHEN_ABI_ERROR_MESSAGE)+": "+argv[1]);
     }
 }

@@ -86,7 +86,7 @@ fn annotation_stub_answers_use_each_questions_own_content_and_evidence() {
 fn nul_in_wording_and_record_data_remains_valid() {
     use thinkthen::RelationRule;
     let question = Decide::new("Ready?\0Still ready?").unwrap();
-    RelationRule::new("linked", "person", "person")
+    RelationRule::new("person", "person", "linked")
         .unwrap()
         .reads("works\0with")
         .unwrap();

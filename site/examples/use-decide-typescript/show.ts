@@ -1,4 +1,4 @@
-import { ThinkThen } from "thinkthen";
+import { Client } from "thinkthen";
 
 const messages = [
   { id: "a1", text: "Please refund my order." },
@@ -7,7 +7,7 @@ const messages = [
 ];
 
 const question = "Does the customer request a refund?";
-const client = new ThinkThen();
+const client = new Client();
 try {
   // One stream for every message, so the engine can batch them.
   const refunds = client.decideStream(question, messages, {

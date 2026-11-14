@@ -3,7 +3,9 @@
 #include "thinkthen_sql.h"
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 static void ok(int32_t result, thinkthen_error *error) { assert(result == THINKTHEN_OK); assert(error->code == 0); }
+static int contains(const thinkthen_row *row,const char *part){thinkthen_buffer json={0};assert(thinkthen_row_host_json(row,&json,NULL)==THINKTHEN_OK);int result=strstr((const char*)json.data,part)!=NULL;thinkthen_buffer_free(&json);return result;}
 int main(void) {
     thinkthen_error error = {0}; error.struct_size = sizeof(error);
     thinkthen_client *client = NULL;
@@ -73,15 +75,32 @@ int main(void) {
         ok(event,&error);break;
     }
     assert(row.position==1 && row.status==THINKTHEN_STATUS_FAILED && row.error_code==THINKTHEN_CODE_RECORD_JSON);
-    assert(row.id.data==NULL && row.answer.data==NULL && row.detail.data==NULL);
-    assert(row.source.data!=NULL);
+    assert(!contains(&row,"\"id\":") && !contains(&row,"\"answer\":") && !contains(&row,"\"detail\":"));
+    assert(contains(&row,"\"source\":"));
     thinkthen_text explicit_id={(const char*)"true",4};
-    ok(thinkthen_sql_row_postgres_id(&row,&explicit_id,&error),&error);
-    assert(row.id.len==4 && !memcmp(row.id.data,"true",4));
+    ok(thinkthen_sql_row_postgres_id(call,&row,&explicit_id,&error),&error);
+    assert(contains(&row,"\"id\":true"));
+    const char *raw_ids[]={"7","\"selected\"","null","184467440737095516160000001","{\"arbitrary\":[true,null]}"};
+    for(size_t n=0;n<sizeof raw_ids/sizeof raw_ids[0];n++){
+        explicit_id.data=raw_ids[n];explicit_id.len=strlen(raw_ids[n]);
+        ok(thinkthen_sql_row_postgres_id(call,&row,&explicit_id,&error),&error);
+        char marker[128];snprintf(marker,sizeof marker,"\"id\":%s",raw_ids[n]);assert(contains(&row,marker));
+        thinkthen_id selected={0},copied={0};thinkthen_value *retained=NULL;
+        ok(thinkthen_row_id(&row,&selected,&error),&error);
+        ok(thinkthen_row_values(&row,&retained,&error),&error);
+        ok(thinkthen_value_id(retained,&copied,&error),&error);
+        assert(selected.kind==copied.kind);
+        if(n==0)assert(selected.kind==THINKTHEN_ID_SIGNED && selected.signed_value==7 && copied.signed_value==7);
+        else if(n==1)assert(selected.kind==THINKTHEN_ID_STRING && selected.text.len==8 && !memcmp(selected.text.data,"selected",8) && copied.text.len==8);
+        else assert(selected.kind==THINKTHEN_ID_ABSENT);
+        thinkthen_value_free(retained);
+        thinkthen_buffer canonical={0};ok(thinkthen_row_to_json(&row,&canonical,&error),&error);
+        printf("%.*s\n",(int)canonical.len,(const char*)canonical.data);thinkthen_buffer_free(&canonical);
+    }
     const char *zero_id="\"a\\u0000b\"";
     explicit_id.data=(const char*)zero_id;explicit_id.len=strlen(zero_id);
-    ok(thinkthen_sql_row_postgres_id(&row,&explicit_id,&error),&error);
-    assert(row.id.data==NULL && row.error_code==THINKTHEN_CODE_RECORD_JSON);
+    ok(thinkthen_sql_row_postgres_id(call,&row,&explicit_id,&error),&error);
+    assert(!contains(&row,"\"id\":") && row.error_code==THINKTHEN_CODE_RECORD_JSON);
     thinkthen_row_free(&row);
     assert(thinkthen_sql_call_poll_postgres(call,20,NULL,NULL,&row,&error)==THINKTHEN_END);
     thinkthen_sql_call_free(call);
@@ -96,7 +115,24 @@ int main(void) {
         ok(event,&error);break;
     }
     assert(row.status==THINKTHEN_STATUS_ANSWERED && row.error_code==0);
-    assert(row.id.len==2 && !memcmp(row.id.data,"42",2));thinkthen_row_free(&row);
+    assert(contains(&row,"\"id\":42"));
+    assert(thinkthen_sql_call_set_raise_if_failed(call,2,&error)<0);
+    assert(error.code==THINKTHEN_CODE_USAGE_ABI);thinkthen_error_free(&error);
+    ok(thinkthen_sql_call_set_raise_if_failed(call,1,&error),&error);
+    const thinkthen_text nan_id={(const char*)"NaN",3};
+    ok(thinkthen_sql_row_postgres_id(call,&row,&nan_id,&error),&error);
+    assert(row.status==THINKTHEN_STATUS_FAILED && row.error_code==THINKTHEN_CODE_RECORD_JSON);
+    assert(strstr(thinkthen_row_string(&row),"failed: record.json:"));
+    bool stale=true;assert(thinkthen_row_answer_bool(&row,&stale,&error)==-THINKTHEN_CODE_RECORD_JSON && stale);
+    thinkthen_value *snapshot=NULL;ok(thinkthen_row_values(&row,&snapshot,&error),&error);
+    uint8_t stale_value=77;assert(thinkthen_value_bool(snapshot,&stale_value,&error)==-THINKTHEN_CODE_RECORD_JSON && stale_value==77);
+    thinkthen_value_free(snapshot);
+    thinkthen_row_free(&row);
+    assert(thinkthen_sql_call_poll_postgres(call,20,NULL,NULL,&row,&error)<0);
+    assert(error.code==THINKTHEN_CODE_RECORD_JSON);
+    const char summary[]="1 of 1 records failed; the first, at position 1";
+    assert(error.message.len>=sizeof(summary)-1 && !memcmp(error.message.data,summary,sizeof(summary)-1));
+    thinkthen_error_free(&error);
     assert(thinkthen_sql_call_poll_postgres(call,20,NULL,NULL,&row,&error)==THINKTHEN_END);
     thinkthen_question_free(question);question=NULL;
     const char *sql_rules="{\"function\":\"relate\",\"rules\":[{\"relation\":\"works_for\",\"source\":\"person\",\"target\":\"organization\"}]}";

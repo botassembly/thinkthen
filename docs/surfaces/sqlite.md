@@ -1,215 +1,405 @@
-# ThinkThen in SQLite
+# SQLite functions that answer questions about text
 
-The ThinkThen 0.2.0 extension adds ten table-valued functions to SQLite. Each one runs a query you pass as text, asks one question of every row, and returns one row per record with a typed `answer` column.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-Set `THINKTHEN_API_KEY` in your shell, start `sqlite3` in the extracted archive's folder, and run:
+In SQLite, each ThinkThen function is a table function. You give it a query of records and one question, and it gives back one row per record, with the answer in a column beside your record.
+
+Use SQLite 3.41.0 or later with extension loading on, which the `sqlite3` shell has. Download the SQLite archive for your platform from the ThinkThen release page and extract it. Set `THINKTHEN_API_KEY` in the environment of the SQLite process, start `sqlite3` in the extracted folder, and run:
 
 ```sql
 .load ./thinkthen_sqlite sqlite3_thinkthensqlite_init
-.mode box
 
-CREATE TABLE messages(msg_id INTEGER PRIMARY KEY, body TEXT);
+CREATE TABLE messages (msg_id INTEGER PRIMARY KEY, body TEXT);
 INSERT INTO messages VALUES
   (1, 'Please refund my order.'),
   (2, 'Where is my parcel?'),
   (3, 'I was charged twice for one invoice.'),
   (4, 'I was charged twice and my parcel is late again.'),
   (5, 'Morgan works for Example Group.
-Please refund my order.'),
-  (6, 'Morgan works for Example Group.');
+Please refund my order.');
+```
 
-SELECT id AS msg_id, answer AS is_refund, status
-FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 1',
+Every example on this page uses that `messages` table. `SELECT thinkthen_version();` gives the version you loaded. Loading into an older SQLite fails with a message that names the version. From a program, load the extension once per connection with your library's `load_extension` call.
+
+Every row is in exactly one of three states, named by its `status` column:
+
+- **`answered`**: there is an answer, and the `answer` column holds it.
+- **`unsure`**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **`failed`**: the record could not be judged, or the service did not respond.
+
+Three rules hold for every function on this page.
+
+1. **Where there is no answer, `answer` is NULL, and NULL is never a yes or a no.** `WHERE answer` keeps only the yeses. `WHERE NOT answer` keeps only the noes. A missing answer passes neither test.
+2. **Checking the state never fails.** `status`, `probability`, `error_code` and `error_message` are on every row, beside the answer, in every state.
+3. **A failed record is a row, not a failed statement.** One bad record never costs you the others. A statement fails for a record only where you ask it to: in `thinkthen_filter`, and in any call with `raise_if_failed`.
+
+Rule 1 has one trap, and it is SQL's own: `ELSE`, `coalesce` and `NOT IN` all treat NULL as "everything else". `CASE WHEN answer THEN 'refund queue' ELSE 'inbox' END` sends a not-sure message and a failed message to the inbox. Test `status` first, or name the no with `WHEN NOT answer`.
+
+## Writing the call
+
+Here is one call, with everything a call can hold:
+
+```sql
+SELECT id AS msg_id, record AS body, answer AS is_refund, status
+FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages',
+                      'Does the customer request a refund?')
+WHERE low = 0.2 AND high = 0.8;
+```
+
+The records:
+
+- The records are a query, given as text in the first argument. It must be one read-only statement.
+- The column to judge is named `record`, and your key is a column named `id`. `record_column` and `id_column` name other columns.
+- Your other columns do not come back. Each row carries `id` and `record`. To get other columns, join on `id`.
+- Bind values into the query with `params`, a JSON array, and never paste them into its text.
+- Add `ORDER BY` inside the query so `position` follows your order.
+
+The options:
+
+- An option goes in `WHERE` after the call, as `WHERE low = 0.2 AND high = 0.8`. Write one `=` per option, and join options with `AND`. Your own tests on the result go in the same `WHERE`, as in `WHERE low = 0.2 AND high = 0.8 AND answer`. With `OR`, SQLite may silently ignore an option and use its default; use `AND`.
+- A list is JSON text: `'["billing", "shipping", "other"]'`. Rules, `descriptions` and annotate's `questions` are JSON text too.
+
+The results:
+
+- A yes is `1` and a no is `0`, which is how SQLite writes true and false. `WHERE answer` and `WHERE NOT answer` work as the rules above say.
+- An answer with parts, and every list, is JSON text. Read a part with `answer ->> '$.text'` and a list with `json_each(answer)`.
+- `status` and `error_code` are text.
+
+## decide
+
+### The simplest if
+
+SQL's `if` is `WHERE`. A decide answer goes straight into it.
+
+```sql
+SELECT 'refund queue' AS where_it_goes
+FROM thinkthen_decide('SELECT body AS record FROM messages WHERE msg_id = 1',
+                      'Does the customer request a refund?')
+WHERE answer;
+```
+
+The row comes back only on a yes. If the message could not be judged, `answer` is NULL, NULL is never true, and no row comes back. It never reads as a yes.
+
+Only a decide answer belongs in `WHERE`. SQLite takes any value there and refuses nothing: a score of `0.3` counts as true, and a choice such as `billing` counts as false.
+
+Don't turn this into a `CASE` with a plain `ELSE`. `ELSE` runs for every row that is not a yes: no, not sure and failed alike. To act on a no, name it:
+
+```sql
+SELECT CASE
+         WHEN answer THEN 'refund queue'
+         WHEN NOT answer THEN 'inbox'
+       END AS where_it_goes
+FROM thinkthen_decide('SELECT body AS record FROM messages WHERE msg_id = 1',
                       'Does the customer request a refund?');
 ```
 
-`is_refund` is 1 or 0 when `status` is `answered`. It is NULL when `status` is `unsure` or `failed`. The other examples on this page use the same `messages` table.
+Where there is no answer, this gives NULL. It never gives `inbox`.
 
-## Load the extension
+### Yes, no, or something else
 
-1. Download the SQLite archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0). [Verify the checksum](../../README.md#verify-a-download), then extract it.
-2. Use SQLite 3.41.0 or later with extension loading on. Loading into an older SQLite fails with a message that names the version.
-3. In the `sqlite3` shell, run `.load ./thinkthen_sqlite sqlite3_thinkthensqlite_init` from the extracted folder. `SELECT thinkthen_version();` prints `0.2.0`.
-
-In Python, load it once per connection:
-
-```python
-import sqlite3
-
-connection = sqlite3.connect("support.db")
-connection.enable_load_extension(True)
-connection.load_extension("/absolute/path/to/thinkthen_sqlite")
-connection.enable_load_extension(False)
-```
-
-The extension contains the engine. It reads `THINKTHEN_API_KEY` from the SQLite process environment, or `OPENAI_API_KEY` after `SELECT thinkthen_set('backend', 'openai');`. SQL can never set a key or a backend address.
-
-## Write the query
-
-- The first argument, `source_sql`, is a read-only query as text, with one statement. Its `record` column holds the text to judge. `record_column = 'body'` reads another column.
-- A source column named `id` comes back in the result's `id` with its own SQLite type: INTEGER, TEXT, or even BLOB. `id_column = 'msg_id'` reads ids from another column.
-- The arguments after `source_sql` follow in order: `question`, then the function's list, such as `choices`. Any argument can be named in `WHERE` instead, as `WHERE choices = '["billing", "shipping", "other"]'`. Each takes one value with `=`.
-- Lists, rules, toolboxes and descriptions are JSON text.
-- Add `ORDER BY` to the source query so `position` follows your order.
-- Bind values into the source query with `params`, a JSON array for its `?` slots, instead of pasting them into the text:
+Set two bars and decide can also be not sure. `status` tells you whether there is a yes or no to read. This call saves its one result in a small table named `is_refund`, so the next few examples can read it without asking again.
 
 ```sql
-SELECT id AS msg_id, answer AS is_refund, status
-FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = ?',
+CREATE TEMP TABLE is_refund AS
+SELECT answer, probability, status, error_code, error_message
+FROM thinkthen_decide('SELECT body AS record FROM messages WHERE msg_id = 2',
                       'Does the customer request a refund?')
-WHERE params = '[1]';
+WHERE low = 0.2 AND high = 0.8;
 ```
 
-## Handle not sure and failures
-
-Save the answers in a table once, then read them as often as you like. A plain rerun can send questions again and incur new charges.
-
 ```sql
-CREATE TABLE refund_answers AS
-SELECT id AS msg_id, answer AS is_refund, status, error_code, error_message
-FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3',
-                      'Does the customer request a refund?');
-
-SELECT m.msg_id, m.body, a.is_refund, a.status
-FROM refund_answers a JOIN messages m ON a.msg_id = m.msg_id
-ORDER BY m.msg_id;
-
-SELECT msg_id FROM refund_answers WHERE is_refund IS TRUE;                      -- yes
-SELECT msg_id FROM refund_answers WHERE is_refund IS FALSE;                     -- no
-SELECT msg_id FROM refund_answers WHERE status = 'unsure';                      -- send to a person
-SELECT msg_id, error_code, error_message FROM refund_answers WHERE status = 'failed';
+SELECT CASE
+         WHEN status = 'answered'
+           THEN CASE WHEN answer THEN 'refund queue' ELSE 'inbox' END
+         ELSE 'a person reads it'
+       END AS where_it_goes
+FROM is_refund;
 ```
 
-- `status` is `answered`, `unsure` or `failed`.
-- Not sure has a NULL answer. Test answers with `IS TRUE` and `IS FALSE`, which are both false for NULL. `coalesce(is_refund, 0)` and `CASE WHEN is_refund THEN ... ELSE ... END` turn not sure and failed rows into no.
-- A failed record is a row with `status = 'failed'` and a NULL answer, and the query keeps going, unless the backend failed every record. `error_code` is a code such as `record.missing`, `error_message` says what went wrong, and `error_http_status` holds the backend's HTTP status when there was one.
-- A NULL record fails as `record.missing`, and a number or blob as `record.invalid`. Neither sends a request.
-- A backend that cannot be reached fails each record with `backend.transport`. When the backend refuses a batch request after its retries, every record in that batch fails with `backend.status` and the HTTP status.
-- When the backend fails every record in the query, no rows come back. The query raises the first record's error instead, as in `backend.transport: the openai backend could not be reached: connection refused`. This holds for every function, and for filter even with `failures = 'row'`. Once any record is answered, or fails for another reason, the backend failures come back as rows in input order.
-- A usage mistake stops the query before any request is sent. Its message starts with a code. The extension's own argument checks use `usage.argument` and name the argument, as in `usage.argument: question is required for thinkthen_decide`. The engine's checks use codes such as `usage.question`.
+The inner `ELSE` is safe, because the row is already known to be answered. `status <> 'answered'` is the one test that covers both not sure and failed.
 
-## Keep only the matching rows
-
-`thinkthen_filter` returns only the records whose answer is yes. Not-sure records are left out. Join the kept ids back to their text:
+### Not sure or failed
 
 ```sql
-SELECT msg_id, body
-FROM messages
-WHERE msg_id IN (SELECT id FROM thinkthen_filter(
-  'SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id',
-  'Does the customer request a refund?'))
-ORDER BY msg_id;
+SELECT CASE
+         WHEN status = 'unsure' THEN 'a person reads it'
+         WHEN status = 'failed' THEN 'try again later'
+         WHEN answer THEN 'refund queue'
+         ELSE 'inbox'
+       END AS where_it_goes,
+       probability,
+       error_code
+FROM is_refund;
 ```
 
-If any record fails, filter returns the kept rows, then raises one error. The error names how many records failed, the first failed position and its code, and the statement fails, so `CREATE TABLE ... AS` saves nothing. `failures = 'row'` returns each failed record as a row with `status = 'failed'` instead, so the answers you paid for are kept, unless the backend failed every record:
+Yes and no are the two answers. Not sure and failed are the two ways of having none. To name every state, switch on `status`:
 
 ```sql
-SELECT id AS msg_id, status, error_code
-FROM thinkthen_filter('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id',
+SELECT CASE status
+         WHEN 'answered' THEN CASE WHEN answer THEN 'refund queue' ELSE 'inbox' END
+         WHEN 'unsure' THEN 'a person reads it'
+         WHEN 'failed' THEN 'try again later'
+       END AS where_it_goes
+FROM is_refund;
+```
+
+SQL can't check that a `CASE` names every state. Leave the outer `ELSE` off, as here, so a state you forgot shows up as NULL and not as the wrong queue.
+
+### Did it work
+
+```sql
+SELECT 'could not judge it: failed: ' || error_code || ': ' || error_message AS note
+FROM is_refund
+WHERE status = 'failed';
+```
+
+For a failed result, this query combines `could not judge it: failed:` with its actual code and reason, using the same failure format as the `thinkthen` command. Not sure counts as working: ThinkThen did its job, and the answer was "not sure".
+
+`error_code` and `error_message` are NULL on every row that did not fail. `error_http_status` holds the service's HTTP status when it gave one.
+
+### Raise if it failed
+
+```sql
+SELECT answer AS is_refund
+FROM thinkthen_decide('SELECT body AS record FROM messages WHERE msg_id = 1',
                       'Does the customer request a refund?')
-WHERE failures = 'row';
+WHERE raise_if_failed = 1;
 ```
 
-To keep every record with its yes, no or not sure, use `thinkthen_decide`.
+With `raise_if_failed`, the statement fails with one error when any record failed. For annotate, a failed form or any failed entry counts as a failed record; a not-sure entry does not. Count each affected record once, even when several entries failed. For a failed outer form, report its error; otherwise report the first failed entry in question-name order. If no record failed, the rows come back as usual, so the option fits on any call. Every function but filter takes it. filter always raises, as its section says.
 
-## The ten functions
+For a fully consumed call, the error comes after every record is judged. It says how many records failed, the position of the first, and its error code. The statement fails as a whole, so a `CREATE TABLE ... AS` or an `INSERT ... SELECT` around it saves nothing. An error can't carry rows, so the answers that did come are gone with it. Leave the option off whenever you save answers: the failed rows then sit in your table with the reason beside them.
 
-Each query below asks the same question of the same records as the function's page on thinkthen.dev.
-
-### decide: answer a yes-or-no question
+### Both bars and the probability
 
 ```sql
-SELECT id AS msg_id, answer AS is_refund, status
-FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 1',
-                      'Does the customer request a refund?');
+SELECT probability FROM is_refund;
 ```
 
-`answer` is 1 or 0. `probability` is the probability of yes, also when the answer is no. `yes_means` and `no_means` say what yes and no mean for this question:
+- No bar option: one bar at 0.5. The answer is always yes or no.
+- `threshold = 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `low = 0.2 AND high = 0.8`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is NULL only when the row failed.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `thinkthen_decide`, save each `probability` in a table, and compare with your labels.
+
+## choose with your own choices
+
+Give your choices as a list. The answer comes back as one of them, as text, spelled exactly as you wrote it.
 
 ```sql
-SELECT id AS msg_id, answer AS is_refund, status
-FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 1',
-                      'Does the customer request a refund?')
-WHERE yes_means = 'The customer asks for money back.'
-  AND no_means = 'Anything else.';
-```
-
-### choose: pick one option
-
-```sql
-SELECT id AS msg_id, answer AS topic, status
-FROM thinkthen_choose('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 1',
+CREATE TEMP TABLE topic AS
+SELECT answer, probability, status
+FROM thinkthen_choose('SELECT body AS record FROM messages WHERE msg_id = 3',
                       'What is the message about?')
 WHERE choices = '["billing", "shipping", "other"]';
 ```
 
-`answer` is text. `probability` is the chosen option's probability, and `detail ->> '$.labels'` maps every option to its probability.
+```sql
+SELECT CASE
+         WHEN status = 'unsure' THEN 'a person reads it'
+         WHEN answer = 'billing' THEN 'billing team'
+         WHEN answer = 'shipping' THEN 'warehouse'
+         WHEN answer = 'other' THEN 'front desk'
+       END AS team_for
+FROM topic;
+```
 
-### tag: every label that fits
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So test `status` before the answer. `threshold = 0.3` moves the bar. choose takes one bar only.
+
+The choices (`billing`, `shipping`, `other`) are the words the model reads, so make them plain words or short phrases, not codes.
+
+SQL has no list of choices it can check a `CASE` against. Add a choice and nothing points at this `CASE`. Name every choice with its own `WHEN` and leave `ELSE` off, so a new choice shows up as NULL and a not-sure row is never sent to the front desk.
+
+`probability` is the best choice's. `detail` holds every choice with its probability.
+
+## Many records
+
+Every function takes many records the same way: the query you give it can return any number of rows. You get one row back per record, in the order of your query, and each row carries your `id` and `record` beside the answer.
 
 ```sql
-SELECT id AS msg_id, answer AS topics, status
-FROM thinkthen_tag('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 4',
+CREATE TABLE refund_checks AS
+SELECT id AS msg_id, record AS body, answer AS is_refund, probability, status, error_code, error_message
+FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id',
+                      'Does the customer request a refund?')
+WHERE low = 0.2 AND high = 0.8;
+```
+
+```sql
+SELECT msg_id, body,
+       CASE
+         WHEN status = 'unsure' THEN 'a person reads it'
+         WHEN status = 'failed' THEN 'try again later'
+         WHEN is_refund THEN 'refund queue'
+         ELSE 'inbox'
+       END AS where_it_goes
+FROM refund_checks
+ORDER BY msg_id;
+```
+
+One failed record does not stop the statement. Each row keeps its own state, with `position` counted from 1 and the record's `id` when it has one.
+
+Give the whole set of records to one call, so ThinkThen can send them in batches. Don't call a function once per row of another table: each call is a separate piece of work.
+
+To save every result, put the call in `CREATE TABLE ... AS`, as above. The table keeps the state of every row, so nothing is lost. Then read the table as often as you like. Running the call again asks the service again, and costs again.
+
+There is no separate call for one record. One record is a query that returns one row, as in the decide examples above.
+
+## filter
+
+filter means "give me the yeses". It hands back your own records, in order.
+
+```sql
+SELECT refund_request.id AS msg_id, refund_request.record AS body
+FROM thinkthen_filter('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id',
+                      'Does the customer request a refund?') AS refund_request;
+```
+
+filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `threshold = 0.7` moves the bar. `low` and `high` are refused with a `usage.threshold` error that names `thinkthen_decide`: when you want not sure, use `thinkthen_decide`, as in the section above.
+
+Your own records can't carry a failure. So if any record fails, a fully consumed filter call raises one error after every record is judged, and the statement fails as a whole. It works as `raise_if_failed` does: nothing is saved, and the error says how many records failed, the position of the first, and its code.
+
+To see each failed record, or to keep the answers you paid for whatever happens, ask with `thinkthen_decide`, save the rows, and pick the yeses yourself:
+
+```sql
+SELECT msg_id, body FROM refund_checks WHERE is_refund;
+
+SELECT msg_id, body, error_code FROM refund_checks WHERE status = 'failed';
+```
+
+The first query is the refund queue. The second lists what to try again later.
+
+## tag
+
+Labels work as choices do. The answer is the list of labels that fit, in the order you gave them, and it can be empty.
+
+```sql
+CREATE TEMP TABLE topics AS
+SELECT position, id, answer, status
+FROM thinkthen_tag('SELECT body AS record FROM messages WHERE msg_id = 4',
                    'Which topics appear?')
 WHERE labels = '["billing", "shipping"]';
 ```
 
-`answer` is a JSON array, and it can be empty. `detail ->> '$.labels'` maps every label to its probability.
+```sql
+SELECT 'billing team' AS team_for
+FROM topics
+WHERE EXISTS (SELECT 1 FROM json_each(topics.answer) WHERE value = 'billing');
 
-### score: a number from 0 to 1 along your levels
+SELECT topics.position, topics.id, topics.status, label.value AS topic
+FROM topics
+LEFT JOIN json_each(topics.answer) AS label ON true;
+```
+
+The left join keeps an empty or failed result as one row with a NULL topic. `position`, `id` and `status` still identify it and distinguish an empty answer from a failure.
+
+tag is never not sure. `threshold = 0.7` sets how likely a label must be to count. An empty list is an answer: no label fit. A NULL `answer` means the row failed. `probability` is always NULL for tag, and each label's own number is in `detail`.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it.
 
 ```sql
-SELECT id AS msg_id, answer AS urgency, status
-FROM thinkthen_score('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 1',
+CREATE TEMP TABLE urgency AS
+SELECT answer, status
+FROM thinkthen_score('SELECT body AS record FROM messages WHERE msg_id = 1',
                      'How urgent is the request?')
 WHERE levels = '["routine", "urgent"]';
 ```
 
-`answer` is a REAL. List levels from lowest to highest. `detail ->> '$.levels'` holds each level's probability in the same order.
-
-### filter: keep the records that pass
-
 ```sql
-SELECT msg_id, body
-FROM messages
-WHERE msg_id IN (SELECT id FROM thinkthen_filter(
-  'SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id',
-  'Does the customer request a refund?'))
-ORDER BY msg_id;
+SELECT answer AS urgency,
+       CASE WHEN answer > 0.5 THEN 'answer today' END AS note
+FROM urgency;
 ```
 
-[Keep only the matching rows](#keep-only-the-matching-rows) covers failures.
+The score is a position between your levels, not one of them, so it is a number and there is nothing to put in a `CASE` by name. To get exactly one level back, ask with `thinkthen_choose`. score is never not sure, and its `probability` is always NULL.
 
-### rank: order every record
+## rank
+
+rank puts many records in order along your levels, highest first.
 
 ```sql
-SELECT answer AS urgency_rank, id AS msg_id, status
+SELECT ranked.answer, ranked.record AS body
 FROM thinkthen_rank('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id',
-                    'How urgent is the request?')
+                    'How urgent is the request?') AS ranked
 WHERE levels = '["routine", "urgent"]'
-ORDER BY urgency_rank NULLS LAST;
+ORDER BY ranked.answer NULLS LAST;
 ```
 
-`answer` is an INTEGER rank from 1, highest first, and `position` keeps the input order. `top = 2` keeps the first two ranks. Failed records come after the ranked rows with a NULL rank, and `top` never drops them.
+`answer` is the rank, starting at 1, and `id` and `record` are your record. `position` still says where the record was in your query. rank reads every record before it gives anything back. `top = 5` selects the five highest-ranked messages after judging the collection. A failed record comes back with a NULL rank and `status` set to `failed`. rank is never not sure.
 
-### find: the line that answers
+## find
+
+find points to the one line that answers.
 
 ```sql
-SELECT id AS msg_id, answer ->> '$.text' AS requested_action, status
-FROM thinkthen_find('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 5',
+CREATE TEMP TABLE action AS
+SELECT record AS body, answer, status
+FROM thinkthen_find('SELECT body AS record FROM messages WHERE msg_id = 5',
                     'Which line states the requested action?');
 ```
 
-`answer` is a JSON object with `text`, `start_offset` and `end_offset`, or NULL with `status = 'answered'` when no line answers. Offsets count Unicode code points from zero, and the end is exclusive. Find picks a whole line, so keep the record's line breaks.
+```sql
+SELECT CASE
+         WHEN status = 'unsure' THEN 'a person reads it'
+         WHEN status = 'answered' AND answer IS NULL THEN 'no line answers'
+         WHEN status = 'answered' THEN answer ->> '$.text'
+       END AS line
+FROM action;
+```
 
-### annotate: fill in several questions at once
+The answer has three parts, `text`, `start_offset` and `end_offset`, or it is NULL when no line answers. find is the one function where a NULL answer can be an answer, so `status` is what tells "no line answers" from not sure and failed.
+
+The offsets count characters from 0, and `end_offset` is one past the last character. SQL counts from 1, so `substr(body, (answer ->> '$.start_offset') + 1, (answer ->> '$.end_offset') - (answer ->> '$.start_offset'))` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
 
 ```sql
-SELECT id AS msg_id, answer ->> '$.refund' AS is_refund, answer ->> '$.topic' AS topic,
-       answer ->> '$.urgency' AS urgency, status
+SELECT names.position, names.id, names.status,
+       name.value ->> '$.kind' AS kind, name.value ->> '$.text' AS text
+FROM thinkthen_recognize('SELECT ? AS record') AS names
+LEFT JOIN json_each(names.answer) AS name ON true
+WHERE kinds = '["person", "organization"]'
+  AND params = '["Morgan works for Example Group."]';
+```
+
+`answer` is a list of names. Each name has `kind`, `text`, `start_offset`, `end_offset` and `probability`. The list can be empty. recognize is never not sure.
+
+`LEFT JOIN json_each(...)` gives one row per name. A record with no names, or one that failed, stays as one row whose name columns are NULL, so it is never dropped without a word. A plain join with a comma would drop that record.
+
+## relate
+
+```sql
+SELECT relations.position, relations.id, relations.status,
+       relation.value ->> '$.source.text' AS source,
+       relation.value ->> '$.relation' AS relation,
+       relation.value ->> '$.target.text' AS target
+FROM thinkthen_relate('SELECT body AS record FROM messages WHERE msg_id = 5') AS relations
+LEFT JOIN json_each(relations.answer) AS relation ON true
+WHERE rules = '[{"source": "person", "target": "organization", "relation": "works_for"}]';
+```
+
+A rule names the kind it starts from, the kind it points to, and the relation, in that order. It may also give `reads`, the wording the model sees, and `either`, for a relation with no direction. Each relation in `answer` has `source`, `target`, `relation`, `probability` and `either`. `detail` holds every name found, including names in no relation.
+
+## annotate
+
+annotate asks several questions of each record and gives back one form per record. The questions are written as JSON, each under a name of your choosing.
+
+```sql
+CREATE TABLE forms AS
+SELECT id AS msg_id, record AS body, status, error_code, error_message, detail,
+       answer ->> '$.refund' AS is_refund,
+       answer ->> '$.topic' AS topic,
+       answer ->> '$.urgency' AS urgency,
+       detail ->> '$.refund.status' AS refund_status,
+       detail ->> '$.topic.status' AS topic_status,
+       detail ->> '$.urgency.status' AS urgency_status
 FROM thinkthen_annotate('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id <= 3 ORDER BY msg_id')
-WHERE toolbox = '{
-  "refund": {"function": "decide", "question": "Does the customer request a refund?"},
+WHERE questions = '{
+  "refund": {"function": "decide", "question": "Does the customer request a refund?",
+             "threshold": {"low": 0.2, "high": 0.8}},
   "topic": {"function": "choose", "question": "What is the message about?",
             "choices": ["billing", "shipping", "other"]},
   "urgency": {"function": "score", "question": "How urgent is the request?",
@@ -217,143 +407,169 @@ WHERE toolbox = '{
 }';
 ```
 
-`toolbox` maps each name to one question. Rank cannot be one of them. `answer` is a JSON object with each question's bare answer by name, null when that question was not sure or failed. `detail ->> '$.refund.status'`, `detail ->> '$.refund.error'` and the rest hold each question's full outcome. The row's own `status` can be `answered` while one question inside it failed, so check `detail` before you trust a NULL answer.
-
-`toolbox` takes this map of named questions. A toolbox saved with its `entries`, as the command and the packages write it, is not read here: pass its questions as this map.
-
-### recognize: pull out each name
-
 ```sql
-SELECT id AS msg_id, answer AS names, status
-FROM thinkthen_recognize('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 6')
-WHERE kinds = '["person", "organization"]';
+SELECT msg_id, body, status, refund_status, topic_status, urgency_status,
+       CASE WHEN topic_status = 'answered' THEN topic END AS topic,
+       CASE WHEN urgency_status = 'answered' THEN urgency END AS urgency,
+       CASE
+         WHEN status = 'failed' OR refund_status = 'failed'
+              OR topic_status = 'failed' OR urgency_status = 'failed'
+           THEN 'try again later'
+         WHEN refund_status = 'unsure' OR topic_status = 'unsure'
+              OR urgency_status = 'unsure'
+           THEN 'a person reads it'
+         WHEN refund_status = 'answered' AND topic_status = 'answered'
+              AND urgency_status = 'answered'
+           THEN CASE WHEN is_refund THEN 'refund queue' ELSE 'inbox' END
+       END AS where_it_goes
+FROM forms
+ORDER BY msg_id;
 ```
 
-`answer` is a JSON array of names, each with `text`, `kind`, `start_offset`, `end_offset` and `probability`. `json_each(answer)` gives one row per name.
+`answer` holds one entry per question, under the name you gave it. Each entry is the answer of its own function: `answer ->> '$.refund'` is a yes or no, so it works in `WHERE`. An entry is NULL when its question was not sure or failed, and `detail` holds that entry's own `status`, `probability` and error under the same name. One entry can be not sure while the others answer. The row's own `status` is `failed` only when the record could not be judged at all.
 
-### relate: link names by the relations you allow
+The saved `detail` keeps every entry's state and error. The routing query checks the form and each entry it uses: a failed entry goes to retry, a not-sure entry goes to a person, and an answer is used only after its entry is answered. With `raise_if_failed`, a failed form or any failed entry raises; a not-sure entry does not. A record with several failed entries counts once in the failure total.
 
-```sql
-SELECT id AS msg_id, answer AS works_for, status
-FROM thinkthen_relate('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 5')
-WHERE rules = '[{"relation": "works_for", "source": "person", "target": "organization"}]';
-```
+Question names must not collide with generated result columns such as `status`, `probability`, `position`, `id`, `answer`, `error_code` and `detail`. The call reports a usage error naming the clash before sending any paid request. SQL keeps each question's answer and details nested under `answer` and `detail`, so `refund` beside `refund_status` is allowed: neither generates a column named after the other.
 
-Each rule has `relation`, `source` and `target`, plus optional `reads` (the relation's wording) and `either` (true when the relation has no direction). `answer` is a JSON array of relations, each with `relation`, `source`, `target`, `either` and `probability`. `source` and `target` are names with `text`, `kind`, `start_offset` and `end_offset`. `detail` holds `names`, every recognized name, and `pairs`, every allowed pair with its score. Call relate alone when you need both the names and the relations.
+Any function except filter, rank and annotate can be an entry. filter and rank are about many records, and a form is about one.
 
-To read one relation per row, save the answers and expand them with `json_each`:
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
 
 ```sql
-CREATE TABLE employment AS
-SELECT id AS msg_id, answer AS works_for, status
-FROM thinkthen_relate('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 5')
-WHERE rules = '[{"relation": "works_for", "source": "person", "target": "organization"}]';
-
-SELECT msg_id, link.value ->> '$.source.text' AS person,
-       link.value ->> '$.target.text' AS organization
-FROM employment, json_each(employment.works_for) AS link
-WHERE status = 'answered';
-```
-
-## Read JSON records and join on their id
-
-A JSON object record can carry its own `id`. `field = '/text'` selects the field to judge and reads each record as JSON. `format = 'json'` reads records as JSON without selecting a field.
-
-```sql
-CREATE TABLE inbox(line TEXT);
-INSERT INTO inbox VALUES
-  ('{"id":"a1","text":"Please refund my order."}'),
-  ('{"id":"a2","text":"Where is my parcel?"}'),
-  ('{"id":"a3","text":"I was charged twice for one invoice."}');
-
-CREATE TABLE refund_answers_by_ticket AS
-SELECT position, id AS ticket_id, answer AS is_refund, status, error_code, error_message
-FROM thinkthen_decide('SELECT line AS record FROM inbox ORDER BY rowid',
+SELECT answer AS is_refund, status
+FROM thinkthen_decide('SELECT body AS record FROM messages WHERE msg_id = 3',
                       'Does the customer request a refund?')
-WHERE field = '/text';
+WHERE yes_means = 'the customer wants money back, including for a duplicate charge'
+  AND no_means = 'the customer wants anything else';
 
-SELECT * FROM refund_answers_by_ticket ORDER BY position;
-```
-
-`id` keeps the JSON id's type: `"a1"` comes back as TEXT `a1`, and a number as INTEGER, so it joins to your own key as it is. An integer too large for SQLite's 64-bit integers comes back as TEXT digits. A record that is JSON `null`, or has no `text` field, fails as `record.missing`.
-
-A JSON array in one cell is one record, not several. Text read without `format = 'json'` or `field` is judged as text, even when it looks like JSON. In a pointer, write `/` in a key as `~1` and `~` as `~0`.
-
-## JSON columns
-
-`answer` for tag, find, annotate, recognize and relate, and `detail` and `source` for every function, carry SQLite's JSON subtype. `json_object('topics', answer)` nests a real array, and `->>` reads a field. In a CSV export they are JSON text.
-
-## Options
-
-| Option | Functions | What it does |
-| --- | --- | --- |
-| `record_column = 'body'` | all | Reads another source column. Without it, the column named `record` is read. |
-| `id_column = 'msg_id'` | all | Reads ids from another source column. Without it, a column named `id` is read if there is one. |
-| `format = 'json'` | all | Reads each record as JSON. `'text'`, the default, judges it as text. |
-| `field = '/text'` | all | Judges one field of a JSON record, chosen by a JSON pointer. |
-| `params = '[1]'` | all | Binds values to the source query's `?` slots. |
-| `threshold = 0.8` | decide, filter, choose, tag, find, recognize, relate | Sets the cut an answer must reach. |
-| `low = 0.2 AND high = 0.8` | decide, filter | Sets a band. Decide answers no below `low`, yes at or above `high`, and not sure between them. |
-| `top = 5` | rank | Keeps the first five ranks. |
-| `yes_means = '...'`, `no_means = '...'` | decide, filter | Says what yes and no mean for this question. |
-| `descriptions = '{"billing": "Invoices, fees and refunds."}'` | choose, tag, score, rank | Describes some or all options or levels. A key that is not an option or level is refused. |
-| `failures = 'row'` | filter | Returns failed records as rows instead of raising, unless the backend failed every record. `'raise'` is the default. |
-| `name = 'refund-check'` | all | Names the question in `source`. |
-
-```sql
-SELECT id AS msg_id, answer AS topic, status
-FROM thinkthen_choose('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 1',
+SELECT answer AS topic, status
+FROM thinkthen_choose('SELECT body AS record FROM messages WHERE msg_id = 3',
                       'What is the message about?')
 WHERE choices = '["billing", "shipping", "other"]'
-  AND descriptions = '{"billing": "Invoices, fees and refunds."}';
+  AND descriptions = '{"billing": "charges, invoices and refunds",
+                       "shipping": "parcels and delivery"}';
 ```
 
-## Result columns
+decide and filter take `yes_means` and `no_means`. choose, tag, score and rank take `descriptions`, keyed by your choices, labels or levels. A key that is not one of them is refused.
 
-Every function returns these columns in this order:
+## Records and fields
 
-| Column | Type | Holds |
-| --- | --- | --- |
-| `position` | INTEGER | The record's place in the source, from 1 |
-| `id` | the id's own type | The source `id`, or a JSON record's own `id`, or NULL |
-| `answer` | per function | The answer, or NULL when not sure or failed |
-| `probability` | REAL | The answer's probability, when the function has one |
-| `status` | TEXT | `answered`, `unsure` or `failed` |
-| `error_code` | TEXT | The failure's code |
-| `error_message` | TEXT | What went wrong |
-| `error_http_status` | INTEGER | The backend's HTTP status, when there was one |
-| `source` | JSON | The backend, model, question name and question identity |
-| `detail` | JSON | Probabilities and pieces behind the answer |
+A record is one value of the `record` column: text, or JSON. Text is judged as it stands, even when it looks like JSON. `field = '/text'` picks one field of a JSON record, and tells ThinkThen the records are JSON. `format = 'json'` says the same without picking a field, and ThinkThen then judges the whole record.
 
-The arguments are hidden columns, so `SELECT *` shows only these ten.
+```sql
+CREATE TABLE inbox (line TEXT);
+INSERT INTO inbox VALUES ('{"id": "a1", "text": "Please refund my order."}');
+
+SELECT id, answer AS is_refund, status
+FROM thinkthen_decide('SELECT line AS record FROM inbox',
+                      'Does the customer request a refund?')
+WHERE field = '/text';
+```
+
+Give JSON records an `id`. Each row carries it back in the `id` column. `id` is NULL when the record has none.
+
+`id` holds your query's `id` column when it has one, and otherwise the JSON record's own `id`. Either way it keeps its own type: a number stays an INTEGER and text stays TEXT, so it joins to your key as it is.
+
+A record that can't be judged always comes back as a failed row, and nothing about it is sent to the service:
+
+| The record | The failed row's `error_code` |
+| --- | --- |
+| Blank: an empty string, only spaces, or `{}` | `record.empty` |
+| NULL, or a `field` that points at nothing | `record.missing` |
+| Not text, such as a number or a blob | `record.invalid` |
+
+A query that returns no rows gives no rows back and sends nothing.
+
+## Tables
+
+In SQL every result is already a table, so there is nothing to switch on: the answer column and the columns that explain it always come together.
+
+| Column | Holds |
+| --- | --- |
+| `position` | The record's place in your query, from 1 |
+| `id` | Your `id` column, or a JSON record's own `id`, or NULL |
+| `record` | The record, as your query gave it |
+| `answer` | The answer, in the type of the function. NULL when not sure or failed |
+| `probability` | The number compared with your bars. NULL when failed, and for tag, score, rank, recognize, relate and annotate |
+| `status` | `answered`, `unsure` or `failed` |
+| `error_code`, `error_message`, `error_http_status` | Why a failed row failed. NULL on every other row |
+| `source` | Which question, service and model produced the row |
+| `detail` | The numbers behind the answer, by function |
+
+`answer` is `1` or `0` for decide and filter, text for choose, a REAL for score and an INTEGER for rank. For tag, find, recognize, relate and annotate it is JSON text, and so are `detail` and `source`. Saved in a table they stay JSON text, and `->>` and `json_each` read them the same way.
+
+Tables treat missing values their own way. `WHERE is_refund` drops the NULL rows, for example, and so does a join on the answer. `count(*)` counts every row and `count(is_refund)` counts only the answered ones, so the difference is how many had no answer. To see why an answer is missing, read `status`:
+
+```sql
+SELECT status, count(*) AS records FROM refund_checks GROUP BY status;
+
+SELECT msg_id, body FROM refund_checks WHERE status = 'unsure';
+```
+
+Save answers in a table before you use them, as `refund_checks` is saved above. A saved table can be read, joined and filtered for free. A call can't: every run asks the service again. Within one statement, SQLite may run the same call more than once, in a join for example, and an unchanged call then replays its rows without asking again. Nothing is kept from one statement to the next.
+
+The functions can't be used inside a view or a trigger. Save the answers in a table and build the view on that.
+
+Choose the records before the call, not after. Put `WHERE` and `LIMIT` inside the query you give the function. An outer `LIMIT` limits the rows you see; it is not a reliable limit on work or cost because the database may read ahead. It can also hide an already-read, already-judged failure: SQLite can end the statement before filter or `raise_if_failed` reports its final error. Put `LIMIT` inside the input query instead. Do not treat an early-stopped statement as proof that every input record succeeded. Save the complete results before inspecting a subset when failure reporting matters.
+
+One statement is all or nothing. If it is cancelled or fails, nothing it would have saved is kept, even when the answers were already paid for. For a large job, save a few thousand records per statement and commit each one before starting the next.
 
 ## Settings
 
-`thinkthen_set(name, value)` changes a setting for the connection and returns 1.
-
-| Setting | Default | Sets |
-| --- | --- | --- |
-| `backend` | `systemone` | The backend: `systemone` or `openai` |
-| `model` | the backend's default | The model |
-| `batch` | the engine's default | The most questions in one request |
-| `max_retries` | 3 | Retries after a failed request, 0 to 3. More is refused. |
-| `initial_backoff_ms` | 500 | The first wait before a retry |
-| `attempt_timeout_ms` | 120000 | The time limit for one attempt |
+The extension reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment of the SQLite process. To choose settings yourself, set them for the connection.
 
 ```sql
-SELECT thinkthen_set('backend', 'openai');
+SELECT thinkthen_set('model', '...');
+SELECT thinkthen_set('batch', 16);
 ```
 
-`backend` and `model` take text, and the others take integers. A key or a backend address cannot be set.
+The settings are `backend`, `model`, `batch`, `max_retries`, `initial_backoff_ms` (the first wait before a retry) and `attempt_timeout_ms` (the time limit for one attempt). Both times are in milliseconds. `thinkthen_set` takes one setting at a time. A setting lasts for the connection and never changes a statement that is already running. `max_retries` goes from 0 to 3.
 
-## Control cost and cancel
+SQL can't set a key or a service address. Both come only from the environment of the SQLite process, so no query can read a key or send your records somewhere else.
 
-A function invocation owns one engine call over its supplied input. A statement can invoke a function more than once, especially when its arguments depend on an outer row. A plain rerun can send questions again; reading a saved result table does not.
+## Cancel
 
-Choose the input before invoking ThinkThen: put `WHERE`, a deterministic `ORDER BY` on a stable unique key, and any input `LIMIT` inside the supplied source. An output `LIMIT` does not bound paid requests. A CTE is not a durable saved result, and batch size controls packing rather than total work. Retries and dependent questions can make several requests for the same input records. SQL does not admit `max_requests`, inherit `THINKTHEN_MAX_REQUESTS`, or report a statement-wide usage total.
+Stop a statement the way SQLite stops any statement: Ctrl-C in the `sqlite3` shell, or `sqlite3_interrupt` from a program. The statement fails with SQLite's own "interrupted" error, and the connection is ready for the next one. Requests already sent are still charged, and a cancelled statement saves nothing.
 
-The `refund_answers` example above saves answers in a real table before joining them to application data. For a large job, snapshot the source or keep it unchanged, select a fixed range of unique keys for each chunk, save its answers, and commit that chunk before starting the next. Commit the answer rows and a completed-range marker in the same transaction. Restart only ranges that did not commit; do not treat gaps from a failed range as completed work. A single `CREATE TABLE ... AS SELECT` is one statement, not a checkpoint after each row. Cancelling it can discard all of that statement's results even when requests were paid for. Earlier separately committed chunks remain available.
+## Errors
 
-Within one statement, an unchanged invocation can replay its saved rows without sending another request. A correlated invocation with different arguments performs new work; do not assume that returning to a previous argument value provides a persistent cache. Save answers before joining when you need reuse across statements. ThinkThen functions cannot run inside a view or trigger.
+| What happened | What you get |
+| --- | --- |
+| A mistake in the call, such as a bad threshold, a missing list, `low` and `high` on filter, or a column your query does not have | The statement fails before anything is sent. The error carries a code such as `usage.threshold` |
+| The engine could not start, such as no API key, or the service rejects authentication with HTTP 401 or 403 | The statement fails before anything is sent, with a code such as `usage.key-missing` |
+| The statement was cancelled | The statement fails with SQLite's own "interrupted" error |
+| A record could not be judged, or the service failed | A row with `status` of `failed`, a NULL `answer`, and the reason in `error_code` and `error_message`. The statement goes on |
+| The same, in `thinkthen_filter` or with `raise_if_failed` | On full consumption, one error after every record is judged. The statement fails and saves nothing; see Tables for early stopping |
+| Not sure | A row with `status` of `unsure`, a NULL `answer` and its `probability`. Never an error |
+| You read `status`, `probability` or the error columns | Never an error |
 
-`sqlite3_interrupt`, or Ctrl-C in the shell, stops the query and leaves the connection ready for the next one. Closing a statement or cursor ends its call. Already sent requests can still incur charges; a timeout or early cursor close is not a request allowance. In the shell, `.headers on`, `.mode csv` and `.once answers.csv` before a `SELECT` export the saved table.
+Two tests let you sort rows by meaning:
+
+- `status <> 'answered'` finds every row with no answer. That covers not sure and failed.
+- `status = 'failed'` finds every row where something went wrong. Not sure is a result and not an error.
+
+HTTP 401 or 403 stops the call with `backend.status`. The call also stops when every request in its first batch fails and at least one failure has an HTTP status from 400 through 499. These are statement errors even without `raise_if_failed`; other service failures follow the failed-row rule above.
+
+A failed row's `error_code` is one of eight: `record.empty`, `record.missing`, `record.invalid`, `record.json`, `record.too-large`, `backend.transport`, `backend.status` and `backend.reply`. Every other code belongs to a failed statement. Branch on the code, never on the message, which is written for people and can change.
+
+A raised error is an ordinary SQLite error, and its message starts with the code, as in `usage.threshold: ...`. The error for failed records starts with the first failed record's code, then reports how many failed out of those judged, the first failed position and its actual reason. A mistake in how an option is written, such as text where a number belongs, has the code `usage.argument`. An option the function does not have is SQLite's own "no such column" error.
+
+When an error is raised for failed records, treat any rows your program had already read from that statement as not returned. SQLite hands rows over one step at a time, so a program that steps through the result gets rows before the error reaches it. The statement has still failed, and a `CREATE TABLE ... AS` around it saves nothing.
+
+## Upgrading from 0.1
+
+The baseline is the database implementation in the [published 0.1.2 source](https://proxy.golang.org/github.com/botassembly/thinkthen/@v/v0.1.2.zip).
+
+| 0.1.2 | Now |
+| --- | --- |
+| Scalar calls return a bare answer or NULL | Table calls return an answer with `status`, probability and errors |
+| Keyed `_many` calls take JSON objects and return `key`/`value` | The query/table input and position/id/result columns shown above |
+| Separate details/probability functions | State and detail columns on each result |
+| find selects among supplied units | find returns a span within each record |
+
+Update stored queries and dependent views using this database’s calling convention. The public SQL driver ticket proves the shared contract; each database ticket proves these statements against its built extension.
+
+---

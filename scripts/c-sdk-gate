@@ -26,12 +26,6 @@ if [ "${1:-}" = --readme-only ]; then exit 0; fi
 flags="$flags -Wl,-rpath,$(pkg-config --variable=libdir thinkthen-c)"
 # readme-example ran this program; the loader checks below reuse its binary.
 cc -std=c11 -Wall -Wextra -Werror "$scratch/readme/example.c" $flags -o "$scratch/example"
-python3 scripts/c-doc-examples "$scratch/doc-examples" "$flags"
-# Deliberately compile through the installed pkg-config surface, not source paths.
-cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
-    $flags -o "$scratch/consumer"
-cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/conformance.c \
-    $flags -o "$scratch/conformance"
 if [ -n "${THINKTHEN_LOOPBACK:-}" ]; then
     test -x "$THINKTHEN_LOOPBACK"
 else
@@ -39,6 +33,13 @@ else
     THINKTHEN_LOOPBACK="$build_target/debug/loopback"
 fi
 export THINKTHEN_LOOPBACK
+python3 scripts/c-doc-examples "$scratch/doc-examples" "$flags"
+# Deliberately compile through the installed pkg-config surface, not source paths.
+cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
+    $flags -o "$scratch/consumer"
+cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/conformance.c \
+    $flags -o "$scratch/conformance"
+
 c_library=$(find "$scratch/installed/lib" -maxdepth 1 -type f -name 'libthinkthen.*' -print)
 case $(uname -s) in Darwin) c_attempted=$(pkg-config --variable=libdir thinkthen-c)/$(basename "$c_library") ;; *) c_attempted=$(basename "$c_library") ;; esac
 python3 scripts/loader-failure-check "$c_library" --attempted "$c_attempted" -- "$scratch/example"

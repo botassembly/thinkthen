@@ -9,10 +9,10 @@ import sys
 case = json.loads(Path(sys.argv[2]).read_text())
 rows = []
 for line in Path(sys.argv[1]).read_text().splitlines():
-    match = re.fullmatch(r'([0-9]+) #<data ThinkThen::RankRow item=("(?:[^"\\]|\\.)*"), row=.*>', line)
+    match = re.fullmatch(r'([0-9]+) (.*)', line)
     if match is None:
         raise ValueError("Invalid printed rank row")
-    rows.append((json.loads(match[2]), int(match[1])))
+    rows.append((match[2], int(match[1])))
 if Counter(text for text, rank in rows) != Counter(case["records"]):
     raise ValueError("Printed rank records differ from case records")
 rows.sort(key=lambda row: case["records"].index(row[0]))

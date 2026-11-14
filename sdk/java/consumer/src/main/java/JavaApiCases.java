@@ -23,23 +23,23 @@ public final class JavaApiCases {
         }
     }
 
-    static <A, D extends Detail> Answered<A, D> answered(Row<A, D> row) {
+    static <A, T> Answered<A, T> answered(Row<A, T> row) {
         return switch (row) {
-            case Answered<A, D> answer -> answer;
-            case Unsure<A, D> unsure -> throw new AssertionError("Unexpected unsure row at " + unsure.position());
-            case Failed<A, D> failed -> throw new AssertionError(failed.error().code().wireName());
+            case Answered<A, T> answer -> answer;
+            case Unsure<A, T> unsure -> throw new AssertionError("Unexpected unsure row at " + unsure.position());
+            case Failed<A, T> failed -> throw new AssertionError(failed.error().code().wireName());
         };
     }
 
-    static <A, D extends Detail> void failed(Row<A, D> row, String code) {
+    static <A, T> void failed(Row<A, T> row, String code) {
         switch (row) {
-            case Failed<A, D> failure -> {
+            case Failed<A, T> failure -> {
                 equal(failure.error().code().wireName(), code, "typed failed-row code");
                 equal(failure.status(), Status.FAILED, "failed status");
                 try {
                     failure.throwIfFailed();
                     throw new AssertionError("throwIfFailed must throw for a failed row");
-                } catch (ThinkThenException error) {
+                } catch (FailedException error) {
                     equal(error.code(), failure.error().code(), "explicit fail-fast preserves code enum");
                     equal(error.getMessage(), failure.error().message(), "explicit fail-fast preserves message");
                 }
@@ -48,28 +48,37 @@ public final class JavaApiCases {
         }
     }
 
-    // Feature: Java's signatures retain each function's answer and detail types.
+    static void failedCall(java.util.function.Supplier<? extends Row<?,?>> call, String code) {
+        try { call.get(); throw new AssertionError("Scalar failure must throw at the call: " + code); }
+        catch (FailedException error) {
+            equal(error.code().wireName(),code,"scalar failure preserves code");
+            equal(error.rows().size(),1,"scalar failure retains its actual failed parent");
+            failed(error.rows().getFirst(),code);
+        }
+    }
+
+    // Feature: Java signatures retain each function's answer and original-record types.
     static void allFunctionsAndToolbox(ThinkThen client) {
-        Row<Boolean, NoDetail> decide = client.decide("Ready?", "alpha");
+        Row<Boolean, String> decide = client.decide("Ready?", "alpha");
         var bandOptions = DecideOptions.builder().threshold(Threshold.band(0.2, 0.8))
             .field(Pointer.of("/body")).build();
-        Row<Boolean, NoDetail> selectedField = client.decide("Ready?", Map.of("id", "r1", "body", "alpha"), bandOptions);
+        var selectedField = client.decide("Ready?", Map.of("id", "r1", "body", "alpha"), bandOptions);
         equal(selectedField.id().orElseThrow(), JsonValue.parse("\"r1\""), "field selection preserves outer identifier");
         check(selectedField.status() != Status.FAILED, "typed band and pointer reach engine admission");
-        Row<String, LabelDetail> choose = client.choose("Which?", "alpha", List.of("a", "b"));
-        Row<List<String>, LabelDetail> tag = client.tag("What applies?", "alpha", List.of("a", "b"));
-        Row<Double, LevelDetail> score = client.score("How much?", "alpha", List.of("low", "high"));
-        Row<Optional<Span>, NoDetail> find = client.find("Which line?", "first\nsecond");
-        Row<List<Entity>, RecognizeDetail> recognize = client.recognize("Ada Acme", List.of("person", "company"));
+        Row<String, String> choose = client.choose("Which?", "alpha", List.of("a", "b"));
+        Row<List<String>, String> tag = client.tag("What applies?", "alpha", List.of("a", "b"));
+        Row<Double, String> score = client.score("How much?", "alpha", List.of("low", "high"));
+        Row<Optional<Span>, String> find = client.find("Which line?", "first\nsecond");
+        Row<List<Entity>, String> recognize = client.recognize("Ada Acme", List.of("person", "company"));
         var rule = RelationRule.builder("person", "company", "works_for").either(true).build();
-        Row<List<Relation>, RelationDetail> relate = client.relate("Ada Acme", List.of(rule));
+        Row<List<Relation>, String> relate = client.relate("Ada Acme", List.of(rule));
         equal(decide.function(), dev.thinkthen.FunctionName.DECIDE, "typed function tag");
         equal(decide.position(), 1L, "single input position");
-        equal(answered(decide).detail(), Optional.empty(), "no-detail marker stays absent");
+        equal(answered(decide).detail(), NoDetail.INSTANCE, "safe detail has the no-detail marker");
         check(List.of("a", "b").contains(answered(choose).answer()), "choice answer remains a label");
-        Map<String, Double> labelProbabilities = answered(tag).detail().orElseThrow().labels();
+        Map<String, Double> labelProbabilities = ((LabelDetail) answered(tag).detail()).labels();
         equal(labelProbabilities.keySet(), java.util.Set.of("a", "b"), "tag detail retains all labels");
-        List<Double> levels = answered(score).detail().orElseThrow().levels();
+        List<Double> levels = ((LevelDetail) answered(score).detail()).levels();
         equal(levels.size(), 2, "score detail follows required levels");
         answered(find).answer().ifPresent(span -> equal("first\nsecond".substring(Math.toIntExact(span.start()),Math.toIntExact(span.end())), span.text(), "find span offsets"));
         for (Entity entity : answered(recognize).answer()) {
@@ -94,27 +103,25 @@ public final class JavaApiCases {
             {"route":{"function":"choose","question":"Which?","choices":["a","b"]},
              "ready":{"function":"decide","question":"Ready?"}}
             """);
-        ChooseQuestion selected = toolbox.choose("route").orElseThrow();
-        Row<String, LabelDetail> selectedRow = client.choose(selected, "alpha");
+        ChooseQuestion<String> selected = toolbox.choose("route");
+        Row<String, String> selectedRow = client.choose(selected, "alpha");
         equal(answered(selectedRow).answer(), answered(choose).answer(), "typed question carries choices");
-        check(toolbox.decide("route").isEmpty(), "wrong typed selector is empty");
-        check(toolbox.choose("absent").isEmpty(), "missing selector is empty");
-        Row<Annotations, NoDetail> annotation = client.annotate(AnnotationQuestions.builder().put("route", selected).put("ready", toolbox.decide("ready").orElseThrow()).build(), "alpha");
-        Annotations values = answered(annotation).answer();
-        AnnotationOutcome<String, LabelDetail> route = values.choose("route");
-        switch (route) {
-            case AnnotationAnswered<String, LabelDetail> value -> equal(value.answer(), answered(choose).answer(), "annotation is a typed label");
-            case AnnotationUnsure<String, LabelDetail> ignored -> throw new AssertionError("stub choice must answer");
-            case AnnotationFailed<String, LabelDetail> value -> throw new AssertionError(value.error().message());
+        for (Runnable lookup : List.<Runnable>of(() -> toolbox.decide("route"), () -> toolbox.choose("absent"))) {
+            try { lookup.run(); throw new AssertionError("wrong or missing typed selection must fail"); }
+            catch (UsageException expected) { }
         }
+        Row<Annotations, String> annotation = client.annotate(AnnotationQuestions.builder().put("route", selected).put("ready", toolbox.decide("ready")).build(), "alpha");
+        Annotations values = answered(annotation).answer();
+        Row<String,Object> route = values.choose("route");
+        equal(answered(route).answer(), answered(choose).answer(), "annotation is an ordinary typed row");
         for (Runnable selector : List.<Runnable>of(
                 () -> values.decide("absent"), () -> values.choose("absent"),
                 () -> values.tag("absent"), () -> values.score("absent"),
-                () -> values.filter("absent"), () -> values.find("absent"),
+                () -> values.find("absent"),
                 () -> values.recognize("absent"), () -> values.relate("absent"),
                 () -> values.decide("route"), () -> values.choose("ready"),
                 () -> values.tag("ready"), () -> values.score("ready"),
-                () -> values.filter("ready"), () -> values.find("ready"),
+                () -> values.find("ready"),
                 () -> values.recognize("ready"), () -> values.relate("ready"))) {
             try { selector.run(); throw new AssertionError("unknown or wrong-function selector must throw"); }
             catch (ThinkThenException expected) {
@@ -156,29 +163,28 @@ public final class JavaApiCases {
         var first = new String("alpha");
         var last = new String("omega");
         List<String> input = Arrays.asList(first, null, last);
-        try (Stream<Filtered<String>> rows = client.filterRows("Ready?", input)) {
+        try (var rows = client.decideStream("Ready?", input)) {
             var output = rows.toList();
-            equal(output.size(), 3, "filter retains missing and unkept inputs");
+            equal(output.size(), 3, "decide stream keeps every original position");
             for (int i = 0; i < output.size(); i++) {
-                check(output.get(i).item() == input.get(i), "filter preserves every original object");
-                equal(output.get(i).row().position(), (long) i + 1, "filter retains original position");
+                check(output.get(i).item() == input.get(i), "every result preserves original identity");
+                equal(output.get(i).position(), (long)i+1, "stream retains original position");
             }
-            failed(output.get(1).row(), "record.missing");
-            check(!output.get(1).kept(), "failed filter row is not kept");
+            failed(output.get(1), "record.missing");
         }
-        try (Stream<Ranked<JsonValue>> rows = client.rank("Urgency?", input, List.of("low", "high"), RankOptions.builder().top(1).build())) {
+        try (Stream<Row<Long,String>> rows = client.rank("Urgency?", input, List.of("low", "high"), RankOptions.builder().top(1).build())) {
             var output = rows.toList();
             equal(output.size(), 2, "rank top keeps one answer and every failure");
             var top = output.getFirst();
-            equal(answered(top.row()).answer(), 1L, "rank answer is distinct from input position");
-            equal(top.item(), new JsonString(input.get(Math.toIntExact(top.row().position()) - 1)), "rank returns an equal owned text snapshot");
+            equal(answered(top).answer(), 1L, "rank answer is distinct from input position");
+            check(top.item() == input.get(Math.toIntExact(top.position())-1), "rank preserves the caller object");
             var missing = output.getLast();
-            check(missing.item() instanceof JsonNull, "rank keeps missing original");
-            equal(missing.row().position(), 2L, "rank failure position");
-            failed(missing.row(), "record.missing");
+            check(missing.item() == null, "rank keeps missing original");
+            equal(missing.position(), 2L, "rank failure position");
+            failed(missing, "record.missing");
         }
-        failed(client.decide("Ready?", null), "record.missing");
-        failed(client.decide("Ready?", JsonValue.parse("null")), "record.missing");
+        failedCall(() -> client.decide("Ready?", null), "record.missing");
+        failedCall(() -> client.decide("Ready?", JsonValue.parse("null")), "record.missing");
     }
 
     // Feature: Java admits only the supported method shapes at compilation.
@@ -243,7 +249,7 @@ public final class JavaApiCases {
                 import java.util.*;
                 final class ModuleConsumer {
                     void call(ThinkThen client, List<@Nullable String> records) {
-                        try (var rows = client.filterRows("Ready?", records)) { rows.forEach(System.out::println); }
+                        try (var rows = client.filter("Ready?", records)) { rows.forEach(System.out::println); }
                         try (var rows = client.rank("Priority?", records, List.of("low", "high"))) { rows.forEach(System.out::println); }
                     }
                 }

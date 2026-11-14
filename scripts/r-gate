@@ -6,7 +6,8 @@ root=$PWD
 case "${1:-}" in
   '') ;;
   --source) export THINKTHEN_R_SOURCE_NATIVE=1 ;;
-  *) echo 'usage: scripts/r-gate [--source]' >&2; exit 2 ;;
+  --ideal) export THINKTHEN_R_SOURCE_NATIVE=1 ;;
+  *) echo 'usage: scripts/r-gate [--source|--ideal]' >&2; exit 2 ;;
 esac
 export CARGO_NET_OFFLINE=true
 export R_HOME="$(R RHOME)"
@@ -37,4 +38,33 @@ cp "$scratch/library/thinkthen/libs/thinkthen.so" "$CARGO_TARGET_DIR/debug/think
 export THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
 # The driver copies prepared dependencies before isolating its consumer library.
 unset R_LIBS THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
-python3 sdk/r/tests/driver.py --root "$root" --library "$scratch/library" --scratch "$scratch"
+export R_LIBS_USER="$scratch/library${R_LIBS_USER:+:$R_LIBS_USER}"
+status=0
+if [ "${1:-}" = --ideal ]; then
+  for test in contract interface typed-surface typed-frames surface frames; do
+    Rscript --vanilla "$root/sdk/r/tests/$test.R" || status=1
+  done
+else
+  python3 sdk/r/tests/driver.py --root "$root" --library "$scratch/library" --scratch "$scratch" || status=1
+fi
+[ "$status" -eq 0 ] || exit "$status"
+python3 scripts/guide-examples --surface r --inventory || status=1
+python3 scripts/guide-examples --surface r || status=1
+[ "$status" -eq 0 ] || exit "$status"
+for control in output branch refusal; do
+  if python3 scripts/guide-examples --surface r --negative-control "$control" >"$scratch/negative-$control.log" 2>&1; then
+    echo "R guide accepted the $control negative control" >&2
+    exit 1
+  fi
+  case "$control" in
+    output|branch) diagnostic='deliberately wrong output' ;;
+    refusal) diagnostic='inherits(error, class) is not TRUE' ;;
+  esac
+  if ! grep -F "$diagnostic" "$scratch/negative-$control.log" >/dev/null; then
+    cat "$scratch/negative-$control.log"
+    echo "R guide rejected $control for an unexpected reason" >&2
+    exit 1
+  fi
+  echo "R guide rejected the $control negative control"
+done
+exit "$status"

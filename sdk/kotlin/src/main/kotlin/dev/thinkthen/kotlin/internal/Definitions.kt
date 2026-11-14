@@ -34,31 +34,31 @@ private fun JsonObjectBuilder.unmatched(names: List<String>, descriptions: Map<S
 
 internal fun Question<*, *>.definition(): JsonObject = buildJsonObject {
     put("function", when (this@definition) {
-        is Decide -> "decide"; is Choose -> "choose"; is Tag -> "tag"; is Score -> "score"
-        is Filter -> "filter"; is Rank -> "rank"; is Find -> "find"; is Recognize -> "recognize"
-        is Relate -> "relate"; is Annotate -> "annotate"
+        is DecideQuestion -> "decide"; is ChooseQuestion<*> -> "choose"; is TagQuestion<*> -> "tag"; is ScoreQuestion -> "score"
+        is FilterQuestion -> "filter"; is RankQuestion -> "rank"; is FindQuestion -> "find"; is RecognizeQuestion -> "recognize"
+        is RelateQuestion -> "relate"; is AnnotateQuestion -> "annotate"
     })
     val text = when (this@definition) {
-        is Decide -> question; is Choose -> question; is Tag -> question; is Score -> question
-        is Filter -> question; is Rank -> question; is Find -> question
+        is DecideQuestion -> question; is ChooseQuestion<*> -> question; is TagQuestion<*> -> question; is ScoreQuestion -> question
+        is FilterQuestion -> question; is RankQuestion -> question; is FindQuestion -> question
         else -> null
     }
     text?.let { put("question", it) }
     when (this@definition) {
-        is Decide -> { yesMeans?.let { put("true", it) }; noMeans?.let { put("false", it) } }
-        is Filter -> { yesMeans?.let { put("true", it) }; noMeans?.let { put("false", it) } }
-        is Choose -> { put("choices", options(choices, descriptions)); unmatched(choices, descriptions) }
-        is Tag -> { put("labels", options(labels, descriptions)); unmatched(labels, descriptions) }
-        is Score -> { put("levels", options(levels, descriptions)); unmatched(levels, descriptions) }
-        is Rank -> { put("levels", options(levels, descriptions)); unmatched(levels, descriptions); top?.let { put("top", it) } }
-        is Recognize -> put("kinds", JsonArray(kinds.map(::JsonPrimitive)))
-        is Relate -> put("rules", fixedJson.encodeToJsonElement(ListSerializer(RelationRule.serializer()), rules))
-        is Annotate -> put("questions", JsonObject(questions.entries.mapValues { it.value.definition() }))
-        is Find -> Unit
+        is DecideQuestion -> { yesMeans?.let { put("yes_means", it) }; noMeans?.let { put("no_means", it) } }
+        is FilterQuestion -> { yesMeans?.let { put("yes_means", it) }; noMeans?.let { put("no_means", it) } }
+        is ChooseQuestion<*> -> { put("choices", options(choices, descriptions)); unmatched(choices, descriptions) }
+        is TagQuestion<*> -> { put("labels", options(labels, descriptions)); unmatched(labels, descriptions) }
+        is ScoreQuestion -> { put("levels", options(levels, descriptions)); unmatched(levels, descriptions) }
+        is RankQuestion -> { put("levels", options(levels, descriptions)); unmatched(levels, descriptions); top?.let { put("top", it) } }
+        is RecognizeQuestion -> put("kinds", JsonArray(kinds.map(::JsonPrimitive)))
+        is RelateQuestion -> put("rules", fixedJson.encodeToJsonElement(ListSerializer(RelationRule.serializer()), rules))
+        is AnnotateQuestion -> put("questions", JsonObject(questions.entries.mapValues { it.value.definition() }))
+        is FindQuestion -> Unit
     }
     val threshold = when (this@definition) {
-        is Decide -> threshold; is Choose -> threshold; is Tag -> threshold; is Filter -> threshold
-        is Find -> threshold; is Recognize -> threshold; is Relate -> threshold
+        is DecideQuestion -> threshold; is ChooseQuestion<*> -> threshold; is TagQuestion<*> -> threshold; is FilterQuestion -> threshold
+        is FindQuestion -> threshold; is RecognizeQuestion -> threshold; is RelateQuestion -> threshold
         else -> null
     }
     when (threshold) {
@@ -67,9 +67,9 @@ internal fun Question<*, *>.definition(): JsonObject = buildJsonObject {
         null -> Unit
     }
     val field = when (this@definition) {
-        is Decide -> field; is Choose -> field; is Tag -> field; is Score -> field
-        is Filter -> field; is Rank -> field; is Find -> field; is Recognize -> field
-        is Relate -> field; is Annotate -> field
+        is DecideQuestion -> field; is ChooseQuestion<*> -> field; is TagQuestion<*> -> field; is ScoreQuestion -> field
+        is FilterQuestion -> field; is RankQuestion -> field; is FindQuestion -> field; is RecognizeQuestion -> field
+        is RelateQuestion -> field; is AnnotateQuestion -> field
     }
     field?.let { put("field", it.value) }
 }
@@ -95,26 +95,26 @@ internal fun decodeQuestion(value: JsonObject): EntryQuestion<*, *> {
         .filter { "description" in it }
         .associate { it.getValue("name").jsonPrimitive.content to it.getValue("description").jsonPrimitive.content }
     return when (value.getValue("function").jsonPrimitive.content) {
-        "decide" -> Decide(text(), threshold, field, yesMeans = meaning("true"), noMeans = meaning("false"))
-        "choose" -> Choose(text(), names("choices"), cut(), field, descriptions = descriptions("choices"))
-        "tag" -> Tag(text(), names("labels"), cut(), field, descriptions = descriptions("labels"))
-        "score" -> Score(text(), names("levels"), field, descriptions = descriptions("levels"))
-        "filter" -> Filter(text(), threshold, field, yesMeans = meaning("true"), noMeans = meaning("false"))
-        "rank" -> Rank(text(), names("levels"), value["top"]?.jsonPrimitive?.int, field, descriptions = descriptions("levels"))
-        "find" -> Find(text(), cut(), field)
-        "recognize" -> Recognize(names("kinds"), cut(), field)
-        "relate" -> Relate(fixedJson.decodeFromJsonElement(ListSerializer(RelationRule.serializer()), value.getValue("rules")), cut(), field)
+        "decide" -> DecideQuestion(text(), threshold, field, yesMeans = meaning("yes_means"), noMeans = meaning("no_means"))
+        "choose" -> ChooseQuestion(text(), names("choices"), cut(), field, descriptions = descriptions("choices"))
+        "tag" -> TagQuestion(text(), names("labels"), cut(), field, descriptions = descriptions("labels"))
+        "score" -> ScoreQuestion(text(), names("levels"), field, descriptions = descriptions("levels"))
+        "filter" -> FilterQuestion(text(), cut(), field, yesMeans = meaning("yes_means"), noMeans = meaning("no_means"))
+        "rank" -> RankQuestion(text(), names("levels"), value["top"]?.jsonPrimitive?.int, field, descriptions = descriptions("levels"))
+        "find" -> FindQuestion(text(), cut(), field)
+        "recognize" -> RecognizeQuestion(names("kinds"), cut(), field)
+        "relate" -> RelateQuestion(fixedJson.decodeFromJsonElement(ListSerializer(RelationRule.serializer()), value.getValue("rules")), cut(), field)
         else -> throw SerializationException("Unknown toolbox function")
     }
 }
 
 @Suppress("UNCHECKED_CAST")
 internal fun <A, D> decoder(question: Question<A, D>): Decoder<A, D> = when (question) {
-    is Decide -> Decoder.DECIDE; is Choose -> Decoder.CHOOSE; is Tag -> Decoder.TAG; is Score -> Decoder.SCORE
-    is Filter -> Decoder.FILTER; is Rank -> Decoder.RANK; is Find -> Decoder.FIND; is Recognize -> Decoder.RECOGNIZE
-    is Relate -> Decoder.RELATE; is Annotate -> Decoder.ANNOTATE
+    is DecideQuestion -> Decoder.DECIDE; is ChooseQuestion<*> -> Decoder.CHOOSE.mapped(question.domain::read) { kotlinx.serialization.json.JsonPrimitive((question.domain as Domain<Any>).word(it)) }; is TagQuestion<*> -> Decoder.TAG.mapped({ words -> immutableList(words.map(question.domain::read)) }) { values -> kotlinx.serialization.json.JsonArray(values.map { kotlinx.serialization.json.JsonPrimitive((question.domain as Domain<Any>).word(it)) }) }; is ScoreQuestion -> Decoder.SCORE
+    is FilterQuestion -> Decoder.FILTER; is RankQuestion -> Decoder.RANK; is FindQuestion -> Decoder.FIND; is RecognizeQuestion -> Decoder.RECOGNIZE
+    is RelateQuestion -> Decoder.RELATE; is AnnotateQuestion -> Decoder.ANNOTATE
 } as Decoder<A, D>
 
 /** Refuses a selector name that names no question of that function. */
 internal fun missing(function: String, kind: String, name: String, names: Set<String>): Nothing =
-    throw dev.thinkthen.kotlin.ThinkThenException(dev.thinkthen.kotlin.ErrorCode.USAGE_ARGUMENT, "No $function $kind named $name; available names: $names")
+    throw dev.thinkthen.kotlin.UsageException(dev.thinkthen.kotlin.ErrorCode.USAGE_ARGUMENT, "No $function $kind named $name; available names: $names")

@@ -45,15 +45,9 @@ internal struct NativeRow
     internal ulong Position;
     internal double Probability;
     internal int ErrorCode;
-    internal byte AnswerBool;
-    internal ulong Rank;
-    internal double Number;
-    internal Buffer Id, Answer, Detail, Source, Error;
+    internal nint PrivateData;
     internal static NativeRow Empty => new() { StructSize = (uint)Marshal.SizeOf<NativeRow>() };
 }
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct NativeRecordView { internal uint Kind; internal Buffer Bytes; }
 
 internal static partial class Native
 {
@@ -74,7 +68,7 @@ internal static partial class Native
         { rid = "osx-arm64"; filename = "libthinkthen_ffi.dylib"; }
         else if (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         { rid = "win-x64"; filename = "thinkthen_ffi.dll"; }
-        else throw new ThinkThenException(new(ErrorCode.LocalIo, "The ThinkThen package has no native asset for this runtime."));
+        else throw new SetupException(new(ErrorCode.LocalIo, "The ThinkThen package has no native asset for this runtime."));
         string root = AppContext.BaseDirectory;
         string path = Path.Combine(root, "runtimes", rid, "native", filename);
         return !File.Exists(path) && File.Exists(Path.Combine(root, filename)) ? Path.Combine(root, filename) : path;
@@ -84,7 +78,7 @@ internal static partial class Native
     {
         string? chosen = Environment.GetEnvironmentVariable(Contract.LibraryVariable);
         if (!string.IsNullOrEmpty(chosen) && !Path.IsPathFullyQualified(chosen))
-            throw new ThinkThenException(new(ErrorCode.LocalIo, Contract.LibraryPathMessage));
+            throw new SetupException(new(ErrorCode.LocalIo, Contract.LibraryPathMessage));
         string path = string.IsNullOrEmpty(chosen) ? PackagedPath() : chosen;
         nint library;
         try
@@ -94,7 +88,7 @@ internal static partial class Native
         }
         catch (Exception error) when (error is DllNotFoundException or BadImageFormatException)
         {
-            throw new ThinkThenException(new(ErrorCode.LocalIo, $"cannot load native engine {path}: {error.Message}"), error);
+            throw new SetupException(new(ErrorCode.LocalIo, $"cannot load native engine {path}: {error.Message}"), error);
         }
         try
         {
@@ -107,7 +101,7 @@ internal static partial class Native
         catch (EntryPointNotFoundException)
         {
             NativeLibrary.Free(library);
-            throw new ThinkThenException(new(ErrorCode.UsageAbi, Contract.AbiMessage));
+            throw new SetupException(new(ErrorCode.UsageAbi, Contract.AbiMessage));
         }
     }
 
@@ -186,11 +180,14 @@ internal static partial class Native
     [LibraryImport(Library, EntryPoint = "thinkthen_call_send_missing")]
     internal static partial int SendMissing(CallHandle call, ref NativeError error);
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_row_to_json")]
+    internal static partial int RowToJson(ref NativeRow row,out Buffer output,ref NativeError error);
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+    [LibraryImport(Library, EntryPoint = "thinkthen_row_host_json")]
+    internal static partial int RowHostJson(ref NativeRow row,out Buffer output,ref NativeError error);
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     [LibraryImport(Library, EntryPoint = "thinkthen_row_free")]
     internal static partial void RowFree(ref NativeRow row);
-    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    [LibraryImport(Library, EntryPoint = "thinkthen_row_original")]
-    internal static partial int RowOriginal(ref NativeRow row, out NativeRecordView original, ref NativeError error);
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_question_from_json")]
     internal static partial int QuestionFromJson([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] data, nuint length, out nint question, ref NativeError error);

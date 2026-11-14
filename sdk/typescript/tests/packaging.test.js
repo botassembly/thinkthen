@@ -29,9 +29,9 @@ module.exports = {...native, Client: class extends native.Client {
 }};
 `);
     const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
-import {ThinkThen, BackendError} from ${JSON.stringify(join(packagePath, "runtime.js"))};
+import {Client, SetupError} from ${JSON.stringify(join(packagePath, "runtime.js"))};
 import assert from "node:assert/strict";
-assert.throws(() => new ThinkThen({backend:"unknown_backend"}), error => error instanceof BackendError && error.code === "usage.backend");
+assert.throws(() => new Client({backend:"unknown_backend"}), error => error instanceof SetupError && error.code === "usage.backend");
 `], { encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
   } finally { await rm(directory, {recursive: true}); }

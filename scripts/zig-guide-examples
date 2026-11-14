@@ -1,80 +1,25 @@
 #!/usr/bin/env python3
-"""Compile and run every Zig example in the Zig README and guide, as written, on the stub backend.
+"""Run the literal Zig ideal guide against an unpacked package.
 
 Usage: zig-guide-examples PACKAGE SCRATCH
-
-PACKAGE is the unpacked Zig package. Readers see the default client;
-THINKTHEN_BACKEND=stub moves each run to the stub. Each document's own
-build.zig block builds its examples. A block without `main` runs inside the
-document's first `main`, up to its client, as the guide tells readers to.
-Each example builds and runs alone, in a fresh folder holding the files the
-guide tells readers to create. Prints one line per example and exits 1 if any fails.
+THINKTHEN_LOOPBACK names the prepared scripted backend. Each literal builds once,
+then runs its documented branches, outputs and compiler refusals.
 """
-import os
 from pathlib import Path
-import re
 import shutil
-import subprocess
 import sys
+from zig_guide_examples import compile_examples, installed_readme, run_examples, run_host_contract, compile_refusals
 
-ROOT = Path(__file__).resolve().parent.parent
-DOCUMENTS = [ROOT / 'sdk/zig/README.md', ROOT / 'docs/surfaces/zig.md']
-
-
-def run(command, cwd, env=None):
-    return subprocess.run(command, cwd=cwd, env=env, text=True,
-                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-
-def main(package, scratch):
-    environment = {name: value for name, value in os.environ.items()
-                   if name not in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH')}
-    environment['THINKTHEN_BACKEND'] = 'stub'
-    jobs = os.environ.get('CARGO_BUILD_JOBS', '2')
-    template = (ROOT / 'sdk/zig/tests/build.zig.zon').read_text()
-    total = failures = 0
-    for document in DOCUMENTS:
-        blocks = re.findall(r'```(\w*)\n(.*?)\n```', document.read_text(encoding='utf-8'), re.S)
-        files = {}
-        for kind, body in blocks:
-            if kind == 'json' and '"entries"' in body:
-                files['toolbox.json'] = body + '\n'
-            elif kind == 'json':
-                files['records.jsonl'] = body + '\n'
-        sources = [body for kind, body in blocks if kind == 'zig']
-        build = next(body for body in sources if 'pub fn build(' in body)
-        programs = [body for body in sources if 'pub fn build(' not in body]
-        first = next(body for body in programs if 'pub fn main(' in body)
-        prelude = first[:first.index('defer client.deinit();')] + 'defer client.deinit();\n'
-        project = scratch / document.stem
-        (project / 'src').mkdir(parents=True)
-        (project / 'build.zig').write_text(build + '\n')
-        # Zig takes a dependency path relative to the project.
-        (project / 'build.zig.zon').write_text(template.replace('"../package"', '"' + os.path.relpath(package, project) + '"'))
-        for number, body in enumerate(programs, 1):
-            total += 1
-            title = f'{document.relative_to(ROOT)} example {number}'
-            source = body if 'pub fn main(' in body else prelude + body + '\n}'
-            (project / 'src/main.zig').write_text(source + '\n')
-            result = run(['zig', 'build', '-j' + jobs, '--cache-dir', str(scratch / 'cache')], project)
-            if result.returncode == 0:
-                folder = scratch / f'run-{total}'
-                folder.mkdir()
-                for name, text in files.items():
-                    (folder / name).write_text(text)
-                result = run([str(project / 'zig-out/bin/example')], folder, environment)
-                shutil.rmtree(folder)
-            if result.returncode == 0:
-                print(f'{title} passes')
-            else:
-                failures += 1
-                output = result.stdout.strip().splitlines() or ['(no output)']
-                print(f'{title} FAILS:\n  ' + '\n  '.join(output[-8:]))
-    print(f'{total - failures} of {total} Zig docs examples pass')
-    return 1 if failures else 0
-
-
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        raise SystemExit(__doc__)
-    sys.exit(main(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()))
+if len(sys.argv) != 3:
+    raise SystemExit(__doc__)
+package, stage = (Path(value).resolve() for value in sys.argv[1:])
+stage.mkdir(parents=True, exist_ok=True)
+libraries = [path for path in (package / 'native').rglob('*') if path.is_file()]
+if len(libraries) != 1:
+    raise SystemExit('the installed Zig package must contain one host engine')
+shutil.copy2(libraries[0], stage / libraries[0].name)
+compile_examples(stage, package)
+installed_readme(stage, package)
+run_examples(stage)
+run_host_contract(stage)
+compile_refusals(stage, package)

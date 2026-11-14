@@ -2,25 +2,39 @@
 macro_rules! function_set {
     (all[$($variant:ident),+] entries[$($member:ident),+]) => {
         $(crate::core::results::functions::define_function!($variant);)+
+        $(crate::core::results::functions::single!($member);)+
+        impl SingleFunction for questions::Annotate {}
         /// A heterogeneous result with a stable function discriminator.
         #[non_exhaustive]
         #[derive(Debug,Clone,serde::Serialize)]
         #[serde(untagged)]
         pub enum AnyRow {$(#[doc=stringify!($variant)] $variant(Row<questions::$variant>),)+}
         impl AnyRow {
-            #[cfg(feature = "command")]
-            pub(crate) fn failure(&self) -> Option<&Error> {
-                self.error().or_else(|| match self {
-                    Self::Annotate(row) => match row.outcome() {
-                        Outcome::Answered { answer, .. } => answer.values().find_map(AnnotationEntry::error),
-                        _ => None,
-                    },
-                    _ => None,
-                })
+            /// The admitted original input retained for native adapters.
+            #[doc(hidden)]
+            #[must_use]
+            pub fn original_record(&self) -> Option<&crate::core::records::Record> {
+                match self { $(Self::$variant(row) => row.original_record(),)+ }
+            }
+            #[cfg(feature = "native")]
+            pub(crate) fn failure_row(self, error: Error, id: Option<RecordId>) -> Self {
+                match self { $(Self::$variant(mut row) => {
+                    row.id = id;
+                    row.outcome = Outcome::Failed { error };
+                    Self::$variant(row)
+                },)+ }
+            }
+            #[cfg(feature = "native")]
+            pub(crate) fn replace_id(&mut self, id: Option<RecordId>) {
+                match self { $(Self::$variant(row) => row.id = id,)+ }
+            }
+            /// The failed result or first failed form entry, in question-name order.
+            #[must_use]
+            pub fn failure(&self) -> Option<&Error> {
+                match self { $(Self::$variant(row) => row.failure(),)+ }
             }
             pub(crate) fn typed<F:Function>(self)->Result<Row<F>,Error>{
-                let row:Box<dyn std::any::Any>=match self{$(Self::$variant(row)=>Box::new(row),)+};
-                row.downcast::<Row<F>>().map(|row|*row).map_err(|_|mismatch())
+                F::project(self, Projection::new())
             }
             /// The row's function.
             #[must_use]
@@ -60,19 +74,40 @@ macro_rules! function_set {
         }
         /// A named annotation result without an enclosing position, id or source.
         #[non_exhaustive]
-        #[derive(Debug,Clone,PartialEq,serde::Serialize,serde::Deserialize,schemars::JsonSchema)]
+        #[derive(Debug,Clone,PartialEq,serde::Serialize)]
         #[serde(tag="function",rename_all="lowercase")]
-        #[schemars(extend("unevaluatedProperties" = false))]
         pub enum AnnotationEntry {$(#[doc=stringify!($member)] $member(Outcome<<questions::$member as Function>::Answer,<questions::$member as Function>::Detail>),)+}
+        #[derive(serde::Deserialize)]
+        #[serde(tag="function",rename_all="lowercase")]
+        enum RawEntry {$( $member(Outcome<<questions::$member as Function>::Answer,<questions::$member as Function>::Detail>),)+}
+        impl<'de> serde::Deserialize<'de> for AnnotationEntry {
+            fn deserialize<D:serde::Deserializer<'de>>(d:D)->Result<Self,D::Error>{
+                Ok(match RawEntry::deserialize(d)? {$(RawEntry::$member(outcome)=>{
+                    shape::validate::<questions::$member>(&outcome).map_err(serde::de::Error::custom)?;
+                    Self::$member(outcome)
+                },)+})
+            }
+        }
+        impl schemars::JsonSchema for AnnotationEntry {
+            fn schema_name()->std::borrow::Cow<'static,str>{"AnnotationEntry".into()}
+            fn json_schema(g:&mut schemars::SchemaGenerator)->schemars::Schema{
+                schemars::json_schema!({"oneOf":[$(shape::entry_schema::<questions::$member>(g)),+]})
+            }
+        }
         /// Prints the entry's bare answer, `unsure`, or `failed: ` and the error code.
         impl std::fmt::Display for AnnotationEntry {
             fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { match self { $(Self::$member(outcome) => std::fmt::Display::fmt(outcome, formatter),)+ } }
         }
         impl AnnotationEntry {
+            #[cfg(feature = "native")]
+            pub(crate) fn into_row(self, parent: &Row<questions::Annotate>) -> AnyRow {
+                match self { $(Self::$member(outcome) => AnyRow::$member(Row::new(
+                    parent.position, parent.id.clone(), parent.source.clone(), outcome,
+                )),)+ }
+            }
             pub(crate) fn function(&self) -> FunctionName { match self { $(Self::$member(_) => FunctionName::$member,)+ } }
             pub(crate) fn outcome_any(&self) -> &dyn std::any::Any { match self { $(Self::$member(outcome) => outcome,)+ } }
-            #[cfg(feature = "command")]
-            fn error(&self) -> Option<&Error> { match self { $(Self::$member(outcome) => match outcome { Outcome::Failed { error } => Some(error), _ => None },)+ } }
+            pub(crate) fn error(&self) -> Option<&Error> { match self { $(Self::$member(outcome) => match outcome { Outcome::Failed { error } => Some(error), _ => None },)+ } }
         }
     };
 }

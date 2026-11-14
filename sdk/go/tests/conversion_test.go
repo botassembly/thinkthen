@@ -17,11 +17,15 @@ type failedEncoding struct{ message string }
 
 func (v failedEncoding) MarshalJSON() ([]byte, error) { return nil, errors.New(v.message) }
 
-// Feature: host conversion errors use redacted engine messages and cannot open a call.
+// Feature: host conversion failures become redacted record errors with their original causes.
 func TestHostConversionErrorsAreRedacted(t *testing.T) {
 	secret := "synthetic-encoding-secret"
-	_, err := tt.JSON(failedEncoding{secret})
-	if !errors.Is(err, tt.CodeRecordJSON) || errors.Is(err, tt.ErrUsage) || strings.Contains(err.Error(), secret) {
+	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
+	_, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, failedEncoding{secret})
+	if err == nil {
+		t.Fatal("conversion failure did not fail the scalar call")
+	}
+	if !errors.Is(err, tt.CodeRecordInvalid) || errors.Is(err, tt.ErrUsage) || strings.Contains(err.Error(), secret) {
 		t.Fatal("host conversion exposed its message")
 	}
 	var cause *json.MarshalerError
@@ -49,11 +53,8 @@ func TestScalarJSONIntegersKeepExactValues(t *testing.T) {
 	batch := 1
 	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: batch})
 	for _, value := range []any{json.Number("9007199254740993"), int64(math.MinInt64), uint64(math.MaxUint64)} {
-		record, err := tt.JSON(value)
-		if err != nil {
-			t.Fatal(err)
-		}
-		row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), record)
+		record := value
+		row, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, record)
 		if err != nil {
 			t.Fatal(err)
 		}

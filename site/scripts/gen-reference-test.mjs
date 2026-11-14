@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import YAML from 'yaml';
 import { spawnSync } from 'node:child_process';
 
 const repo = path.resolve('..');
@@ -23,10 +24,10 @@ const reports = (text) => {
   assert.equal(r.status, 1, r.stdout);
   assert.match(r.stderr, text);
 };
-const folder = () => Object.fromEntries(fs.readdirSync(out, { recursive: true, withFileTypes: true })
+const folder = (directory = out) => Object.fromEntries(fs.readdirSync(directory, { recursive: true, withFileTypes: true })
   .filter((f) => f.isFile())
   .map((f) => path.join(f.parentPath, f.name))
-  .map((p) => [path.relative(out, p), fs.readFileSync(p, 'utf8')]));
+  .map((p) => [path.relative(directory, p), fs.readFileSync(p, 'utf8')]));
 
 try {
   for (const input of ['schemas', 'docs/resource-observations.md', 'crates/thinkthen/src']) {
@@ -73,6 +74,56 @@ try {
   fs.appendFileSync(path.join(out, 'rows.md'), '\nEdited by hand.\n');
   reports(/rows\.md: differs from the build/);
   console.log('gen-reference: hand-written pages kept; stale and out-of-date pages reported');
+  // Answer generation uses the same canonical owners before reading retired data.
+  const answerOut = path.join(site, 'src/content/docs/answers');
+  fs.mkdirSync(answerOut, { recursive: true });
+  for (const name of ['draft.mdx', 'index.mdx', 'choice-probabilities.mdx']) fs.writeFileSync(path.join(answerOut, name), 'An authored page.\n');
+  const authoredAnswers = folder(answerOut);
+  const canonical = folder();
+  const questionFile = path.join(site, 'questions/functions.yaml');
+  const entries = YAML.parse(fs.readFileSync(questionFile, 'utf8'));
+  const retired = entries.find((q) => q.id === 'choice-probabilities');
+  const candidate = { ...structuredClone(retired), id: 'fixture-unclaimed-answer' };
+  retired.examples = [{ id: 'missing-retired-example' }];
+  retired.explain = { missing: 'Retired output must not be read.' };
+  entries.push({ ...structuredClone(retired), id: 'fixture-menu-owned' });
+  fs.appendFileSync(path.join(site, 'src/lib/sitemap.mjs'), '\nmenuPages.push({ route: "/answers/fixture-menu-owned/" });\n');
+  // Use private copies for the eligible missing-provenance control, not the saved examples.
+  assert.ok(fs.lstatSync(path.join(site, 'examples')).isSymbolicLink());
+  fs.unlinkSync(path.join(site, 'examples'));
+  fs.mkdirSync(path.join(site, 'examples'));
+  const saved = new Map();
+  for (const { id } of candidate.examples) {
+    fs.cpSync(path.resolve('examples', id), path.join(site, 'examples', id), { recursive: true });
+    for (const name of ['output.txt', 'capture.json']) {
+      const file = path.resolve('examples', id, name);
+      saved.set(file, fs.readFileSync(file));
+    }
+  }
+  const answers = () => spawnSync(process.execPath, ['scripts/gen-answers.mjs'], { cwd: site, encoding: 'utf8' });
+  fs.writeFileSync(questionFile, YAML.stringify(entries));
+  let result = answers();
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(folder(answerOut), authoredAnswers);
+  entries.push(candidate);
+  fs.writeFileSync(questionFile, YAML.stringify(entries));
+  result = answers();
+  assert.equal(result.status, 0, result.stderr);
+  for (const [name, text] of Object.entries(authoredAnswers)) assert.equal(fs.readFileSync(path.join(answerOut, name), 'utf8'), text);
+  const generated = path.join(answerOut, 'fixture-unclaimed-answer.mdx');
+  const text = fs.readFileSync(generated, 'utf8');
+  const probability = JSON.parse(fs.readFileSync(path.resolve('examples', candidate.examples[0].id, 'output.txt'), 'utf8')).probability;
+  assert.ok(text.includes(String(probability)) && text.includes(`<Example id="${candidate.examples[0].id}"`));
+  assert.equal(Object.keys(folder(answerOut)).length, Object.keys(authoredAnswers).length + 1);
+  fs.unlinkSync(path.join(site, 'examples', candidate.examples[0].id, 'capture.json'));
+  result = answers();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /public output requires a real capture/);
+  assert.equal(fs.readFileSync(generated, 'utf8'), text);
+  assert.deepEqual(folder(), canonical);
+  for (const [file, bytes] of saved) assert.deepEqual(fs.readFileSync(file), bytes);
+  console.log('gen-answers: canonical pages and saved output kept; retired data ignored; eligible provenance required');
+
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

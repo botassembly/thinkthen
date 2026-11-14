@@ -31,15 +31,19 @@ type apiCase struct {
 	Cancelled          bool            `json:"cancelled"`
 }
 type apiQuestion struct {
-	Function                       string `json:"function"`
-	Question                       string `json:"question"`
-	Choices, Labels, Levels, Kinds []string
-	Rules                          []tt.Rule              `json:"rules"`
-	Questions                      map[string]apiQuestion `json:"questions"`
-	Threshold                      json.RawMessage        `json:"threshold"`
-	Field                          *string                `json:"field"`
-	Top                            *int                   `json:"top"`
+	Function  string                 `json:"function"`
+	Question  string                 `json:"question,omitempty"`
+	Choices   []string               `json:"choices,omitempty"`
+	Labels    []string               `json:"labels,omitempty"`
+	Levels    []string               `json:"levels,omitempty"`
+	Kinds     []string               `json:"kinds,omitempty"`
+	Rules     []tt.RelationRule      `json:"rules,omitempty"`
+	Questions map[string]apiQuestion `json:"questions,omitempty"`
+	Threshold json.RawMessage        `json:"threshold,omitempty"`
+	Field     *string                `json:"field,omitempty"`
+	Top       *int                   `json:"top,omitempty"`
 }
+
 type apiExpected struct {
 	Function       string          `json:"function"`
 	Position       int             `json:"position"`
@@ -86,81 +90,81 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 	t.Helper()
 	switch q.Function {
 	case "decide":
-		v := tt.NewDecide(q.Question)
+		v := tt.DecideQuestion{Question: q.Question}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(thresholdFor(t, q.Threshold))
+			v.Threshold = thresholdFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "choose":
-		v := tt.NewChoose(q.Question, q.Choices)
+		v := tt.ChooseQuestion[string]{Question: q.Question, Choices: q.Choices}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(cutFor(t, q.Threshold))
+			v.Threshold = cutFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "filter":
-		v := tt.NewFilter(q.Question)
+		v := tt.FilterQuestion{Question: q.Question}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(thresholdFor(t, q.Threshold))
+			v.Threshold = cutFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "tag":
-		v := tt.NewTag(q.Question, q.Labels)
+		v := tt.TagQuestion[string]{Question: q.Question, Labels: q.Labels}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(cutFor(t, q.Threshold))
+			v.Threshold = cutFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "score":
-		v := tt.NewScore(q.Question, q.Levels)
+		v := tt.ScoreQuestion[string]{Question: q.Question, Levels: q.Levels}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "rank":
-		v := tt.NewRank(q.Question, q.Levels)
+		v := tt.RankQuestion[string]{Question: q.Question, Levels: q.Levels}
 		if q.Top != nil {
-			v = v.WithTop(*q.Top)
+			v.Top = *q.Top
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "find":
-		v := tt.NewFind(q.Question)
+		v := tt.FindQuestion{Question: q.Question}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(cutFor(t, q.Threshold))
+			v.Threshold = cutFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "recognize":
-		v := tt.NewRecognize(q.Kinds)
+		v := tt.RecognizeQuestion{Kinds: q.Kinds}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(cutFor(t, q.Threshold))
+			v.Threshold = cutFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	case "relate":
-		v := tt.NewRelate(q.Rules)
+		v := tt.RelateQuestion{Rules: q.Rules}
 		if len(q.Threshold) > 0 {
-			v = v.WithThreshold(cutFor(t, q.Threshold))
+			v.Threshold = cutFor(t, q.Threshold)
 		}
 		if q.Field != nil {
-			v = v.WithField(*q.Field)
+			v.Field = *q.Field
 		}
 		return v
 	default:

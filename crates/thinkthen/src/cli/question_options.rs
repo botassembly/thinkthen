@@ -10,19 +10,19 @@ pub(super) fn apply(
     question: &mut Map<String, Value>,
 ) -> Result<(), Error> {
     if matches!(function, "decide" | "filter") {
-        for key in ["true", "false"] {
+        for (key, wire) in [("yes-means", "yes_means"), ("no-means", "no_means")] {
             if let Some(meaning) = value(args, key) {
-                question.insert(key.into(), meaning.into());
+                question.insert(wire.into(), meaning.into());
             }
         }
     }
     let Some(descriptions) = args.try_get_many::<String>("describe").ok().flatten() else {
         return Ok(());
     };
-    let field = if function == "choose" {
-        "choices"
-    } else {
-        "labels"
+    let field = match function {
+        "choose" => "choices",
+        "score" | "rank" => "levels",
+        _ => "labels",
     };
     let labels = question
         .get_mut(field)

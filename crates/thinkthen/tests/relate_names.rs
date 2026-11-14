@@ -59,7 +59,7 @@ fn relate_returns_all_recognized_names_without_a_second_recognition_call() {
                 .engine(|_| None)
                 .unwrap();
             let relate =
-                Relate::new([RelationRule::new("works_for", "person", "company").unwrap()])
+                Relate::new([RelationRule::new("person", "company", "works_for").unwrap()])
                     .unwrap();
             let rows: Vec<_> = engine
                 .open_request(&Request::new(relate).with_records([json!(text)]), unit)

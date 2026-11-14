@@ -1,92 +1,613 @@
-# Python SDK
+# Python functions that answer questions about text
 
-The Python SDK asks questions about text from your Python code. Its first function, decide, answers a yes-or-no question with yes (`True`), no (`False`) or not sure.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-Install it with Python 3.10 or later:
+Use Python 3.10 or later. Run `python -m pip install thinkthen`. The package includes the engine. Set `THINKTHEN_API_KEY` in the environment first.
 
-```sh
-pip install thinkthen
+A one-record call fails at the call with `tt.Failed` when its record could not be judged. A successful call returns a result that is answered or not sure, with `.failed` false and its own `.error` set to `None`. Many-record calls keep failures in their results, so the shared result type has three states:
+
+- **answered**: there is an answer, and `result.answer` is it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the record could not be judged, or the service did not respond.
+
+Three rules hold for every function on this page.
+
+1. **Reading the answer raises when there is none.** On a returned one-record result, `result.answer` can raise `tt.Unsure`. On a many-record result, form entry or saved row, it can also raise `tt.Failed`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never raises.** `result.answered`, `result.unsure`, `result.failed`, `result.probability` and `result.error` are always safe to read.
+3. **Printing never raises.** `print(result)` shows the answer, `unsure`, or `failed:` with the reason. A yes prints as `true` and a no as `false`, the same words the `thinkthen` command prints.
+
+## decide
+
+### The simplest if
+
+A decide result goes straight into an `if`.
+
+```python
+import thinkthen as tt
+
+if tt.decide("Does the customer request a refund?", "Please refund my order."):
+    print("refund queue")
+else:
+    print("inbox")
 ```
 
-The calls read your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+If the message could not be judged, `tt.decide` raises `tt.Failed` at the call. The `if` never receives a failed result and never falls through to `inbox` for a failure. With one bar, a returned decide result is always yes or no; two bars can make the answer read raise `tt.Unsure`.
 
-## Ask a question
+### Yes, no, or not sure
 
-Ask whether a support message requests a refund:
+Set two bars and decide can also be not sure. `answered` tells you whether there is a yes or no to read.
 
 ```python
 import thinkthen as tt
 
 is_refund = tt.decide(
     "Does the customer request a refund?",
-    "Please refund my order.",
+    "Where is my parcel?",
+    threshold=(0.2, 0.8),
 )
-print(is_refund)
+
+if is_refund.answered:
+    print("refund queue" if is_refund else "inbox")
+else:
+    print("a person reads it")
 ```
 
-Output:
+You can also let the read raise and catch `tt.Unsure`. The call above has already succeeded, so this read cannot report a failed result.
 
-```text
-True
+```python
+try:
+    print("refund queue" if is_refund else "inbox")
+except tt.Unsure:
+    print("a person reads it")
 ```
 
-`True` means yes: the message asks for a refund. `is_refund` stands for its answer, so `if is_refund:` works.
+### Did the call work
 
-## Not sure and failures
+```python
+try:
+    is_refund = tt.decide(
+        "Does the customer request a refund?", "Please refund my order."
+    )
+except tt.Failed as failure:
+    print("could not judge it:", failure)
+except tt.ThinkThenError as failure:
+    print("the call did not complete:", failure)
+else:
+    print(is_refund)
+```
 
-Set a low and a high bar, and decide is not sure between them. Using a not-sure answer raises `tt.Unsure`, and a message ThinkThen could not judge raises `tt.RecordError`, so neither one passes for no. Send both to a person.
+`tt.Failed` reports the failed judgement, including a service failure returned for that record. It is one kind of `tt.ThinkThenError`, not a replacement for usage, setup, authentication or cancellation errors. The broader catch also covers those other ThinkThen call errors; Python argument mistakes can still raise `TypeError`. No answer is read inside either handler.
+
+Not sure counts as a successful call: ThinkThen did its job and returned an unsure result. Reading its answer can raise `tt.Unsure`, which is not a `tt.ThinkThenError`.
+
+### Both bars and the probability
+
+```python
+is_refund = tt.decide(
+    "Does the customer request a refund?",
+    "Where is my parcel?",
+    threshold=(0.2, 0.8),
+)
+print(is_refund.probability)
+```
+
+- No `threshold`: one bar at 0.5. The answer is always yes or no.
+- `threshold=0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `threshold=(0.2, 0.8)`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. A returned decide result has this probability even when it is not sure. A failed many-record result has `None`.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `tt.decide_stream`, save each `probability`, and compare with your labels.
+
+## choose with your own choices
+
+Give your choices as an `Enum`. The answer comes back as a member of it.
+
+```python
+from enum import Enum
+
+import thinkthen as tt
+
+
+class Topic(Enum):
+    BILLING = "billing"
+    SHIPPING = "shipping"
+    OTHER = "other"
+
+
+def team_for(topic: Topic) -> str:
+    match topic:
+        case Topic.BILLING:
+            return "billing team"
+        case Topic.SHIPPING:
+            return "warehouse"
+        case Topic.OTHER:
+            return "front desk"
+
+
+topic = tt.choose(
+    "What is the message about?",
+    "I was charged twice for one invoice.",
+    choices=Topic,
+)
+
+if topic.unsure:
+    print("a person reads it")
+else:
+    print(team_for(topic.answer))
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.unsure` before reading the answer. `threshold=0.3` moves the bar.
+
+The values of the Enum (`"billing"`, `"shipping"`, `"other"`) are the words the model reads, so make them plain words or short phrases, not codes. The member names are for your code.
+
+Add a member to `Topic` and a type checker points at `team_for` until you handle it.
+
+A choose result does not go in an `if`, and is not equal to its answer. `if topic:` and `topic == Topic.BILLING` both raise `TypeError` and tell you to read `topic.answer`.
+
+Results compare by their own fields only: `function`, `status`, `answer`, `probability`, `error`, `position`, `id`, `source` and `detail`. Equality and hashing exclude `.item`, including on nested results. A caller may change its original dictionary without changing the result's equality or hash. Results, including forms whose answers are mappings, can be stored in sets and used as dictionary keys.
+
+Every answer is read through `.answer`. A result itself cannot be iterated, indexed, measured with `len()`, converted with `float()` or `int()`, or ordered against an answer. Find offsets are read as `action.answer.start` and `action.answer.end`. Write `for name in names.answer` and read `urgency.answer` or `ranked.answer`; there is one loud answer read.
+
+A list of strings also works, `choices=["billing", "shipping", "other"]`, and the answer is then a `str`.
+
+## Many records
+
+Each one-record function has a `_stream` form that takes many records and gives one result per record, in order. Each result carries your own record as `.item`.
 
 ```python
 import thinkthen as tt
 
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+
+with tt.decide_stream(
+    "Does the customer request a refund?", messages, threshold=(0.2, 0.8)
+) as refund_checks:
+    for is_refund in refund_checks:
+        if is_refund.unsure:
+            print("a person reads it:", is_refund.item)
+        elif is_refund.failed:
+            print("try again later:", is_refund.item)
+        elif is_refund:
+            print("refund queue:", is_refund.item)
+        else:
+            print("inbox:", is_refund.item)
+```
+
+One failed record does not stop the stream. Each result keeps its own state, with `position` counted from 1 and the record's `id` when it has one. A `_stream` call stays many-record even when you give it a one-item collection; its failed result is still returned.
+
+To stop when you encounter a failed result, use the shared result's explicit check:
+
+```python
+with tt.decide_stream(
+    "Does the customer request a refund?", messages, threshold=(0.2, 0.8)
+) as refund_checks:
+    for is_refund in refund_checks:
+        print(is_refund.raise_if_failed())
+```
+
+`raise_if_failed()` raises `tt.Failed` for a failed result and otherwise returns that same result. Not sure does not raise here, and printing is safe. The method remains available on the shared result type, but a successful ordinary single call needs no additional failure check.
+
+Pass the whole collection to one stream so ThinkThen can send the records in batches. Use a `with` block so the stream is closed even after an early `break`. `.to_list()` collects every result and closes the stream.
+
+To save every result, write `result.to_dict()` as a line of JSON. It includes the state, so nothing is lost.
+
+## Many-result not sure or failed
+
+```python
+if is_refund.unsure:
+    print("a person reads it", is_refund.probability)
+elif is_refund.failed:
+    assert is_refund.error is not None
+    print("try again later", is_refund.error.code)
+elif is_refund:
+    print("refund queue")
+else:
+    print("inbox")
+```
+
+Here `is_refund` is a result from the stream above. Yes and no are the two answers. Not sure and failed are the two ways of having none. To name every state and have a type checker confirm none is missed, use `match` in a function that returns a value:
+
+```python
+def where_it_goes(is_refund: tt.DecideRow) -> str:
+    match is_refund.status:
+        case tt.Status.ANSWERED:
+            return "refund queue" if is_refund else "inbox"
+        case tt.Status.UNSURE:
+            return "a person reads it"
+        case tt.Status.FAILED:
+            return "try again later"
+```
+
+The same `tt.DecideRow` type is used for single calls and streams. Its status union still contains `FAILED`, so an exhaustive static match may require that arm even for a row obtained from a successful single call. That arm is unreachable for that scalar result at runtime, not removed from its type.
+
+To use the function on the stream's actual results:
+
+```python
+with tt.decide_stream(
+    "Does the customer request a refund?", messages, threshold=(0.2, 0.8)
+) as refund_checks:
+    for is_refund in refund_checks:
+        print(where_it_goes(is_refund), is_refund.item)
+```
+
+`tt.NoAnswer` groups `tt.Unsure` and `tt.Failed` when you read a many-record result, a form entry or a saved row. Catch it when either means there is no answer to use; catch the two separately when they need different routes.
+
+## filter
+
+filter means "give me the yeses". It hands back your own records, in order.
+
+```python
+import thinkthen as tt
+
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+
+for refund_request in tt.filter("Does the customer request a refund?", messages):
+    print("refund queue:", refund_request)
+```
+
+filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `threshold=0.7` moves the bar. Two bars are refused with `tt.UsageError`: when you want not sure, use `tt.decide_stream`, as in the section above.
+
+If a record fails, you still get every kept record first. Then filter raises one `tt.Failed`, and its `rows` holds every failed result with its `.item`.
+
+```python
+try:
+    for refund_request in tt.filter("Does the customer request a refund?", messages):
+        print("refund queue:", refund_request)
+except tt.Failed as failure:
+    for failed in failure.rows:
+        assert failed.error is not None
+        print("try again later:", failed.item, failed.error.code)
+```
+
+## tag
+
+Labels work as choices do. The answer is a list of the members that fit, and it can be empty.
+
+```python
+from enum import Enum
+
+import thinkthen as tt
+
+
+class Topic(Enum):
+    BILLING = "billing"
+    SHIPPING = "shipping"
+
+
+topics = tt.tag(
+    "Which topics appear?",
+    "I was charged twice and my parcel is late again.",
+    labels=Topic,
+)
+
+if Topic.BILLING in topics.answer:
+    print("billing team")
+for topic in topics.answer:
+    print(topic.value)
+```
+
+tag is never not sure. `threshold=` sets how likely a label must be to count.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. An Enum scale follows its members' declaration order, lowest first. Their text values do not sort or reorder the scale. The same order applies to rank and score questions inside a form.
+
+```python
+from enum import Enum
+
+import thinkthen as tt
+
+
+class Urgency(Enum):
+    ROUTINE = "routine"
+    URGENT = "urgent"
+
+
+urgency = tt.score(
+    "How urgent is the request?",
+    "Please refund my order.",
+    levels=Urgency,
+)
+
+if urgency.answer > 0.5:
+    print("answer today")
+print(round(urgency.answer, 2))
+```
+
+The score is a position between your levels, not one of them, so it is a `float` and there is nothing to `match`. To get exactly one level back, ask with `tt.choose`. score is never not sure.
+
+## rank
+
+rank puts many records in order along your levels, highest first.
+
+```python
+import thinkthen as tt
+
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+
+for ranked in tt.rank("How urgent is the request?", messages, levels=Urgency):
+    print(ranked.answer, ranked.item)
+```
+
+`ranked.answer` is the rank, starting at 1, and `ranked.item` is your record. rank reads the whole collection before it gives anything back. `top=5` returns the five highest-ranked records, after judging the collection. A failed record comes back after the ranked ones, with `failed` set.
+
+## find
+
+find points to the one line that answers.
+
+```python
+import thinkthen as tt
+
+message = "Morgan works for Example Group.\nPlease refund my order."
+action = tt.find("Which line states the requested action?", message)
+
+if action.unsure:
+    print("a person reads it")
+elif action.answer is None:
+    print("no line answers")
+else:
+    print(action.answer.text)
+```
+
+The answer is a `tt.Span` with `text`, `start` and `end`, or `None` when no line answers. `message[span.start:span.end]` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```python
+import thinkthen as tt
+
+names = tt.recognize(
+    "Morgan works for Example Group.",
+    kinds=["person", "organization"],
+)
+
+for name in names.answer:
+    print(name.kind, name.text)
+```
+
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure.
+
+## relate
+
+```python
+import thinkthen as tt
+
+message = "Morgan works for Example Group.\nPlease refund my order."
+rules = [tt.RelationRule(source="person", target="organization", relation="works_for")]
+
+relations = tt.relate(message, rules=rules)
+
+for relation in relations.answer:
+    print(relation.source.text, relation.relation, relation.target.text)
+```
+
+Each relation has `source`, `target`, `relation`, `probability` and `either`. `relations.detail.names` holds every name found, including names in no relation.
+
+## annotate
+
+annotate asks several questions of each record and gives back one form per record.
+
+```python
+import thinkthen as tt
+
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+
+questions = tt.AnnotationQuestions(
+    {
+        "refund": tt.DecideQuestion("Does the customer request a refund?"),
+        "topic": tt.ChooseQuestion("What is the message about?", choices=Topic),
+        "urgency": tt.ScoreQuestion("How urgent is the request?", levels=Urgency),
+    }
+)
+
+with tt.annotate_stream(questions, messages) as forms:
+    for form in forms:
+        if form.failed:
+            print("try again later:", form.item)
+            continue
+        entries = form.answer
+        is_refund, topic, urgency = (
+            entries["refund"],
+            entries["topic"],
+            entries["urgency"],
+        )
+        if is_refund.failed or topic.failed or urgency.failed:
+            print("try again later:", form.item)
+        elif is_refund.unsure or topic.unsure or urgency.unsure:
+            print("a person reads it:", form.item)
+        elif is_refund:
+            print("refund queue:", topic.answer.value, round(urgency.answer, 2))
+```
+
+`form.answer` holds one entry per question, under the name you gave it. Each entry is a result of its own function, with its own state. `form.answer["refund"]` is a decide result, so it works in an `if`. One entry can be not sure while the others answer. Here `Topic` is the three-choice Enum from the choose section.
+
+A form can be answered while an entry failed. This example checks all three entries before reading their answers: failed entries go to retry, not-sure entries go to a person, and only answered entries reach the refund branch.
+
+For one record, `tt.annotate(questions, message)` raises `tt.Failed` only if the parent form itself failed. An answered parent is returned even if one, several or all its entries failed. The call does not use the recursive failure check to decide whether to return the form.
+
+```python
+form = tt.annotate(questions, "Please refund my order.")
+form.raise_if_failed()
+```
+
+The second line is optional and explicitly raises for any failed entry as well as for a failed form. A not-sure entry is not a failure; otherwise the same form is returned unchanged. The method also works on forms from `annotate_stream`. Checking the form alone never authorizes reading an unchecked entry's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```python
 is_refund = tt.decide(
     "Does the customer request a refund?",
     "I was charged twice for one invoice.",
-    threshold=(0.2, 0.8),
+    yes_means="the customer wants money back, including for a duplicate charge",
+    no_means="the customer wants anything else",
 )
-try:
-    if is_refund:
-        print("Send to refunds.")
-    else:
-        print("Leave in the inbox.")
-except tt.Unsure:
-    print("Not sure. Ask a person.")
+
+topic = tt.choose(
+    "What is the message about?",
+    "I was charged twice for one invoice.",
+    choices=Topic,
+    descriptions={
+        Topic.BILLING: "charges, invoices and refunds",
+        Topic.SHIPPING: "parcels and delivery",
+    },
+)
 ```
 
-Output:
+decide and filter take `yes_means` and `no_means`. choose, tag, score and rank take `descriptions`, keyed by your choices, labels or levels.
 
-```text
-Not sure. Ask a person.
-```
+## Records and fields
 
-## When to make a client
+A record is a string, or a dictionary or other JSON-like value. `field="/text"` picks one field of a dictionary. Without it, ThinkThen judges the whole record.
 
-Make a client when you need your own settings, request allowance or usage totals, or want to close it yourself. Ordinary calls can use the module functions shown above.
+Give dictionary records an `id`. Each result carries it back as `.id`.
 
-### Inspect client usage
+A one-record call given a list raises `TypeError` and names the `_stream` form. A blank record (an empty string, only spaces, or `{}`) raises `tt.Failed` at the one-record call with code `record.empty`, and nothing is sent to the service. In a `_stream` call the same input remains a failed result; collection length does not change that rule.
+
+## Tables
+
+Use the dedicated [pandas guide](https://thinkthen.dev/sdks/pandas/) or [Polars guide](https://thinkthen.dev/sdks/polars/) for table operations. Install the existing Python extras `thinkthen[pandas]` or `thinkthen[polars]`; they remain part of the Python package. Table calls keep their many-record semantics, including a one-row table, native missing values and a details form with each result's state.
+
+## Async
+
+`tt.AsyncClient` has the same functions and gives the same results.
 
 ```python
-from thinkthen import Client
+import asyncio
 
-with Client(backend="stub") as client:
-    is_ready = client.decide("Ready?", "alpha")
-print("Ready" if is_ready else "Not ready")
-snapshot = client.usage
-assert snapshot.attempts == 0
+import thinkthen as tt
+
+
+async def main() -> None:
+    async with tt.AsyncClient() as client:
+        is_refund = await client.decide(
+            "Does the customer request a refund?", "Please refund my order."
+        )
+        print("refund queue" if is_refund else "inbox")
+
+        messages = ["Please refund my order.", "Where is my parcel?"]
+        async with client.decide_stream(
+            "Does the customer request a refund?", messages
+        ) as refund_checks:
+            async for is_refund in refund_checks:
+                print(is_refund, is_refund.item)
+
+
+asyncio.run(main())
 ```
 
-`client.usage` (also on `AsyncClient`) is an immutable cumulative snapshot for that explicit client, available after close. Input and output tokens each carry a reported sum and a count of finished attempts whose usage is unknown. Active attempts and calls remain separate. This is not a price or invoice total; use a separate client for isolated accounting.
+Cancelling the asyncio task stops the call.
 
-### Set a request allowance
+## Saved questions
+
+A question object holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
 
 ```python
-from thinkthen import Client
-
-client = Client(max_requests=100)
+asks_refund = tt.DecideQuestion(
+    "Does the customer request a refund?",
+    threshold=(0.2, 0.8),
+    field="/text",
+)
+is_refund = tt.decide(asks_refund, {"id": "a1", "text": "Please refund my order."})
 ```
 
-The optional allowance belongs to this explicit client and counts actual remote send attempts, including retries. Unset is unlimited; zero forbids remote sends. Stub calls use no remote allowance. Exhaustion ends the call with `local.request-limit`; it does not promise a final bill or refund in-flight requests. This setting does not inherit the command's environment allowance.
+There is one class per function, such as `tt.ChooseQuestion` and `tt.ScoreQuestion`. A `tt.Toolbox` keeps named questions in a JSON file:
 
-## Next
+```python
+toolbox = tt.Toolbox.load("toolbox.json")
+topic = tt.choose(toolbox.choose("topic"), {"id": "a1", "text": "Where is my parcel?"})
+```
 
-The [Python SDK page](https://thinkthen.dev/sdks/python/) shows all ten functions, with pandas and Polars, async calls with `thinkthen.aio`, and when to make a client of your own. The [Python guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/python/thinkthen/__init__.py) cover every option.
+## Settings
+
+The functions on `tt` use a shared client that reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, make a client and call the same functions on it.
+
+```python
+with tt.Client(model="...", batch=16, retry=tt.RetryPolicy(max_retries=5)) as client:
+    is_refund = client.decide(
+        "Does the customer request a refund?", "Please refund my order."
+    )
+```
+
+The options are `backend`, `url`, `model`, `api_key`, `batch` and `retry`. Times in `tt.RetryPolicy` are in seconds. Keep the key in the environment, not in your code.
+
+## Usage
+
+```python
+with tt.Client() as client:
+    client.decide("Does the customer request a refund?", "Please refund my order.")
+    usage = client.usage
+    print(usage.attempts, usage.input_tokens.reported, usage.output_tokens.reported)
+```
+
+`client.usage` counts everything the client has sent so far: `attempts`, `responses`, retries, bytes sent, and tokens in and out as the service reported them.
+
+## Cancel
+
+```python
+stop = tt.Cancel()
+is_refund = tt.decide(
+    "Does the customer request a refund?", "Please refund my order.", cancel=stop
+)
+```
+
+Calling `stop.cancel()` from another thread stops the call, which raises `tt.Cancelled`. Ctrl-C does the same.
+
+## Errors
+
+| What happened | When it raises | What is raised |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold or a list given to a one-record call | At the call | `tt.UsageError`, `TypeError` |
+| The client could not start, such as no API key | At the call | `tt.SetupError` |
+| The call was cancelled | At the call | `tt.Cancelled` |
+| A one-record judgement failed, including blank input or a service failure on its row | At the call | `tt.Failed` |
+| A many-record result or form entry failed | At its answer read or `raise_if_failed()` | `tt.Failed` |
+| An annotate parent failed | At the single call; kept as a failed form in a stream | `tt.Failed` at the single call or a later failed-form read/check |
+| An answered annotate parent contains failed entries | The call returns it; reading a failed entry or explicitly checking the form raises | `tt.Failed` |
+| Not sure | When you read the answer | `tt.Unsure` |
+| You print a result, store it, or ask about its state | Never | |
+
+Two parents let you catch by meaning:
+
+- `except tt.NoAnswer` catches `tt.Unsure` and `tt.Failed`: there was no answer to read.
+- `except tt.ThinkThenError` catches everything that went wrong, including `tt.Failed`. It does not catch `tt.Unsure`, because not sure is a result and not an error.
+
+`tt.Failed` keeps the existing failure payload: `code`, `http_status` and `rows`, the failed results. Existing general call errors and their payloads keep their classifications; not every service-related exception is renamed `Failed`. Wire error codes such as `record.empty` do not change. `tt.Unsure` carries `probability` and `row`.
+
+## Upgrading from 0.1
+
+The baseline is [published Python 0.1.2](https://pypi.org/project/thinkthen/0.1.2/). A call now returns a result, not a `Call` with a `.value`. That release already accepts tuple thresholds.
+
+| 0.1 | Now |
+| --- | --- |
+| `tt.decide(q, text).value` is `True`, `False` or `None` | `tt.decide(q, text)` goes straight into an `if`, and `.answer` is the `True` or `False` |
+| `None` meant not sure | `.unsure` is `True`, and reading the answer raises `tt.Unsure`, so not sure can't pass for no |
+| A failure raised `BackendError` or `LocalError` from the call | A failed one-record judgement raises `tt.Failed` at the call. Many-record calls keep failed results; read `.error` or explicitly check them. Other call errors retain their own classifications |
+| `.probability` | The same meaning |
+| `true=`, `false=`, `options=` | `yes_means=`, `no_means=`, `choices=` |
+| `tt.decide(q, texts).value` for a list | `tt.decide_stream(q, texts)` gives one result per text |
+| `tt.decide(q, series).value` | See the dedicated [pandas guide](https://thinkthen.dev/sdks/pandas/) and [Polars guide](https://thinkthen.dev/sdks/polars/) for the table accessors |
+| `tt.filter(q, records).value` | `list(tt.filter(q, records))` |
+| `tt.Engine(...)`, `.facts` | `tt.Client(...)`, `client.usage` |
+
+## More examples
+
+The [complete guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md) is the tested reference for this SDK. [Recorded examples](https://thinkthen.dev/sdks/python/) show real backend answers.

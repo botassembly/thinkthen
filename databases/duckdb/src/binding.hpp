@@ -7,7 +7,7 @@ Value Argument(TableFunctionBindInput &input, const string &name, idx_t position
     return found == input.named_parameters.end() ? Value() : found->second;
 }
 string RequiredList(const string &function) {
-    for (auto name : {"choices", "labels", "levels", "kinds", "rules", "toolbox"})
+    for (auto name : {"choices", "labels", "levels", "kinds", "rules", "questions"})
         if (HasArgument(function, name)) return name;
     return "";
 }
@@ -66,8 +66,7 @@ QuestionOwner Admit(TableFunctionBindInput &input, Binding &bind) {
     for (auto &key : {"yes_means", "no_means", "top", "field"}) {
         auto value = Argument(input, key);
         if (value.IsNull()) continue;
-        if (string(key) == "field") bind.json = true;
-        json += "," + Quote(string(key) == "yes_means" ? "true" : string(key) == "no_means" ? "false" : key) + ":" + Encode(value);
+        json += "," + Quote(key) + ":" + Encode(value);
     }
     json += "}";
     Checked(thinkthen_sql_question_from_json(Bytes(json), json.size(), &raw, &error.value), error);
@@ -104,16 +103,15 @@ unique_ptr<LogicalOperator> Bind(ClientContext &, TableFunctionBindInput &input,
     TextArgument("name", name);
     bind->has_name = !name.IsNull();
     if (bind->has_name) bind->name = name.GetValue<string>();
-    auto answer = bind->function == "annotate" ? AnnotationType(yyjson_doc_get_root(Parse(Encode(Argument(input, "toolbox", 1))).get()), true) : AnswerType(bind->function);
-    auto detail = bind->function == "annotate" ? AnnotationType(yyjson_doc_get_root(Parse(Encode(Argument(input, "toolbox", 1))).get()), false) : DetailType(bind->function);
+    auto answer = bind->function == "annotate" ? AnnotationType(yyjson_doc_get_root(Parse(Encode(Argument(input, "questions", 1))).get()), true) : AnswerType(bind->function);
+    auto detail = bind->function == "annotate" ? AnnotationType(yyjson_doc_get_root(Parse(Encode(Argument(input, "questions", 1))).get()), false) : DetailType(bind->function);
     names = {"position", "id", "answer", "probability", "status", "error_code", "error_message", "error_http_status", "source", "detail"};
     vector<LogicalType> types{LogicalTypeId::BIGINT, LogicalType::JSON(), answer, LogicalTypeId::DOUBLE, StatusType(), CodeType(), LogicalTypeId::VARCHAR, LogicalTypeId::BIGINT, SourceType(), detail};
-    auto failures = Argument(input, "failures");
-    if (!failures.IsNull()) {
-        TextArgument("failures", failures);
-        auto value = failures.GetValue<string>();
-        if (value != "row") throw InvalidInputException("usage.option: failures expects 'row', received %s", value);
-        bind->failure_rows = true;
+    auto raise = Argument(input, "raise_if_failed");
+    if (!raise.IsNull()) {
+        if (raise.type().id() != LogicalTypeId::BOOLEAN)
+            throw InvalidInputException("usage.option: raise_if_failed expects BOOLEAN, received %s", raise.type().ToString());
+        bind->raise_if_failed = raise.GetValue<bool>();
     }
     case_insensitive_set_t reserved;
     for (auto &name : names) reserved.insert(name.GetIdentifierName());
@@ -159,7 +157,7 @@ void Load(ExtensionLoader &loader) {
             }
             if (function == "choose" || function == "tag" || function == "score" || function == "rank")
                 fn.GetSignature().AddKeywordOnly(Identifier("descriptions"), LogicalType::ANY, Value());
-            if (function == "filter") fn.GetSignature().AddKeywordOnly(Identifier("failures"), LogicalType::ANY, Value());
+            if (function != "filter") fn.GetSignature().AddKeywordOnly(Identifier("raise_if_failed"), LogicalType::ANY, Value());
             fn.bind_operator = Bind; fn.init_global = Init;
             fn.init_local = [](ExecutionContext &, TableFunctionInitInput &, GlobalTableFunctionState *) -> unique_ptr<LocalTableFunctionState> {
                 return make_uniq<LocalInvocation>();

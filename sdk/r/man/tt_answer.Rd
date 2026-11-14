@@ -8,7 +8,7 @@ tt_answer(rows, errors = "error")
 tt_bind(data, rows, prefix)
 }
 \arguments{
-\item{errors}{"error" raises thinkthen_failed_rows with code, codes, rows and failed_rows; its message names every code. "na" returns typed missing values for failed records, signals one thinkthen_failed_rows_warning with the same fields, and keeps the failures for \code{\link{tt_failures}}.}
+\item{errors}{"error" raises thinkthen_failed with code, rows (failures) and outcomes (all results); its message prints one failed line per affected record. "na" returns typed missing values for failed records, signals one thinkthen_record_warning with the same fields, and keeps the failures for \code{\link{tt_failures}}.}
 \item{rows}{Result rows returned by a ThinkThen call.}
 \item{data}{Original data frame, tibble, grouped tibble or data.table.}
 \item{prefix}{Prefix for attached result columns. Annotation uses question names.}

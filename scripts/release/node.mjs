@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { ThinkThen } from 'thinkthen';
+import { Client, FailedError } from 'thinkthen';
 
 for (const fixture of JSON.parse(await readFile(process.argv[2], 'utf8'))) {
   const { question, records, name: executionName } = fixture.request;
@@ -9,56 +9,28 @@ for (const fixture of JSON.parse(await readFile(process.argv[2], 'utf8'))) {
   const value = name === 'annotate' ? hostQuestion.questions : hostQuestion;
   const options = { ...(name === 'annotate' && field !== undefined ? {field} : {}),
     ...(executionName === undefined ? {} : {name: executionName}) };
-  const client = new ThinkThen(fixture.client);
+  const client = new Client(fixture.client);
   let actual;
   try {
-    const items = await client[`${name}Stream`](value, records, options).toArray();
-    actual = name === 'filter' ? items.map(item => item.row) : name === 'rank' ? items.map(({item, ...row}) => {
-      assert.deepEqual(item, records[row.position - 1]);
-      return row;
-    }) : items;
-    if (name === 'filter') for (const item of items) {
-      assert.equal(item.item, records[item.row.position - 1]);
-      assert.equal(item.kept, item.row.status === 'answered' && item.row.answer === true);
+    if (name === 'filter') {
+      const kept = [];
+      let failures = [];
+      try { for await (const record of client.filter(value, records, options)) kept.push(record); }
+      catch (error) { if (!(error instanceof FailedError)) throw error; failures = error.rows; }
+      assert.deepEqual(kept, fixture.expected.filter(row => row.status === 'answered' && row.answer).map(row => records[row.position - 1]));
+      assert.deepEqual(failures.map(row => row.position), fixture.expected.filter(row => row.status === 'failed').map(row => row.position));
+      continue;
     }
+    const items = await (name === 'recognize' || name === 'relate'
+      ? client[`${name}Stream`](records, {...hostQuestion, ...options})
+      : client[name === 'rank' ? 'rank' : `${name}Stream`](value, records, options)).toArray();
+    for (const row of items) assert.equal(row.item, records[row.position - 1]);
+    actual = JSON.parse(JSON.stringify(items));
   } finally { await client.close(); }
   const expected = structuredClone(fixture.expected);
-  for (const row of expected) {
-    const record = records[row.position - 1];
-    if (name === 'annotate' && row.status === 'answered') {
-      for (const [entry, outcome] of Object.entries(row.answer)) {
-        if (['find', 'recognize', 'relate'].includes(outcome.function)) {
-          projectOffsets(outcome, selectedText(record, questions[entry].field ?? field));
-        }
-      }
-    } else if (['find', 'recognize', 'relate'].includes(name)) {
-      projectOffsets(row.answer, selectedText(record, field));
-      projectOffsets(row.detail, selectedText(record, field));
-    }
-  }
-  assert.deepEqual(actual, hostValue(expected), name);
+  assert.deepEqual(actual, expected, name);
 }
 console.log('candidate TypeScript: ten shared stub cases pass');
-
-// Shared fixtures count code points; the installed Node API uses String.slice units.
-function projectOffsets(value, text) {
-  if (value === null || typeof value !== 'object') return;
-  if ('start' in value && 'end' in value) {
-    const points = Array.from(text);
-    value.start = points.slice(0, value.start).join('').length;
-    value.end = points.slice(0, value.end).join('').length;
-  }
-  for (const child of Object.values(value)) projectOffsets(child, text);
-}
-
-function selectedText(record, pointer) {
-  if (typeof record === 'string') return record;
-  let value = record;
-  if (pointer) {
-    for (const segment of pointer.slice(1).split('/')) value = value?.[segment.replaceAll('~1', '/').replaceAll('~0', '~')];
-  }
-  return typeof value === 'string' ? value : JSON.stringify(value) ?? '';
-}
 
 function hostValue(value) {
   if (Array.isArray(value)) return value.map(hostValue);
@@ -73,10 +45,6 @@ function hostValue(value) {
       const {http_status,...error} = result.error;
       result.error = {...error,httpStatus:http_status};
     }
-    if (result.function === 'relate' && Array.isArray(result.rules)) result.rules = result.rules.map(({relation,reads,either,...rule}) => ({...rule,name:relation,...(reads === undefined ? {} : {phrase:reads}),...(either === undefined ? {} : {symmetric:either})}));
-  }
-  if (typeof result.relation === 'string' && typeof result.source === 'object' && typeof result.target === 'object' && 'either' in result) {
-    result.symmetric = result.either; delete result.either;
   }
   return result;
 }

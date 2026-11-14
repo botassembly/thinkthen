@@ -3,7 +3,7 @@ package dev.thinkthen;
 /**
  * A reusable typed filter question.
  */
-public final class FilterQuestion implements AnnotationQuestion<Boolean,NoDetail> {
+public final class FilterQuestion implements Question<Boolean,NoDetail> {
     private final com.fasterxml.jackson.databind.JsonNode definition;
     private final @org.jspecify.annotations.Nullable String name;
     FilterQuestion(com.fasterxml.jackson.databind.JsonNode definition, @org.jspecify.annotations.Nullable String name) { this.definition = definition.deepCopy(); this.name = name; }

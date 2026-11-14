@@ -1,215 +1,173 @@
 # frozen_string_literal: true
 
 module ThinkThen
-  module RowPredicates
+  # A result owns its immutable value; item remains the caller's own object.
+  class Result
+    undef_method :<=>
+    attr_reader :function, :status, :probability, :error, :position, :id, :source, :detail, :item
+
+    def initialize(fields, question: nil, item: nil, parent: nil, raw_code: nil)
+      if parent
+        fields = fields.merge("position" => parent.position, "source" => parent.source.to_h)
+        fields = fields.merge("id" => parent.id) if parent.id_present?
+      end
+      @wire = Values.freeze_copy(fields)
+      @function, @status = fields.fetch("function").to_sym, fields.fetch("status").to_sym
+      @position, @id, @item = parent ? [parent.position, parent.id, parent.item] : [fields["position"], Values.freeze_copy(fields["id"]), item]
+      @source = parent ? parent.source : Row.value(Source, fields.fetch("source"))
+      @probability = fields["probability"]
+      @error = fields["error"] && Row.row_error(fields["error"], raw_code: raw_code)
+      @detail = Row.detail(fields.fetch("function"), fields["detail"])
+      @answer = answered? ? Row.answer(fields.fetch("function"), fields["answer"], question, self) : nil
+      @value = [function, status, @answer, probability, Values.freeze_copy(@error&.to_h), position, id, source, detail].freeze
+      freeze
+    end
+    private_class_method :new
+
     def answered? = status == :answered
     def unsure? = status == :unsure
     def failed? = status == :failed
-  end
-  # Read an answer through Ruby's predicates and conversion protocols.
-  module AnswerValue
-    include Comparable
-    # Comparable's answer ordering must not replace Data's complete value equality.
-    def ==(other) = Data.instance_method(:==).bind_call(self, other)
-    def yes? = answer == true
-    def no? = answer == false
-    def found? = !answer.nil?
-    def to_s
-      value = answer
-      value.is_a?(Found) ? value.text : value.to_s
+    def id_present? = @wire.key?("id")
+
+    def answer
+      raise UnsureError.new(self) if unsure?
+      raise_failure(self) if failed?
+      @answer
     end
-    def to_f = answer.to_f
-    def to_i = answer.to_i
-    def to_sym = answer.to_sym
-    def to_a = answer.to_a
-    def empty? = answer.empty?
-    def include?(value) = answer.include?(value)
-    def each(&block) = answer.each(&block)
-    def <=>(other) = answer <=> other
-    def [](name) = answer[name]
-    def to_json(*_args) = JSON.generate(to_h)
-    def inspect
-      value = answered? ? answer.inspect : status.to_s
-      "#<ThinkThen::#{self.class.name.to_s.split('::').last} #{value}>"
+
+    def raise_if_failed
+      failed = failed? ? self : function == :annotate && @answer&.each_value&.find(&:failed?)
+      raise_failure(failed) if failed
+      self
+    end
+
+    def ==(other)
+      raise TypeError, "compare the result's .answer" unless other.is_a?(Result)
+      eql?(other)
+    end
+    def eql?(other) = other.is_a?(Result) && @value.eql?(other.instance_variable_get(:@value))
+    def hash = @value.hash
+    def to_h = Values.wire(@wire)
+    def to_json(*_args) = JSON.generate(@wire)
+    def to_s = Row.text(self, @answer)
+    def inspect = "#<#{self.class.name} #{to_s}>"
+
+    private
+
+    def raise_failure(row)
+      # Native failed outcomes carry an error; the public getter remains optional.
+      # @type var failure: untyped
+      failure = row.error
+      raise FailedError.new(failure.message, code: failure.code, http_status: failure.http_status, rows: [row])
     end
   end
-  # Annotation names accept symbols and unknown names always raise KeyError.
+
+  class DecideRow < Result
+    def yes? = answer
+  end
+  class ChooseRow < Result; end
+  class TagRow < Result; end
+  class ScoreRow < Result; end
+  class RankRow < Result; end
+  class FindRow < Result; end
+  class RecognizeRow < Result; end
+  class RelateRow < Result; end
+  class AnnotateRow < Result; end
+
+  # Symbols and strings address the same canonical question name, loudly.
   class AnnotationAnswers < Hash
-    def [](name) = fetch(name.to_s)
+    def [](name) = fetch(name)
     def fetch(name) = super(name.to_s)
   end
-  module RowWire
-    include RowPredicates
-    include AnswerValue
-    def id_present? = id_present
-    def to_h
-      # @type var klass: untyped
-      klass = self.class
-      result = klass.members.to_h { |key| [key.to_s, Values.wire(public_send(key))] }
-      result.delete("id_present")
-      result.delete("id") unless id_present?
-      result.delete("probability") if result["probability"].nil?
-      result.delete("detail") if result["detail"].nil?
-      result
-    end
-  end
-  # A definite answer with input position, identity, provenance and optional typed detail.
-  Answered = Data.define(:function, :position, :id, :id_present, :source, :status, :answer, :probability, :detail) { include RowWire }
-  # An uncertain outcome. Reading its answer or conversions raises UnsureError with its probability.
-  Unsure = Data.define(:function, :position, :id, :id_present, :source, :status, :probability, :detail) { include RowWire }
-  # A failed record with its position and error. Reading its answer raises RecordError.
-  Failed = Data.define(:function, :position, :id, :id_present, :source, :status, :error) { include RowWire }
-  module AnnotationWire
-    include WireValue
-    include AnswerValue
-    def to_h
-      result = super
-      result["answer"] = Values.wire(answer) if answered?
-      result
-    end
-  end
-  # One definite named annotation answer; the containing row holds input metadata.
-  AnnotationAnswered = Data.define(:function, :status, :answer, :probability, :detail) do
-    include AnnotationWire
-    include RowPredicates
-  end
-  # One uncertain named annotation answer. Reading its answer raises UnsureError.
-  AnnotationUnsure = Data.define(:function, :status, :probability, :detail) do
-    include AnnotationWire
-    include RowPredicates
-  end
-  # One failed named annotation answer. Reading its answer raises RecordError.
-  AnnotationFailed = Data.define(:function, :status, :error) do
-    include AnnotationWire
-    include RowPredicates
-  end
-  module UnsureAnswer
-    def answer = raise UnsureError.new(probability)
-  end
-  module FailedAnswer
-    def answer
-      raise RecordError.new(error.message, code: error.code, http_status: error.http_status, rows: [self])
-    end
-  end
-  class Unsure; include UnsureAnswer; end
-  class AnnotationUnsure; include UnsureAnswer; end
-  class Failed; include FailedAnswer; end
-  class AnnotationFailed; include FailedAnswer; end
-  module InputRow
-    include WireValue
-    def answer = row.answer
-    def probability = row.probability
-    def detail = row.detail
-    def kept?
-      value = row
-      value.is_a?(Answered) && value.answer == true
-    end
-    def answered? = row.answered?
-    def unsure? = row.unsure?
-    def failed? = row.failed?
-    def function = row.function
-    def position = row.position
-    def id = row.id
-    def id_present? = row.id_present?
-    def source = row.source
-    def status = row.status
-  end
-  # A filter decision with its original input record.
-  FilterRow = Data.define(:item, :row) { include InputRow }
-  module RankCopy
-    # An equal copy of the record. A record with no JSON form failed, and reading it raises that RecordError.
-    def item
-      value = super
-      value.equal?(Native::NO_COPY) ? row.answer : value
-    end
-  end
-  # A rank decision with an equal copy of its input record, read back from the engine.
-  RankRow = Data.define(:item, :row) { include InputRow }
-  class RankRow
-    prepend RankCopy
-    # The engine's rank number, starting at 1; raises like +answer+ on not sure or failure.
-    def rank = row.answer
-    # Contract data; a record with no JSON form has no item.
-    def to_h
-      stored = Data.instance_method(:to_h).bind_call(self).fetch(:item)
-      {"item" => stored.equal?(Native::NO_COPY) ? nil : Values.wire(stored), "row" => row.to_h}.reject { |_, value| value.nil? }
-    end
-  end
+
   module Row
-    def self.decode(native)
-      function = Native.discriminator(NativeContract::FUNCTION_NAMES, native[:function])
-      status = Native.discriminator(NativeContract::STATUS_NAMES, native[:status])
-      # @type var fields: Hash[String, untyped]
-      fields = {"function" => function, "status" => status, "position" => native[:position]}
-      %i[id answer source error detail].each do |key|
-        fields[key.to_s] = Native.parse(Native.copy(native[key])) unless native[key][:data].null?
-      end
-      fields["probability"] = native[:probability] unless native[:probability].nan?
-      if status == "failed"
-        code = Native.thinkthen_code_name(native[:error_code])
-        if code && NativeContract::CODE_NAMES.key?(native[:error_code])
-          raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE) unless fields.fetch("error").fetch("code") == code
-        else
-          fields.fetch("error")["raw_code"] = native[:error_code]
-          fields.fetch("error")["raw_name"] = code || fields.fetch("error").fetch("code")
-          fields.fetch("error")["code"] = "unknown"
-        end
-      end
-      source = fields.fetch("source")
-      metadata = Source.new(question_identity: Values.freeze_copy(source.fetch("question_identity")),
-                            backend: source.fetch("backend").to_sym, model: Values.freeze_copy(source.fetch("model")),
-                            name: Values.freeze_copy(source["name"]))
-      shared = {position: fields.fetch("position"), id: Values.freeze_copy(fields["id"]), id_present: fields.key?("id"), source: metadata}
-      variant(fields, shared)
+    def self.decode(native, question: nil, item: nil)
+      variant(Native.parse(Native.row_json(native)), question: question, item: item, raw_code: native[:error_code])
     end
-    def self.variant(fields, shared = nil)
-      function, status = fields.fetch("function"), fields.fetch("status")
-      common = {function: function.to_sym, status: status.to_sym, **(shared || {})}
-      # @type var classes: untyped
-      classes = shared ? [Answered, Unsure, Failed] : [AnnotationAnswered, AnnotationUnsure, AnnotationFailed]
-      return classes[2].new(**common, error: row_error(fields.fetch("error"))) if status == "failed"
-      result = {**common, probability: fields["probability"], detail: detail(function, fields["detail"])}
-      return classes[1].new(**result) if status == "unsure"
-      classes[0].new(**result, answer: answer(function, fields["answer"]))
+
+    def self.variant(fields, question: nil, item: nil, parent: nil, raw_code: nil)
+      function = fields.fetch("function")
+      klass = function == "filter" ? Result : ThinkThen.const_get("#{function.capitalize}Row")
+      klass.send(:new, fields, question: question, item: item, parent: parent, raw_code: raw_code)
     end
+
     def self.value(klass, fields)
       # @type var values: Hash[Symbol, untyped]
       values = klass.members.to_h { |key| [key, Values.freeze_copy(fields[key.to_s])] }
       klass.new(**values)
     end
-    def self.row_error(fields)
+
+    def self.row_error(fields, raw_code: nil)
       name = fields.fetch("code")
       known = NativeContract::CODE_NAMES.value?(name)
-      RowError.new(code: known ? Native.error_symbol(name) : :unknown, message: fields.fetch("message"),
-                   http_status: fields["http_status"], raw_code: fields["raw_code"],
-                   raw_name: fields["raw_name"] || (known ? nil : name))
+      RowError.new(code: known ? Native.error_symbol(name) : :unknown, message: Values.freeze_copy(fields.fetch("message")),
+                   http_status: fields["http_status"], raw_code: known ? fields["raw_code"] : raw_code || fields["raw_code"],
+                   raw_name: fields["raw_name"] || (known ? nil : name)).freeze
     end
+
     def self.relation(fields)
-      value(Relation, fields.merge("symmetric" => fields["either"], "source" => value(RelationName, fields.fetch("source")),
+      value(Relation, fields.merge("either" => fields.fetch("either", false), "source" => value(RelationName, fields.fetch("source")),
                                    "target" => value(RelationName, fields.fetch("target"))))
     end
-    def self.answer(function, fields)
+
+    def self.answer(function, fields, question, parent)
       case function
-      when "find" then fields && value(Found, fields)
-      when "recognize" then fields.map { |name| value(Name, name) }.freeze
+      when "find" then fields && value(Span, fields)
+      when "recognize" then fields.map { |entry| value(Name, entry) }.freeze
       when "relate" then fields.map { |entry| relation(entry) }.freeze
-      when "annotate" then AnnotationAnswers[fields.transform_values { |entry| variant(entry) }].freeze
+      when "annotate"
+        # @type var questions: Hash[String, untyped]
+        questions = question.is_a?(AnnotateQuestion) ? question.questions : {}
+        AnnotationAnswers[fields.to_h { |name, entry| [name, variant(entry, question: questions[name], parent: parent)] }].freeze
+      when "choose" then question&.symbols? ? fields.to_sym : Values.freeze_copy(fields)
+      when "tag" then fields.map { |entry| question&.symbols? ? entry.to_sym : Values.freeze_copy(entry) }.freeze
       when "score" then fields.to_f
       else Values.freeze_copy(fields)
       end
     end
+
     def self.detail(function, fields)
       return nil unless fields
       case function
       when "choose", "tag" then value(LabelDetail, fields)
       when "score", "rank" then value(LevelDetail, fields)
-      when "relate" then RelationDetail.new(names: fields.fetch("names").map { |name| value(Name, name) }.freeze, pairs: fields.fetch("pairs").map { |entry| relation(entry) }.freeze)
+      when "relate"
+        RelationDetail.new(names: fields.fetch("names").map { |entry| value(Name, entry) }.freeze,
+                           pairs: fields.fetch("pairs").map { |entry| relation(entry) }.freeze)
       when "recognize"
-        pieces = fields.fetch("pieces").map { |entry| value(PieceDetail, entry) }.freeze
-        names = fields.fetch("names").map { |entry| value(KindDetail, entry) }.freeze
-        RecognizeDetail.new(pieces: pieces, names: names)
+        RecognizeDetail.new(pieces: fields.fetch("pieces").map { |entry| value(PieceDetail, entry) }.freeze,
+                            names: fields.fetch("names").map { |entry| value(KindDetail, entry) }.freeze)
+      end
+    end
+
+    def self.number(value)
+      parts = value.to_s.split("e")
+      mantissa, exponent = parts.fetch(0), parts[1]
+      return mantissa.sub(/\.0\z/, "") unless exponent
+      "0." + "0" * (-exponent.to_i - 1) + mantissa.delete(".").sub(/0+\z/, "")
+    end
+
+    # Fold only string leaves. The tabs joining labels/entries remain separators.
+    def self.leaf(value) = value.to_s.tr("\r\n\t", "   ")
+    def self.text(row, answer)
+      return "unsure" if row.unsure?
+      if row.failed?
+        # @type var failure: untyped
+        failure = row.error
+        return "failed: #{leaf(failure.raw_name || failure.code)}: #{leaf(failure.message)}"
+      end
+      case row.function
+      when :decide, :filter then answer ? "true" : "false"
+      when :choose then leaf(answer)
+      when :tag then answer.map { |label| leaf(label) }.join("\t")
+      when :score then number(answer)
+      when :rank then answer.to_s
+      when :find then answer ? leaf(answer.text) : ""
+      when :recognize then answer.map { |name| "#{leaf(name.kind)}: #{leaf(name.text)} (#{name.start}..#{name.end})" }.join("\t")
+      when :relate then answer.map { |entry| "#{leaf(entry.source.text)} --#{leaf(entry.relation)}--> #{leaf(entry.target.text)}" }.join("\t")
+      when :annotate then answer.map { |name, entry| "#{leaf(name)}=#{entry}" }.join("\t")
       end
     end
   end
-  private_constant :Row, :Values, :RowWire, :RowPredicates, :AnnotationWire, :WireValue, :AnswerValue, :AnnotationAnswers, :NativeContract, :UnsureAnswer, :FailedAnswer, :InputRow, :RankCopy
+  private_constant :Row, :Values, :WireValue, :AnnotationAnswers, :NativeContract
 end

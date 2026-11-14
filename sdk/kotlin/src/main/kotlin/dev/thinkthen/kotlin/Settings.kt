@@ -19,11 +19,11 @@ public class ApiKey(private val value: String) {
 /** How the engine retries a backend request: up to [maxRetries] times, starting at [initialBackoff], waiting at most [attemptTimeout] for each attempt. */
 public class RetryPolicy(
     /** How many times to retry. */
-    public val maxRetries: Int,
+    public val maxRetries: Int = 3,
     /** The first wait between attempts. */
-    public val initialBackoff: Duration,
+    public val initialBackoff: Duration = 500.milliseconds,
     /** The longest wait for one attempt. */
-    public val attemptTimeout: Duration,
+    public val attemptTimeout: Duration = 120_000.milliseconds,
 ) {
     internal fun definition(): JsonObject = buildJsonObject {
         put("max_retries", maxRetries); put("initial_backoff_ms", wholeMilliseconds(initialBackoff)); put("attempt_timeout_ms", wholeMilliseconds(attemptTimeout))

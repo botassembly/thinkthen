@@ -8,6 +8,16 @@ fn read(path: &Path) -> Value {
     serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
 }
 fn discriminator(value: &mut Value, registry: &Value, key: &str, domain: &str) {
+    if value[key].is_string() {
+        assert!(
+            registry[domain]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|entry| entry["name"] == value[key])
+        );
+        return;
+    }
     let number = value[key].as_u64().unwrap();
     value[key] = registry[domain]
         .as_array()
@@ -132,6 +142,23 @@ fn database_caller_retains_null_invalid_and_terminal_error_protocol() {
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
+    let saved = String::from_utf8(result.stdout).unwrap();
+    let rows: Vec<thinkthen::results::AnyRow> = saved
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("C canonical SQL row must reload"))
+        .collect();
+    assert_eq!(rows.len(), 5);
+    for (index, row) in rows.iter().enumerate() {
+        let fields = serde_json::to_value(row).unwrap();
+        match index {
+            0 => assert_eq!(fields["id"], json!(7)),
+            1 => assert_eq!(fields["id"], json!("selected")),
+            _ => assert!(
+                fields.get("id").is_none(),
+                "SQL-only raw ID entered saved row"
+            ),
+        }
+    }
 }
 
 #[test]

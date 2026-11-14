@@ -236,37 +236,38 @@
     },
     "expected": [
       {
+        "answer": false,
         "function": "filter",
         "position": 1,
-        "probability": 0.46,
+        "probability": 0.36,
         "source": {
           "backend": "stub",
           "model": "stub",
-          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
-        },
-        "status": "unsure"
-      },
-      {
-        "answer": true,
-        "function": "filter",
-        "position": 2,
-        "probability": 1.0,
-        "source": {
-          "backend": "stub",
-          "model": "stub",
-          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
+          "question_identity": "2090e4b78b6af804797ccdebc0cf6d4ae5d609d7ba401d063eb398dc09431531"
         },
         "status": "answered"
       },
       {
         "answer": true,
         "function": "filter",
-        "position": 3,
-        "probability": 0.95,
+        "position": 2,
+        "probability": 0.82,
         "source": {
           "backend": "stub",
           "model": "stub",
-          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
+          "question_identity": "2090e4b78b6af804797ccdebc0cf6d4ae5d609d7ba401d063eb398dc09431531"
+        },
+        "status": "answered"
+      },
+      {
+        "answer": false,
+        "function": "filter",
+        "position": 3,
+        "probability": 0.28,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "2090e4b78b6af804797ccdebc0cf6d4ae5d609d7ba401d063eb398dc09431531"
         },
         "status": "answered"
       },
@@ -280,7 +281,7 @@
         "source": {
           "backend": "stub",
           "model": "stub",
-          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
+          "question_identity": "2090e4b78b6af804797ccdebc0cf6d4ae5d609d7ba401d063eb398dc09431531"
         },
         "status": "failed"
       }
@@ -289,10 +290,7 @@
       "question": {
         "function": "filter",
         "question": "Ready?",
-        "threshold": {
-          "high": 0.8,
-          "low": 0.2
-        }
+        "threshold": 0.8
       },
       "records": [
         "refund",

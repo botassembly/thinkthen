@@ -23,8 +23,8 @@ internal abstract class ContractSerializer<T>(name: String) : KSerializer<T> {
 internal fun JsonObject.text(name: String): String = getValue(name).jsonPrimitive.content
 internal fun JsonObject.number(name: String): Double = getValue(name).jsonPrimitive.double
 internal fun JsonObject.long(name: String): Long = getValue(name).jsonPrimitive.long
-internal fun span(value: JsonObject): Span = Span(value.text("text"), value.long("start"), value.long("end"))
-internal fun spanFields(value: Span): JsonObject = buildJsonObject { put("text", value.text); put("start", value.start); put("end", value.end) }
+internal fun span(value: JsonObject): Span = Span(value.text("text"), value.getValue("start").jsonPrimitive.int, value.getValue("end").jsonPrimitive.int, value["_canonical_start"]?.jsonPrimitive?.int ?: value.getValue("start").jsonPrimitive.int, value["_canonical_end"]?.jsonPrimitive?.int ?: value.getValue("end").jsonPrimitive.int)
+internal fun spanFields(value: Span): JsonObject = buildJsonObject { put("text", value.text); put("start", value.canonicalStart); put("end", value.canonicalEnd) }
 
 internal object RecordIdSerializer : ContractSerializer<RecordId>("RecordId") {
     override fun write(value: RecordId): JsonElement = when (value) {
@@ -52,31 +52,21 @@ internal object PieceDetailSerializer : ContractSerializer<PieceDetail>("PieceDe
     override fun read(value: JsonElement): PieceDetail = PieceDetail(span(value.jsonObject), value.jsonObject.getValue("tags").jsonObject.mapKeys { BoundaryTag.valueOf(it.key) }.mapValues { it.value.jsonPrimitive.double })
 }
 
-internal object AnnotationsSerializer : ContractSerializer<Annotations>("Annotations") {
-    override fun read(value: JsonElement): Annotations = Annotations(value.jsonObject.mapValues { (_, item) ->
-        val fields = item.jsonObject
-        when (fields.text("function")) {
-            "decide" -> DecideResult(Decoder.DECIDE.outcome(fields))
-            "choose" -> ChooseResult(Decoder.CHOOSE.outcome(fields))
-            "tag" -> TagResult(Decoder.TAG.outcome(fields))
-            "score" -> ScoreResult(Decoder.SCORE.outcome(fields))
-            "filter" -> FilterResult(Decoder.FILTER.outcome(fields))
-            "find" -> FindResult(Decoder.FIND.outcome(fields))
-            "recognize" -> RecognizeResult(Decoder.RECOGNIZE.outcome(fields))
-            "relate" -> RelateResult(Decoder.RELATE.outcome(fields))
-            else -> throw SerializationException("Unknown annotation function")
-        }
-    })
-    override fun write(value: Annotations): JsonElement = JsonObject(value.entries.mapValues { (_, entry) ->
-        when (entry) {
-            is DecideResult -> Decoder.DECIDE.outcomeJson("decide", entry.outcome)
-            is ChooseResult -> Decoder.CHOOSE.outcomeJson("choose", entry.outcome)
-            is TagResult -> Decoder.TAG.outcomeJson("tag", entry.outcome)
-            is ScoreResult -> Decoder.SCORE.outcomeJson("score", entry.outcome)
-            is FilterResult -> Decoder.FILTER.outcomeJson("filter", entry.outcome)
-            is FindResult -> Decoder.FIND.outcomeJson("find", entry.outcome)
-            is RecognizeResult -> Decoder.RECOGNIZE.outcomeJson("recognize", entry.outcome)
-            is RelateResult -> Decoder.RELATE.outcomeJson("relate", entry.outcome)
-        }
-    })
+
+internal object SpanSerializer : ContractSerializer<Span>("Span") {
+    override fun write(value: Span): JsonElement = spanFields(value)
+    override fun read(value: JsonElement): Span = span(value.jsonObject)
+}
+
+/** Pair the native getter projection with engine-owned canonical endpoints before detaching values. */
+internal fun coordinates(host: JsonElement, canonical: JsonElement): JsonElement = when {
+    host is JsonObject && canonical is JsonObject -> JsonObject(host.mapValues { (key, value) -> canonical[key]?.let { coordinates(value, it) } ?: value } +
+        if ("text" in host && "start" in host && "end" in host) mapOf("_canonical_start" to canonical.getValue("start"), "_canonical_end" to canonical.getValue("end")) else emptyMap())
+    host is JsonArray && canonical is JsonArray -> JsonArray(host.mapIndexed { index, value -> coordinates(value, canonical[index]) })
+    else -> host
+}
+
+internal object KindDetailSerializer : ContractSerializer<KindDetail>("KindDetail") {
+    override fun write(value: KindDetail): JsonElement = JsonObject(spanFields(value.span) + ("kinds" to JsonObject(value.kinds.mapValues { JsonPrimitive(it.value) })))
+    override fun read(value: JsonElement): KindDetail = KindDetail.from(span(value.jsonObject), value.jsonObject.getValue("kinds").jsonObject.mapValues { it.value.jsonPrimitive.double })
 }

@@ -212,7 +212,6 @@ fn a_function_reads_a_shell_line_as_it_reads_the_same_input_line() {
     let nested = format!("{}{}", "[".repeat(200), "]".repeat(200));
     let questions = [
         question(),
-        json!({"question":{"function":"filter","question":"Ready?"}}),
         json!({"question":{"function":"rank","question":"Ready?","levels":["low","high"]}}),
     ];
     for line in ["1e999", r#""\ud800""#, nested.as_str()] {
@@ -229,9 +228,8 @@ fn a_function_reads_a_shell_line_as_it_reads_the_same_input_line() {
                     assert_eq!(direct[0].get(field), Some(value), "{line}: {field}");
                 }
             }
-            let carries_item = question["question"]["function"] != "decide";
             let item = piped[0].get("item").map(String::as_str);
-            assert_eq!(item, carries_item.then_some(line));
+            assert_eq!(item, Some(line));
         }
     }
 }

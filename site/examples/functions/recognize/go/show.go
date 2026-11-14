@@ -20,9 +20,9 @@ func main() {
 	}
 	defer client.Close()
 
-	kinds := tt.NewRecognize([]string{"person", "organization"})
+	kinds := tt.RecognizeQuestion{Kinds: []string{"person", "organization"}}
 	names, err := tt.Answer(client.Recognize(context.Background(), kinds,
-		tt.Text(string(message))))
+		string(message)))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -129,7 +129,12 @@ def run_cases(factory, loopback):
                 if function == 'filter':
                     expected_rows = [row for row in expected_rows if row['status'] == 'failed' or (row['status'] == 'answered' and row.get('answer') is True)]
                 backend_only = bool(case['expected']) and all(row['status'] == 'failed' and row['error']['code'].startswith('backend.') for row in case['expected'])
-                if backend_only:
+                if factory.surface in ('duckdb', 'sqlite') and function == 'filter' and any(row['status'] == 'failed' for row in expected_rows):
+                    host.call_failure(case['request'], 'records failed')
+                    assert int(command(server, 'count')) == case['requests'], file
+                    covered.add((function, backend))
+                    continue
+                if backend_only and factory.surface not in ('duckdb', 'sqlite'):
                     host.call_failure(case['request'], expected_rows[0]['error']['code'])
                     assert int(command(server, 'count')) == case['requests'], file
                     covered.add((function, backend))

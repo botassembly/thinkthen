@@ -1,7 +1,7 @@
 using ThinkThen;
 
 await using var client = new ThinkThenClient();
-bool isRefund = await client.DecideAsync(
+var isRefund = await client.DecideAsync(
     "Does the customer request a refund?",
     "Please refund my order.");
 Console.WriteLine(isRefund);

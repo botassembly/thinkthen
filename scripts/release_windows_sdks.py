@@ -399,13 +399,13 @@ def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch
             c = unpack(packages['c'], scratch / 'cpp-c')
             cpp = unpack(packages['cpp'], scratch / 'cpp')
             binary = scratch / 'cpp-consumer.exe'
-            build_consumer('clang-cl', '/nologo', '/std:c++17', '/EHsc', '/MD', '/W4', '/WX', '/UNDEBUG',
+            build_consumer('clang-cl', '/nologo', '/std:c++20', '/EHsc', '/MD', '/W4', '/WX', '/UNDEBUG',
                     '/I' + str(cpp / 'include'), '/I' + str(c / 'include'), checks / 'cpp/consumer.cpp', '/Fe:' + str(binary), '/link',
                     c / 'lib/thinkthen_ffi.lib')
             native_cases, registry = native_contract(checks)
             for case in cases:
                 output = execute(binary, json.dumps(case['request']), json.dumps(case['client']), extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
-                native_cases.compare(output, case, registry, 'utf8')
+                native_cases.compare(output, case, registry, 'cpp')
             cancel('C++', binary, native=True, extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
 
 

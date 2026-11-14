@@ -85,7 +85,7 @@ Every question names its `function`, and every question takes an optional `field
 | relate | `rules`; optional `threshold` |
 | annotate | `questions`, a map from name to question |
 
-`threshold` is one bar, a number above 0 and at most 1, such as `0.8`; the default is `0.5`. decide and filter also take a low and a high bar, `{"low": 0.2, "high": 0.8}`. A relate rule holds `relation`, `source` and `target`, and optional `either` and `reads`. A field the format doesn't list stops the command with the closest name it knows.
+`threshold` is one bar, a number above 0 and at most 1, such as `0.8`; the default is `0.5`. decide also takes a low and a high bar, `{"low": 0.2, "high": 0.8}`. Filter takes only one bar. A relate rule holds `source`, `target` and `relation`, and optional `either` and `reads`. A field the format doesn't list stops the command with the closest name it knows.
 
 ## Next
 

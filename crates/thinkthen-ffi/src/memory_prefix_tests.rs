@@ -91,7 +91,7 @@ fn old_prefixes_work_when_engine_structs_are_larger() {
         thinkthen_call_end_input(call);
         assert_eq!(thinkthen_call_next(call, row, error), THINKTHEN_OK);
         assert_eq!((*row).position, 1);
-        assert!((*row).source.len > 0);
+        assert!(!(*row).private_data.is_null());
         let mut value = ptr::null_mut();
         assert_eq!(thinkthen_row_values(row, &mut value, error), THINKTHEN_OK);
         thinkthen_value_free(value);

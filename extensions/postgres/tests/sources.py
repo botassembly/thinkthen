@@ -27,8 +27,8 @@ def verify(database, query, failure):
     assert query(database, "SELECT position,id = '1e1000'::jsonb,status,error_code FROM thinkthen.decide(%s,'Ready?',id_column=>'key')", (source,)) == [(1, True, 'answered', None)]
     # Feature: nullable composite rule options use the shared defaults.
     source = "SELECT 'Alice works at Acme'::text AS record"
-    statements = ["ROW('works at','person','company',NULL,NULL)",
-                  "ROW('works at','person','company',NULL,false)"]
+    statements = ["ROW('person','company','works at',NULL,NULL)",
+                  "ROW('person','company','works at',NULL,false)"]
     results = [query(database, "SELECT position,status,answer,detail,(source).question_identity FROM thinkthen.relate(%s,rules=>ARRAY[" + rule + "]::thinkthen.rule[]) t", (source,)) for rule in statements]
     assert len(results[0]) == 1 and results[0][0][1] == 'answered', results
     assert results[0] == results[1], results

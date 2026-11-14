@@ -1,4 +1,4 @@
-"""A blank record is a usage mistake in a one-record call and a row in a stream."""
+"""Blank scalar calls fail immediately; streams retain failed results."""
 
 from __future__ import annotations
 
@@ -29,16 +29,17 @@ def server(tmp_path: Path) -> Iterator[Loopback]:
 
 
 @pytest.mark.parametrize("record", BLANK)
-def test_a_blank_one_record_call_raises_record_empty(
+def test_a_blank_one_record_call_returns_record_empty(
     server: Loopback, record: Any
 ) -> None:
-    with client(server) as selected, pytest.raises(tt.RecordError) as raised:
+    with client(server) as selected, pytest.raises(tt.Failed) as raised:
         selected.decide("Ready?", record)
     assert raised.value.code is tt.ErrorCode.RECORD_EMPTY
+    assert raised.value.rows[0].failed
     assert server.count() == 0
 
 
-def test_a_blank_async_one_record_call_raises_record_empty(server: Loopback) -> None:
+def test_a_blank_async_one_record_call_returns_record_empty(server: Loopback) -> None:
     async def scenario() -> None:
         async with tt.AsyncClient(
             backend="systemone",
@@ -47,11 +48,12 @@ def test_a_blank_async_one_record_call_raises_record_empty(server: Loopback) -> 
             batch=1,
             retry=tt.RetryPolicy(max_retries=0),
         ) as selected:
-            await selected.score("How big?", " ", levels=["small", "large"])
+            with pytest.raises(tt.Failed) as raised:
+                await selected.score("How big?", " ", levels=["small", "large"])
+            assert raised.value.code is tt.ErrorCode.RECORD_EMPTY
+            assert raised.value.rows[0].failed
 
-    with pytest.raises(tt.RecordError) as raised:
-        asyncio.run(scenario())
-    assert raised.value.code is tt.ErrorCode.RECORD_EMPTY
+    asyncio.run(scenario())
     assert server.count() == 0
 
 

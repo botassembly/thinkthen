@@ -6,7 +6,7 @@ rules = [
 ]
 text = "Morgan works for Example Group.\nPlease refund my order.\n"
 relations = tt.relate(text, rules=rules)
-for relation in relations:
+for relation in relations.answer:
     print(relation.source.kind, repr(relation.source.text),
           relation.relation,
           relation.target.kind, repr(relation.target.text),

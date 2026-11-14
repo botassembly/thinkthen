@@ -55,6 +55,8 @@ decide prints `true` for yes and `false` for no. Set a low and a high bar, and i
 The same ten functions, in your code or your database:
 
 - [Python SDK](https://thinkthen.dev/sdks/python/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md)
+- [pandas guide](https://thinkthen.dev/sdks/pandas/), with its [tested guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/pandas.md)
+- [Polars guide](https://thinkthen.dev/sdks/polars/), with its [tested guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/polars.md)
 - [TypeScript SDK](https://thinkthen.dev/sdks/typescript/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/typescript.md)
 - [Go SDK](https://thinkthen.dev/sdks/go/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/go.md)
 - [Java SDK](https://thinkthen.dev/sdks/java/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/java.md)
@@ -65,13 +67,15 @@ The same ten functions, in your code or your database:
 - [Rust SDK](https://thinkthen.dev/sdks/rust/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/rust.md)
 - [Swift SDK](https://thinkthen.dev/sdks/swift/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/swift.md)
 - [Zig SDK](https://thinkthen.dev/sdks/zig/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/zig.md)
-- [C SDK](https://thinkthen.dev/sdks/c/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c-cpp.md)
-- [C++ SDK](https://thinkthen.dev/sdks/cpp/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c-cpp.md)
+- [C SDK](https://thinkthen.dev/sdks/c/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c.md)
+- [C++ SDK](https://thinkthen.dev/sdks/cpp/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/cpp.md)
 - [DuckDB](https://thinkthen.dev/sdks/duckdb/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/duckdb.md)
 - [SQLite](https://thinkthen.dev/sdks/sqlite/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/sqlite.md)
 - [PostgreSQL](https://thinkthen.dev/sdks/postgresql/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md)
 
-The [command guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/bash.md) covers every option of the command, and [Where your text goes](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/service.md) covers keys and connection settings.
+The [C and C++ guide index](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c-cpp.md) links to each native guide. The [shared SQL guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/sql.md) explains the rules the databases share.
+
+The [command guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/bash.md) shows the ten functions and result handling, and [Where your text goes](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/service.md) covers keys and connection settings.
 
 ## Verify a download
 

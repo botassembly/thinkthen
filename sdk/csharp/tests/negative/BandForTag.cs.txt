@@ -1,3 +1,4 @@
+// Expected: error CS0266
 using ThinkThen;
 
 public static class InvalidInput

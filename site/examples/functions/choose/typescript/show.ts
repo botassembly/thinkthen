@@ -1,14 +1,13 @@
-import { ThinkThen } from "thinkthen";
+import { Client } from "thinkthen";
 
-const tt = new ThinkThen();
+const tt = new Client();
 try {
-  // await throws UnsureError when not sure, RecordError on failure.
   const topic = await tt.choose(
     "What is the message about?",
     "Please refund my order.",
     { choices: ["billing", "shipping", "other"] },
   );
-  console.log(topic);
+  console.log(String(topic));
 } finally {
   await tt.close();
 }

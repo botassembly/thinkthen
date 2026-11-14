@@ -11,7 +11,7 @@ use thinkthen::{BackendName, Code, Key, Question, Request, Settings, Threshold, 
 fn questions_require_their_domains_and_round_trip_the_canonical_contract() {
     let cases = [
         json!({"function":"decide","question":"Ready?"}),
-        json!({"function":"filter","question":"Keep?","threshold":{"low":0.2,"high":0.8}}),
+        json!({"function":"filter","question":"Keep?","threshold":0.8}),
         json!({"function":"choose","question":"Which?","choices":["a","b"]}),
         json!({"function":"tag","question":"Which?","labels":["a"],"threshold":0.7}),
         json!({"function":"score","question":"How?","levels":["low","high"]}),
@@ -40,8 +40,9 @@ fn questions_require_their_domains_and_round_trip_the_canonical_contract() {
             serde_json::to_value(request).unwrap()
         );
     }
-    for function in ["tag", "find", "recognize", "relate"] {
+    for function in ["filter", "tag", "find", "recognize", "relate"] {
         let mut question = match function {
+            "filter" => json!({"function":function,"question":"Keep?"}),
             "tag" => json!({"function":function,"question":"Which?","labels":["a"]}),
             "find" => json!({"function":function,"question":"Where?"}),
             "recognize" => json!({"function":function,"kinds":["person"]}),
@@ -180,7 +181,7 @@ fn toolbox_selection_retains_required_domains_and_rejects_duplicate_names() {
     use std::collections::BTreeMap;
     let toolbox = questions::Toolbox::new(BTreeMap::from([(
         "route".to_owned(),
-        questions::Choose::new("Which?", ["billing", "shipping"])
+        questions::Choose::with_strings("Which?", ["billing", "shipping"])
             .unwrap()
             .into(),
     )]))
@@ -199,7 +200,7 @@ fn toolbox_selection_retains_required_domains_and_rejects_duplicate_names() {
     let annotate = questions::Annotate::new(entries)
         .unwrap()
         .field("/body".parse().unwrap());
-    let rank: thinkthen::SimpleQuestion = questions::Rank::new("How?", ["low", "high"])
+    let rank: thinkthen::SimpleQuestion = questions::Rank::with_strings("How?", ["low", "high"])
         .unwrap()
         .into();
     let toolbox =
@@ -220,7 +221,6 @@ fn toolbox_selection_retains_required_domains_and_rejects_duplicate_names() {
 
 #[test]
 fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
-    use std::num::NonZeroUsize;
     use std::time::Duration;
     use thinkthen::{Cut, Retry};
     let cut = Cut::new(0.7123456789012345).unwrap();
@@ -237,19 +237,19 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
         (
             questions::Filter::new("Keep?")
                 .unwrap()
-                .threshold(cut.into())
+                .threshold(cut)
                 .into(),
             json!(cut.get()),
         ),
         (
-            questions::Choose::new("Which?", ["a", "b"])
+            questions::Choose::with_strings("Which?", ["a", "b"])
                 .unwrap()
                 .threshold(cut)
                 .into(),
             json!(cut.get()),
         ),
         (
-            questions::Tag::new("Which?", ["a"])
+            questions::Tag::with_strings("Which?", ["a"])
                 .unwrap()
                 .threshold(cut)
                 .into(),
@@ -270,11 +270,15 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
             json!(cut.get()),
         ),
         (
-            questions::Relate::new([questions::RelationRule::new("knows", "person", "person")
-                .unwrap()
-                .reads("knows well")
-                .unwrap()
-                .either(true)])
+            questions::Relate::new([questions::RelationRule::new(
+                "person",
+                "organization",
+                "knows",
+            )
+            .unwrap()
+            .reads("knows well")
+            .unwrap()
+            .either(true)])
             .unwrap()
             .threshold(cut)
             .into(),
@@ -290,7 +294,7 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
         if encoded["function"] == "relate" {
             assert_eq!(
                 encoded["rules"][0],
-                json!({"relation":"knows","source":"person","target":"person","reads":"knows well","either":true})
+                json!({"relation":"knows","source":"person","target":"organization","reads":"knows well","either":true})
             );
         }
         assert_eq!(
@@ -298,15 +302,15 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
             encoded
         );
     }
-    let rank = questions::Rank::new("How?", ["low", "high"])
+    let rank = questions::Rank::with_strings("How?", ["low", "high"])
         .unwrap()
-        .top(NonZeroUsize::new(2).unwrap())
+        .top(2)
         .unwrap();
     assert_eq!(
         serde_json::to_value(Question::from(rank)).unwrap()["top"],
         2
     );
-    let score = questions::Score::new("How?", ["low", "high"]).unwrap();
+    let score = questions::Score::with_strings("How?", ["low", "high"]).unwrap();
     assert!(
         serde_json::to_value(Question::from(score))
             .unwrap()
@@ -323,7 +327,6 @@ fn annotation_preserves_inherited_evidence_and_explicit_root_selection() {
     let validator = jsonschema::validator_for(&schema).unwrap();
     for child in [
         json!({"function":"decide","question":"Ready?"}),
-        json!({"function":"filter","question":"Keep?"}),
         json!({"function":"choose","question":"Which?","choices":["a","b"]}),
         json!({"function":"tag","question":"Which?","labels":["a"]}),
         json!({"function":"score","question":"How?","levels":["low","high"]}),
@@ -469,7 +472,7 @@ fn sql_retry_settings_cannot_raise_the_default_budget() {
 #[cfg(feature = "native")]
 #[test]
 fn postgres_input_nul_is_not_an_output_representation_failure() {
-    use thinkthen::{AnyRow, Decide, Record, RecordId};
+    use thinkthen::{Decide, OffsetUnit, Record, RecordId};
     let server = loopback::Loopback::noul(0.9).unwrap();
     let engine = Settings::default()
         .url(server.base())
@@ -477,13 +480,24 @@ fn postgres_input_nul_is_not_an_output_representation_failure() {
         .engine(|_| None)
         .unwrap();
     let question = Decide::new("Ready?").unwrap();
+    let run = |record| {
+        let call = engine
+            .open_request(&Request::new(question.clone()), OffsetUnit::Utf8)
+            .unwrap();
+        let sender = call.sender();
+        sender.send(record).unwrap();
+        sender.close();
+        let mut rows = call.rows();
+        let row = rows.next().unwrap().unwrap();
+        assert!(rows.next().is_none());
+        thinkthen::native::sql_postgres_row(row).unwrap()
+    };
     for text in [
         r#""before\u0000after""#,
         r#"{"id":7,"body":"before\u0000after","key\u0000name":"value"}"#,
     ] {
         let record = thinkthen::native::sql_postgres_record(text);
-        let row = engine.run(&question, record).unwrap();
-        let row = thinkthen::native::sql_postgres_row(AnyRow::Decide(row)).unwrap();
+        let row = run(record);
         let value = serde_json::to_value(row).unwrap();
         assert_eq!(value["status"], "answered", "{text}");
         assert_eq!(value["answer"], true);
@@ -491,8 +505,7 @@ fn postgres_input_nul_is_not_an_output_representation_failure() {
     assert_eq!(server.count(), 2);
     let record =
         thinkthen::native::sql_postgres_record(r#"{"id":"bad\u0000id","body":"evidence"}"#);
-    let row = engine.run(&question, record).unwrap();
-    let row = thinkthen::native::sql_postgres_row(AnyRow::Decide(row)).unwrap();
+    let row = run(record);
     let value = serde_json::to_value(row).unwrap();
     assert_eq!(value["status"], "failed");
     assert_eq!(value["error"]["code"], "record.json");
@@ -500,8 +513,7 @@ fn postgres_input_nul_is_not_an_output_representation_failure() {
     assert_eq!(server.count(), 2, "unrepresentable ID sent a paid request");
     // Output identifiers still obey PostgreSQL's text/jsonb representation limit.
     let record = Record::text("evidence").with_id(RecordId::String("bad\0id".into()));
-    let row = engine.run(&question, record).unwrap();
-    let row = thinkthen::native::sql_postgres_row(AnyRow::Decide(row)).unwrap();
+    let row = run(record);
     let value = serde_json::to_value(row).unwrap();
     assert_eq!(value["status"], "failed");
     assert_eq!(value["error"]["code"], "record.json");

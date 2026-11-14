@@ -21,10 +21,9 @@ func main() {
 	defer client.Close()
 
 	// 0 means routine and 1 means urgent.
-	urgencyQuestion := tt.NewScore("How urgent is the request?",
-		[]string{"routine", "urgent"})
+	urgencyQuestion := tt.ScoreQuestion[string]{Question: "How urgent is the request?", Levels: []string{"routine", "urgent"}}
 	urgency, err := tt.Answer(client.Score(context.Background(),
-		urgencyQuestion, tt.Text(string(message))))
+		urgencyQuestion, string(message)))
 	if err != nil {
 		log.Fatal(err)
 	}

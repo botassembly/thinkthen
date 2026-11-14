@@ -1,451 +1,201 @@
 const std = @import("std");
 const t = @import("types.zig");
-pub const Function = t.Function;
-pub const Choice = t.Choice;
-pub const RelationRule = t.RelationRule;
-pub const Threshold = t.Threshold;
-/// Options for decide.
-pub const DecideOptions = struct {
-    /// What yes means for this question; null keeps the question's own wording.
-    yes_means: ?[]const u8 = null,
-    /// What no means for this question; null keeps the question's own wording.
-    no_means: ?[]const u8 = null,
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// The answer threshold: a cut, or a band whose middle is not sure.
-    threshold: ?Threshold = null,
-};
-/// A decide question.
 pub const Decide = struct {
-    /// The question text.
+    pub const function: t.Function = .decide;
     question: []const u8,
-    /// The options.
-    options: DecideOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("decide");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        if (self.options.yes_means) |v| {
-            try writer.objectField("true");
-            try writer.write(v);
-        }
-        if (self.options.no_means) |v| {
-            try writer.objectField("false");
-            try writer.write(v);
-        }
-        try writer.endObject();
-    }
-};
-/// Options for choose.
-pub const ChooseOptions = struct {
-    /// Descriptions by label or level. The engine refuses keys outside the question's choices.
-    descriptions: ?std.json.ArrayHashMap([]const u8) = null,
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
+    threshold: ?t.Threshold = null,
     field: ?[]const u8 = null,
-    /// The lowest probability that counts; below it the answer is not sure.
-    threshold: ?f64 = null,
-};
-/// A choose question.
-pub const Choose = struct {
-    /// The question text.
-    question: []const u8,
-    /// The labels, one of which is chosen.
-    choices: []const Choice,
-    /// The options.
-    options: ChooseOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("choose");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        try writer.objectField("choices");
-        try writeOptions(writer, self.choices, self.options.descriptions);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        try writer.endObject();
-    }
-};
-/// Options for tag.
-pub const TagOptions = struct {
-    /// Descriptions by label or level. The engine refuses keys outside the question's choices.
-    descriptions: ?std.json.ArrayHashMap([]const u8) = null,
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// The lowest probability that counts.
-    threshold: ?f64 = null,
-};
-/// A tag question.
-pub const Tag = struct {
-    /// The question text.
-    question: []const u8,
-    /// The labels, any of which may fit.
-    labels: []const Choice,
-    /// The options.
-    options: TagOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("tag");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        try writer.objectField("labels");
-        try writeOptions(writer, self.labels, self.options.descriptions);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        try writer.endObject();
-    }
-};
-/// Options for score.
-pub const ScoreOptions = struct {
-    /// Descriptions by label or level. The engine refuses keys outside the question's choices.
-    descriptions: ?std.json.ArrayHashMap([]const u8) = null,
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-};
-/// A score question.
-pub const Score = struct {
-    /// The question text.
-    question: []const u8,
-    /// The ordered levels, lowest first.
-    levels: []const Choice,
-    /// The options.
-    options: ScoreOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("score");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        try writer.objectField("levels");
-        try writeOptions(writer, self.levels, self.options.descriptions);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        try writer.endObject();
-    }
-};
-/// Options for filter.
-pub const FilterOptions = struct {
-    /// What yes means for this question; null keeps the question's own wording.
     yes_means: ?[]const u8 = null,
-    /// What no means for this question; null keeps the question's own wording.
     no_means: ?[]const u8 = null,
-    /// A name for the question; it changes the question's identity and appears in each row's source.
     name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// The answer threshold: a cut, or a band whose middle is not sure.
-    threshold: ?Threshold = null,
+    pub fn jsonStringify(self: @This(), w: anytype) !void {
+        try write(self, w);
+    }
 };
-/// A filter question.
 pub const Filter = struct {
-    /// The question text.
+    pub const function: t.Function = .filter;
     question: []const u8,
-    /// The options.
-    options: FilterOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("filter");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        if (self.options.yes_means) |v| {
-            try writer.objectField("true");
-            try writer.write(v);
-        }
-        if (self.options.no_means) |v| {
-            try writer.objectField("false");
-            try writer.write(v);
-        }
-        try writer.endObject();
+    threshold: ?t.Cut = null,
+    field: ?[]const u8 = null,
+    yes_means: ?[]const u8 = null,
+    no_means: ?[]const u8 = null,
+    name: ?[]const u8 = null,
+    pub fn jsonStringify(self: @This(), w: anytype) !void {
+        try write(self, w);
     }
 };
-/// Options for rank.
-pub const RankOptions = struct {
-    /// Descriptions by label or level. The engine refuses keys outside the question's choices.
-    descriptions: ?std.json.ArrayHashMap([]const u8) = null,
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// Keep only this many of the top-ranked records.
-    top: ?u32 = null,
-};
-/// A rank question.
-pub const Rank = struct {
-    /// The question text.
-    question: []const u8,
-    /// The ordered levels, lowest first.
-    levels: []const Choice,
-    /// The options.
-    options: RankOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("rank");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        try writer.objectField("levels");
-        try writeOptions(writer, self.levels, self.options.descriptions);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
+fn Descriptions(comptime E: type) type {
+    const names = @typeInfo(E).@"enum".field_names;
+    const empty: ?[]const u8 = null;
+    return @Struct(.auto, null, names, &@splat(?[]const u8), &@splat(.{ .default_value_ptr = @as(?*const anyopaque, @ptrCast(&empty)) }));
+}
+fn Enumerated(comptime f: t.Function, comptime E: type) type {
+    if (E != []const u8 and @typeInfo(E) != .@"enum") @compileError("choices, labels and levels must be an enum or []const u8");
+    return struct {
+        pub const function = f;
+        pub const Choice = E;
+        question: []const u8,
+        choices: if (E == []const u8) []const []const u8 else void = if (E == []const u8) &.{} else {},
+        descriptions: if (E == []const u8) ?std.json.ArrayHashMap([]const u8) else Descriptions(E) = if (E == []const u8) null else .{},
+        threshold: if (f == .choose or f == .tag) ?t.Cut else void = if (f == .choose or f == .tag) null else {},
+        field: ?[]const u8 = null,
+        name: ?[]const u8 = null,
+        top: if (f == .rank) ?usize else void = if (f == .rank) null else {},
+        pub fn jsonStringify(self: @This(), w: anytype) !void {
+            try write(self, w);
         }
-        if (self.options.top) |v| {
-            try writer.objectField("top");
-            try writer.write(v);
-        }
-        try writer.endObject();
-    }
-};
-/// Options for find.
-pub const FindOptions = struct {
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// The lowest probability that counts.
-    threshold: ?f64 = null,
-};
-/// A find question.
+    };
+}
+pub fn Choose(comptime E: type) type {
+    return Enumerated(.choose, E);
+}
+pub fn Tag(comptime E: type) type {
+    return Enumerated(.tag, E);
+}
+pub fn Score(comptime E: type) type {
+    return Enumerated(.score, E);
+}
+pub fn Rank(comptime E: type) type {
+    return Enumerated(.rank, E);
+}
 pub const Find = struct {
-    /// The question text.
+    pub const function: t.Function = .find;
     question: []const u8,
-    /// The options.
-    options: FindOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("find");
-        try writer.objectField("question");
-        try writer.write(self.question);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        try writer.endObject();
+    threshold: ?t.Cut = null,
+    field: ?[]const u8 = null,
+    name: ?[]const u8 = null,
+    pub fn jsonStringify(self: @This(), w: anytype) !void {
+        try write(self, w);
     }
 };
-/// Options for recognize.
-pub const RecognizeOptions = struct {
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// The lowest probability that counts.
-    threshold: ?f64 = null,
-};
-/// A recognize question.
 pub const Recognize = struct {
-    /// The kinds of names to recognize.
-    kinds: []const Choice,
-    /// The options.
-    options: RecognizeOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("recognize");
-        try writer.objectField("kinds");
-        try writer.write(self.kinds);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        try writer.endObject();
+    pub const function: t.Function = .recognize;
+    kinds: []const []const u8,
+    threshold: ?t.Cut = null,
+    field: ?[]const u8 = null,
+    name: ?[]const u8 = null,
+    pub fn jsonStringify(self: @This(), w: anytype) !void {
+        try write(self, w);
     }
 };
-/// Options for relate.
-pub const RelateOptions = struct {
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
-    field: ?[]const u8 = null,
-    /// The lowest probability that counts.
-    threshold: ?f64 = null,
-};
-/// A relate question.
 pub const Relate = struct {
-    /// The relations to look for.
-    rules: []const RelationRule,
-    /// The options.
-    options: RelateOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("relate");
-        try writer.objectField("rules");
-        try writer.write(self.rules);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        if (self.options.threshold) |v| {
-            try writer.objectField("threshold");
-            try writer.write(v);
-        }
-        try writer.endObject();
-    }
-};
-/// Options for annotate.
-pub const AnnotateOptions = struct {
-    /// A name for the question; it changes the question's identity and appears in each row's source.
-    name: ?[]const u8 = null,
-    /// A JSON pointer, such as `/text`, that selects what to judge in JSON records.
+    pub const function: t.Function = .relate;
+    rules: []const t.RelationRule,
+    threshold: ?t.Cut = null,
     field: ?[]const u8 = null,
-};
-/// A annotate question.
-pub const Annotate = struct {
-    /// The named questions.
-    questions: AnnotationQuestions,
-    /// The options.
-    options: AnnotateOptions = .{},
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writer.beginObject();
-        try writer.objectField("function");
-        try writer.write("annotate");
-        try writer.objectField("questions");
-        try writer.write(self.questions);
-        if (self.options.field) |v| {
-            try writer.objectField("field");
-            try writer.write(v);
-        }
-        try writer.endObject();
+    name: ?[]const u8 = null,
+    pub fn jsonStringify(self: @This(), w: anytype) !void {
+        try write(self, w);
     }
 };
-/// The question type of each function.
-pub fn QuestionType(comptime function: Function) type {
+pub fn Annotate(comptime Entries: type) type {
+    inline for (@typeInfo(Entries).@"struct".field_types) |Q| if (Q.function == .filter or Q.function == .rank or Q.function == .annotate) @compileError("annotate cannot hold filter, rank or annotate questions");
+    return struct {
+        pub const function: t.Function = .annotate;
+        pub const Questions = Entries;
+        entries: Entries,
+        field: ?[]const u8 = null,
+        name: ?[]const u8 = null,
+        pub fn jsonStringify(self: @This(), w: anytype) !void {
+            try write(self, w);
+        }
+    };
+}
+pub fn annotate(entries: anytype) Annotate(@TypeOf(entries)) {
+    return .{ .entries = entries };
+}
+fn write(self: anytype, w: anytype) !void {
+    const Q = @TypeOf(self);
+    try w.beginObject();
+    try w.objectField("function");
+    try w.write(Q.function);
+    inline for (@typeInfo(Q).@"struct".field_names) |name| {
+        if (comptime std.mem.eql(u8, name, "name") or std.mem.eql(u8, name, "choices") or std.mem.eql(u8, name, "descriptions")) continue;
+        if (@TypeOf(@field(self, name)) == void) continue;
+        if (comptime @typeInfo(@TypeOf(@field(self, name))) == .optional) {
+            if (@field(self, name)) |value| {
+                try w.objectField(name);
+                try w.write(value);
+            }
+        } else {
+            try w.objectField(if (comptime std.mem.eql(u8, name, "entries")) "questions" else name);
+            try w.write(@field(self, name));
+        }
+    }
+    if (@hasDecl(Q, "Choice")) {
+        const E = Q.Choice;
+        try w.objectField(switch (Q.function) {
+            .choose => "choices",
+            .tag => "labels",
+            else => "levels",
+        });
+        try w.beginArray();
+        if (E == []const u8) {
+            for (self.choices) |word| {
+                const description = if (self.descriptions) |descriptions| descriptions.map.get(word) else null;
+                if (description) |text| try w.write(.{ .name = word, .description = text }) else try w.write(word);
+            }
+        } else inline for (@typeInfo(E).@"enum".field_names) |word| {
+            if (@field(self.descriptions, word)) |text| try w.write(.{ .name = word, .description = text }) else try w.write(word);
+        }
+        try w.endArray();
+        // Preserve unknown dynamic-map keys for the engine to refuse at admission.
+        if (E == []const u8) if (self.descriptions) |descriptions| {
+            var unknown = false;
+            for (descriptions.map.keys()) |key| {
+                var found = false;
+                for (self.choices) |word| if (std.mem.eql(u8, word, key)) {
+                    found = true;
+                    break;
+                };
+                if (!found) unknown = true;
+            }
+            if (unknown) {
+                try w.objectField("descriptions");
+                try w.write(descriptions);
+            }
+        };
+    }
+    try w.endObject();
+}
+
+/// A form whose question names are known only at runtime.
+pub const DynamicAnnotate = struct {
+    pub const function: t.Function = .annotate;
+    entries: std.json.Value,
+    field: ?[]const u8 = null,
+    name: ?[]const u8 = null,
+    pub fn jsonStringify(self: @This(), w: anytype) !void {
+        try write(self, w);
+    }
+};
+pub fn QuestionType(comptime function: t.Function) type {
     return switch (function) {
         .decide => Decide,
-        .choose => Choose,
-        .tag => Tag,
-        .score => Score,
+        .choose => Choose([]const u8),
+        .tag => Tag([]const u8),
+        .score => Score([]const u8),
+        .rank => Rank([]const u8),
         .filter => Filter,
-        .rank => Rank,
         .find => Find,
         .recognize => Recognize,
         .relate => Relate,
-        .annotate => Annotate,
+        .annotate => DynamicAnnotate,
     };
 }
-/// A saved question of any function.
 pub const EntryQuestion = union(enum) {
     decide: Decide,
-    choose: Choose,
-    tag: Tag,
-    score: Score,
+    choose: Choose([]const u8),
+    tag: Tag([]const u8),
+    score: Score([]const u8),
     filter: Filter,
-    rank: Rank,
+    rank: Rank([]const u8),
     find: Find,
     recognize: Recognize,
     relate: Relate,
-    /// This question as the given function's type, or null when it is another function.
-    pub fn as(self: EntryQuestion, comptime function: Function) ?QuestionType(function) {
-        if (comptime !@hasField(EntryQuestion, @tagName(function))) return null;
-        return if (std.meta.activeTag(self) == @field(std.meta.Tag(EntryQuestion), @tagName(function))) @field(self, @tagName(function)) else null;
+    pub fn as(self: @This(), comptime function: t.Function) ?QuestionType(function) {
+        if (comptime !@hasField(@This(), @tagName(function))) return null;
+        return if (std.mem.eql(u8, @tagName(std.meta.activeTag(self)), @tagName(function))) @field(self, @tagName(function)) else null;
     }
 };
-/// An annotate question: any function but rank and annotate.
-pub const AnnotationQuestion = union(enum) { decide: Decide, choose: Choose, tag: Tag, score: Score, filter: Filter, find: Find, recognize: Recognize, relate: Relate };
-/// A saved question and its name.
 pub const NamedQuestion = struct { name: []const u8, question: EntryQuestion };
-/// An annotate question and its name.
-pub const NamedAnnotationQuestion = struct { name: []const u8, question: AnnotationQuestion };
-/// Annotate's named questions. Build one, or get one from `Toolbox.annotation`.
-pub const AnnotationQuestions = struct {
-    /// The named questions, in order.
-    entries: []const NamedAnnotationQuestion,
-    /// Write as JSON, for `std.json.Stringify`.
-    pub fn jsonStringify(self: AnnotationQuestions, writer: anytype) !void {
-        try writer.beginObject();
-        for (self.entries) |entry| {
-            try writer.objectField(entry.name);
-            switch (entry.question) {
-                inline else => |q| try writer.write(q),
-            }
-        }
-        try writer.endObject();
-    }
-};
-
-// Adapt host description maps into the shared OptionWire form. Keep unmatched keys
-// on the wire so shared admission, rather than this adapter, diagnoses them.
-fn writeOptions(writer: anytype, options: []const Choice, descriptions: ?std.json.ArrayHashMap([]const u8)) !void {
-    try writer.beginArray();
-    var unknown = false;
-    if (descriptions) |values| for (values.map.keys()) |key| {
-        var found = false;
-        for (options) |option| if (std.mem.eql(u8, option.name, key)) {
-            found = true;
-            break;
-        };
-        if (!found) unknown = true;
-    };
-    for (options) |option| {
-        if (if (descriptions) |values| values.map.get(option.name) else null) |description| {
-            try writer.write(.{ .name = option.name, .description = description });
-        } else try writer.write(option.name);
-    }
-    try writer.endArray();
-    if (descriptions) |values| if (unknown) {
-        try writer.objectField("descriptions");
-        try writer.write(values);
-    };
-}

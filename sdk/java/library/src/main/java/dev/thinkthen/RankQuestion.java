@@ -40,4 +40,7 @@ public final class RankQuestion implements Question<Long,LevelDetail> {
         values.put("question",java.util.Objects.requireNonNull(question,"question")); values.put("levels",Questions.options(levels,values));
         return new RankQuestion(Values.tree(values),options.name());
     }
+
+    public static <E extends Enum<E>> RankQuestion of(String question, Class<E> type) { return of(question,type,RankOptions.defaults()); }
+    public static <E extends Enum<E>> RankQuestion of(String question, Class<E> type, RankOptions options) { return of(question,Domain.of(type).words(),options); }
 }

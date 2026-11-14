@@ -10,23 +10,6 @@ pub(crate) struct Score {
 }
 
 impl Score {
-    /// A question on an ordered scale of at least two distinct nonblank levels.
-    ///
-    /// # Errors
-    ///
-    /// `usage.question` when the question or its levels are invalid.
-    pub(crate) fn new(
-        text: impl Into<String>,
-        levels: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Result<Self, Error> {
-        Self::with_options(
-            text,
-            levels
-                .into_iter()
-                .map(|value| crate::core::ChoiceOption::new(value.into()))
-                .collect::<Result<Vec<_>, _>>()?,
-        )
-    }
     pub(crate) fn with_options(
         text: impl Into<String>,
         levels: impl IntoIterator<Item = crate::core::ChoiceOption>,

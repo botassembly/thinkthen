@@ -1,0 +1,9 @@
+#!/bin/sh
+# Run literal Rust guide examples through an external consumer of this checkout.
+set -eu
+cd "$(dirname "$0")/.."
+command_target=${CARGO_TARGET_DIR:-$PWD/target}
+case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
+cargo build -p loopback --bin loopback --locked
+export THINKTHEN_LOOPBACK="$command_target/debug/loopback"
+exec python3 scripts/guide-examples --surface rust "$@"

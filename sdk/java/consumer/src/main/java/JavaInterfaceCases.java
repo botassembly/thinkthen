@@ -23,17 +23,15 @@ public final class JavaInterfaceCases {
             }
             List<String> records = Arrays.asList(null,"first","second",null,"third");
             var kept = new ArrayList<String>();
-            List<Filtered<String>> outcomes;
-            try (var rows = client.filterRows("Ready?",records,FilterOptions.builder().threshold(Threshold.cut(0.000001)).build())) { outcomes = rows.toList(); }
             try (var complaints = client.filter("Ready?",records,FilterOptions.builder().threshold(Threshold.cut(0.000001)).build())) {
                 complaints.forEach(kept::add);
                 throw new AssertionError("failed records must raise after kept items");
-            } catch (ThinkThenException expected) {
-                check(expected.failures().size() == 2, "one exception carries every failed row");
-                check(expected.failures().get(0).position() == 1 && expected.failures().get(1).position() == 4, "failed rows retain input positions");
+            } catch (FailedException expected) {
+                check(expected.rows().size() == 2, "one exception carries every failed row");
+                check(expected.rows().get(0).position() == 1 && expected.rows().get(1).position() == 4, "failed rows retain input positions");
             }
             check(kept.size() == 3, "all nonmissing positive items arrive before the failure");
-            check(kept.equals(outcomes.stream().filter(Filtered::kept).map(Filtered::item).toList()), "kept-only filter returns original matching items before failure");
+            check(kept.equals(List.of("first","second","third")), "filter returns original positives before failure");
             var descriptions = Map.of("billing","Invoices and refunds","shipping","Delivery and parcels");
             var route = client.choose("Which team?","refund",List.of("billing","shipping"),ChooseOptions.builder().descriptions(descriptions).build());
             check(route.isAnswered(), "label descriptions reach the shared engine");
@@ -43,16 +41,16 @@ public final class JavaInterfaceCases {
             String describedIdentity;
             try (var ranked = client.rank(priority,List.of("alpha","beta"))) {
                 var output = ranked.toList();
-                check(output.size() == 2 && output.stream().allMatch(Ranked::isAnswered), "rank descriptions reach the packaged engine");
-                describedIdentity = output.getFirst().row().source().orElseThrow().questionIdentity();
+                check(output.size() == 2 && output.stream().allMatch(Row::isAnswered), "rank descriptions reach the packaged engine");
+                describedIdentity = output.getFirst().source().orElseThrow().questionIdentity();
             }
             try (var ranked = client.rank("Priority?",List.of("alpha","beta"),List.of("low","high"))) {
-                check(!describedIdentity.equals(ranked.findFirst().orElseThrow().row().source().orElseThrow().questionIdentity()), "rank descriptions contribute to question identity");
+                check(!describedIdentity.equals(ranked.findFirst().orElseThrow().source().orElseThrow().questionIdentity()), "rank descriptions contribute to question identity");
             }
             var saved = Toolbox.builder().put("priority",priority).build().toJson();
             check(saved.contains("Urgent"), "saved rank questions retain level descriptions");
-            try (var ranked = client.rank(Toolbox.fromJson(saved).rank("priority").orElseThrow(),List.of("alpha","beta"))) {
-                check(describedIdentity.equals(ranked.findFirst().orElseThrow().row().source().orElseThrow().questionIdentity()), "saved rank descriptions survive typed admission");
+            try (var ranked = client.rank(Toolbox.fromJson(saved).rank("priority"),List.of("alpha","beta"))) {
+                check(describedIdentity.equals(ranked.findFirst().orElseThrow().source().orElseThrow().questionIdentity()), "saved rank descriptions survive typed admission");
             }
             var questions = AnnotationQuestions.builder().put("z_first",DecideQuestion.of("Ready?"))
                 .put("a_second",DecideQuestion.of("Ready?" )).put("m_third",DecideQuestion.of("Ready?")).build();
@@ -63,7 +61,7 @@ public final class JavaInterfaceCases {
             var taxonomy = new LinkedHashMap<String,String>();
             taxonomy.put("z_first","first"); taxonomy.put("a_second","second"); taxonomy.put("m_third","third");
             var choice = client.choose("Which?","alpha",List.copyOf(taxonomy.keySet()),ChooseOptions.builder().descriptions(taxonomy).build());
-            check(List.copyOf(((Answered<String,LabelDetail>) choice).detail().orElseThrow().labels().keySet()).equals(List.copyOf(taxonomy.keySet())), "probability map retains label order");
+            check(List.copyOf(((LabelDetail) choice.detail()).labels().keySet()).equals(List.copyOf(taxonomy.keySet())), "probability map retains label order");
         }
         System.out.println("Java stub interface contracts pass");
     }

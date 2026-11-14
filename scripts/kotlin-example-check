@@ -1,69 +1,9 @@
 #!/usr/bin/env python3
-"""Compile and run every literal Kotlin guide example against the built JARs.
-
-Usage: kotlin-example-check CLASSPATH MAVEN_REPOSITORY HOME
-
-A complete program runs as written. Every other snippet runs inside
-`runBlocking { ThinkThen().use { client -> ... } }` after the guide block that
-sets up `messages` and `text`, with the imports the guide names: the Kotlin
-package. The Gradle dependency block is build setup, not code, and the JSON block is the toolbox.json the toolbox example loads. Only
-these steps run with THINKTHEN_BACKEND=stub, so no example makes a paid call.
-"""
+"""Run the ideal Kotlin guide using the JVM gate’s prepared runtime and compiler."""
 import os
-from pathlib import Path
-import re
-import subprocess
 import sys
-import tempfile
+from guide_kotlin import run_kotlin
 
-from kotlin_compiler import classpath as compiler_classpath
-
-root = Path(__file__).resolve().parent.parent
-guide = root / 'docs/surfaces/kotlin.md'
-classpath, repository, home = sys.argv[1:]
-classpath = os.pathsep.join(str(Path(part).resolve()) for part in classpath.split(os.pathsep))
-java = str(Path(os.environ['JAVA_HOME']) / 'bin/java')
-
-
-def blocks(language):
-    return re.findall(r'```' + language + r'\n(.*?)\n```', guide.read_text(), re.S)
-
-
-examples = blocks('kotlin')
-setup, = [block for block in examples if 'val messages = listOf(' in block]
-toolbox, = blocks('json')
-environment = dict(os.environ)
-for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BACKEND', 'THINKTHEN_BASE_URL', 'THINKTHEN_URL',
-             'THINKTHEN_BATCH', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS'):
-    environment.pop(name, None)
-environment['THINKTHEN_BACKEND'] = 'stub'
-with tempfile.TemporaryDirectory(prefix='kotlin-guide-examples-') as folder:
-    scratch = Path(folder)
-    sources, programs = scratch / 'src', []
-    sources.mkdir()
-    for index, literal in enumerate(examples):
-        if re.match(r'\s*dependencies \{', literal):
-            print(f'{guide.relative_to(root)} Kotlin block {index}: Gradle build setup, not run')
-            continue
-        package = f'example{index}'
-        if 'fun main(' in literal:
-            source = f'package {package}\n' + literal + '\n'
-        else:
-            body = literal if literal == setup else setup + '\n' + literal
-            source = (f'package {package}\n\nimport dev.thinkthen.kotlin.*\nimport kotlinx.coroutines.flow.*\n'
-                      'import kotlinx.coroutines.runBlocking\n\n'
-                      'fun main(): Unit = runBlocking {\n    ThinkThen().use { client ->\n'
-                      + body + '\n    }\n    Unit\n}\n')
-        (sources / f'Example{index}.kt').write_text(source)
-        programs.append((index, package + '.Example' + str(index) + 'Kt'))
-    compiler = compiler_classpath(repository)
-    subprocess.run([java, '-Duser.home=' + home, '-cp', compiler, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
-                    '-no-stdlib', '-no-reflect', '-jvm-target', '22', '-classpath', classpath,
-                    '-d', str(scratch / 'classes'), str(sources)], cwd=scratch, env=environment, check=True)
-    (scratch / 'toolbox.json').write_text(toolbox + '\n')
-    for index, program in programs:
-        subprocess.run([java, '-Duser.home=' + home, '--enable-native-access=ALL-UNNAMED',
-                        '-cp', str(scratch / 'classes') + os.pathsep + classpath, program],
-                       cwd=scratch, env=environment, check=True, timeout=120)
-        print(f'{guide.relative_to(root)} Kotlin block {index}: PASS')
-print('Literal Kotlin guide examples pass')
+classpath, repository, home = sys.argv[1:4]
+os.environ['THINKTHEN_KOTLIN_REPOSITORY'] = repository
+run_kotlin(classpath, host_only=sys.argv[4:] == ['--host-only'])

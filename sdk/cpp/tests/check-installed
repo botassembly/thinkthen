@@ -7,11 +7,24 @@ engine=$3
 root=$PWD
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+check_abi() {
+    if [ -n "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
+        test -f "$THINKTHEN_NATIVE_FIXTURES/manifest.json"
+    else
+        scripts/native-fixtures --engine "$engine" --output "$scratch/fixtures"
+        THINKTHEN_NATIVE_FIXTURES="$scratch/fixtures"
+    fi
+    python3 sdk/cpp/tests/abi.py "$prefix" "$THINKTHEN_NATIVE_FIXTURES/manifest.json"
+}
+if [ "${THINKTHEN_CPP_ABI_ONLY:-0}" = 1 ]; then
+    check_abi
+    exit 0
+fi
 check_malformed_rows() {
 if [ -z "${THINKTHEN_MALFORMED_ROW_FIXTURES:-}" ]; then
     THINKTHEN_MALFORMED_ROW_FIXTURES="$scratch/malformed"
     export THINKTHEN_MALFORMED_ROW_FIXTURES
-    for kind in unknown-function unanswered-answer invalid-json; do
+    for kind in unknown-function; do
         scripts/abi-minor-check --native "$engine" --malformed-row "$kind" --output "$THINKTHEN_MALFORMED_ROW_FIXTURES/$kind"
     done
 fi
@@ -23,11 +36,13 @@ fixtures = Path(os.environ['THINKTHEN_MALFORMED_ROW_FIXTURES'])
 engines = [p for p in (prefix / 'lib').glob('libthinkthen.*') if not p.is_symlink()]
 assert len(engines) == 1, engines
 with tempfile.TemporaryDirectory(prefix='thinkthen-cpp-row-') as temporary:
-    for kind in ('unknown-function', 'unanswered-answer', 'invalid-json'):
+    # Typed C++ getters consume the opaque row, not the retired answer JSON.
+    # Projection corruption belongs to C/service adapter checks.
+    for kind in ('unknown-function',):
         library, = (fixtures / kind).glob('libthinkthen*')
         assert library.is_file(), library
         consumer = Path(temporary) / kind
-        subprocess.run(['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-UNDEBUG',
+        subprocess.run(['c++', '-std=c++20', '-Wall', '-Wextra', '-Werror', '-UNDEBUG',
             '-I' + str(prefix / 'include'), 'sdk/cpp/tests/malformed_rows.cpp', str(library),
             '-Wl,-rpath,' + str(library.parent), '-o', str(consumer)], check=True)
         subprocess.run([consumer, kind], check=True, timeout=30)
@@ -36,52 +51,16 @@ PYTHON
 if [ "${THINKTHEN_CPP_INTERFACE_ONLY:-0}" != 1 ]; then
 # Docs examples name no backend, so the environment picks the offline one.
 offline="env -u THINKTHEN_API_KEY -u OPENAI_API_KEY -u THINKTHEN_BASE_URL THINKTHEN_BACKEND=stub"
-python3 - "$prefix/share/thinkthen-cpp/README.md" "$root/docs/surfaces/c-cpp.md" "$scratch" <<'PYTHON'
+# The installed README quickstart proves CMake consumption. The complete public
+# guide's continuations, scenarios and refusals run via cpp-guide-examples below.
+python3 - "$prefix/share/thinkthen-cpp/README.md" "$scratch" <<'PYTHON'
 from pathlib import Path
 import re, sys
-*docs, root = map(Path, sys.argv[1:])
-programs = []
-guide_fragments = []
-standalone_fragments = []
-guide_preamble = None
-collection = None
-for doc in docs:
-    for block in re.findall(r"```cpp\n(.*?)\n```", doc.read_text(), re.S):
-        assert "backend::stub" not in block, (doc, block)
-        for number, line in enumerate(block.splitlines(), 1):
-            assert len(line) <= 80, (doc, number, line)
-        if "int main" in block:
-            if doc == docs[1] and guide_preamble is None:
-                guide_preamble = block.split("int main", 1)[0]
-            if "records.jsonl" in block:
-                collection = block
-            else:
-                programs.append(block)
-        elif doc == docs[0]:
-            raise AssertionError("README examples must be complete programs")
-        elif '"toolbox.json"' in block:
-            guide_fragments.append(block)
-        else:
-            standalone_fragments.append(block)
-assert len(programs) >= 4, len(programs)
-assert guide_fragments and collection and guide_preamble
-for fragment in standalone_fragments:
-    programs.append(guide_preamble
-                    + "int main() {\n" + fragment + "\n}\n")
-# The guide places the saved-file fragment inside the collection try.
-body, handler = collection.rsplit("    } catch (const std::exception& error)", 1)
-context = ("#include <iterator>\n" + body + "\n"
-           + "\n".join(guide_fragments)
-           + "\n    } catch (const std::exception& error)" + handler)
-(root / "guide-context.cpp").write_text(context + "\n")
-json_blocks = re.findall(r"```json\n(.*?)\n```", docs[1].read_text(), re.S)
-assert len(json_blocks) == 1
-(root / "toolbox.json").write_text(json_blocks[0] + "\n")
+readme, root = map(Path, sys.argv[1:])
+programs = re.findall(r"```cpp\n(.*?)\n```", readme.read_text(), re.S)
+assert programs and "int main" in programs[0], "README quickstart must be a complete program"
+assert "backend::stub" not in programs[0]
 (root / "example.cpp").write_text(programs[0] + "\n")
-(root / "docs").mkdir()
-# The CMake consumer below builds and runs programs[0].
-for index, program in enumerate(programs[1:], 1):
-    (root / "docs" / f"program{index}.cpp").write_text(program + "\n")
 (root / "CMakeLists.txt").write_text(
     'cmake_minimum_required(VERSION 3.20)\nproject(example LANGUAGES CXX)\n'
     'find_package(ThinkThenCpp CONFIG REQUIRED)\nadd_executable(example example.cpp)\n'
@@ -91,16 +70,6 @@ PYTHON
 cmake -S "$scratch" -B "$scratch/readme-build" -DCMAKE_PREFIX_PATH="$prefix"
 cmake --build "$scratch/readme-build" --parallel 2
 $offline "$scratch/readme-build/example"
-for program in "$scratch"/docs/program*.cpp; do
-    c++ -std=c++17 -Wall -Wextra -Werror -I"$prefix/include" "$program" -L"$prefix/lib" -lthinkthen -Wl,-rpath,"$prefix/lib" -o "${program%.cpp}"
-    $offline "${program%.cpp}"
-done
-python3 "$root/scripts/surface-example" prepare c-cpp "$scratch/guide"
-c++ -std=c++17 -Wall -Wextra -Werror -I"$prefix/include" "$scratch/guide/example.cpp" -L"$prefix/lib" -lthinkthen -Wl,-rpath,"$prefix/lib" -o "$scratch/guide/example"
-(cd "$scratch/guide" && python3 "$root/scripts/surface-example" check c-cpp ./example)
-cp "$scratch/toolbox.json" "$scratch/guide/toolbox.json"
-c++ -std=c++17 -Wall -Wextra -Werror -I"$prefix/include" "$scratch/guide-context.cpp" -L"$prefix/lib" -lthinkthen -Wl,-rpath,"$prefix/lib" -o "$scratch/guide-context"
-(cd "$scratch/guide" && $offline "$scratch/guide-context")
 fi
 if [ "${THINKTHEN_CPP_CORRECTIONS_ONLY:-0}" = 1 ]; then
     check_malformed_rows
@@ -154,7 +123,7 @@ HOME="$scratch/home" python3 sdk/cpp/tests/network.py "$scratch/application/bin/
 # Warning contracts protect immutable modifiers and one-record calls.
 for expression in 'thinkthen::decide{"Ready?"}.field("/body");' 'thinkthen::decide{"Ready?"}.threshold(0.7);' 'thinkthen::client{}.decide(thinkthen::decide{"Ready?"}, "evidence");' '(void)thinkthen::client{}.decide(thinkthen::decide{"Ready?"}, std::vector<std::string>{"a", "b"});' 'thinkthen::cancel_handle{}.cancel();'; do
     printf '#include <thinkthen/thinkthen.hpp>\nint main() { %s }\n' "$expression" > "$scratch/negative.cpp"
-    if c++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only -I"$prefix/include" "$scratch/negative.cpp" > "$scratch/negative.log" 2>&1; then
+    if c++ -std=c++20 -Wall -Wextra -Werror -fsyntax-only -I"$prefix/include" "$scratch/negative.cpp" > "$scratch/negative.log" 2>&1; then
         echo "C++ accepted an unsafe discarded value, collection or removed cancel alias: $expression" >&2
         exit 1
     fi
@@ -164,16 +133,10 @@ if [ "${THINKTHEN_CPP_INTERFACE_ONLY:-0}" = 1 ]; then exit 0; fi
 # Negative type contracts exclude rank and general toolboxes from annotations.
 for expression in 'thinkthen::annotation_question q = thinkthen::rank{"Rank?", {"low", "high"}};' 'thinkthen::annotate q{thinkthen::toolbox{{{"ready", thinkthen::decide{"Ready?"}}}}};'; do
     printf '#include <thinkthen/thinkthen.hpp>\nint main() { %s }\n' "$expression" > "$scratch/negative.cpp"
-    if c++ -std=c++17 -fsyntax-only -I"$prefix/include" "$scratch/negative.cpp" > "$scratch/negative.log" 2>&1; then
+    if c++ -std=c++20 -fsyntax-only -I"$prefix/include" "$scratch/negative.cpp" > "$scratch/negative.log" 2>&1; then
         echo 'annotation accepted an excluded question type' >&2
         exit 1
     fi
 done
-if [ -n "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
-    test -f "$THINKTHEN_NATIVE_FIXTURES/manifest.json"
-else
-    scripts/native-fixtures --engine "$engine" --output "$scratch/fixtures"
-    THINKTHEN_NATIVE_FIXTURES="$scratch/fixtures"
-fi
-HOME="$scratch/home" python3 sdk/cpp/tests/abi.py "$prefix" "$THINKTHEN_NATIVE_FIXTURES/manifest.json"
+check_abi
 check_malformed_rows

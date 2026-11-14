@@ -1,6 +1,10 @@
+// Expected: error CS0534
 using ThinkThen;
-
-public sealed record ForeignRow : Row<bool, NoDetail>
+public sealed record ForeignRow : Row<bool,string>
 {
-    public ForeignRow(Row<bool, NoDetail> source) : base(source) { }
+    public ForeignRow(Row<bool,string> source):base(source){}
+    public override Status Status=>Status.Answered;
+    public override bool Answer=>true;
+    public override double? Probability=>1;
+    public override Detail? Detail=>null;
 }

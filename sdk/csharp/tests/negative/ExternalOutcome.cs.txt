@@ -1,6 +1,3 @@
+// Expected: error CS0246
 using ThinkThen;
-
-public sealed record ForeignOutcome : EntryOutcome<string, LabelsDetail>
-{
-    public ForeignOutcome(EntryOutcome<string, LabelsDetail> source) : base(source) { }
-}
+public sealed class InvalidOutcome { public EntryOutcome<string,LabelsDetail>? Outcome {get;set;} }

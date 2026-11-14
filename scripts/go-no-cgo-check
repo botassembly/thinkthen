@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='go-no-cgo-') as directory:
     consumer.mkdir()
     (consumer / 'main.go').write_text(CONSUMER)
     (consumer / 'go.mod').write_text(
-        'module consumer\n\ngo 1.23\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v0.0.0\n\n'
+        'module consumer\n\ngo 1.27\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v0.0.0\n\n'
         f'replace github.com/botassembly/thinkthen/sdk/go/thinkthen => {module}\n')
     environment = dict(os.environ, CGO_ENABLED='0', GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOWORK='off')
     # darwin/amd64 has no bundled engine but stays a public target.

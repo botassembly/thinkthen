@@ -118,3 +118,26 @@ pub(crate) fn deadline(pid: u32) -> Deadline {
         watcher: Some(watcher),
     }
 }
+
+/// A record failure always prints its row or its readable code and message.
+#[allow(dead_code, reason = "Only command failure cases inspect this output.")]
+pub(crate) fn failed_stdout(output: &Output) {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.is_empty(),
+        "a failed result disappeared: {output:?}"
+    );
+    if stdout.trim_start().starts_with('{') {
+        for line in stdout.lines() {
+            let row: serde_json::Value = serde_json::from_str(line).unwrap();
+            assert_eq!(row["status"], "failed");
+            assert!(row["error"]["code"].as_str().unwrap().contains('.'));
+            assert!(!row["error"]["message"].as_str().unwrap().is_empty());
+        }
+    } else {
+        assert!(
+            stdout.contains(&format!("failed: {}: ", reported(output))),
+            "{stdout}"
+        );
+    }
+}

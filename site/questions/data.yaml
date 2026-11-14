@@ -212,14 +212,14 @@
   reference_title: thinkthen filter
   reader: A developer who wants the kept records, with every field, not answer rows
   answer: |
-    Leave out `--json`. In text output, ThinkThen {version} filter prints each kept record exactly as it came in, every field included, so the output is a smaller copy of the input.
+    Filter prints each kept input unchanged, including every field. It refuses `--json`; its output is the selected input, not answer-result JSON.
   why: |
     filter's text output is the records that answered yes, one per line, unchanged. The `--field` pointer chooses what the model reads; it does not trim what filter prints.
   limits: |
-    Text output drops the no, not sure and failed records without a trace. Use `--json` when you must know what was dropped; its rows carry the `id` and `position`, not the record.
+    Filter uses one bar and omits inputs that do not pass it. A failed message makes the command exit 6 with its diagnostic. To inspect every answer and status, use decide with `--json`; the results retain `id`, `position` and `item`.
   examples:
     - id: ans-filter-records
-      says: "Keep the records that ask for a refund, with a cut of 0.3. The output is JSON Lines, one kept record per line:"
+      says: "Keep the messages that ask for a refund, with a bar of 0.3. The output is JSON Lines, one kept record per line:"
   explain:
     text: The field the model read, unchanged.
     customer: A field the model never read. It comes back because filter prints the whole record.

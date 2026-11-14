@@ -7,6 +7,6 @@ await foreach (var ranked in client.RankAsync(
     "How urgent is the request?", File.ReadLinesAsync("messages.txt"),
     ["routine", "urgent"]))
 {
-    long rank = ranked.Row;
+    long rank = ranked.Answer;
     Console.WriteLine($"{rank} {ranked.Item}");
 }

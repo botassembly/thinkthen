@@ -23,4 +23,4 @@ questions = {
     ),
 }
 forms = messages["message"].thinkthen.annotate(questions)
-print(messages.join(forms.apply(pd.Series)))
+print(messages.join(forms))

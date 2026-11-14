@@ -231,29 +231,8 @@ pub unsafe extern "C" fn thinkthen_value_probability(
     out: *mut f64,
     error: *mut HostError,
 ) -> i32 {
-    fn probability<A, D>(outcome: &thinkthen::results::Outcome<A, D>) -> f64 {
-        match outcome {
-            thinkthen::results::Outcome::Answered { probability, .. } => {
-                probability.map_or(f64::NAN, thinkthen::Probability::get)
-            }
-            thinkthen::results::Outcome::Unsure { probability, .. } => probability.get(),
-            _ => f64::NAN,
-        }
-    }
-    /* SAFETY: value is borrowed and outputs are exclusively writable until return. */
-    unsafe {
-        project(out, error, || {
-            Ok(match &live(value)?.0 {
-                Owned::Row(row) => row
-                    .probability()
-                    .map_or(f64::NAN, thinkthen::Probability::get),
-                Owned::Entry(entry) => {
-                    macro_rules! read{($($variant:ident),*)=>{match entry{$(thinkthen::results::AnnotationEntry::$variant(value)=>probability(value),)*_=>return Err(native::abi_error())}};}
-                    read!(Decide, Choose, Tag, Score, Filter, Find, Recognize, Relate)
-                }
-            })
-        })
-    }
+    // SAFETY: the value is borrowed and the output slots remain exclusive.
+    unsafe { project(out, error, || live(value)?.probability()) }
 }
 /// Write 1 to *out when the value carries detail, even an empty list, and 0 when it does not.
 ///
@@ -288,7 +267,7 @@ pub unsafe extern "C" fn thinkthen_value_has_detail(
                 }
                 Owned::Entry(entry) => {
                     macro_rules! read{($($variant:ident),*)=>{match entry{$(thinkthen::results::AnnotationEntry::$variant(outcome)=>present(outcome),)*_=>return Err(native::abi_error())}};}
-                    read!(Decide, Choose, Tag, Score, Filter, Find, Recognize, Relate)
+                    read!(Decide, Choose, Tag, Score, Find, Recognize, Relate)
                 }
             })
         })
@@ -325,7 +304,7 @@ pub unsafe extern "C" fn thinkthen_value_source_name(
     }
 }
 
-/// Write the input of a filter or rank value to *out.
+/// Write the original input retained by a many-record value to *out.
 ///
 /// Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged
 /// when the value has no input. *out borrows from value and lasts until
@@ -344,10 +323,11 @@ pub unsafe extern "C" fn thinkthen_value_original(
     /* SAFETY: the value owns the original input and output slots are exclusive. */
     unsafe {
         project(out, error, || {
-            live(value)?
-                .1
-                .as_ref()
-                .map(crate::original::Original::view)
+            let Owned::Row(row) = &live(value)?.0 else {
+                return Err(native::abi_error());
+            };
+            row.original_record()
+                .map(crate::original::view)
                 .ok_or_else(native::abi_error)
         })
     }

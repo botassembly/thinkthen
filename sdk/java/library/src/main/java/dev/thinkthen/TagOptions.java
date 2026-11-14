@@ -30,7 +30,7 @@ public final class TagOptions {
      * @param value the value value
      * @return the descriptions result
      */
-        public Builder descriptions(java.util.Map<String,String> value) { values.put("descriptions",Values.orderedMap(value)); return this; }
+        public Builder descriptions(java.util.Map<?,String> value) { values.put("descriptions",Domain.descriptions(value)); return this; }
         /**
          * Select record field with a JSON pointer.
          * @param value the value to set
@@ -54,7 +54,6 @@ public final class TagOptions {
          * @param value the value to set
          * @return the threshold result
          */
-        public Builder threshold(double value) { return threshold(Threshold.cut(value)); }
         /**
          * Build this immutable value.
          * @return the build result

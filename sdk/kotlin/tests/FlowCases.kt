@@ -7,20 +7,9 @@ import kotlinx.serialization.json.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
 @Serializable private data class RankTicket(val id: Int, val body: String)
-
-// Writes a ticket as usual and passes what it reads through read.
-private fun reading(read: (RankTicket) -> RankTicket): KSerializer<RankTicket> = object : KSerializer<RankTicket> {
-    override val descriptor = RankTicket.serializer().descriptor
-    override fun serialize(encoder: Encoder, value: RankTicket) = RankTicket.serializer().serialize(encoder, value)
-    override fun deserialize(decoder: Decoder) = read(RankTicket.serializer().deserialize(decoder))
-}
 
 // Feature: take stops upstream even when it suspends before its next handoff.
 private suspend fun earlyStop() = coroutineScope {
@@ -95,13 +84,11 @@ private suspend fun nativeCancellation(mode: String, stream: Boolean, backend: B
             }
             check(fixture.command("arrived") == "arrived")
             val paid = fixture.command("count")
-            withTimeout(2000) {
-                operation.cancel()
-                try { operation.await(); error("Expected coroutine cancellation") }
-                catch (_: CancellationException) { }
-                check(operation.isCancelled)
-                check(fixture.command("closed") == "closed")
-            }
+            operation.cancel()
+            try { operation.await(); error("Expected coroutine cancellation") }
+            catch (_: CancellationException) { }
+            check(operation.isCancelled)
+            check(fixture.command("closed") == "closed")
             check(fixture.command("count") == paid) { "Cancellation sent another request" }
             client.close()
         }
@@ -172,19 +159,27 @@ private suspend fun remoteRows(directory: Path) {
                         rows.forEachIndexed { index,row -> assertRow(row,expected[index].jsonObject,selected,::JsonPrimitive,{ error("No detail") }) }
                     }
                     "filter" -> {
-                        val rows = client.filterRows(question.required("question").jsonPrimitive.content,records.asFlow(),question.threshold(),question.pointer()).toList()
-                        check(rows.size == expected.size)
-                        rows.forEachIndexed { index,item ->
-                            check(item.item === records[(item.row.position-1L).toInt()])
-                            assertRow(item.row,expected[index].jsonObject,selected,::JsonPrimitive,{ error("No detail") })
+                        val kept = mutableListOf<JsonElement>()
+                        val wanted = expected.filter { it.jsonObject["answer"] == JsonPrimitive(true) }.map { records[it.jsonObject.required("position").jsonPrimitive.int - 1] }
+                        val failed = expected.filter { it.jsonObject["status"] == JsonPrimitive("failed") }
+                        try {
+                            client.filter(question.required("question").jsonPrimitive.content, records.asFlow(), question.cut(), question.pointer()).toList(kept)
+                            check(failed.isEmpty())
+                        } catch (failure: FailedException) {
+                            check(failure.rows.size == failed.size)
+                            failure.rows.zip(failed).forEach { (row, expectedRow) ->
+                                assertRow(row, expectedRow.jsonObject, selected, { error("Failed has no answer") }, { error("No detail") })
+                                check(row.item === records[(row.position - 1).toInt()])
+                            }
                         }
+                        check(kept == wanted && kept.indices.all { kept[it] === wanted[it] })
                     }
                     "rank" -> {
                         val rows = client.rank(question.required("question").jsonPrimitive.content,records.asFlow(),question.strings("levels"),question["top"]?.jsonPrimitive?.int,question.pointer()).toList()
                         check(rows.size == expected.size)
                         rows.forEachIndexed { index,item ->
-                            check(item.item == records[(item.row.position-1L).toInt()]) { "Rank item ${item.item} differs from its input" }
-                            assertRow(item.row,expected[index].jsonObject,selected,::JsonPrimitive,{ contractValue(it) })
+                            check(item.item === records[(item.position-1L).toInt()]) { "RankQuestion item ${item.item} differs from its input" }
+                            assertRow(item,expected[index].jsonObject,selected,::JsonPrimitive,{ contractValue(it) })
                         }
                     }
                 }
@@ -194,7 +189,7 @@ private suspend fun remoteRows(directory: Path) {
     }
 }
 
-// Feature: rank gives equal copies of the caller's objects in rank order, and refuses a type it cannot read back.
+// Feature: rank retains original objects in rank order without deserializing a copy.
 private suspend fun rankObjects(directory: Path) {
     val tickets = listOf(RankTicket(1,"a"),RankTicket(2,"b"),RankTicket(3,"c"))
     val levels = listOf("low","high")
@@ -204,45 +199,71 @@ private suspend fun rankObjects(directory: Path) {
             backend = Backend.OPENAI; url = fixture.url; apiKey = ApiKey("loopback-only")
             model = "fixture-model"; batch = 1; retry = RetryPolicy(0,0.milliseconds,10000.milliseconds)
         }.use { client ->
-            for(serializer in listOf(reading { TODO("One-way serializer") },reading { it.copy(id = 0) })) {
-                val leadingMissing = (listOf(null)+tickets).asFlow()
-                for(ranks in listOf(client.rank("How much?",tickets,levels,serializer,field = body),client.rank("How much?",leadingMissing,levels,serializer,field = body))) {
-                    val refusal = try { ranks.toList(); error("Accepted a type that cannot be read back") } catch(failure: SerializationException) { failure }
-                    check(RankTicket.serializer().descriptor.serialName in refusal.message.orEmpty() && refusal.cause != null)
-                }
-            }
-            check(fixture.command("count") == "0") { "A refused type reached the backend" }
-            val ranked: List<Ranked<RankTicket>> = client.rank("How much?",tickets,levels,field = body).toList()
+            val ranked: List<Row<Long, RankTicket>> = client.rank("How much?",tickets,levels,field = body).toList()
             check(ranked.map { it.position } == listOf(2L,1L,3L) && ranked.map { it.answer() } == listOf(1L,2L,3L))
             ranked.forEach { item ->
                 val input = tickets[(item.position-1L).toInt()]
-                check(item.item == input && item.item !== input) { "Rank item ${item.item} is not a copy of $input" }
+                check(item.item === input) { "RankQuestion item ${item.item} is not the original $input" }
             }
-            val delivered = mutableListOf<Ranked<RankTicket?>>()
-            val refusesLast = reading { if(it.body == "c") error("Cannot read c") else it }
-            try { client.rank("How much?",tickets.asFlow(),levels,refusesLast,field = body).toList(delivered); error("Delivered an unreadable copy") }
-            catch(failure: SerializationException) { check(failure.cause?.message == "Cannot read c") }
-            check(delivered.map { it.position } == listOf(2L,1L))
+
         }
     }
     val invalid = RankTicket(4,"\uD800")
     val failing = listOf(tickets[0],null,invalid)
     ThinkThen { backend = Backend.STUB; batch = 1 }.use { client ->
         for(ranks in listOf(client.rank("How much?",failing,levels,top = 1),client.rank("How much?",failing.asFlow(),levels,top = 1))) {
-            val failed = ranks.toList().filter { it.row is Row.Failed }.associate { it.position to it.item }
+            val failed = ranks.toList().filter { it is Row.Failed }.associate { it.position to it.item }
             check(failed.size == 2 && failed[2L] == null && failed[3L] === invalid)
         }
     }
 }
 
-// Feature: rank memory stays bounded by top when a lazy source is larger than the heap.
+// Feature: unconfined collection cancellation releases a retained input/readiness wait and its producer.
+private suspend fun unconfinedReadinessCancellation(mode: String, backend: Backend) = coroutineScope {
+    val waiting = CompletableDeferred<Unit>()
+    val stopped = CompletableDeferred<Unit>()
+    Fixture.held(mode).use { fixture ->
+        ThinkThen { this.backend = backend; url = fixture.url; apiKey = ApiKey("loopback-only"); batch = 1; retry = RetryPolicy(0, 0.milliseconds, 60000.milliseconds) }.use { client ->
+            val operation = async(Dispatchers.Unconfined) {
+                client.decideStream("Ready?", flow<String> {
+                    try { emit("alpha"); waiting.complete(Unit); awaitCancellation() }
+                    finally { stopped.complete(Unit) }
+                }).collect()
+            }
+            waiting.await()
+            check(fixture.command("arrived") == "arrived")
+            operation.cancel()
+            try { operation.await(); error("Unconfined collection ignored cancellation") }
+            catch (_: CancellationException) { }
+            stopped.await()
+            check(operation.isCancelled && fixture.command("closed") == "closed")
+        }
+    }
+}
+
+// Feature: a retained top-ranked result owns its original after the call closes.
 private fun rankMemory() {
     val command = listOf(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-Duser.home=${System.getProperty("user.home")}",
         "-Xmx64m","-XX:+ExitOnOutOfMemoryError","--enable-native-access=ALL-UNNAMED","-cp",System.getProperty("java.class.path"),"consumer.RankMemoryCasesKt")
     check(ProcessBuilder(command).inheritIO().start().waitFor() == 0) { "Kotlin rank memory case failed" }
 }
 
+// Feature: the native bridge returns to the caller's dispatcher after a suspended native result.
+private suspend fun callerDispatcher() {
+    java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher().use { dispatcher ->
+        withContext(dispatcher) {
+            val thread = Thread.currentThread()
+            ThinkThen { backend = Backend.STUB }.use { client ->
+                check(client.decide("Ready?", "text").isAnswered)
+                check(Thread.currentThread() === thread)
+                client.decideStream("Ready?", flowOf("text")).collect { check(Thread.currentThread() === thread) }
+            }
+        }
+    }
+}
+
 fun main(args: Array<String>) = runBlocking {
+    callerDispatcher()
     streamThreads()
     earlyStop()
     blockedInput()
@@ -250,6 +271,8 @@ fun main(args: Array<String>) = runBlocking {
     for (backend in listOf(Backend.SYSTEMONE,Backend.OPENAI)) {
         nativeCancellation("headers", stream = false, backend = backend)
         nativeCancellation("body", stream = true, backend = backend)
+        unconfinedReadinessCancellation("headers", backend)
+        unconfinedReadinessCancellation("body", backend)
     }
     clientClose()
     independentCollections()

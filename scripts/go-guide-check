@@ -1,0 +1,52 @@
+#!/bin/sh
+# Prepare the existing Go package and execute its literal ideal guide.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+scripts/words
+python3 -c 'import sys;sys.path.insert(0,"scripts");from release_go import prepare;prepare()'
+THINKTHEN_GO_HOME=$(python3 -c 'import sys;sys.path.insert(0,"scripts");from release_go import home;print(home())')
+export THINKTHEN_GO_HOME GOTOOLCHAIN=local CGO_ENABLED=1
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$PWD/target-go-guide}"
+ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/go_guide_examples.py
+cargo build --locked -p thinkthen-ffi -p loopback
+case "$(uname -s)" in Darwin) suffix=dylib ;; *) suffix=so ;; esac
+export THINKTHEN_GO_ENGINE="$CARGO_TARGET_DIR/debug/libthinkthen_ffi.$suffix"
+export THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
+api_check() {
+    python3 -c 'import sys;sys.path.insert(0,"scripts");from release_host_tools import source_tools;source_tools()'
+    exec scripts/go-api-check --code-only
+}
+if [ "${1:-}" = --api ]; then api_check; fi
+if [ "${1:-}" = --examples ]; then exec scripts/go-api-check --examples-only; fi
+
+scratch=$(mktemp -d)
+scripts/go-package "$scratch/module" debug
+export THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
+export THINKTHEN_GO_GUIDE_MODULE="$scratch/module"
+if [ "${1:-}" = --compile-only ]; then
+    cd "$scratch/module"
+    "$THINKTHEN_GO_HOME/bin/gofmt" -w .
+    "$THINKTHEN_GO_HOME/bin/go" build ./...
+    exit
+fi
+mkdir "$scratch/consumer"
+cp sdk/go/tests/*.go sdk/go/tests/go.mod "$scratch/consumer/"
+(cd "$scratch/consumer"
+ "$THINKTHEN_GO_HOME/bin/go" mod edit -replace="github.com/botassembly/thinkthen/sdk/go/thinkthen=$scratch/module"
+ "$THINKTHEN_GO_HOME/bin/go" test -c -gcflags=-e -o "$scratch/guide-contract")
+if [ "${1:-}" = --consumer-compile-only ]; then exit; fi
+export THINKTHEN_GO_GUIDE_TEST_COMMAND="$scratch/guide-contract"
+if [ "${1:-}" = --runtime-api ]; then
+    python3 -u -c 'import sys;sys.path.insert(0,"scripts");from go_guide_examples import run_runtime;run_runtime()'
+    api_check
+fi
+guide_start=0
+case "${1:-}" in --remaining|--changed) guide_start=20 ;; esac
+if [ "$guide_start" = 0 ]; then
+    python3 -u scripts/guide-examples --surface go
+else
+    python3 -u -c 'import sys;sys.path.insert(0,"scripts");from go_guide_examples import run_go;run_go(start=int(sys.argv[1]))' "$guide_start"
+fi
+
+case "${1:-}" in --changed|--qualify) api_check ;; esac

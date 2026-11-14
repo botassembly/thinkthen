@@ -6,7 +6,7 @@ pub mod loopback;
 
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
-use thinkthen::{BackendName, Choose, Decide, Engine, Function, Key, Record, Score, Settings, Tag};
+use thinkthen::{BackendName, Choose, Decide, Engine, Key, Record, Score, Settings, Tag};
 
 fn engine(server: &Loopback) -> Engine {
     Settings::default()
@@ -16,10 +16,16 @@ fn engine(server: &Loopback) -> Engine {
         .engine(|_| None)
         .unwrap()
 }
-fn call(question: &impl Function, answers: Value) -> (Value, Vec<loopback::Request>) {
+fn call(
+    question: &impl thinkthen::SingleFunction,
+    answers: Value,
+) -> (Value, Vec<loopback::Request>) {
     let server = Loopback::start(move |_| Reply::json(200, &json!({"answers": answers}))).unwrap();
     let row = engine(&server)
-        .run(question, Record::text("Say \"now\"\nplease"))
+        .rows(question, [Record::text("Say \"now\"\nplease")])
+        .unwrap()
+        .next()
+        .unwrap()
         .unwrap();
     (serde_json::to_value(row).unwrap(), server.requests())
 }
@@ -58,7 +64,7 @@ fn predicates_send_quoted_evidence_and_return_the_same_verdict() {
 
 #[test]
 fn choices_match_typed_values_and_preserve_caller_order() {
-    let question = Choose::new("Which?", ["z", "a"]).unwrap();
+    let question = Choose::with_strings("Which?", ["z", "a"]).unwrap();
     let (row, requests) = call(
         &question,
         json!([{"type":"choice","probabilities":[
@@ -77,7 +83,7 @@ fn choices_match_typed_values_and_preserve_caller_order() {
 
 #[test]
 fn tags_judge_each_label_in_answer_order() {
-    let question = Tag::new("What applies?", ["urgent", "refund"]).unwrap();
+    let question = Tag::with_strings("What applies?", ["urgent", "refund"]).unwrap();
     let (row, requests) = call(
         &question,
         json!([
@@ -96,7 +102,7 @@ fn tags_judge_each_label_in_answer_order() {
 
 #[test]
 fn scores_use_level_probabilities_in_caller_order() {
-    let question = Score::new("How urgent?", ["low", "high"]).unwrap();
+    let question = Score::with_strings("How urgent?", ["low", "high"]).unwrap();
     let (row, requests) = call(
         &question,
         json!([{"type":"score","score":99,"probabilities":[
@@ -152,7 +158,7 @@ fn malformed_answers_fail_only_their_asks_without_exposing_reply_text() {
 
 #[test]
 fn distributions_reject_missing_duplicate_unknown_and_invalid_values() {
-    let choice = Choose::new("Which?", ["a", "b"]).unwrap();
+    let choice = Choose::with_strings("Which?", ["a", "b"]).unwrap();
     for probabilities in [
         json!([{"value":"a","probability":0.9}]),
         json!([{"value":"a","probability":0.5},{"value":"a","probability":0.5}]),
@@ -165,7 +171,7 @@ fn distributions_reject_missing_duplicate_unknown_and_invalid_values() {
         );
         assert_eq!(row["error"]["code"], "backend.reply");
     }
-    let score = Score::new("How urgent?", ["low", "high"]).unwrap();
+    let score = Score::with_strings("How urgent?", ["low", "high"]).unwrap();
     for probabilities in [
         json!([]),
         json!([{"label":"low","probability":0.5},{"label":"low","probability":0.5}]),
@@ -219,7 +225,7 @@ fn adapter_selection_keeps_explicit_settings_and_rejects_missing_keys() {
 #[test]
 fn a_choice_above_the_protocol_limit_fails_before_sending() {
     let server = Loopback::start(|_| panic!("an invalid choice must not send")).unwrap();
-    let question = Choose::new("Which?", (0..256).map(|i| i.to_string())).unwrap();
+    let question = Choose::with_strings("Which?", (0..256).map(|i| i.to_string())).unwrap();
     let mut rows = Vec::new();
     engine(&server)
         .rows(&question, [Record::text("text")])

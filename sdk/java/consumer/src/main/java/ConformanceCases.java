@@ -21,25 +21,20 @@ public final class ConformanceCases {
         if (function.equals("annotate")) {
             var options = AnnotateOptions.builder().field(Pointer.of(definition.path("field").asText("")));
             if (request.hasNonNull("name")) options.name(request.get("name").asText());
-            return client.annotateStream(annotations(definition.get("questions")),records,options.build()).map(Annotated::row);
+            return client.annotateStream(annotations(definition.get("questions")),records,options.build());
         }
         var box = ConsumerCases.JSON.createObjectNode(); box.set("entry",definition);
         var toolbox = Toolbox.fromDefinitions(box.toString());
         return switch (function) {
-            case "decide" -> client.decideStream(named(toolbox.decide("entry").orElseThrow(),request,DecideQuestion::named),records);
-            case "choose" -> client.chooseStream(named(toolbox.choose("entry").orElseThrow(),request,ChooseQuestion::named),records);
-            case "tag" -> client.tagStream(named(toolbox.tag("entry").orElseThrow(),request,TagQuestion::named),records);
-            case "score" -> client.scoreStream(named(toolbox.score("entry").orElseThrow(),request,ScoreQuestion::named),records);
-            case "filter" -> client.filterRows(named(toolbox.filter("entry").orElseThrow(),request,FilterQuestion::named),records).peek(item -> {
-                if (expected.isArray()) {
-                    var wanted = expected.get(Math.toIntExact(item.row().position() - 1));
-                    ConsumerCases.equal(item.kept(),wanted.path("answer").asBoolean(false),"canonical filter kept");
-                }
-            }).map(Filtered::row);
-            case "rank" -> client.rank(named(toolbox.rank("entry").orElseThrow(),request,RankQuestion::named),records).map(Ranked::row);
-            case "find" -> client.findStream(named(toolbox.find("entry").orElseThrow(),request,FindQuestion::named),records);
-            case "recognize" -> client.recognizeStream(named(toolbox.recognize("entry").orElseThrow(),request,RecognizeQuestion::named),records);
-            case "relate" -> client.relateStream(named(toolbox.relate("entry").orElseThrow(),request,RelateQuestion::named),records);
+            case "decide" -> client.decideStream(named(toolbox.decide("entry"),request,DecideQuestion::named),records);
+            case "choose" -> client.chooseStream(named(toolbox.choose("entry"),request,ChooseQuestion::named),records);
+            case "tag" -> client.tagStream(named(toolbox.tag("entry"),request,TagQuestion::named),records);
+            case "score" -> client.scoreStream(named(toolbox.score("entry"),request,ScoreQuestion::named),records);
+            case "filter" -> throw new AssertionError("Filter uses its public kept-record projection");
+            case "rank" -> client.rank(named(toolbox.rank("entry"),request,RankQuestion::named),records);
+            case "find" -> client.findStream(named(toolbox.find("entry"),request,FindQuestion::named),records);
+            case "recognize" -> client.recognizeStream(named(toolbox.recognize("entry"),request,RecognizeQuestion::named),records);
+            case "relate" -> client.relateStream(named(toolbox.relate("entry"),request,RelateQuestion::named),records);
             default -> throw new AssertionError("Unknown function");
         };
     }
@@ -51,118 +46,85 @@ public final class ConformanceCases {
         questions.properties().forEach(entry -> {
             String name = entry.getKey();
             switch (entry.getValue().get("function").asText()) {
-                case "decide" -> result.put(name,box.decide(name).orElseThrow());
-                case "choose" -> result.put(name,box.choose(name).orElseThrow());
-                case "tag" -> result.put(name,box.tag(name).orElseThrow());
-                case "score" -> result.put(name,box.score(name).orElseThrow());
-                case "filter" -> result.put(name,box.filter(name).orElseThrow());
-                case "find" -> result.put(name,box.find(name).orElseThrow());
-                case "recognize" -> result.put(name,box.recognize(name).orElseThrow());
-                case "relate" -> result.put(name,box.relate(name).orElseThrow());
+                case "decide" -> result.put(name,box.decide(name));
+                case "choose" -> result.put(name,box.choose(name));
+                case "tag" -> result.put(name,box.tag(name));
+                case "score" -> result.put(name,box.score(name));
+                case "find" -> result.put(name,box.find(name));
+                case "recognize" -> result.put(name,box.recognize(name));
+                case "relate" -> result.put(name,box.relate(name));
                 default -> throw new AssertionError("Unexpected annotation function");
             }
         });
         return result.build();
     }
-    private static JsonNode value(Object item) {
-        if (item instanceof java.util.Optional<?> optional) return optional.map(ConformanceCases::value).orElse(ConsumerCases.JSON.nullNode());
-        if (item instanceof Span span) return ConsumerCases.JSON.valueToTree(span);
-        if (item instanceof Mention mention) { var result = (ObjectNode) value(mention.span()); result.put("kind",mention.kind()); return result; }
-        if (item instanceof Entity entity) { var result = (ObjectNode) value(entity.mention()); result.put("probability",entity.probability()); return result; }
-        if (item instanceof Relation relation) {
-            var result = ConsumerCases.JSON.createObjectNode().put("relation",relation.relation()).put("probability",relation.probability());
-            result.set("source",value(relation.source())); result.set("target",value(relation.target())); relation.either().ifPresent(either -> result.put("either",either)); return result;
-        }
-        if (item instanceof List<?> list) { var result = ConsumerCases.JSON.createArrayNode(); list.forEach(entry -> result.add(value(entry))); return result; }
-        if (item instanceof Annotations annotations) {
-            var result = ConsumerCases.JSON.createObjectNode();
-            annotations.entries().forEach((name,entry) -> {
-                String function; AnnotationOutcome<?,?> outcome;
-                switch (entry) {
-                    case AnnotationEntry.Decide e -> { function = "decide"; outcome = e.outcome(); }
-                    case AnnotationEntry.Choose e -> { function = "choose"; outcome = e.outcome(); }
-                    case AnnotationEntry.Tag e -> { function = "tag"; outcome = e.outcome(); }
-                    case AnnotationEntry.Score e -> { function = "score"; outcome = e.outcome(); }
-                    case AnnotationEntry.Filter e -> { function = "filter"; outcome = e.outcome(); }
-                    case AnnotationEntry.Find e -> { function = "find"; outcome = e.outcome(); }
-                    case AnnotationEntry.Recognize e -> { function = "recognize"; outcome = e.outcome(); }
-                    case AnnotationEntry.Relate e -> { function = "relate"; outcome = e.outcome(); }
-                }
-                result.set(name,outcome(function,outcome));
+    static ObjectNode row(Row<?,?> row) {
+        try {
+            var value = (ObjectNode) ConsumerCases.JSON.readTree(row.toJson());
+            value.remove("source");
+            row.source().flatMap(Source::name).ifPresent(name -> value.putObject("source").put("name",name));
+            stripMessages(value);
+            return value;
+        } catch (java.io.IOException error) { throw new java.io.UncheckedIOException(error); }
+    }
+    private static void stripMessages(JsonNode value) {
+        if (value.isObject() && value.path("error").isObject())
+            ((ObjectNode)value.get("error")).remove("message");
+        for (var child : value) stripMessages(child);
+    }
+    static JsonNode filterResult(ThinkThen client, JsonNode request) {
+        return filterResult(client,request,false);
+    }
+    static JsonNode filterResult(ThinkThen client, JsonNode request, boolean includeSource) {
+        var records = ConsumerCases.records(request);
+        var definitions = ConsumerCases.JSON.createObjectNode(); definitions.set("entry",request.get("question"));
+        var question = named(Toolbox.fromDefinitions(definitions.toString()).filter("entry"),request,FilterQuestion::named);
+        var result = ConsumerCases.JSON.createObjectNode();
+        var kept = result.putArray("kept"); var failed = result.putArray("failed");
+        try (var rows = client.filter(question, records)) {
+            rows.forEach(item -> {
+                ConsumerCases.check(records.stream().anyMatch(original -> original == item),"filter returns the caller's original object");
+                if (item instanceof JsonValue value) {
+                    try { kept.add(ConsumerCases.JSON.readTree(value.toString())); }
+                    catch (java.io.IOException error) { throw new java.io.UncheckedIOException(error); }
+                } else kept.add(ConsumerCases.JSON.valueToTree(item));
             });
-            return result;
-        }
-        return ConsumerCases.JSON.valueToTree(item);
-    }
-    private static JsonNode detail(Detail item) {
-        if (item instanceof RecognizeDetail recognize) {
-            var result = ConsumerCases.JSON.createObjectNode(); var pieces = result.putArray("pieces");
-            for (var piece : recognize.pieces()) { var row = (ObjectNode) value(piece.span()); row.set("tags",value(piece.tags())); pieces.add(row); }
-            result.set("names",value(recognize.names())); return result;
-        }
-        if (item instanceof RelationDetail relate) { var result = ConsumerCases.JSON.createObjectNode(); result.set("names",value(relate.names())); result.set("pairs",value(relate.pairs())); return result; }
-        return ConsumerCases.JSON.valueToTree(item);
-    }
-    private static ObjectNode outcome(String function,AnnotationOutcome<?,?> item) {
-        var result = ConsumerCases.JSON.createObjectNode().put("function",function).put("status",item.status().name().toLowerCase(java.util.Locale.ROOT));
-        switch (item) {
-            case AnnotationAnswered<?,?> a -> { result.set("answer",value(a.answer())); a.probability().ifPresent(p -> result.put("probability",p)); a.detail().ifPresent(d -> result.set("detail",detail(d))); }
-            case AnnotationUnsure<?,?> u -> { result.put("probability",u.probability().orElseThrow()); u.detail().ifPresent(d -> result.set("detail",detail(d))); }
-            case AnnotationFailed<?,?> f -> { var error = result.putObject("error").put("code",f.error().code().wireName()); f.error().httpStatus().ifPresent(status -> error.put("http_status",status)); }
+        } catch (FailedException error) {
+            error.rows().forEach(row -> {
+                ConsumerCases.check(row.item() == records.get(Math.toIntExact(row.position()-1)),"failed filter row retains original object");
+                ConsumerCases.check(!row.source().orElseThrow().questionIdentity().isBlank(),"failed filter row keeps source identity");
+                failed.add(includeSource ? ConsumerCases.canonicalRow(row) : row(row));
+            });
         }
         return result;
     }
-    static ObjectNode row(Row<?,?> row) {
-        AnnotationOutcome<?,?> outcome = switch (row) {
-            case Answered<?,?> a -> new AnnotationAnswered<>(a.answer(),a.probability(),a.detail());
-            case Unsure<?,?> u -> new AnnotationUnsure<>(u.probability(),u.detail());
-            case Failed<?,?> f -> new AnnotationFailed<>(f.error());
-        };
-        var result = outcome(row.function().name().toLowerCase(java.util.Locale.ROOT),outcome);
-        result.put("position",row.position()); row.id().ifPresent(id -> { try { result.set("id",ConsumerCases.JSON.readTree(id.toString())); } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); } });
-        row.source().flatMap(Source::name).ifPresent(name -> result.putObject("source").put("name",name));
+    static JsonNode expectedFilter(JsonNode request, JsonNode expected) {
+        if (!expected.isArray()) return expected;
+        var result = ConsumerCases.JSON.createObjectNode();
+        var kept = result.putArray("kept"); var failed = result.putArray("failed");
+        for (var row : expected) {
+            if (row.path("status").asText().equals("failed")) failed.add(row);
+            else if (row.path("answer").asBoolean(false)) kept.add(request.get("records").get(row.get("position").intValue()-1));
+        }
         return result;
     }
     private static JsonNode expected(JsonNode sample) {
-        JsonNode result = sample.get("expected").deepCopy();
-        if (!result.isArray()) return result;
-        for (var row : result) {
-            var record = sample.get("request").get("records").get(row.get("position").intValue()-1);
-            var question = sample.get("request").get("question");
-            if (question.path("function").asText().equals("annotate") && row.path("answer").isObject())
-                row.get("answer").properties().forEach(entry -> offsets(entry.getValue(),field(record,question.get("questions").get(entry.getKey()),question)));
-            else {
-                String text = field(record,question,question);
-                offsets(row.path("answer"),text); offsets(row.path("detail"),text);
-            }
-        }
-        return result;
-    }
-    private static String field(JsonNode record,JsonNode definition,JsonNode question) {
-        var pointer = definition.hasNonNull("field") ? definition.get("field") : question.get("field");
-        var selected = pointer == null ? record : record.at(pointer.asText());
-        return selected.isTextual() ? selected.asText() : selected.toString();
-    }
-    private static void offsets(JsonNode value,String text) {
-        if (value.isObject() && value.has("start") && value.has("end")) {
-            ((ObjectNode)value).put("start",text.offsetByCodePoints(0,value.get("start").intValue()));
-            ((ObjectNode)value).put("end",text.offsetByCodePoints(0,value.get("end").intValue()));
-        }
-        for (var child : value) offsets(child,text);
+        return sample.get("request").path("question").path("function").asText().equals("filter")
+            ? expectedFilter(sample.get("request"),sample.get("expected")) : sample.get("expected").deepCopy();
     }
     private static void savedToolbox(Path directory) throws Exception {
         String fixture = Files.readString(directory.resolve("questions.json"));
         var loaded = Toolbox.fromJson(fixture);
         ConsumerCases.check(ValuesEqual(loaded.toJson(),fixture),"saved toolbox changed");
         ConsumerCases.check(loaded.get("ready").orElseThrow() instanceof FilterQuestion && loaded.get("missing").isEmpty(),"saved lookup");
-        ConsumerCases.check(loaded.relate("names").isPresent(),"saved relate lost");
+        ConsumerCases.check(loaded.relate("names") instanceof RelateQuestion,"saved relate lost");
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
             var original = ChooseQuestion.of("Which topic?",List.of("billing","shipping"),ChooseOptions.builder().threshold(Threshold.cut(0.7)).field(Pointer.of("/body")).build());
             var record = java.util.Map.of("body","Bill");
-            ConsumerCases.check(row(client.choose(loaded.choose("topic").orElseThrow(),record)).equals(row(client.choose(original,record))),"loaded execution changed");
+            ConsumerCases.check(row(client.choose(loaded.choose("topic"),record)).equals(row(client.choose(original,record))),"loaded execution changed");
             var named = original.named("triage");
             var constructed = Toolbox.builder().put("topic",named).build();
-            ConsumerCases.check(row(client.choose(constructed.choose("topic").orElseThrow(),record)).equals(row(client.choose(named,record))),"constructed toolbox lost execution name");
+            ConsumerCases.check(row(client.choose(constructed.choose("topic"),record)).equals(row(client.choose(named,record))),"constructed toolbox lost execution name");
             var saved = Toolbox.builder().put("topic",original).build();
             ConsumerCases.check(ValuesEqual(Toolbox.fromJson(saved.toJson()).toJson(),saved.toJson()),"constructed save lost choices");
         }
@@ -218,7 +180,7 @@ public final class ConformanceCases {
         var request = sample.get("request");
         var definitions = ConsumerCases.JSON.createObjectNode();
         definitions.set("entry",request.get("question"));
-        var question = Toolbox.fromDefinitions(definitions.toString()).decide("entry").orElseThrow().named(request.get("name").asText());
+        var question = Toolbox.fromDefinitions(definitions.toString()).decide("entry").named(request.get("name").asText());
         for (var backend : manifest.get("backends")) {
             try (var fixture = new BackendFixture(file.toString());
                  var client = ThinkThen.builder().backend(Backend.valueOf(backend.asText().toUpperCase(java.util.Locale.ROOT)))
@@ -272,6 +234,9 @@ public final class ConformanceCases {
                 try (var client = ThinkThen.builder().backend(Backend.valueOf(backend.asText().toUpperCase(java.util.Locale.ROOT))).url(URI.create(fixture.base())).apiKey("synthetic-key").model(manifest.get("client").get("model").asText())
                      .batch(sample.path("client").has("batch") ? sample.get("client").get("batch").intValue() : manifest.get("client").get("batch").intValue()).retry(RetryPolicy.builder().maxRetries(sample.path("client").path("retry").path("max_retries").asInt(manifest.path("client").path("retry").path("max_retries").asInt(0))).build()).recordCodec(value -> { try { return ConsumerCases.JSON.writeValueAsString(value); } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); } }).build()) {
                     if (cancelled) Thread.currentThread().interrupt();
+                    if (sample.get("request").path("question").path("function").asText().equals("filter")) {
+                        actual = filterResult(client,sample.get("request"));
+                    } else {
                     try (var rows = execute(client,sample.get("request"),sample.get("expected"))) {
                         for (var row : rows.toList()) {
                             ConsumerCases.equal(row.source().orElseThrow().backend().name().toLowerCase(java.util.Locale.ROOT),backend.asText(),"typed backend");
@@ -281,6 +246,7 @@ public final class ConformanceCases {
                         }
                     }
                     actual = values;
+                    }
                 } catch (ThinkThenException error) {
                     ConsumerCases.check(values.isEmpty(), "Admission returned rows");
                     var failure = (ObjectNode) error(error.code().wireName());

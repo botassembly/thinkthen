@@ -7,33 +7,25 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(try_from = "RankWire", into = "RankWire")]
 #[schemars(with = "RankWire")]
-pub struct Rank {
+pub struct Rank<C: Choice = String> {
+    #[serde(skip)]
+    pub(super) choice: std::marker::PhantomData<C>,
     pub(crate) inner: crate::core::Score,
     pub(crate) top: Option<crate::core::RankLimit>,
     pub(super) field: Option<Pointer>,
 }
-impl Rank {
-    /// Admit a question with its required levels.
-    /// # Errors
-    /// Returns the shared scale admission error.
-    pub fn new(
-        question: impl Into<String>,
-        levels: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Result<Self, Error> {
-        Ok(Self {
-            inner: crate::core::Score::new(question, levels)?,
-            top: None,
-            field: None,
-        })
-    }
+impl<C: Choice> Rank<C> {
     /// Admit named levels with optional descriptions.
     /// # Errors
     /// Returns the shared scale admission error.
-    pub fn with_options(
+    pub(super) fn from_options(
         question: impl Into<String>,
         levels: impl IntoIterator<Item = AnswerOption>,
     ) -> Result<Self, Error> {
+        let levels: Vec<_> = levels.into_iter().collect();
+        choice::validate::<C>(&levels)?;
         Ok(Self {
+            choice: std::marker::PhantomData,
             inner: crate::core::Score::with_options(question, levels)?,
             top: None,
             field: None,
@@ -42,8 +34,8 @@ impl Rank {
     /// Retain at most this many successful ranks.
     /// # Errors
     /// Returns the shared question error outside the portable signed count range.
-    pub fn top(mut self, top: std::num::NonZeroUsize) -> Result<Self, Error> {
-        self.top = Some(crate::core::RankLimit::new(top.get())?);
+    pub fn top(mut self, top: usize) -> Result<Self, Error> {
+        self.top = Some(crate::core::RankLimit::new(top)?);
         Ok(self)
     }
     /// Select field with an admitted JSON Pointer.
@@ -59,7 +51,69 @@ impl Rank {
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
+    pub(super) fn typed<D: Choice>(self) -> Result<Rank<D>, Error> {
+        choice::validate::<D>(&self.inner.levels)?;
+        Ok(Rank {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+            top: self.top,
+        })
+    }
+    pub(crate) fn erase(self) -> Rank {
+        Rank {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+            top: self.top,
+        }
+    }
 }
+impl Rank<String> {
+    /// Admit explicit string labels and descriptions.
+    /// # Errors
+    /// Refuses invalid question text or label domains.
+    pub fn with_options(
+        question: impl Into<String>,
+        values: impl IntoIterator<Item = AnswerOption>,
+    ) -> Result<Self, Error> {
+        Self::from_options(question, values)
+    }
+
+    /// Admit a question with its required levels.
+    /// # Errors
+    /// Returns the shared scale admission error.
+    pub fn with_strings(
+        question: impl Into<String>,
+        levels: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Result<Self, Error> {
+        Self::with_options(
+            question,
+            levels
+                .into_iter()
+                .map(|label| AnswerOption::new(label.into()))
+                .collect::<Result<Vec<_>, _>>()?,
+        )
+    }
+}
+impl<C: Choices> Rank<C> {
+    /// Admit a question using this enum's declaration order.
+    /// # Errors
+    /// Refuses invalid question text or an invalid enum domain.
+    pub fn new(question: impl Into<String>) -> Result<Self, Error> {
+        Self::from_options(question, choice::options::<C>()?)
+    }
+    /// Describe enum members without changing their declaration order.
+    #[must_use]
+    pub fn descriptions(
+        mut self,
+        values: impl IntoIterator<Item = (C, impl Into<String>)>,
+    ) -> Self {
+        choice::descriptions(&mut self.inner.levels, values);
+        self
+    }
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RankWire {
@@ -81,10 +135,10 @@ pub(crate) struct RankWire {
     #[schemars(with = "Pointer")]
     field: Option<String>,
 }
-impl TryFrom<RankWire> for Rank {
+impl<C: Choice> TryFrom<RankWire> for Rank<C> {
     type Error = Error;
     fn try_from(value: RankWire) -> Result<Self, Error> {
-        let mut question = Self::with_options(
+        let mut question = Self::from_options(
             value.question,
             value
                 .levels
@@ -97,8 +151,8 @@ impl TryFrom<RankWire> for Rank {
         Ok(question)
     }
 }
-impl From<Rank> for RankWire {
-    fn from(value: Rank) -> Self {
+impl<C: Choice> From<Rank<C>> for RankWire {
+    fn from(value: Rank<C>) -> Self {
         Self {
             question: value.inner.text,
             levels: value.inner.levels.into_iter().map(Into::into).collect(),

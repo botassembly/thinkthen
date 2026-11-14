@@ -19,10 +19,10 @@ from thinkthen import aio
 
 pytestmark = pytest.mark.usefixtures("isolated_environment")
 
-# The shared case answers "refund" yes, "uncertain" not sure and anything else
-# no. The missing record fails first, so kept records must still follow it.
+# The shared case answers "refund" above the cut and other records below it.
+# The missing record fails first, so kept records must still follow it.
 RECORDS: list[tt.Record] = [None, "refund", "parcel", "uncertain"]
-BAND = (0.2, 0.8)
+CUT = 0.8
 
 
 @pytest.fixture
@@ -40,8 +40,8 @@ def test_filter_delivers_kept_records_then_raises_one_error_for_failures(
     server: Loopback,
 ) -> None:
     kept: list[tt.Record] = []
-    with connect(server) as selected, pytest.raises(tt.RecordError) as raised:
-        for record in selected.filter("Ready?", RECORDS, threshold=BAND):
+    with connect(server) as selected, pytest.raises(tt.Failed) as raised:
+        for record in selected.filter("Ready?", RECORDS, threshold=CUT):
             kept.append(record)  # noqa: PERF402 - keep what arrives before the error.
     assert kept == ["refund"]
     assert raised.value.code is tt.ErrorCode.RECORD_MISSING
@@ -49,18 +49,15 @@ def test_filter_delivers_kept_records_then_raises_one_error_for_failures(
     assert raised.value.rows[0].item is None
 
 
-def test_filter_errors_coerce_yields_failed_rows_in_place(server: Loopback) -> None:
+def test_filter_refuses_removed_coercion_and_every_row_view(server: Loopback) -> None:
     with connect(server) as selected:
-        found = selected.filter(
-            "Ready?", RECORDS, threshold=BAND, errors="coerce"
-        ).to_list()
-        assert len(found) == 2 and found[1] == "refund"
-        failed = found[0]
-        assert isinstance(failed, tt.FilterRow) and failed.failed
-        assert failed.error is not None
-        assert failed.error.code is tt.ErrorCode.RECORD_MISSING
-        with pytest.raises(ValueError, match="errors"):
-            selected.filter("Ready?", RECORDS, errors=cast(Any, "ignore"))
+        for errors in ("coerce", "ignore"):
+            with pytest.raises(TypeError, match="errors"):
+                cast(Any, selected).filter(
+                    "Ready?", RECORDS, threshold=CUT, errors=errors
+                )
+        assert not hasattr(selected, "filter_rows")
+        assert not hasattr(tt, "filter_rows")
 
 
 def test_async_filter_delivers_kept_records_before_the_failure(
@@ -71,9 +68,9 @@ def test_async_filter_delivers_kept_records_before_the_failure(
         async with tt.AsyncClient(
             url=server.url, api_key="synthetic-loopback-key", batch=1
         ) as selected:
-            with pytest.raises(tt.RecordError) as raised:
+            with pytest.raises(tt.Failed) as raised:
                 async for record in aio.filter(
-                    "Ready?", RECORDS, threshold=BAND, client=selected
+                    "Ready?", RECORDS, threshold=CUT, client=selected
                 ):
                     kept.append(record)
             assert [row.position for row in raised.value.rows] == [1]
@@ -82,30 +79,27 @@ def test_async_filter_delivers_kept_records_before_the_failure(
     assert asyncio.run(scenario()) == ["refund"]
 
 
-def test_rank_rows_carry_a_copy_of_their_record() -> None:
+def test_rank_rows_keep_their_original_object_even_when_conversion_fails() -> None:
     records: list[Any] = [{"id": "a", "text": "first"}, "second", object()]
     with tt.Client(backend="stub") as selected:
         rows = selected.rank("How urgent?", records, levels=["low", "high"]).to_list()
     assert sorted(row.position for row in rows) == [1, 2, 3]
     for row in rows:
+        assert row.item is records[row.position - 1]
         if row.position == 3:
-            # A record with no JSON form fails, and its item raises that failure.
             assert row.failed
-            with pytest.raises(tt.RecordError) as raised:
-                _ = row.item
-            assert raised.value.code is tt.ErrorCode.RECORD_INVALID
-            assert "object" in str(raised.value)
-        else:
-            original = records[row.position - 1]
-            assert row.item == original
-            assert row.item is not original or isinstance(original, str)
+            assert (
+                row.error is not None and row.error.code is tt.ErrorCode.RECORD_INVALID
+            )
+            with pytest.raises(tt.Failed):
+                _ = row.answer
 
 
 class Message(dict[str, str]):
     """A record type that weak references can observe."""
 
 
-def test_lazy_top_one_rank_keeps_a_bounded_number_of_records() -> None:
+def test_lazy_top_one_rank_retains_originals_until_completion() -> None:
     finished: list[int] = []
 
     def messages(count: int) -> Iterator[Message]:
@@ -127,13 +121,14 @@ def test_lazy_top_one_rank_keeps_a_bounded_number_of_records() -> None:
     ):
         first = next(rows)
         gc.collect()
-        assert count - len(finished) <= 2
+        assert count - len(finished) == count
         assert first.item == {"text": f"message {first.position - 1}"}
+    gc.collect()
+    assert count - len(finished) == 1
 
 
 def test_rank_exports_leave_out_the_record_copy() -> None:
-    # Rank rows join back to their records by id or position, as the guide says
-    # only a filter result exports its item.
+    # Saved rows are the wire result; caller objects are not serialized.
     with tt.Client(backend="stub") as selected:
         rows = selected.rank("How urgent?", ["first"], levels=["low", "high"])
         exported = rows.to_list()[0].to_dict()

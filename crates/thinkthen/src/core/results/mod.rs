@@ -4,7 +4,12 @@
     reason = "schema derives construct metadata; result values are typed"
 )]
 mod answer;
+mod entry;
+pub use entry::Entry;
+mod domains;
 mod functions;
+pub(crate) mod offsets;
+mod shape;
 mod values;
 use super::{
     Error, Probability,
@@ -18,10 +23,46 @@ use std::num::NonZeroU64;
 pub use values::*;
 
 pub(crate) mod sealed {
-    pub trait Sealed {}
+    pub trait Sealed {
+        fn project(
+            row: super::AnyRow,
+            token: super::Projection,
+        ) -> Result<super::Row<Self>, super::Error>
+        where
+            Self: super::Function + Sized;
+        fn entry(
+            entry: &super::AnnotationEntry,
+            _: super::Projection,
+        ) -> Result<super::Outcome<Self::Answer, Self::Detail>, super::Error>
+        where
+            Self: super::Function + Sized,
+        {
+            entry
+                .outcome_any()
+                .downcast_ref::<super::Outcome<Self::Answer, Self::Detail>>()
+                .cloned()
+                .ok_or_else(super::mismatch)
+        }
+    }
+    pub(super) trait Failures {
+        fn failure(&self) -> Option<&super::Error> {
+            None
+        }
+    }
     /// The plain text a row prints for its answer.
     pub trait Text {
         fn text(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
+    }
+}
+/// An unconstructible capability keeping execution projection inside the engine.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct Projection {
+    _private: (),
+}
+impl Projection {
+    pub(crate) const fn new() -> Self {
+        Self { _private: () }
     }
 }
 pub(crate) trait Decode: Function {
@@ -49,12 +90,31 @@ pub trait Function:
     type Answer: Clone
         + std::fmt::Debug
         + PartialEq
-        + sealed::Text
         + Serialize
         + serde::de::DeserializeOwned
         + schemars::JsonSchema
         + Send
         + 'static;
+    /// The plain owned value returned when taking an answer.
+    type Owned;
+    /// Take the public value from its validated stored representation.
+    #[doc(hidden)]
+    fn take(answer: Self::Answer) -> Self::Owned;
+    /// The plain value or borrow returned by an answer read.
+    type Read<'a>
+    where
+        Self: 'a;
+    /// Read the plain value without changing its owned representation.
+    #[doc(hidden)]
+    fn read(answer: &Self::Answer) -> Self::Read<'_>;
+    /// Format this function's answer as the command does.
+    #[doc(hidden)]
+    fn format(answer: &Self::Answer, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
+    /// The first failed child of a form, if any.
+    #[doc(hidden)]
+    fn answer_failure(_: &Self::Answer) -> Option<&Error> {
+        None
+    }
     /// The function's optional backend detail.
     type Detail: Clone
         + std::fmt::Debug
@@ -67,6 +127,19 @@ pub trait Function:
     /// Its stable function discriminator.
     const NAME: FunctionName;
 }
+/// A question supported by one-record and ordered many-record calls.
+/// Filter and rank use their collection operations instead.
+/// ```compile_fail
+/// # let engine = thinkthen::Settings::default().engine(|_| None).unwrap();
+/// let filter = thinkthen::Filter::new("Keep?").unwrap();
+/// engine.run(&filter, "evidence");
+/// ```
+/// ```compile_fail
+/// # let engine = thinkthen::Settings::default().engine(|_| None).unwrap();
+/// let rank = thinkthen::Rank::with_strings("How urgent?", ["low", "high"]).unwrap();
+/// engine.rows(&rank, ["evidence"]);
+/// ```
+pub trait SingleFunction: Function {}
 super::abi::discriminators! {
     /// The result status, independent of the backend.
     ///
@@ -150,12 +223,43 @@ impl<A, D> Outcome<A, D> {
         }
     }
 }
+impl<A, D> Outcome<A, D> {
+    pub(crate) fn map_answer<B>(
+        self,
+        map: impl FnOnce(A) -> Result<B, Error>,
+    ) -> Result<Outcome<B, D>, Error> {
+        Ok(match self {
+            Self::Answered {
+                answer,
+                probability,
+                detail,
+            } => Outcome::Answered {
+                answer: map(answer)?,
+                probability,
+                detail,
+            },
+            Self::Unsure {
+                probability,
+                detail,
+            } => Outcome::Unsure {
+                probability,
+                detail,
+            },
+            Self::Failed { error } => Outcome::Failed { error },
+        })
+    }
+}
 /// The execution question and attempted route, including on failed rows.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Source {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "optional_value",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "String")]
     pub(crate) name: Option<String>,
     pub(crate) question_identity: String,
     pub(crate) backend: crate::core::BackendName,
@@ -218,17 +322,22 @@ impl<F: Function> schemars::JsonSchema for FunctionTag<F> {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, schemars::JsonSchema)]
 #[serde(bound(serialize = ""))]
-#[schemars(bound = "", extend("unevaluatedProperties" = false))]
-pub struct Row<F: Function> {
+#[schemars(bound = "", extend("unevaluatedProperties" = false), transform = shape::saved_item)]
+pub struct Row<F: Function, T = ()> {
+    #[serde(skip)]
+    #[schemars(skip)]
+    item: T,
     function: FunctionTag<F>,
     position: NonZeroU64,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "RecordId")]
     id: Option<RecordId>,
     source: Source,
     #[serde(skip)]
     #[schemars(skip)]
     original: Option<Box<super::records::Record>>,
     #[serde(flatten)]
+    #[schemars(schema_with = "shape::outcome_schema::<F>")]
     outcome: Outcome<F::Answer, F::Detail>,
 }
 impl Row<questions::Rank> {
@@ -247,6 +356,7 @@ impl<F: Function> Row<F> {
         outcome: Outcome<F::Answer, F::Detail>,
     ) -> Self {
         Self {
+            item: (),
             function: FunctionTag(std::marker::PhantomData),
             position,
             id,
@@ -258,6 +368,51 @@ impl<F: Function> Row<F> {
     pub(crate) fn with_original(mut self, original: Option<super::records::Record>) -> Self {
         self.original = original.map(Box::new);
         self
+    }
+    pub(crate) fn into_record_result(mut self) -> Result<Row<F, super::records::Record>, Error> {
+        let record = self.original.take().ok_or_else(mismatch)?;
+        Ok(self.with_item(*record))
+    }
+    pub(crate) fn original_record(&self) -> Option<&super::records::Record> {
+        self.original.as_deref()
+    }
+    pub(crate) fn map_answer<G: Function<Detail = F::Detail>>(
+        self,
+        map: impl FnOnce(F::Answer) -> Result<G::Answer, Error>,
+    ) -> Result<Row<G>, Error> {
+        let outcome = self.outcome.map_answer(map)?;
+        Ok(Row {
+            item: self.item,
+            function: FunctionTag(std::marker::PhantomData),
+            position: self.position,
+            id: self.id,
+            source: self.source,
+            original: self.original,
+            outcome,
+        })
+    }
+    pub(crate) fn with_item<T>(self, item: T) -> Row<F, T> {
+        Row {
+            item,
+            function: self.function,
+            position: self.position,
+            id: self.id,
+            source: self.source,
+            original: None,
+            outcome: self.outcome,
+        }
+    }
+}
+impl<F: Function, T> Row<F, T> {
+    /// The caller's original item retained by a many-record result.
+    #[must_use]
+    pub const fn item(&self) -> &T {
+        &self.item
+    }
+    /// Take back the caller's original item.
+    #[must_use]
+    pub fn into_item(self) -> T {
+        self.item
     }
     /// The stable function discriminator.
     #[must_use]
@@ -289,23 +444,53 @@ impl<F: Function> Row<F> {
     pub const fn status(&self) -> Status {
         self.outcome.status()
     }
+    /// Whether this result has an answer.
+    #[must_use]
+    pub fn is_answered(&self) -> bool {
+        self.status() == Status::Answered
+    }
+    /// Whether the model could not choose an answer.
+    #[must_use]
+    pub fn is_unsure(&self) -> bool {
+        self.status() == Status::Unsure
+    }
+    /// Whether this record failed.
+    #[must_use]
+    pub fn is_failed(&self) -> bool {
+        self.status() == Status::Failed
+    }
+    /// The function's detail, including detail on an unsure result.
+    #[must_use]
+    pub fn detail(&self) -> Option<&F::Detail> {
+        self.outcome.detail()
+    }
     /// The function's defined aggregate probability, when present.
     #[must_use]
     pub fn probability(&self) -> Option<Probability> {
-        match &self.outcome {
-            Outcome::Answered { probability, .. } => *probability,
-            Outcome::Unsure { probability, .. } => Some(*probability),
-            Outcome::Failed { .. } => None,
-        }
+        self.outcome.probability()
     }
     /// The error belonging to this failed record.
     #[must_use]
     pub fn error(&self) -> Option<&Error> {
-        match &self.outcome {
-            Outcome::Failed { error } => Some(error),
-            _ => None,
-        }
+        self.outcome.error()
     }
+    /// Report a failed record or a failed entry of an answered form.
+    /// Not-sure entries are not failures.
+    #[must_use]
+    pub fn failure(&self) -> Option<&Error> {
+        self.outcome.failure::<F>()
+    }
+    /// Return this result unchanged unless it or one of its form entries failed.
+    /// # Errors
+    /// Returns the record error, or the first failed entry in question-name order.
+    pub fn err_if_failed(self) -> Result<Self, Error> {
+        if let Some(error) = self.failure() {
+            return Err(error.clone());
+        }
+        Ok(self)
+    }
+}
+impl<F: Function> Row<F> {
     pub(crate) fn from_outcome(
         position: NonZeroU64,
         id: Option<RecordId>,
@@ -319,19 +504,12 @@ impl<F: Function> Row<F> {
         Ok(Self::new(position, id, source, outcome))
     }
 }
-impl<F: Function> PartialEq for Row<F> {
-    fn eq(&self, other: &Self) -> bool {
+impl<F: Function, T, U> PartialEq<Row<F, U>> for Row<F, T> {
+    fn eq(&self, other: &Row<F, U>) -> bool {
         self.position == other.position
             && self.id == other.id
             && self.source == other.source
             && self.outcome == other.outcome
-    }
-}
-impl Row<questions::Filter> {
-    /// Only an answered true result keeps the original item.
-    #[must_use]
-    pub fn kept(&self) -> bool {
-        matches!(self.outcome, Outcome::Answered { answer: true, .. })
     }
 }
 
@@ -403,7 +581,7 @@ fn required_answer<'de, T: Deserialize<'de>, D: serde::Deserializer<'de>>(
 ) -> Result<T, D::Error> {
     T::deserialize(d)
 }
-fn optional_value<'de, T: Deserialize<'de>, D: serde::Deserializer<'de>>(
+pub(crate) fn optional_value<'de, T: Deserialize<'de>, D: serde::Deserializer<'de>>(
     d: D,
 ) -> Result<Option<T>, D::Error> {
     T::deserialize(d).map(Some)

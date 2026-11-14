@@ -19,8 +19,8 @@ public class Functions {
         String howUrgent = "How urgent is the request?";
         Pointer field = Pointer.of("/text");
 
-        // answer() throws UnsureException when not sure,
-        // ThinkThenException on failure.
+        // A scalar failure throws FailedException at the call.
+        // Reading an unsure answer throws UnsureException.
         try (var client = ThinkThen.builder().build()) {
             boolean isRefund = client.decide(asksRefund, refund).answer();
             System.out.println("decide: " + isRefund);
@@ -45,15 +45,15 @@ public class Functions {
                 howUrgent, refund, urgencyLevels).answer();
             System.out.println("score: " + urgency);
 
-            try (Stream<Ranked<JsonValue>> byUrgency = client.rank(
+            try (var byUrgency = client.rank(
                     howUrgent, messages, urgencyLevels,
                     RankOptions.builder().field(field).build())) {
                 byUrgency.forEach(ranked -> {
                     long urgencyRank = ranked.answer();
-                    var message = (JsonObject) ranked.item();
-                    var id = (JsonString) message.values().get("id");
+                    var message = ranked.item();
+                    var id = message.get("id");
                     System.out.println(
-                        "rank: " + urgencyRank + " " + id.value());
+                        "rank: " + urgencyRank + " " + id);
                 });
             }
 
@@ -66,17 +66,17 @@ public class Functions {
                 "Morgan works for Example Group.",
                 List.of("person", "organization")).answer();
             for (Entity name : names) {
-                System.out.println("recognize: " + name.mention().kind()
-                    + " " + name.mention().span().text());
+                System.out.println("recognize: " + name.kind()
+                    + " " + name.text());
             }
 
             List<Relation> relations = client.relate(text,
                 List.of(RelationRule.of("person", "organization", "works_for")))
                 .answer();
             for (Relation relation : relations) {
-                System.out.println("relate: " + relation.source().span().text()
+                System.out.println("relate: " + relation.source().text()
                     + " " + relation.relation()
-                    + " " + relation.target().span().text());
+                    + " " + relation.target().text());
             }
 
             var questions = AnnotationQuestions.builder()
@@ -85,11 +85,24 @@ public class Functions {
                     ChooseQuestion.of(
                         "What is the message about?", topicChoices))
                 .build();
-            Annotations answers = client.annotate(questions, refund).answer();
-            System.out.println(
-                "annotate: refund " + answers.decide("refund").answer());
-            System.out.println(
-                "annotate: topic " + answers.choose("topic").answer());
+            var form = client.annotate(questions, refund);
+            if (form.isAnswered()) {
+                var entries = form.answer();
+                var refundCheck = entries.decide("refund");
+                var topicChoice = entries.choose("topic");
+                if (refundCheck.isAnswered()) {
+                    System.out.println("annotate: refund " + refundCheck.answer());
+                } else {
+                    System.out.println("annotate: refund " + refundCheck);
+                }
+                if (topicChoice.isAnswered()) {
+                    System.out.println("annotate: topic " + topicChoice.answer());
+                } else {
+                    System.out.println("annotate: topic " + topicChoice);
+                }
+            } else {
+                System.out.println("annotate: " + form);
+            }
         }
     }
 }

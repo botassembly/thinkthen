@@ -5,5 +5,5 @@ import kotlinx.coroutines.flow.flowOf
 
 // Feature: RankRejectsSingleAsk. This expression must fail after the positive consumer compiles.
 suspend fun rejectedRankRejectsSingleAsk(client: ThinkThen) {
-    client.ask(Rank("Priority?", listOf("low", "high")), "record")
+    client.decide(RankQuestion("Priority?", listOf("low", "high")), "record")
 }

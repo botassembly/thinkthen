@@ -5,8 +5,8 @@ import kotlinx.coroutines.runBlocking
 fun main() = runBlocking {
     val message = File("message.txt").readText()
     ThinkThen().use { client ->
-        // answer() throws UnsureException when not sure,
-        // ThinkThenException on failure.
+        // A scalar failure throws FailedException at the call.
+        // Reading an unsure answer throws UnsureException.
         val isRefund = client.decide(
             "Does the customer request a refund?", message,
         ).answer()

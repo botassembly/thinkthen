@@ -1,6 +1,8 @@
 #![cfg(test)]
 #![allow(unsafe_code, reason = "exercise the caller's native output ownership")]
 //! C failures retain their identity even without an error output.
+#[path = "../../loopback/src/lib.rs"]
+pub mod fixture;
 use std::ptr;
 use thinkthen_ffi::*;
 
@@ -26,7 +28,7 @@ fn optional_error_slot_preserves_success_and_bad_argument_codes() {
 }
 
 #[test]
-fn single_record_failure_and_unsure_are_distinct_from_false_and_leave_owned_rows() {
+fn scalar_failure_leaves_empty_output_but_unsure_keeps_an_owned_row() {
     use std::mem::{size_of, zeroed};
     let server = loopback::Loopback::noul(0.5).unwrap();
     let settings =
@@ -92,16 +94,8 @@ fn single_record_failure_and_unsure_are_distinct_from_false_and_leave_owned_rows
             ),
             -2005
         );
-        assert_eq!(row.error_code, 2005);
-        let mut failed = ptr::null_mut();
-        assert_eq!(thinkthen_row_values(&row, &mut failed, ptr::null_mut()), 0);
-        let mut failed_answer = 97;
-        assert_eq!(
-            thinkthen_value_bool(failed, &mut failed_answer, ptr::null_mut()),
-            -2005
-        );
-        assert_eq!(failed_answer, 97);
-        thinkthen_value_free(failed);
+        assert!(row.private_data.is_null());
+        assert_eq!(server.count(), 0, "blank evidence reached the service");
         thinkthen_row_free(&mut row);
         assert_eq!(
             thinkthen_run_one(
@@ -113,7 +107,7 @@ fn single_record_failure_and_unsure_are_distinct_from_false_and_leave_owned_rows
                 &mut row,
                 ptr::null_mut()
             ),
-            4
+            0
         );
         let mut value = ptr::null_mut();
         assert_eq!(thinkthen_row_values(&row, &mut value, ptr::null_mut()), 0);
@@ -179,7 +173,7 @@ fn single_c_spans_use_bytes_and_retain_the_original_match() {
         let mut value = ptr::null_mut();
         assert_eq!(thinkthen_row_values(&row, &mut value, ptr::null_mut()), 0);
         let mut found: SpanView = zeroed();
-        assert_eq!(thinkthen_value_found(value, &mut found, ptr::null_mut()), 0);
+        assert_eq!(thinkthen_value_span(value, &mut found, ptr::null_mut()), 0);
         assert_eq!((found.start, found.end), (5, 8));
         assert_eq!(
             std::slice::from_raw_parts(found.text.data, found.text.len),
@@ -238,7 +232,7 @@ fn selected_empty_field_never_reaches_the_backend_through_c() {
                 ),
                 -2005
             );
-            assert_eq!(row.error_code, 2005);
+            assert!(row.private_data.is_null());
             thinkthen_row_free(&mut row);
         }
         assert_eq!(
@@ -266,7 +260,7 @@ fn selected_empty_field_never_reaches_the_backend_through_c() {
                 ),
                 -code
             );
-            assert_eq!(row.error_code, code);
+            assert!(row.private_data.is_null());
             thinkthen_row_free(&mut row);
         }
         thinkthen_question_free(question);
@@ -523,5 +517,104 @@ fn streaming_rank_retains_invalid_original_bytes_after_owners_are_freed() {
             );
             thinkthen_value_free(snapshot);
         }
+    }
+}
+
+#[test]
+fn kept_records_precede_one_aggregate_and_failed_rows_keep_originals() {
+    use std::mem::{size_of, zeroed};
+    let backend = fixture::Loopback::answering(|question| {
+        let text = question["instructions"].as_str().unwrap();
+        serde_json::json!({"type":"noul","noul":if text.contains("bad") {2.0} else if text.contains("keep") {0.95} else {0.05}})
+    }).unwrap();
+    let settings = serde_json::json!({"url":backend.base(),"api_key":fixture::KEY}).to_string();
+    let request = br#"{"question":{"function":"filter","question":"Keep?","threshold":0.8}}"#;
+    let inputs = ["bad first", "keep middle", "no", "bad last"];
+    let records: Vec<_> = inputs
+        .iter()
+        .map(|text| RecordInput {
+            struct_size: size_of::<RecordInput>() as u32,
+            kind: 0,
+            data: text.as_ptr(),
+            len: text.len(),
+        })
+        .collect();
+    let mut client = ptr::null_mut();
+    let mut call = ptr::null_mut();
+    // SAFETY: counted inputs stay live; each initialized output is freed once.
+    unsafe {
+        let mut error: HostError = zeroed();
+        error.struct_size = size_of::<HostError>() as u32;
+        assert_eq!(
+            thinkthen_client_open_json(settings.as_ptr(), settings.len(), &mut client, &mut error),
+            0
+        );
+        assert_eq!(
+            thinkthen_call_open_records_json(
+                client,
+                request.as_ptr(),
+                request.len(),
+                records.as_ptr(),
+                records.len(),
+                size_of::<RecordInput>(),
+                0,
+                &mut call,
+                &mut error
+            ),
+            0
+        );
+        let mut row: HostRow = zeroed();
+        row.struct_size = size_of::<HostRow>() as u32;
+        assert_eq!(thinkthen_call_next_kept(call, &mut row, &mut error), 0);
+        assert_eq!(
+            row.position, 2,
+            "a failed first record must not interrupt the kept records"
+        );
+        assert_eq!(
+            thinkthen_call_next_kept(call, &mut row, &mut error),
+            -thinkthen::Code::BackendReply.abi()
+        );
+        assert_eq!(row.position, 0, "the aggregate is not a failed row");
+        let message = std::str::from_utf8(std::slice::from_raw_parts(
+            error.message.data,
+            error.message.len,
+        ))
+        .unwrap();
+        assert!(
+            message.starts_with(
+                "2 of 4 records failed; the first, at position 1, failed with backend.reply:"
+            ),
+            "{message}"
+        );
+        assert_eq!(thinkthen_call_next_kept(call, &mut row, &mut error), 1);
+        let mut retained = Vec::new();
+        for position in [1, 4] {
+            let mut failure: HostRow = zeroed();
+            failure.struct_size = size_of::<HostRow>() as u32;
+            assert_eq!(
+                thinkthen_call_next_failed(call, &mut failure, &mut error),
+                0
+            );
+            assert_eq!(failure.position, position);
+            assert_eq!(failure.error_code, thinkthen::Code::BackendReply.abi());
+            retained.push(failure);
+        }
+        assert_eq!(thinkthen_call_next_failed(call, &mut row, &mut error), 1);
+        thinkthen_call_free(call);
+        thinkthen_client_free(client);
+        for mut failure in retained {
+            let mut original: RecordView = zeroed();
+            assert_eq!(
+                thinkthen_row_original(&failure, &mut original, &mut error),
+                0
+            );
+            assert_eq!(
+                std::slice::from_raw_parts(original.data, original.len),
+                inputs[failure.position as usize - 1].as_bytes()
+            );
+            thinkthen_row_free(&mut failure);
+        }
+        thinkthen_row_free(&mut row);
+        thinkthen_error_free(&mut error);
     }
 }

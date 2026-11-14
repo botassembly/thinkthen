@@ -10,7 +10,7 @@ inputs <- list(base, tibble::as_tibble(base),
                data.table::as.data.table(base))
 for (input in inputs) {
   before <- unserialize(serialize(input, NULL))
-  rows <- tt_decide_rows(input, "Ready?", field = "/body", client = client)
+  rows <- tt_decide(details = TRUE, input, "Ready?", field = "/body", client = client)
   result <- tt_bind(input, rows, "decision")
   stopifnot(identical(class(result), class(input)),
             identical(as.data.frame(input), as.data.frame(before)),
@@ -26,21 +26,18 @@ for (input in inputs) {
 
 # Feature: filter rows retain originals and failed rows in input order.
 input <- list("alpha", NULL, "bravo")
-rows <- tt_filter_rows(input, "Ready?", client = client)
-check_rows(rows, "filter", 3L)
-stopifnot(identical(rows$position, c(1, 2, 3)), identical(rows$item, input),
-          is.logical(rows$kept), identical(rows$kept[[2]], FALSE), rows$status[[2]] == "failed",
-          as.character(rows$error_code[[2]]) == "record.missing",
-          identical(rows$kept, vapply(rows$answer, isTRUE, logical(1))))
-mask <- warned(tt_keep(input, "Ready?", client = client))
+rows <- tt_decide(details = TRUE, input, "Ready?", client = client)
+check_rows(rows,"decide",3L)
+stopifnot(identical(rows$position,c(1,2,3)),identical(rows$item,input),rows$status[2]=="failed",rows$error_code[2]=="record.missing")
+mask <- warned(tt_decide(input, "Ready?", client = client))
 stopifnot(is.logical(mask), length(mask) == 3L, is.na(mask[[2]]))
 
 # Feature: filter originals keep reconstructed grouping and custom attributes.
 input <- dplyr::group_by(tibble::as_tibble(base), group)
 attr(input, "origin") <- "caller"
-rows <- tt_filter_rows(input, "Ready?", field = "/body", client = client)
+rows <- tt_decide(details = TRUE, input, "Ready?", field = "/body", client = client)
 for (position in seq_len(nrow(input))) {
-  item <- rows$item[[position]]
+  item <- rows$item[position,,drop=FALSE]
   expected <- input[position, , drop = FALSE]
   dplyr::validate_grouped_df(item, check_bounds = TRUE)
   stopifnot(identical(class(item), class(input)),
@@ -52,7 +49,7 @@ for (position in seq_len(nrow(input))) {
 # Feature: full rank attachment joins on input positions and top retains failures.
 records <- list(list(id = "same", body = "alpha"), NULL,
                 list(id = "same", body = "bravo"))
-ranked <- tt_rank_rows(records, "How urgent?", c("low", "high"), client = client)
+ranked <- tt_rank(details = TRUE, records, "How urgent?", c("low", "high"), client = client)
 check_rows(ranked, "rank", 3L)
 stopifnot(is.double(ranked$answer), ranked$position[[3]] == 2,
           ranked$status[[3]] == "failed")
@@ -60,7 +57,7 @@ data <- data.frame(body = c("alpha", NA_character_, "bravo"))
 bound <- tt_bind(data, ranked, "priority")
 stopifnot(identical(bound$priority_answer,
                     ranked$answer[match(seq_len(3L), ranked$position)]))
-limited <- tt_rank_rows(records, "How urgent?", c("low", "high"), top = 1L, client = client)
+limited <- tt_rank(details = TRUE, records, "How urgent?", c("low", "high"), top = 1L, client = client)
 stopifnot(nrow(limited) == 2L, sum(limited$status == "failed") == 1L,
           limited$position[limited$status == "failed"] == 2)
 condition(tt_bind(data, limited, "priority"), "thinkthen_usage_error")
@@ -68,11 +65,11 @@ condition(tt_bind(data, limited, "priority"), "thinkthen_usage_error")
 questions <- tt_annotation_questions(list(ready = tt_decide_question("Ready?")))
 for (input in list(data.frame(id = logical(), body = character()),
                    data.frame(id = TRUE, body = "text"))) {
-  annotated <- tt_annotate_rows(input, questions, client = client)
+  annotated <- tt_annotate(details = TRUE, input, questions, client = client)
   attached <- tt_bind(input, annotated)
-  stopifnot(identical(names(attached), c("id", "body", "ready", "ready_status", "ready_probability", "ready_detail")),
+  stopifnot(identical(names(attached), c("id", "body", "ready", "ready_status", "ready_probability", "ready_error_code", "ready_error_message", "ready_error_http_status", "ready_detail")),
             nrow(attached) == nrow(input), is.logical(attached$ready), is.double(attached$ready_probability))
-  if (nrow(input)) stopifnot(is.na(attached$ready), as.character(attached$ready_status) == "failed")
+  if (nrow(input)) stopifnot(is.na(attached$ready), is.na(attached$ready_status))
 }
 tt_close(client)
 cat("R table restoration, complete filters and rank attachment passed\n")

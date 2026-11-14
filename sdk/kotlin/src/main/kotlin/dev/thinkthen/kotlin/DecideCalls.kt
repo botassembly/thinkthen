@@ -1,42 +1,45 @@
 package dev.thinkthen.kotlin
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlin.reflect.KClass
 
-/**
- * Answers a yes-or-no [question] about one [record]: `client.decide(question, message).answer()` is a `Boolean`.
- *
- * Throws [ThinkThenException] with `record.empty` for blank text, before any backend call. A missing record (null) gives a failed row. The row's `answer()` throws on not sure or failure. Pass many records to [decideStream].
- */
-public suspend inline fun <reified T> ThinkThen.decide(question: String, record: T?, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, Nothing> =
-    single(Decide(question, threshold, field, name, yesMeans, noMeans), record, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend inline fun <reified T> ThinkThen.decide(question: String, record: T, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, T> =
+    single(DecideQuestion(question, threshold, field, name, yesMeans, noMeans), record, { recordSerializer<T>() })
 
-/** The same as the other `decide`, encoding [record] with [serializer]. */
-public suspend fun <T> ThinkThen.decide(question: String, record: T?, serializer: KSerializer<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, Nothing> =
-    single(Decide(question, threshold, field, name, yesMeans, noMeans), record, serializer)
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend fun ThinkThen.decide(question: String, record: Nothing?, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, Nothing?> =
+    single(DecideQuestion(question, threshold, field, name, yesMeans, noMeans), record, { JsonElement.serializer() })
 
-/** The same as the other `decide`, for a missing record written as `null`. It returns a failed `record.missing` row. */
-public suspend fun ThinkThen.decide(question: String, record: Nothing?, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, Nothing> =
-    single(Decide(question, threshold, field, name, yesMeans, noMeans), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.decideStream(question: String, records: Flow<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Flow<Row<Boolean, T>> =
+    stream(DecideQuestion(question, threshold, field, name, yesMeans, noMeans), records, { recordSerializer<T>() })
 
-/** The same as the other `decide`, for one JSON array record. A JSON array is one record, not many records. */
-public suspend fun ThinkThen.decide(question: String, record: JsonArray, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, Nothing> =
-    single(Decide(question, threshold, field, name, yesMeans, noMeans), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.decideStream(question: String, records: Iterable<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Flow<Row<Boolean, T>> =
+    iterable(DecideQuestion(question, threshold, field, name, yesMeans, noMeans), records, { recordSerializer<T>() })
 
-/** Many records as a cold flow of rows in input order. Each collection makes its own call; a failed record gives a failed row and the rest continue. */
-public inline fun <reified T> ThinkThen.decideStream(question: String, records: Flow<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Flow<Row<Boolean, Nothing>> =
-    stream(Decide(question, threshold, field, name, yesMeans, noMeans), records, recordSerializer<T>())
+/** Ask an immutable typed question. */
+public suspend inline fun <reified T> ThinkThen.decide(question: DecideQuestion, record: T): Row<Boolean, T> =
+    single(question, record, { recordSerializer<T>() })
 
-/** The same as the other `decideStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.decideStream(question: String, records: Flow<T?>, serializer: KSerializer<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Flow<Row<Boolean, Nothing>> =
-    stream(Decide(question, threshold, field, name, yesMeans, noMeans), records, serializer)
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.decideStream(question: DecideQuestion, records: Iterable<T>): Flow<Row<Boolean, T>> =
+    iterable(question, records, { recordSerializer<T>() })
 
-/** Many records from a collection, as a cold flow of rows in input order. */
-public inline fun <reified T> ThinkThen.decideStream(question: String, records: Iterable<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Flow<Row<Boolean, Nothing>> =
-    iterable(Decide(question, threshold, field, name, yesMeans, noMeans), records, recordSerializer<T>())
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.decideStream(question: DecideQuestion, records: Flow<T>): Flow<Row<Boolean, T>> =
+    stream(question, records, { recordSerializer<T>() })
 
-/** The same as the other `decideStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.decideStream(question: String, records: Iterable<T?>, serializer: KSerializer<T>, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Flow<Row<Boolean, Nothing>> =
-    iterable(Decide(question, threshold, field, name, yesMeans, noMeans), records, serializer)
+/** One JSON array is one record. */
+public suspend fun ThinkThen.decide(question: String, record: kotlinx.serialization.json.JsonArray, threshold: Threshold? = null, field: Pointer? = null, name: String? = null, yesMeans: String? = null, noMeans: String? = null): Row<Boolean, kotlinx.serialization.json.JsonArray> =
+    single(DecideQuestion(question, threshold, field, name, yesMeans, noMeans), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun ThinkThen.decide(question: DecideQuestion, record: kotlinx.serialization.json.JsonArray): Row<Boolean, kotlinx.serialization.json.JsonArray> =
+    single(question, record, { JsonElement.serializer() })
+
+/** A missing record retains null as its original item. */
+public suspend fun ThinkThen.decide(question: DecideQuestion, record: Nothing?): Row<Boolean, Nothing?> =
+    single(question, record, { JsonElement.serializer() })

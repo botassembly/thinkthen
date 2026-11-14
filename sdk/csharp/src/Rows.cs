@@ -1,137 +1,192 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 namespace ThinkThen;
-/// <summary>Signals that an answer falls inside the question's uncertainty band.</summary>
-public sealed class UnsureException : InvalidOperationException
-{
-    /// <summary>The probability reported for the uncertain answer.</summary>
-    public double Probability { get; }
-    /// <summary>Create an uncertainty exception with the reported probability.</summary>
-    public UnsureException(double probability) : base("The answer is not sure.") => Probability = probability;
-}
-/// <summary>A result that converts to its answer and retains source and outcome metadata.</summary>
+
+/// <summary>A non-generic view of a result's safe metadata.</summary>
 [JsonConverter(typeof(RowConverters))]
-public abstract record Row<TAnswer, TDetail>
+public interface IRow
 {
-    internal Row(Function function, ulong position, RecordId? id, Source source)
-    { Function = function; Position = position; Id = id; Source = source; }
+    /// <summary>Gets this result metadata value.</summary>
+    Function Function { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    Status Status { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    ulong Position { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    RecordId? Id { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    Source Source { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    object? Item { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    double? Probability { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    Detail? Detail { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    bool IsAnswered { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    bool IsUnsure { get; }
+    /// <summary>Gets this result metadata value.</summary>
+    bool IsFailed { get; }
+}
+/// <summary>A failed result with its error and original record.</summary>
+[JsonConverter(typeof(RowConverters))]
+public interface IFailed : IRow
+{
+    /// <summary>The stable error of this failed record.</summary>
+    RowError Error { get; }
+}
+internal interface IRowValue : IRow { JsonElement Canonical { get; } object? OwnAnswer { get; } object?[] OwnValues { get; } }
+/// <summary>No answer was available, through uncertainty or record failure.</summary>
+public abstract class NoAnswerException : Exception { internal NoAnswerException(string message) : base(message) {} }
+/// <summary>The result is not sure.</summary>
+public sealed class UnsureException : NoAnswerException
+{
+    /// <summary>The original unsure result.</summary>
+    public IRow Row { get; }
+    /// <summary>The aggregate probability, when present.</summary>
+    public double Probability => Row.Probability!.Value;
+    internal UnsureException(IRow row) : base("The answer is not sure.") => Row=row;
+}
+/// <summary>One or more records failed.</summary>
+public sealed class FailedException : NoAnswerException
+{
+    /// <summary>Provides Code.</summary>
+    public string Code { get; }
+    /// <summary>Provides HttpStatus.</summary>
+    public int? HttpStatus { get; }
+    /// <summary>Every affected failed result.</summary>
+    public ValueList<IFailed> Rows { get; }
+    internal FailedException(IEnumerable<IFailed> rows) : this(new ValueList<IFailed>(rows)) {}
+    private FailedException(ValueList<IFailed> rows) : base(rows[0].Error.Message)
+    { Rows=rows; Code=rows[0].Error.Code; HttpStatus=rows[0].Error.HttpStatus; }
+}
+/// <summary>An immutable result and the caller's original record.</summary>
+[JsonConverter(typeof(RowConverters))]
+public abstract record Row<TAnswer,TRecord> : IRowValue
+{
+    internal Row(Function function, ulong position, RecordId? id, Source source, TRecord item)
+    { Function=function; Position=position; Id=id; Source=source; Item=item; }
     private protected abstract void Closed();
     internal JsonElement Canonical { get; init; }
-    /// <summary>Gets the question function.</summary>
+    JsonElement IRowValue.Canonical => Canonical;
+    /// <summary>Provides Function.</summary>
     public Function Function { get; }
-    /// <summary>Gets the one-based input position.</summary>
+    /// <summary>Provides Position.</summary>
     public ulong Position { get; }
-    /// <summary>Gets the original record identifier, if present.</summary>
+    /// <summary>Provides Id.</summary>
     public RecordId? Id { get; }
-    /// <summary>Gets the producing question, backend and model.</summary>
+    /// <summary>Provides Source.</summary>
     public Source Source { get; }
-    /// <summary>Gets the outcome status.</summary>
-    public abstract RowStatus Status { get; }
-    /// <summary>Gets the answer; uncertain answers throw UnsureException and failed answers throw ThinkThenException.</summary>
+    /// <summary>The caller's original record.</summary>
+    public TRecord Item { get; }
+    object? IRow.Item => Item;
+    /// <summary>The result state.</summary>
+    public abstract Status Status { get; }
+    /// <summary>Reads the answer, throwing when none is available.</summary>
     public abstract TAnswer Answer { get; }
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
+    /// <summary>The aggregate probability, when present.</summary>
     public abstract double? Probability { get; }
-    /// <summary>Reports whether this outcome contains an answer.</summary>
-    public bool IsAnswered => Status == RowStatus.Answered;
-    /// <summary>Reports whether this outcome is uncertain.</summary>
-    public bool IsUnsure => Status == RowStatus.Unsure;
-    /// <summary>Reports whether this outcome failed.</summary>
-    public bool IsFailed => Status == RowStatus.Failed;
-    /// <summary>Returns true and the answer only for an answered outcome; uncertainty and failure return false.</summary>
-    public bool TryGetAnswer([System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out TAnswer answer)
+    /// <summary>The function-specific immutable detail.</summary>
+    public abstract Detail? Detail { get; }
+    /// <summary>Provides IsAnswered.</summary>
+    public bool IsAnswered => Status==Status.Answered;
+    /// <summary>Provides IsUnsure.</summary>
+    public bool IsUnsure => Status==Status.Unsure;
+    /// <summary>Provides IsFailed.</summary>
+    public bool IsFailed => Status==Status.Failed;
+    object? IRowValue.OwnAnswer => IsAnswered ? Answer : null;
+    object?[] IRowValue.OwnValues => [Function,Status,IsAnswered ? Answer : null,Probability,(this as IFailed)?.Error,Position,Id,Source,Detail];
+    /// <summary>Provides ThrowIfFailed.</summary>
+    public Row<TAnswer,TRecord> ThrowIfFailed()
     {
-        if (IsAnswered) { answer = Answer; return true; }
-        answer = default; return false;
+        if (this is IFailed failed) throw new FailedException([failed]);
+        if (IsAnswered && Answer is IAnnotations form) form.ThrowIfFailed();
+        return this;
     }
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static implicit operator TAnswer(Row<TAnswer, TDetail> row)
-    { ArgumentNullException.ThrowIfNull(row); return row.Answer; }
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator ==(Row<TAnswer, TDetail>? row, TAnswer answer) =>
-        row is not null && row.IsAnswered && ValueEquality.Equal(row.Answer, answer);
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator !=(Row<TAnswer, TDetail>? row, TAnswer answer) => !(row == answer);
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator ==(TAnswer answer, Row<TAnswer, TDetail>? row) => row == answer;
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator !=(TAnswer answer, Row<TAnswer, TDetail>? row) => !(row == answer);
-    /// <summary>Compares public values, including collection contents, without cached wire JSON or exception causes.</summary>
-    public virtual bool Equals(Row<TAnswer, TDetail>? other) => other is not null &&
-        GetType() == other.GetType() && Function == other.Function && Position == other.Position &&
-        Equals(Id, other.Id) && Equals(Source, other.Source);
+    /// <summary>Provides Equals.</summary>
+    public virtual bool Equals(Row<TAnswer,TRecord>? other) => other is not null && GetType()==other.GetType() &&
+        ValueEquality.Equal(((IRowValue)this).OwnValues,((IRowValue)other).OwnValues);
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(Function, Position, Id, Source, Status);
+    public override int GetHashCode() => ValueEquality.Hash(((IRowValue)this).OwnValues);
     /// <inheritdoc/>
-    public sealed override string ToString() => this switch
-    {
-        Failed<TAnswer, TDetail> failed => $"failed: {failed.Error.Code}: {failed.Error.Message}",
-        _ when IsUnsure => "unsure",
-        _ => ValueEquality.Display(Answer)
-    };
+    public sealed override string ToString() => ResultText.Print(this);
 }
-/// <summary>A row containing an answer.</summary>
-public sealed record Answered<TAnswer,TDetail> : Row<TAnswer,TDetail>
+/// <summary>A result with an answer.</summary>
+[JsonConverter(typeof(RowConverters))]
+public sealed record Answered<TAnswer,TRecord> : Row<TAnswer,TRecord>
 {
-    internal Answered(Function function, ulong position, RecordId? id, Source source, TAnswer answer, double? probability, TDetail? detail)
-        : base(function, position, id, source) { Answer = answer; Probability = probability; Detail = detail; }
-    private protected override void Closed() { }
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => RowStatus.Answered;
-    /// <summary>Gets the answer; uncertain answers throw UnsureException and failed answers throw ThinkThenException.</summary>
+    internal Answered(Function function,ulong position,RecordId? id,Source source,TRecord item,TAnswer answer,double? probability,Detail? detail)
+        : base(function,position,id,source,item) { Answer=answer; Probability=probability; Detail=detail; }
+    /// <inheritdoc/>
+    private protected override void Closed(){}
+    /// <inheritdoc/>
+    public override Status Status => Status.Answered;
+    /// <inheritdoc/>
     public override TAnswer Answer { get; }
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
+    /// <inheritdoc/>
     public override double? Probability { get; }
-    /// <summary>Gets the function-specific probability detail, if present.</summary>
-    public TDetail? Detail { get; }
-    /// <summary>Compares public values, including collection contents, without cached wire JSON or exception causes.</summary>
-    public bool Equals(Answered<TAnswer,TDetail>? other) => base.Equals(other) &&
-        ValueEquality.Equal(Answer, other!.Answer) && Nullable.Equals(Probability, other.Probability) && ValueEquality.Equal(Detail, other.Detail);
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), ValueEquality.Hash(Answer), Probability, ValueEquality.Hash(Detail));
+    public override Detail? Detail { get; }
+    /// <inheritdoc/>
+    public bool Equals(Answered<TAnswer,TRecord>? other) => base.Equals(other);
+    /// <inheritdoc/>
+    public override int GetHashCode() => base.GetHashCode();
 }
-/// <summary>A row whose answer is uncertain; answer access throws UnsureException.</summary>
-public sealed record Unsure<TAnswer,TDetail> : Row<TAnswer,TDetail>
+/// <summary>A result without a sufficiently likely answer.</summary>
+[JsonConverter(typeof(RowConverters))]
+public sealed record Unsure<TAnswer,TRecord> : Row<TAnswer,TRecord>
 {
-    internal Unsure(Function function, ulong position, RecordId? id, Source source, double probability, TDetail? detail)
-        : base(function, position, id, source) { Probability = probability; Detail = detail; }
-    private protected override void Closed() { }
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => RowStatus.Unsure;
+    internal Unsure(Function function,ulong position,RecordId? id,Source source,TRecord item,double probability,Detail? detail)
+        : base(function,position,id,source,item) { Probability=probability; Detail=detail; }
     /// <inheritdoc/>
-    public override TAnswer Answer => throw new UnsureException(Probability!.Value);
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
+    private protected override void Closed(){}
+    /// <inheritdoc/>
+    public override Status Status => Status.Unsure;
+    /// <inheritdoc/>
+    public override TAnswer Answer => throw new UnsureException(this);
+    /// <inheritdoc/>
     public override double? Probability { get; }
-    /// <summary>Gets the function-specific probability detail, if present.</summary>
-    public TDetail? Detail { get; }
-    /// <summary>Compares public values, including collection contents, without cached wire JSON or exception causes.</summary>
-    public bool Equals(Unsure<TAnswer,TDetail>? other) => base.Equals(other) &&
-        Nullable.Equals(Probability, other!.Probability) && ValueEquality.Equal(Detail, other.Detail);
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Probability, ValueEquality.Hash(Detail));
+    public override Detail? Detail { get; }
+    /// <inheritdoc/>
+    public bool Equals(Unsure<TAnswer,TRecord>? other) => base.Equals(other);
+    /// <inheritdoc/>
+    public override int GetHashCode() => base.GetHashCode();
 }
-/// <summary>A failed row; answer access throws its ThinkThenException.</summary>
-public sealed record Failed<TAnswer,TDetail> : Row<TAnswer,TDetail>
+/// <summary>A record that could not be judged.</summary>
+[JsonConverter(typeof(RowConverters))]
+public sealed record Failed<TAnswer,TRecord> : Row<TAnswer,TRecord>, IFailed
 {
-    internal Failed(Function function, ulong position, RecordId? id, Source source, RowError error)
-        : base(function, position, id, source) => Error = error;
-    private protected override void Closed() { }
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => RowStatus.Failed;
+    internal Failed(Function function,ulong position,RecordId? id,Source source,TRecord item,RowError error)
+        : base(function,position,id,source,item) => Error=error;
     /// <inheritdoc/>
-    public override TAnswer Answer => throw new ThinkThenException(Error, Error.Cause);
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
+    private protected override void Closed(){}
+    /// <inheritdoc/>
+    public override Status Status => Status.Failed;
+    /// <inheritdoc/>
+    public override TAnswer Answer => throw new FailedException([this]);
+    /// <inheritdoc/>
     public override double? Probability => null;
-    /// <summary>Gets the failed record's shared error.</summary>
-    public RowError Error { get; }
-    /// <summary>Compares public values, including collection contents, without cached wire JSON or exception causes.</summary>
-    public bool Equals(Failed<TAnswer,TDetail>? other) => base.Equals(other) && ValueEquality.Equal(Error, other!.Error);
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), ValueEquality.Hash(Error));
+    public override Detail? Detail => null;
+    /// <summary>The stable record error.</summary>
+    public RowError Error { get; }
+    /// <inheritdoc/>
+    public bool Equals(Failed<TAnswer,TRecord>? other) => base.Equals(other);
+    /// <inheritdoc/>
+    public override int GetHashCode() => base.GetHashCode();
 }
-/// <summary>An original input record and its filter outcome.</summary>
-public sealed record FilterItem<T>(T Item, Row<bool, NoDetail> Row)
+/// <summary>Decide results support the language's conditional operations.</summary>
+public static class DecideOperators
 {
-    /// <summary>Reports whether the filter answered yes.</summary>
-    public bool Kept => Row is Answered<bool, NoDetail> { Answer: true }; }
-/// <summary>An equal JSON snapshot of an input record and its rank outcome. The record type must support JSON reading and writing.</summary>
-public sealed record RankedItem<T>(T Item, Row<long, LevelsDetail> Row);
+    extension<TRecord>(Row<bool,TRecord>)
+    {
+        /// <summary>Provides true.</summary>
+        public static bool operator true(Row<bool,TRecord> row) => row.Answer;
+        /// <summary>Provides false.</summary>
+        public static bool operator false(Row<bool,TRecord> row) => !row.Answer;
+        /// <summary>Reads the answer, throwing when none is available.</summary>
+        public static bool operator !(Row<bool,TRecord> row) => !row.Answer;
+    }
+}

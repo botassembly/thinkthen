@@ -11,74 +11,553 @@ head:
 ---
 import Example from '../../../components/Example.astro';
 
-With `--json`, ThinkThen prints one line of JSON for each text it judges. Each line says whether it answered, was not sure or failed, with the answer, its probability and its details; the SDKs return the same fields.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-`jq .` spreads each line out so you can read it. A yes:
+Under every library and the command there is one JSON contract. A **request** holds one question and the messages to ask it about. The answer is one **result** per message, each a JSON object on a line of its own. Read this page when you write or check a library, save results to a file, or read results another program wrote. A scalar SDK call promotes a failed parent result to its host error instead of returning it. This does not change the JSON contract: a request with one message still uses the same array and result shapes. The exact field lists are the generated schemas: `request.schema.json`, `row.schema.json` and `contract.json`.
+
+Every result is in exactly one of three states, named by its `status`:
+
+- **`answered`**: there is an answer, and `answer` is it.
+- **`unsure`**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **`failed`**: the message could not be judged, or the service did not respond.
+
+## What every result guarantees
+
+A library turns a result into its own result type, and it relies on these rules to do that. They hold for every function on this page.
+
+1. **`function`, `position`, `source` and `status` are on every result.** `status` is exactly `"answered"`, `"unsure"` or `"failed"`, and nothing else.
+2. **`answer` is present exactly when `status` is `"answered"`.** On a not-sure or failed result the key is left out. It is never written as `null`, `false`, `0`, `""` or `[]`, so a missing answer can't be read as "no" or as an empty value.
+3. **The only `null` answer is find's.** `"answer": null` on an answered find result means "no line answers". That is an answer, not a missing one.
+4. **`probability` is never on a failed result and always on a not-sure result.** On an answered result it is present for decide, filter, choose and find, and left out for tag, score, rank, recognize, relate and annotate, which have no single number.
+5. **`error` is present exactly when `status` is `"failed"`.** It always has a `code` and a `message`. The `code` is one of the eight message and service codes listed under [Errors](#errors). `http_status` is there only when the service answered with one.
+6. **Only decide, choose and find can be `"unsure"`,** and decide only when the request sets two bars. A filter, tag, score, rank, recognize, relate or annotate result is answered or failed.
+7. **`position` counts the request's messages from 1,** in the order you sent them. It is the message's place in your input even when the results come back in another order, as rank's do.
+8. **`id` is present exactly when the message has one,** and it is the value you sent: a string stays a string, and a whole number stays that number.
+9. **Every message gets one result, in the order of the messages.** A bad message gets a failed result and the results after it still come. rank is the one exception: its results come in rank order, and with `top` set the messages ranked below the top get no result.
+10. **A key with no value is left out, not set to `null`.** Rule 3 is the only `null` in a result. A result has no keys beyond the ones on this page. The `thinkthen` command adds one of its own when it writes the results of a many-message call with `--json`: `item`, the message itself. The service never sends it.
+11. **A mistake in the request never comes back as a result.** It comes back as one error for the whole call, and no result carries a call's error code.
+12. **`start` and `end` count characters from 0,** and `end` is one past the last character. That holds for every saved result, whichever library or command wrote it.
+
+The answer has one JSON type per function:
+
+| `function` | `answer` on an answered result | `detail`, when present |
+| --- | --- | --- |
+| `decide` | `true` or `false` | none |
+| `filter` | `true` or `false` | none |
+| `choose` | a string: exactly one of the request's `choices` | `labels`: every choice and its probability |
+| `tag` | an array of strings from the request's `labels`, in the request's order, possibly empty | `labels`: every label and its probability |
+| `score` | a number from 0 to 1 | `levels`: one probability per level, in the request's order |
+| `rank` | a whole number from 1 | `levels`, as for score |
+| `find` | an object with `text`, `start` and `end`, or `null` | none |
+| `recognize` | an array of names, possibly empty | `pieces` and `names`: the probabilities behind the names |
+| `relate` | an array of relations, possibly empty | `names`: every name found. `pairs`: every pair that was checked |
+| `annotate` | an object: one entry per named question | none |
+
+## decide
+
+### The simplest if
+
+Send one question and one message.
+
+```json
+{
+  "question": {
+    "function": "decide",
+    "question": "Does the customer request a refund?"
+  },
+  "records": ["Please refund my order."]
+}
+```
+
+One result comes back. Read its status before its answer.
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+`source` identifies the actual question, service and model. It is on every result, including failed ones. Preserve it when saving results.
+
+Answered no:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+Failed:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+A failed result has no `answer` key, so it can never read as no. With one bar, a decide result is never not sure.
+
+### Yes, no, or something else
+
+Set two bars and decide can also be not sure. `status` tells you whether there is a yes or no to read.
+
+```json
+{
+  "question": {
+    "function": "decide",
+    "question": "Does the customer request a refund?",
+    "threshold": {"low": 0.2, "high": 0.8}
+  },
+  "records": ["Where is my parcel?"]
+}
+```
+
+The result is one of these:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+When `status` is `"answered"`, `answer` is `true` for the refund queue and `false` for the inbox. Any other `status` means there is no answer, and a person reads it.
+
+### Not sure or failed
+
+The two ways of having no answer are told apart by `status` alone.
+
+| `status` | `answer` | `probability` | `error` | Where it goes |
+| --- | --- | --- | --- | --- |
+| `"answered"` | `true` | present | left out | refund queue |
+| `"answered"` | `false` | present | left out | inbox |
+| `"unsure"` | left out | present | left out | a person reads it |
+| `"failed"` | left out | left out | present | try again later |
+
+Yes and no are the two answers. Not sure and failed are the two ways of having none. `status` has three values and no others, so a `switch` over the three names every state.
+
+### Did it work
+
+A result worked unless its `status` is `"failed"`. You can tell without looking for an answer.
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+The command and every library print a failed result as `failed:`, its stable code and the actual service reason. They print a not-sure result as `unsure`, and an answered result as its answer, in the words of the table at the top of the command's guide. Not sure counts as working: ThinkThen did its job, and the answer was "not sure".
+
+### Raise if it failed
+
+JSON can't raise. A library's explicit raise-if-failed step on bulk results, forms or their entries reads `status` and, when it is `"failed"`, `error`. On an answered annotate form it also checks each entry: the step raises if the form failed or any entry failed, but not for a not-sure entry. Otherwise it returns the same form. Scalar annotate promotion checks only the parent; an answered parent can still contain failed entries. Rule 5 holds for each entry as well as the outer result, so every failed entry carries its own code and message.
+
+### Both bars and the probability
+
+`threshold` takes one of two forms.
+
+```json
+{"function": "decide", "question": "Does the customer request a refund?", "threshold": 0.7}
+```
+
+```json
+{"function": "decide", "question": "Does the customer request a refund?", "threshold": {"low": 0.2, "high": 0.8}}
+```
+
+- No `threshold`: one bar at 0.5. The answer is always yes or no.
+- `"threshold": 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `"threshold": {"low": 0.2, "high": 0.8}`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+A bar is a number above 0 and at most 1, and `low` must be below `high`. Anything else is refused with `usage.threshold`.
+
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. On a decide result it is missing only when the result failed. It is written at full precision, so read it as a 64-bit float.
+
+The number is the model's own. To choose bars for your data, send examples you have already labelled in one decide request, save each result's `probability`, and compare with your labels.
+
+## choose with your own choices
+
+Give your choices as an array of strings. The answer comes back as one of them, spelled exactly as you sent it.
+
+```json
+{
+  "question": {
+    "function": "choose",
+    "question": "What is the message about?",
+    "choices": ["billing", "shipping", "other"]
+  },
+  "records": ["I was charged twice for one invoice."]
+}
+```
+
+Answered, not sure and failed:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `status` before reading `answer`. `"threshold": 0.3` moves the bar. choose takes one bar only.
+
+The strings in `choices` are the words the model reads, so make them plain words or short phrases, not codes. A library that offers its language's enumerated type sends the members' text here and turns `answer` back into a member. That works because `answer` is always exactly one of the strings in the request.
+
+`probability` is the best choice's. `detail.labels` holds every choice with its probability.
+
+## Many messages
+
+`records` is an array, and one request can hold as many as you like. Every function takes many messages the same way.
+
+```json
+{
+  "question": {
+    "function": "decide",
+    "question": "Does the customer request a refund?",
+    "threshold": {"low": 0.2, "high": 0.8}
+  },
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+One failed message does not stop the results. Had the second message been `null`, its result would be this, with the first and third unchanged:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+A result does not repeat your message. It carries `position`, counted from 1, and the message's `id` when it has one. A library keeps the messages it sent and attaches each to its result by `position`, so its caller never matches by hand. The command does the same and writes the message into each result as `item`.
+
+Send the whole collection in one request so ThinkThen can send the messages to the service in batches. An empty `records` array gives no results and sends nothing.
+
+To save every result, write each result as a line of JSON. It includes the state, so nothing is lost.
+
+## filter
+
+filter means "give me the yeses". On the wire it is decide with one bar: every message gets a result, and the messages to keep are the ones whose result is answered `true`.
+
+```json
+{
+  "question": {
+    "function": "filter",
+    "question": "Does the customer request a refund?"
+  },
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+A library hands its caller messages 1 and 3, in order.
+
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `"threshold": 0.7` moves the bar. Two bars are refused. This request gives no results and one error:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+If a message fails, its result is a failed result in its place, and the other results still come:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+A library gives its caller every kept message first, then reports the failed results in one error.
+
+## tag
+
+Labels work as choices do. The answer is an array of the labels that fit, in the order you gave them, and it can be empty.
+
+```json
+{
+  "question": {
+    "function": "tag",
+    "question": "Which topics appear?",
+    "labels": ["billing", "shipping"]
+  },
+  "records": ["I was charged twice and my parcel is late again."]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+tag is never not sure. `threshold` sets how likely a label must be to count, and takes one bar only. An empty array is an answer: no label fit. A tag result has no `probability`. Each label's own number is in `detail.labels`.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it.
+
+```json
+{
+  "question": {
+    "function": "score",
+    "question": "How urgent is the request?",
+    "levels": ["routine", "urgent"]
+  },
+  "records": ["Please refund my order."]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+The score is a position between your levels, not one of them, so it is a number and never a level's name. To get exactly one level back, ask with choose. score is never not sure, takes no `threshold`, and its result has no `probability`. `detail.levels` holds one probability per level, in the order of the request.
+
+## rank
+
+rank puts many messages in order along your levels, highest first.
+
+```json
+{
+  "question": {
+    "function": "rank",
+    "question": "How urgent is the request?",
+    "levels": ["routine", "urgent"]
+  },
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+`answer` is the rank, starting at 1, and `position` says which of your messages it is. Here the third message ranks first. The results come in rank order, and none comes until every message has been read. Messages that tie keep the order you sent them in.
+
+`"top": 5` ranks only the first five, and the messages below them get no result. A failed message comes back after the ranked ones, as a failed result:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+rank is never not sure, takes no `threshold`, and its result has no `probability`.
+
+## find
+
+find points to the one line that answers.
+
+```json
+{
+  "question": {
+    "function": "find",
+    "question": "Which line states the requested action?"
+  },
+  "records": ["Morgan works for Example Group.\nPlease refund my order."]
+}
+```
+
+A line answers, no line answers, not sure, and failed:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+The answer is an object with `text`, `start` and `end`, or `null` when no line answers. `start` and `end` count characters from 0 in the text that was judged, and `end` is one past the last character. A library changes them to the unit its own strings use, and changes them back when it saves a result.
+
+`"answer": null` with `"status": "answered"` means ThinkThen looked and no line answers. It is the only `null` answer in the contract. A result with no `answer` key at all is not sure or failed. Keep the two apart when you decode.
+
+Like choose, find can be not sure with no bar set. `probability` is the best option's, where "no line" is one of the options. find takes one bar only.
+
+## recognize
+
+recognize takes kinds and no question text.
+
+```json
+{
+  "question": {
+    "function": "recognize",
+    "kinds": ["person", "organization"]
+  },
+  "records": ["Morgan works for Example Group."]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+Each name has `kind`, `text`, `start`, `end` and its own `probability`. The answer can be empty. recognize is never not sure, and the result itself has no `probability`. `threshold` sets how likely a name must be to count.
+
+An answered result also carries `detail`, left out above to keep the example short. `detail.pieces` and `detail.names` hold the probabilities behind each name.
+
+## relate
+
+relate takes rules and no question text.
+
+```json
+{
+  "question": {
+    "function": "relate",
+    "rules": [
+      {"source": "person", "target": "organization", "relation": "works_for"}
+    ]
+  },
+  "records": ["Morgan works for Example Group.\nPlease refund my order."]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+Each relation has `source`, `target`, `relation` and `probability`. It has `"either": true` when its rule does, and no `either` key otherwise. A rule may also give `reads`, the wording the model sees, and `either`, for a relation with no direction.
+
+An answered result also carries `detail`, left out above. `detail.names` holds every name found, including names in no relation. `detail.pairs` holds every pair that was checked, with its probability. relate is never not sure, and the result itself has no `probability`.
+
+## annotate
+
+annotate asks several questions of each message and gives back one form per message.
+
+```json
+{
+  "question": {
+    "function": "annotate",
+    "questions": {
+      "refund": {"function": "decide", "question": "Does the customer request a refund?"},
+      "topic": {"function": "choose", "question": "What is the message about?", "choices": ["billing", "shipping", "other"]},
+      "urgency": {"function": "score", "question": "How urgent is the request?", "levels": ["routine", "urgent"]}
+    }
+  },
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ]
+}
+```
+
+One result per message. The result for the third message, with its topic not sure:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+A form whose topic question failed while the other questions answered:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+A form whose message could not be judged at all:
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+Each entry of a form is a result of its own function, with its own `status`. It follows every rule at the top of this page, and leaves out only `position`, `id` and `source`, which belong to the form. One entry can be not sure, or failed, while the others answer. The form itself is never not sure and has no `probability`. A consumer checks each entry it uses before reading that entry's answer. An answered outer form does not establish that all its entries answered; raise-if-failed checks the entries too.
+
+Any function except filter, rank and annotate can be an entry. filter and rank are about many messages, and a form is about one. The entries come back under the names you gave.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```json
+{
+  "function": "decide",
+  "question": "Does the customer request a refund?",
+  "yes_means": "the customer wants money back, including for a duplicate charge",
+  "no_means": "the customer wants anything else"
+}
+```
+
+```json
+{
+  "function": "choose",
+  "question": "What is the message about?",
+  "choices": [
+    {"name": "billing", "description": "charges, invoices and refunds"},
+    {"name": "shipping", "description": "parcels and delivery"},
+    "other"
+  ]
+}
+```
+
+decide and filter take `yes_means` and `no_means`: what a yes means and what a no means. choose, tag, score and rank take a description on any of their choices, labels or levels. Write that one as an object with `name` and `description` in place of the plain string. The answer is still the name alone.
+
+## Messages and fields
+
+A message is a JSON string, or an object or other JSON value. A string is judged as its text. Any other value is judged as its JSON text.
+
+`"field": "/text"` in the question picks one field of an object. It is a JSON Pointer. Without it, ThinkThen judges the whole message.
+
+```json
+{
+  "question": {
+    "function": "decide",
+    "question": "Does the customer request a refund?",
+    "field": "/text"
+  },
+  "records": [
+    {"id": "a1", "text": "Please refund my order."},
+    {"id": 42, "text": "Where is my parcel?"}
+  ]
+}
+```
+
+The field table describes this state. Actual captured responses are shown in the [JSON reference](https://thinkthen.dev/reference/json-output/).
+
+Give object messages an `id`: a string or a whole number. Each result carries it back unchanged. A result for a message with no `id` has no `id` key. Whole numbers of any size up to 64 bits come back exactly, so read `id` with a parser that keeps them.
+
+There is no separate one-message request. One message is an array of one. A message that can't be judged always comes back as a failed result, and nothing about it is sent to the service:
+
+| The message | The failed result's `code` |
+| --- | --- |
+| Blank: an empty string, only spaces, `{}`, `[]`, or an object with nothing but its `id` | `record.empty` |
+| `null`, or a `field` that points at nothing or at `null` | `record.missing` |
+| An `id` that is `null`, a fraction, `true`, an object or an array | `record.invalid` |
+| Too large to send on its own | `record.too-large` |
+
+This holds for a request with one message too. A blank message is a failed result, not a refused call.
+
+A request may also carry `"name"` beside `question` and `records`. It comes back in each result's `source.name`, so saved results from different runs can be told apart.
+
+## Saved questions
+
+The `question` object is the saved question. It holds the function, the question text and every option, so a library can keep it, load it, and send it unchanged with new messages.
+
+A toolbox file keeps named questions together:
+
+```json
+{
+  "entries": {
+    "refund": {
+      "question": {
+        "function": "decide",
+        "question": "Does the customer request a refund?",
+        "threshold": {"low": 0.2, "high": 0.8},
+        "field": "/text"
+      }
+    }
+  }
+}
+```
+
+A request never names a toolbox entry. The library looks the entry up and sends its `question`.
+
+## Settings
+
+Settings are not part of a request. They belong to the client that sends it, and have their own schema, `client.schema.json`.
+
+```json
+{
+  "backend": "systemone",
+    "batch": 16,
+  "retry": {"max_retries": 5, "initial_backoff_ms": 500, "attempt_timeout_ms": 120000}
+}
+```
+
+The fields are `backend`, `url`, `model`, `api_key`, `batch` and `retry`. Times are in milliseconds. `api_key` is accepted but never written back out. Keep the key in the environment, not in a file.
+
+## Errors
+
+Errors come back either as a call error or as a failed message result.
+
+| What happened | How it comes back |
+| --- | --- |
+| A mistake in the request, such as a bad threshold or an unknown key | One error for the call. No results |
+| The client could not start, such as no API key | One error for the call. No results |
+| The call was cancelled | One error for the call, `local.cancelled`, after any results already given |
+| A remote request was refused | HTTP 401/403 always end the call. If every request in the first batch fails and any failure is HTTP 4xx, the call ends with that service error. These are call errors, not failed message results |
+| A message could not be judged, or the service failed | A failed result for that message. The other results still come |
+| Not sure | An `"unsure"` result. It is not an error and has no `error` |
+
+A call's error has the same three fields as a result's: `code`, `message` and, when the service gave one, `http_status`. It is not a result: it has no `status`, `function` or `position`.
+
+A failed result's `code` is always one of these eight:
+
+| `code` | Meaning |
+| --- | --- |
+| `record.empty` | The message's text is blank, so it was not sent |
+| `record.missing` | The message is `null`, or the `field` points at nothing |
+| `record.invalid` | The message or its `id` can't be read without loss |
+| `record.json` | The message is not JSON |
+| `record.too-large` | The message is too large to send on its own |
+| `backend.transport` | The service could not be reached |
+| `backend.status` | The service answered with an error. `http_status` has the number |
+| `backend.reply` | The service's reply did not answer the request |
+
+The listed service codes can also end a call under the remote-refusal conditions above; the error comes back outside any result in that case. Every other code belongs to a call: the `usage.` codes for a mistake in the request or the settings, the `local.` codes for cancelling and for local files, and `internal.bug`. `contract.json` lists every code with its family. Branch on `code`, never on `message`, which is written for people and can change.
+
+Two groupings let a library sort results by meaning:
+
+- There is no answer when `status` is not `"answered"`. That covers not sure and failed.
+- Something went wrong only when `status` is `"failed"`. Not sure is a result and not an error.
+
+## Upgrading from 0.1
+
+The [published 0.1.2 source](https://proxy.golang.org/github.com/botassembly/thinkthen/@v/v0.1.2.zip) uses call envelopes with `value`, `facts` and `details`. The current result schema replaces that envelope with per-message `function`, `status` and an answer only when answered. Do not load an old call envelope as a current saved result; preserve its original inputs and regenerate results through the current API. The `yes_means`/`no_means` request keys replace `true`/`false`.
+
+---
+
+## Recorded responses
 
 <Example id="ref-json-answered" />
 
-## The fields on every line
-
-| Field | What it holds |
-| --- | --- |
-| `function` | The function that answered, such as `decide`. |
-| `position` | Where the text came in the input, counting from 1. |
-| `id` | The `id` of the JSON line, when it has one. A string or a whole number, exactly as it was. A whole number written as a float, such as `3.0`, comes back as `3`. |
-| `source` | Which question was asked, and where. See below. |
-| `status` | `answered`, `unsure` for not sure, or `failed`. |
-
-`source` holds:
-
-| Field | What it holds |
-| --- | --- |
-| `question_identity` | A fingerprint of the question. The same question asked the same way has the same fingerprint. |
-| `backend` | The service that answered, such as `systemone`. |
-| `model` | The model that answered. |
-| `name` | The name from `--name`, when you gave one. |
-
-## The fields for each status
-
-**`answered`** adds `answer`, and `probability` and `detail` for the functions that have them.
-
-**`unsure`** adds `probability`, which fell short of your bar for a sure answer, and `detail` for the functions that have it. It has no `answer`.
-
-<Example id="ref-json-unsure" />
-
-Not sure: the chance of yes falls between the bars of 0.2 and 0.8.
-
-**`failed`** adds `error`, with its `code` and `message`, and `http_status` when the service sent one. It has no `answer`. [Troubleshooting](/reference/troubleshooting/) lists each code.
+A locally rejected message also retains its error and position:
 
 <Example id="ref-json-failed" />
-
-Failed: the line has no `text` field to judge.
-
-## The answer and details of each function
-
-| Function | `answer` | `detail` |
-| --- | --- | --- |
-| [decide](/functions/decide/) | `true` or `false` | none |
-| [filter](/functions/filter/) | `true` or `false` | none |
-| [choose](/functions/choose/) | One of your choices | `labels`: the chance of each choice |
-| [tag](/functions/tag/) | A list of the labels that fit | `labels`: the chance of each label |
-| [score](/functions/score/) | A number from 0 to 1 along your levels | `levels`: the chance of each level, in your order |
-| [rank](/functions/rank/) | The text's place, counting from 1 | `levels`: the chance of each level, in your order |
-| [find](/functions/find/) | The part that answers, as `text`, `start` and `end`, or `null` when none does | none |
-| [recognize](/functions/recognize/) | A list of names, each with `text`, `start`, `end`, `kind` and `probability` | `names` and `pieces`: the chance of each kind for each name and piece |
-| [relate](/functions/relate/) | A list of links, each with `source`, `relation`, `target` and `probability` | `names`, and `pairs`: the chance of each allowed link |
-| [annotate](/functions/annotate/) | An object with one answer per question name | none |
-
-`start` and `end` count characters from 0, and `end` is the position after the last character. In relate, `source` and `target` are names, each with `text`, `start`, `end` and `kind`, and `either` is `true` when the link can go either way.
-
-Each answer inside annotate has the `function`, `status`, `answer`, `probability`, `detail` and `error` fields of its own function, without `position`, `id` or `source`.
-
-## The extra fields from filter
-
-filter adds two fields on the command line. `item` holds the text or JSON line it judged, and `kept` is `true` for a line it keeps.
-
-## Next
-
-[JSON Lines](/command-line/json-lines/) shows how to keep your own fields and add the answer with `--into`.
-
-## Interpreting probability
-
-Probabilities are the model's estimates, not measured accuracy guarantees. For decide and filter, probability estimates yes, including when the answer is no. For choose and find, it estimates the winning outcome; find's none outcome must meet the same threshold as a line. Below the threshold the result is unsure, not none. Measure accuracy and coverage against labeled cases from your own task before relying on a threshold. A model can rank examples well without its probabilities matching observed frequencies.

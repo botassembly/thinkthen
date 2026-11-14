@@ -1,37 +1,29 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-
-// Feature: saved Zig toolboxes own hydrated domains and preserve native rows.
 pub fn saved(allocator: std.mem.Allocator, json: []const u8) ![]u8 {
     var loaded = try tt.Toolbox.fromJson(allocator, json, null);
     defer loaded.deinit();
     try std.testing.expect(loaded.get("missing") == null);
     try std.testing.expectEqual(@as(usize, 9), loaded.entries.len);
-    const topic = loaded.get("topic").?.as(.choose).?;
-    try std.testing.expectEqual(@as(usize, 2), topic.choices.len);
-    try std.testing.expectEqualStrings("billing", topic.choices[0].name);
-    const names = loaded.get("names").?.as(.relate).?;
-    try std.testing.expectEqualStrings("pays", names.rules[0].name);
+    const topic = try loaded.choose([]const u8, "topic", null);
+    try std.testing.expectEqualStrings("billing", topic.choices[0]);
+    const names = try loaded.relate("names", null);
+    try std.testing.expectEqualStrings("pays", names.rules[0].relation);
     try std.testing.expectEqualStrings("pays money to", names.rules[0].reads.?);
-    try std.testing.expect(names.rules[0].either.?);
-    const constructed: tt.Toolbox = .{ .entries = loaded.entries };
-    const encoded = try constructed.toJson(allocator, null);
+    try std.testing.expect(names.rules[0].either);
+    const encoded = try loaded.toJson(allocator, null);
     errdefer allocator.free(encoded);
     var roundtrip = try tt.Toolbox.fromJson(allocator, encoded, null);
     defer roundtrip.deinit();
-    try std.testing.expectEqualDeep(loaded.entries, roundtrip.entries);
+    const repeated = try roundtrip.choose([]const u8, "topic", null);
     var client = try tt.Client.init(.{ .backend = .stub }, null);
     defer client.deinit();
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
-    const a = arena.allocator();
     const record: tt.Record = .{ .json = "{\"body\":\"Bill\"}" };
-    const actual = try client.choose(a, topic.question, topic.choices, record, topic.options, null);
-    const choices = [_]tt.Choice{ .{ .name = "billing" }, .{ .name = "shipping" } };
-    const direct = try client.choose(a, "Which topic?", &choices, record, .{ .field = "/body", .threshold = 0.7 }, null);
-    const direct_json = try std.json.Stringify.valueAlloc(a, direct, .{ .emit_null_optional_fields = false });
-    const actual_json = try std.json.Stringify.valueAlloc(a, actual, .{ .emit_null_optional_fields = false });
-    try std.testing.expectEqualStrings(direct_json, actual_json);
+    const actual = try client.choose(arena.allocator(), topic, record, null);
+    const direct = try client.choose(arena.allocator(), repeated, record, null);
+    try std.testing.expect(actual.eql(direct));
     return encoded;
 }
 pub fn invalid(allocator: std.mem.Allocator, json: []const u8) !tt.Diagnostic {

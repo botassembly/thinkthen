@@ -17,7 +17,7 @@ backend = os.environ.get("THINKTHEN_BACKEND", "systemone")
 thinkthen.set_default_client(thinkthen.Client(backend=backend))
 
 shown = runpy.run_path("show.py")
-answers = [sorted(str(topic) for topic in shown["topics"])]
+answers = [sorted(str(topic) for topic in shown["topics"].answer)]
 with open(os.environ["SITE_ANSWERS_FILE"], "w", encoding="utf-8") as out:
     json.dump(answers, out)
 PY

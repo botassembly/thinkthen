@@ -39,7 +39,7 @@ fn help_lists_current_options_and_settings() {
             "--url overrides the chosen backend",
             "THINKTHEN_CA_FILE",
             "Exits:",
-            "4 backend failure",
+            "6 failed records",
         ] {
             assert!(help.contains(current), "{name:?}: missing {current}");
         }

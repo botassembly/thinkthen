@@ -50,6 +50,14 @@ const content = (await Astro.slots.render('default'))
     }
     resize.observe(main);
   }
+  function redirectMovedAnchor() {
+    if (!location.hash) return;
+    const destination = document.getElementById(location.hash.slice(1))?.dataset.redirectTo;
+    if (destination) location.replace(destination);
+  }
+  redirectMovedAnchor();
+  window.addEventListener('hashchange', redirectMovedAnchor);
+  document.addEventListener('astro:page-load', redirectMovedAnchor);
   initializeScrollAccess();
   document.addEventListener('astro:page-load', initializeScrollAccess);
 </script>

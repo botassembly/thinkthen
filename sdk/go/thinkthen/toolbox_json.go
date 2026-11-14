@@ -84,12 +84,12 @@ type definition struct {
 	Labels    []answerOption  `json:"labels"`
 	Levels    []answerOption  `json:"levels"`
 	Kinds     []string        `json:"kinds"`
-	Rules     []Rule          `json:"rules"`
+	Rules     []RelationRule  `json:"rules"`
 	Threshold json.RawMessage `json:"threshold"`
 	Field     *string         `json:"field"`
 	Top       *int            `json:"top"`
-	YesMeans  *string         `json:"true"`
-	NoMeans   *string         `json:"false"`
+	YesMeans  *string         `json:"yes_means"`
+	NoMeans   *string         `json:"no_means"`
 }
 
 func (d definition) question() question {

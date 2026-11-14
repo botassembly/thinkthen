@@ -1,209 +1,58 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 namespace ThinkThen;
-/// <summary>The outcome of one annotation question.</summary>
-public abstract record EntryOutcome<TAnswer,TDetail> : IOutcome
+internal interface IAnnotations { void ThrowIfFailed(); IReadOnlyDictionary<string,IRow> Entries { get; } }
+/// <summary>Immutable named results, reached through a form's answer.</summary>
+public sealed class Annotations<TRecord> : IAnnotations, IEquatable<Annotations<TRecord>>
 {
-    internal EntryOutcome() { }
-    private protected abstract void Closed();
-    /// <summary>Gets the answer; uncertain answers throw UnsureException and failed answers throw ThinkThenException.</summary>
-    public abstract TAnswer Answer { get; }
-    /// <summary>Gets the outcome status.</summary>
-    public abstract RowStatus Status { get; }
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
-    public abstract double? Probability { get; }
-    internal abstract object?[] Values { get; }
-    object?[] IOutcome.Values => Values;
-    /// <summary>Returns true and the answer only for an answered outcome; uncertainty and failure return false.</summary>
-    public bool TryGetAnswer([System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out TAnswer answer)
+    private readonly ValueMap<string,IRow> entries;
+    private readonly IReadOnlyDictionary<string,IReadOnlyList<string>> domains;
+    internal Annotations(IEnumerable<KeyValuePair<string,IRow>> entries,IReadOnlyDictionary<string,IReadOnlyList<string>> domains)
+    { this.entries=new(entries); this.domains=domains; }
+    /// <summary>Provides Entries.</summary>
+    public IReadOnlyDictionary<string,IRow> Entries => entries;
+    private Row<A,TRecord> Get<A>(string name,Function function)
     {
-        if (Status == RowStatus.Answered) { answer = Answer; return true; }
-        answer = default; return false;
+        if (!entries.TryGetValue(name,out var row) || row.Function!=function)
+            throw new UsageException(new(ErrorCode.UsageArgument,$"No {Contract.FunctionName((uint)function)} annotation named {name}; available names: {string.Join(", ",entries.Keys)}"));
+        return (Row<A,TRecord>)row;
     }
-}
-/// <summary>An answered annotation question.</summary>
-public sealed record EntryAnswered<TAnswer,TDetail> : EntryOutcome<TAnswer,TDetail>
-{
-    /// <summary>An answered annotation question.</summary>
-    public EntryAnswered(TAnswer answer, double? probability, TDetail? detail)
-    { Answer = answer; Probability = probability; Detail = detail; }
+    /// <summary>Provides Decide.</summary>
+    public Row<bool,TRecord> Decide(string name) => Get<bool>(name,Function.Decide);
+    /// <summary>Provides Choose.</summary>
+    public Row<string,TRecord> Choose(string name) => Get<string>(name,Function.Choose);
+    /// <summary>Provides Choose.</summary>
+    public Row<T,TRecord> Choose<T>(string name) where T : struct,Enum
+    { var row=Choose(name); Validate<T>(name); return Map(row,Domain<T>.Read); }
+    /// <summary>Provides Tag.</summary>
+    public Row<ValueList<string>,TRecord> Tag(string name) => Get<ValueList<string>>(name,Function.Tag);
+    /// <summary>Provides Tag.</summary>
+    public Row<ValueList<T>,TRecord> Tag<T>(string name) where T : struct,Enum
+    { var row=Tag(name); Validate<T>(name); return Map(row,items=>new ValueList<T>(items.Select(Domain<T>.Read))); }
+    private void Validate<T>(string name) where T:struct,Enum
+    { foreach(var word in domains[name]) _=Domain<T>.Read(word); }
+    /// <summary>Provides Score.</summary>
+    public Row<double,TRecord> Score(string name) => Get<double>(name,Function.Score);
+    /// <summary>Provides Find.</summary>
+    public Row<TextSpan?,TRecord> Find(string name) => Get<TextSpan?>(name,Function.Find);
+    /// <summary>Provides Recognize.</summary>
+    public Row<ValueList<Entity>,TRecord> Recognize(string name) => Get<ValueList<Entity>>(name,Function.Recognize);
+    /// <summary>Provides Relate.</summary>
+    public Row<ValueList<FoundRelation>,TRecord> Relate(string name) => Get<ValueList<FoundRelation>>(name,Function.Relate);
+    void IAnnotations.ThrowIfFailed()
+    {
+        var failed=entries.OrderBy(pair=>pair.Key,QuestionNameOrder.Instance).Select(pair=>pair.Value).OfType<IFailed>().FirstOrDefault();
+        if (failed is not null) throw new FailedException([failed]);
+    }
+    internal static Row<B,TRecord> Map<A,B>(Row<A,TRecord> row,Func<A,B> convert) => row switch
+    {
+        Answered<A,TRecord> value => new Answered<B,TRecord>(value.Function,value.Position,value.Id,value.Source,value.Item,convert(value.Answer),value.Probability,value.Detail) { Canonical=value.Canonical },
+        Unsure<A,TRecord> value => new Unsure<B,TRecord>(value.Function,value.Position,value.Id,value.Source,value.Item,value.Probability!.Value,value.Detail) { Canonical=value.Canonical },
+        Failed<A,TRecord> value => new Failed<B,TRecord>(value.Function,value.Position,value.Id,value.Source,value.Item,value.Error) { Canonical=value.Canonical },
+        _ => throw Json.Abi()
+    };
     /// <inheritdoc/>
-    public bool Equals(EntryAnswered<TAnswer,TDetail>? other) => ValueEquality.Equal(this, other);
+    public bool Equals(Annotations<TRecord>? other) => other is not null && entries.Equals(other.entries);
     /// <inheritdoc/>
-    public override int GetHashCode() => ValueEquality.Hash(this);
-    private protected override void Closed() { }
-    /// <summary>Gets the answer; uncertain answers throw UnsureException and failed answers throw ThinkThenException.</summary>
-    public override TAnswer Answer { get; }
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
-    public override double? Probability { get; }
-    /// <summary>Gets the function-specific probability detail, if present.</summary>
-    public TDetail? Detail { get; }
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => RowStatus.Answered;
-    internal override object?[] Values => [Status, Answer, Probability, Detail];
-}
-/// <summary>An uncertain annotation question.</summary>
-public sealed record EntryUnsure<TAnswer,TDetail> : EntryOutcome<TAnswer,TDetail>
-{
-    /// <summary>An uncertain annotation question.</summary>
-    public EntryUnsure(double probability, TDetail? detail) { Probability = probability; Detail = detail; }
+    public override bool Equals(object? other) => other is Annotations<TRecord> value && Equals(value);
     /// <inheritdoc/>
-    public bool Equals(EntryUnsure<TAnswer,TDetail>? other) => ValueEquality.Equal(this, other);
-    /// <inheritdoc/>
-    public override int GetHashCode() => ValueEquality.Hash(this);
-    private protected override void Closed() { }
-    /// <inheritdoc/>
-    public override TAnswer Answer => throw new UnsureException(Probability!.Value);
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
-    public override double? Probability { get; }
-    /// <summary>Gets the function-specific probability detail, if present.</summary>
-    public TDetail? Detail { get; }
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => RowStatus.Unsure;
-    internal override object?[] Values => [Status, Probability, Detail];
-}
-/// <summary>A failed annotation question.</summary>
-public sealed record EntryFailed<TAnswer,TDetail>(RowError Error) : EntryOutcome<TAnswer,TDetail>
-{
-    /// <inheritdoc/>
-    public bool Equals(EntryFailed<TAnswer,TDetail>? other) => ValueEquality.Equal(this, other);
-    /// <inheritdoc/>
-    public override int GetHashCode() => ValueEquality.Hash(this);
-    private protected override void Closed() { }
-    /// <inheritdoc/>
-    public override TAnswer Answer => throw new ThinkThenException(Error, Error.Cause);
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
-    public override double? Probability => null;
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => RowStatus.Failed;
-    internal override object?[] Values => [Status, Error];
-}
-/// <summary>One annotation answer and its outcome metadata.</summary>
-public abstract record AnnotationEntry
-{
-    internal AnnotationEntry() { }
-    private protected abstract void Closed();
-    internal abstract IOutcome Value { get; }
-    internal abstract object? AnswerValue { get; }
-    /// <summary>Gets the answer; uncertain answers throw UnsureException and failed answers throw ThinkThenException.</summary>
-    public object? Answer => AnswerValue;
-    /// <summary>Gets the question function.</summary>
-    public abstract Function Function { get; }
-    /// <summary>Gets the outcome status.</summary>
-    public abstract RowStatus Status { get; }
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
-    public abstract double? Probability { get; }
-    /// <summary>Reports whether this outcome contains an answer.</summary>
-    public bool IsAnswered => Status == RowStatus.Answered;
-    /// <summary>Reports whether this outcome is uncertain.</summary>
-    public bool IsUnsure => Status == RowStatus.Unsure;
-    /// <summary>Reports whether this outcome failed.</summary>
-    public bool IsFailed => Status == RowStatus.Failed;
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static implicit operator bool(AnnotationEntry entry) => (bool)entry.Answer!;
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static implicit operator string(AnnotationEntry entry) => (string)entry.Answer!;
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static implicit operator double(AnnotationEntry entry) => (double)entry.Answer!;
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator ==(AnnotationEntry? entry, object? answer) =>
-        entry is not null && entry.IsAnswered && ValueEquality.Equal(entry.Answer, answer);
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator !=(AnnotationEntry? entry, object? answer) => !(entry == answer);
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator ==(object? answer, AnnotationEntry? entry) => entry == answer;
-    /// <summary>Reads an answered value, or compares it without throwing for uncertainty or failure.</summary>
-    public static bool operator !=(object? answer, AnnotationEntry? entry) => !(entry == answer);
-    /// <inheritdoc/>
-    public sealed override string ToString() => IsAnswered ? ValueEquality.Display(Answer) : IsUnsure ? "unsure" : "failed";
-}
-/// <summary>One annotation answer and its outcome metadata.</summary>
-public abstract record AnnotationEntry<TAnswer,TDetail> : AnnotationEntry
-{
-    internal AnnotationEntry(EntryOutcome<TAnswer,TDetail> outcome)
-    { ArgumentNullException.ThrowIfNull(outcome); Outcome = outcome; }
-    /// <summary>Gets the annotation question's complete outcome.</summary>
-    public EntryOutcome<TAnswer,TDetail> Outcome { get; }
-    internal override IOutcome Value => Outcome;
-    internal override object? AnswerValue => Outcome.Answer;
-    /// <summary>Gets the answer; uncertain answers throw UnsureException and failed answers throw ThinkThenException.</summary>
-    public new TAnswer Answer => Outcome.Answer;
-    /// <summary>Gets the reported probability, or null when the outcome has no aggregate probability.</summary>
-    public override double? Probability => Outcome.Probability;
-    /// <summary>Gets the outcome status.</summary>
-    public override RowStatus Status => Outcome.Status;
-    /// <summary>Returns true and the answer only for an answered outcome; uncertainty and failure return false.</summary>
-    public bool TryGetAnswer([System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out TAnswer answer) => Outcome.TryGetAnswer(out answer);
-}
-/// <summary>An annotation decide answer with outcome metadata.</summary>
-public sealed record DecideEntry : AnnotationEntry<bool,NoDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public DecideEntry(EntryOutcome<bool,NoDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Decide;
-}
-/// <summary>An annotation choose answer with outcome metadata.</summary>
-public sealed record ChooseEntry : AnnotationEntry<string,LabelsDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public ChooseEntry(EntryOutcome<string,LabelsDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Choose;
-}
-/// <summary>An annotation tag answer with outcome metadata.</summary>
-public sealed record TagEntry : AnnotationEntry<ValueList<string>,LabelsDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public TagEntry(EntryOutcome<ValueList<string>,LabelsDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Tag;
-}
-/// <summary>An annotation score answer with outcome metadata.</summary>
-public sealed record ScoreEntry : AnnotationEntry<double,LevelsDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public ScoreEntry(EntryOutcome<double,LevelsDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Score;
-}
-/// <summary>An annotation filter answer with outcome metadata.</summary>
-public sealed record FilterEntry : AnnotationEntry<bool,NoDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public FilterEntry(EntryOutcome<bool,NoDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Filter;
-}
-/// <summary>An annotation find answer with outcome metadata.</summary>
-public sealed record FindEntry : AnnotationEntry<TextSpan?,NoDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public FindEntry(EntryOutcome<TextSpan?,NoDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Find;
-}
-/// <summary>An annotation recognize answer with outcome metadata.</summary>
-public sealed record RecognizeEntry : AnnotationEntry<ValueList<Entity>,RecognizeDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public RecognizeEntry(EntryOutcome<ValueList<Entity>,RecognizeDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Recognize;
-}
-/// <summary>An annotation relate answer with outcome metadata.</summary>
-public sealed record RelateEntry : AnnotationEntry<ValueList<Relation>,RelateDetail>
-{
-    /// <summary>Wraps an annotation outcome with its function-specific answer type.</summary>
-    public RelateEntry(EntryOutcome<ValueList<Relation>,RelateDetail> outcome) : base(outcome) { }
-    private protected override void Closed() { }
-    /// <summary>Gets the question function.</summary>
-    public override Function Function => Function.Relate;
+    public override int GetHashCode() => entries.GetHashCode();
 }

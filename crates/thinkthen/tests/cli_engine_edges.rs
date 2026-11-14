@@ -30,7 +30,7 @@ fn oversized_backend_reply_names_its_body_limit() {
         .unwrap();
     child.stdin.take().unwrap().write_all(b"evidence").unwrap();
     let output = child.wait_with_output().unwrap();
-    assert_eq!(output.status.code(), Some(4));
+    assert_eq!(output.status.code(), Some(6));
     assert_eq!(support::reported(&output), "backend.transport");
     let error = String::from_utf8(output.stderr).unwrap();
     assert!(

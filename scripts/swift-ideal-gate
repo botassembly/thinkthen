@@ -1,0 +1,71 @@
+#!/bin/sh
+# Build the packaged Swift surface once, then exercise the literal ideal guide.
+set -eu
+cd "$(dirname "$0")/.."
+unset THINKTHEN_LIBRARY
+swift_ideal_prepared=0
+if [ "${1:-}" = --prepared-source ]; then
+    swift_ideal_scratch=$2
+    swift_ideal_prepared=1
+    shift 2
+    swift_ideal_command=$(command -v swift)
+    . scripts/native-tools-env
+    PATH="$(dirname "$swift_ideal_command"):$PATH"
+    export PATH
+else
+    swift_ideal_scratch=$(mktemp -d)
+fi
+if [ "${1:-}" = --source ]; then
+    shift
+    # The source SDK route is the focused Swift portion of interface-source-gate.
+    # Every native byte comes from this checkout; release pair receipts are unused.
+    . scripts/native-tools-env
+    cargo build --offline --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+    swift_ideal_target=${CARGO_TARGET_DIR:-$PWD/target}
+    case "$swift_ideal_target" in /*) ;; *) swift_ideal_target="$PWD/$swift_ideal_target" ;; esac
+    swift_ideal_host=$(python3 scripts/native_platform.py rid)
+    swift_ideal_library="libthinkthen_ffi.$([ "$(uname -s)" = Darwin ] && echo dylib || echo so)"
+    mkdir -p "$swift_ideal_scratch/assets/$swift_ideal_host"
+    cp "$swift_ideal_target/debug/$swift_ideal_library" "$swift_ideal_scratch/assets/$swift_ideal_host/"
+    THINKTHEN_SWIFT_NATIVE_ASSETS="$swift_ideal_scratch/assets"
+    THINKTHEN_LOOPBACK="$swift_ideal_target/debug/loopback"
+    THINKTHEN_SWIFT_SOURCE_ENGINE="$swift_ideal_target/debug/$swift_ideal_library"
+    export THINKTHEN_SWIFT_NATIVE_ASSETS THINKTHEN_LOOPBACK THINKTHEN_SWIFT_SOURCE_ENGINE
+    if [ "$(uname -s)" = Linux ]; then
+        # The same prepared Swift image as interface-source-gate consumes this
+        # exact source library; no release pair or alternate native producer.
+        exec scripts/linux-binding-gate --abi-binding swift --scratch "$swift_ideal_scratch" -- \
+            env THINKTHEN_SWIFT_NATIVE_ASSETS="$THINKTHEN_SWIFT_NATIVE_ASSETS" \
+            THINKTHEN_LOOPBACK="$THINKTHEN_LOOPBACK" \
+            THINKTHEN_SWIFT_SOURCE_ENGINE="$THINKTHEN_SWIFT_SOURCE_ENGINE" \
+            scripts/swift-ideal-gate --prepared-source "$swift_ideal_scratch" "$@"
+    fi
+elif [ "$swift_ideal_prepared" = 0 ]; then
+    . scripts/native-env
+fi
+if [ "${1:-}" = --existing ]; then
+    if [ -z "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
+        scripts/native-fixtures --engine "$THINKTHEN_SWIFT_SOURCE_ENGINE" --output "$swift_ideal_scratch/abi"
+        THINKTHEN_NATIVE_FIXTURES="$swift_ideal_scratch/abi"
+        export THINKTHEN_NATIVE_FIXTURES
+    fi
+    exec scripts/swift-gate
+fi
+scripts/swift-package "$swift_ideal_scratch/ThinkThen"
+python3 scripts/swift-consumer-stage "$swift_ideal_scratch/consumer"
+swift build --package-path "$swift_ideal_scratch/consumer" --disable-sandbox --jobs "${CARGO_BUILD_JOBS:-2}" -Xswiftc -warnings-as-errors
+if [ "${1:-}" = --compile-only ]; then exit 0; fi
+if [ "${1:-}" = --dispatch-check ]; then
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift-dispatch-check scripts/swift_guide_examples.py sdk/swift/tests/*.py
+    exec python3 scripts/swift-dispatch-check "$swift_ideal_scratch/consumer"
+fi
+if [ "${1:-}" = --tail-check ]; then
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/swift_guide_examples.py sdk/swift/tests/*.py scripts/swift-consumer-stage scripts/swift-consumer-staging-test scripts/release/swift.py sdk/c/tests/admission.py
+    scripts/native-fixtures --engine "$THINKTHEN_SWIFT_SOURCE_ENGINE" --output "$swift_ideal_scratch/abi"
+    THINKTHEN_NATIVE_FIXTURES="$swift_ideal_scratch/abi" python3 sdk/swift/tests/abi.py "$swift_ideal_scratch/consumer/.build/debug/Consumer"
+    exec python3 sdk/swift/tests/review_probes.py "$swift_ideal_scratch/consumer/.build/debug/Consumer"
+fi
+if [ "${1:-}" = --review-probes ]; then
+    exec python3 sdk/swift/tests/review_probes.py "$swift_ideal_scratch/consumer/.build/debug/Consumer" "${2:-}"
+fi
+python3 sdk/swift/tests/ideal.py run "$swift_ideal_scratch/consumer"

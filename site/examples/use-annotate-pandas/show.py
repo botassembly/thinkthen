@@ -13,5 +13,5 @@ questions = tt.AnnotationQuestions({
 })
 messages = pd.read_csv("messages.csv")
 forms = messages["text"].thinkthen.annotate(questions)
-reviewed = messages[["id"]].join(forms.apply(pd.Series))
+reviewed = messages[["id"]].join(forms)
 print(reviewed.to_string(index=False))

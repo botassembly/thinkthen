@@ -1,18 +1,10 @@
 package dev.thinkthen;
 
-/**
- * A record whose probability falls inside the configured uncertainty band.
- * @param info the info value
- * @param probability the probability value
- * @param detail the detail value
-     * @param <A> the answer type
-     * @param <D> the detail type
-     */
-public record Unsure<A,D extends Detail>(RowInfo info, java.util.OptionalDouble probability, java.util.Optional<D> detail) implements Row<A,D> {
-    /**
-     * Return whether this outcome is answered, unsure or failed.
-     * @return the status result
-     */
-    public Status status() { return Status.UNSURE; }     /** Return a compact outcome without the full source identity. */
-    @Override public String toString() { return "Unsure[" + "probability=" + probability + ", position=" + info.position() + "]"; }
+/** An immutable unsure result. The original item is excluded from value equality. */
+public record Unsure<A,T>(RowInfo info, @org.jspecify.annotations.Nullable T item, java.util.OptionalDouble probability, Detail detail) implements Row<A,T> {
+    public Status status() { return Status.UNSURE; }
+
+    @Override public boolean equals(Object other) { return ResultValues.equal(this,other); }
+    @Override public int hashCode() { return ResultValues.hash(this); }
+    @Override public String toString() { return ResultValues.print(this); }
 }

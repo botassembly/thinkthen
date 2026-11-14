@@ -1,42 +1,45 @@
 package dev.thinkthen.kotlin
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlin.reflect.KClass
 
-/**
- * Finds the relations that [rules] describe in one [record].
- *
- * Throws [ThinkThenException] with `record.empty` for blank text, before any backend call. A missing record (null) gives a failed row. The row's `answer()` throws on not sure or failure. Pass many records to [relateStream].
- */
-public suspend inline fun <reified T> ThinkThen.relate(record: T?, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, RelationDetail> =
-    single(Relate(rules, threshold, field, name), record, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend inline fun <reified T> ThinkThen.relate(record: T, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, T> =
+    single(RelateQuestion(rules, threshold, field, name), record, { recordSerializer<T>() })
 
-/** The same as the other `relate`, encoding [record] with [serializer]. */
-public suspend fun <T> ThinkThen.relate(record: T?, rules: List<RelationRule>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, RelationDetail> =
-    single(Relate(rules, threshold, field, name), record, serializer)
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend fun ThinkThen.relate(record: Nothing?, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, Nothing?> =
+    single(RelateQuestion(rules, threshold, field, name), record, { JsonElement.serializer() })
 
-/** The same as the other `relate`, for a missing record written as `null`. It returns a failed `record.missing` row. */
-public suspend fun ThinkThen.relate(record: Nothing?, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, RelationDetail> =
-    single(Relate(rules, threshold, field, name), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.relateStream(records: Flow<T>, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<List<Relation>, T>> =
+    stream(RelateQuestion(rules, threshold, field, name), records, { recordSerializer<T>() })
 
-/** The same as the other `relate`, for one JSON array record. A JSON array is one record, not many records. */
-public suspend fun ThinkThen.relate(record: JsonArray, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, RelationDetail> =
-    single(Relate(rules, threshold, field, name), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.relateStream(records: Iterable<T>, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<List<Relation>, T>> =
+    iterable(RelateQuestion(rules, threshold, field, name), records, { recordSerializer<T>() })
 
-/** Many records as a cold flow of rows in input order. Each collection makes its own call; a failed record gives a failed row and the rest continue. */
-public inline fun <reified T> ThinkThen.relateStream(records: Flow<T>, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<List<Relation>, RelationDetail>> =
-    stream(Relate(rules, threshold, field, name), records, recordSerializer<T>())
+/** Ask an immutable typed question. */
+public suspend inline fun <reified T> ThinkThen.relate(question: RelateQuestion, record: T): Row<List<Relation>, T> =
+    single(question, record, { recordSerializer<T>() })
 
-/** The same as the other `relateStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.relateStream(records: Flow<T?>, rules: List<RelationRule>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<List<Relation>, RelationDetail>> =
-    stream(Relate(rules, threshold, field, name), records, serializer)
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.relateStream(question: RelateQuestion, records: Iterable<T>): Flow<Row<List<Relation>, T>> =
+    iterable(question, records, { recordSerializer<T>() })
 
-/** Many records from a collection, as a cold flow of rows in input order. */
-public inline fun <reified T> ThinkThen.relateStream(records: Iterable<T>, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<List<Relation>, RelationDetail>> =
-    iterable(Relate(rules, threshold, field, name), records, recordSerializer<T>())
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.relateStream(question: RelateQuestion, records: Flow<T>): Flow<Row<List<Relation>, T>> =
+    stream(question, records, { recordSerializer<T>() })
 
-/** The same as the other `relateStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.relateStream(records: Iterable<T?>, rules: List<RelationRule>, serializer: KSerializer<T>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Flow<Row<List<Relation>, RelationDetail>> =
-    iterable(Relate(rules, threshold, field, name), records, serializer)
+/** One JSON array is one record. */
+public suspend fun ThinkThen.relate(record: kotlinx.serialization.json.JsonArray, rules: List<RelationRule>, threshold: Threshold.Cut? = null, field: Pointer? = null, name: String? = null): Row<List<Relation>, kotlinx.serialization.json.JsonArray> =
+    single(RelateQuestion(rules, threshold, field, name), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun ThinkThen.relate(question: RelateQuestion, record: kotlinx.serialization.json.JsonArray): Row<List<Relation>, kotlinx.serialization.json.JsonArray> =
+    single(question, record, { JsonElement.serializer() })
+
+/** A missing record retains null as its original item. */
+public suspend fun ThinkThen.relate(question: RelateQuestion, record: Nothing?): Row<List<Relation>, Nothing?> =
+    single(question, record, { JsonElement.serializer() })

@@ -15,6 +15,7 @@
     "NativeQuestion",
     "NativeQuestion.definition",
     "NativeQuestion.function",
+    "NativeQuestion.validate_table_columns",
     "NativeStream",
     "NativeStream.cancel",
     "NativeStream.close",
@@ -43,8 +44,10 @@
     "wrap__r_open_finite",
     "wrap__r_poll",
     "wrap__r_prepare_record",
+    "wrap__r_prepare_request",
     "wrap__r_question",
     "wrap__r_question_conversion_error",
+    "wrap__r_saved_row",
     "wrap__r_settings_conversion_error"
   ],
   "typescript": [
@@ -67,6 +70,7 @@
     "rejectQuestionConversion",
     "rejectRecordKind",
     "rejectSettingsConversion",
-    "serializeToolbox"
+    "serializeToolbox",
+    "toolboxQuestion"
   ]
 }

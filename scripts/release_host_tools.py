@@ -121,16 +121,92 @@ def source_tools():
     compiler = Path(go_command())
     cache = TOOLS / 'staticcheck' / PINS['staticcheck']
     environment = dict(os.environ, GOTOOLCHAIN='local', CGO_ENABLED='0',
+                       PATH=str(compiler.parent) + os.pathsep + os.environ.get('PATH', ''),
                        GOPROXY='https://proxy.golang.org', GOSUMDB='sum.golang.org',
-                       GOPRIVATE='', GONOSUMDB='', GOBIN=str(Path.home() / '.local/bin'),
+                       GOPRIVATE='', GONOSUMDB='', GONOPROXY='', GOINSECURE='',
+                       GOFLAGS='', GOWORK='off', GOBIN=str(Path.home() / '.local/bin'),
                        GOPATH=str(cache), GOMODCACHE=str(cache / 'modules'))
     actual = subprocess.check_output([compiler, 'env', 'GOVERSION'], env=environment, text=True).strip()
     if actual != 'go' + HOST_PINS['go']:
         raise ValueError('prepare staticcheck with the pinned Go floor compiler')
     Path(environment['GOBIN']).mkdir(parents=True, exist_ok=True)
-    run(compiler, 'install', 'honnef.co/go/tools/cmd/staticcheck@' + PINS['staticcheck'], env=environment)
+    if PINS['staticcheck'] == 'v0.8.2':
+        prepare_staticcheck_variant(compiler, environment)
+    else:
+        run(compiler, 'install', 'honnef.co/go/tools/cmd/staticcheck@' + PINS['staticcheck'], env=environment)
     binary = Path(environment['GOBIN']) / 'staticcheck'
-    metadata = subprocess.check_output([compiler, 'version', '-m', binary], env=environment, text=True)
-    if '\tmod\thonnef.co/go/tools\t' + PINS['staticcheck'] + '\t' not in metadata:
-        raise ValueError('prepared staticcheck differs from the pinned module')
+    verify_source_checker(binary)
     run(binary, '-version', env=environment)
+
+
+STATICCHECK_VARIANT = 'thinkthen.dev/build/staticcheck-without-sa4023'
+
+
+def verify_source_checker(binary):
+    """Require honest upstream identity, including the one authorized entry variant."""
+    metadata = subprocess.check_output([go_command(), 'version', '-m', binary], text=True)
+    rows = [line.split() for line in metadata.splitlines()]
+    pin = PINS['staticcheck']
+    if pin == 'v0.8.2':
+        main = any(row[:2] == ['mod', STATICCHECK_VARIANT] for row in rows)
+        upstream = any(row[:3] == ['dep', 'honnef.co/go/tools', pin]
+                       and len(row) == 4 and row[3].startswith('h1:') for row in rows)
+        if not main or not upstream:
+            raise ValueError('prepare the declared Staticcheck v0.8.2 entry variant and verified upstream dependency')
+    elif not any(row[:3] == ['mod', 'honnef.co/go/tools', pin] for row in rows):
+        raise ValueError('prepared staticcheck differs from the pinned module')
+
+
+def prepare_staticcheck_variant(compiler, environment):
+    """Omit only the crashing SA4023 registration; never alter analyzer libraries."""
+    # v0.8.2's SA4023 nilness result indexes a missing return fact on Go 1.27
+    # generic methods. This pin therefore lacks its impossible interface/nil
+    # comparison diagnostic; go vet and every other analyzer remain enabled.
+    module = 'honnef.co/go/tools'
+    pin = PINS['staticcheck']
+    downloaded = json.loads(subprocess.check_output(
+        [compiler, 'mod', 'download', '-json', module + '@' + pin], env=environment, text=True))
+    if (downloaded.get('Path'), downloaded.get('Version')) != (module, pin):
+        raise ValueError('Staticcheck download identity differs from its pin')
+    if not all(downloaded.get(key, '').startswith('h1:') for key in ('Sum', 'GoModSum')):
+        raise ValueError('Staticcheck download lacks verified module checksums')
+    entry = (Path(downloaded['Dir']) / 'cmd/staticcheck/staticcheck.go').read_text()
+    statement = '\tcmd.AddAnalyzers(staticcheck.Analyzers...)\n'
+    if entry.count(statement) != 1:
+        raise ValueError('Staticcheck entry point no longer has the one expected registration statement')
+    replacement = """\tfor _, analyzer := range staticcheck.Analyzers {
+\t\tif analyzer.Analyzer.Name != "SA4023" {
+\t\t\tcmd.AddAnalyzers(analyzer)
+\t\t}
+\t}
+"""
+    with tempfile.TemporaryDirectory(prefix='staticcheck-entry-') as temporary:
+        folder = Path(temporary)
+        (folder / 'main.go').write_text(entry.replace(statement, replacement))
+        (folder / 'go.mod').write_text('module ' + STATICCHECK_VARIANT
+                                     + '\n\ngo 1.27\n\nrequire ' + module + ' ' + pin + '\n')
+        (folder / 'go.sum').write_text(module + ' ' + pin + ' ' + downloaded['Sum'] + '\n'
+                                     + module + ' ' + pin + '/go.mod ' + downloaded['GoModSum'] + '\n')
+        run(compiler, 'mod', 'tidy', cwd=folder, env=environment)
+        run(compiler, 'mod', 'verify', cwd=folder, env=environment)
+        binary = Path(environment['GOBIN']) / 'staticcheck'
+        run(compiler, 'build', '-mod=readonly', '-o', binary, '.', cwd=folder, env=environment)
+        upstream = folder / 'upstream'
+        upstream.mkdir()
+        run(compiler, 'install', module + '/cmd/staticcheck@' + pin,
+            env=dict(environment, GOBIN=str(upstream)))
+        expected = subprocess.check_output([upstream / 'staticcheck', '-list-checks'], text=True)
+        actual = subprocess.check_output([binary, '-list-checks'], text=True)
+        expected_checks, actual_checks = set(expected.splitlines()), set(actual.splitlines())
+        removed = expected_checks - actual_checks
+        if actual_checks - expected_checks or len(removed) != 1 or not next(iter(removed)).startswith('SA4023 '):
+            raise ValueError('Staticcheck variant registry differs by more than SA4023')
+        sentinel = folder / 'sentinel'
+        sentinel.mkdir()
+        (sentinel / 'go.mod').write_text('module checker-sentinel\n\ngo 1.27\n')
+        (sentinel / 'sentinel.go').write_text('package sentinel\nimport "regexp"\nvar _ = regexp.MustCompile("[")\n')
+        result = subprocess.run([binary, '.'], cwd=sentinel, env=environment, text=True, capture_output=True)
+        if result.returncode == 0 or 'SA1000' not in result.stdout + result.stderr:
+            raise ValueError('Staticcheck variant did not report the retained SA1000 sentinel: '
+                             + result.stdout + result.stderr)
+    print('Staticcheck v0.8.2 entry variant: registry differs only by SA4023; SA1000 sentinel refused', flush=True)

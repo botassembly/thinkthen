@@ -15,7 +15,7 @@ if $PROGRAM_NAME == __FILE__
     require "thinkthen"
     20.times do
       client = ThinkThen::Client.new(backend: :stub)
-      token = ThinkThen::CancelToken.new
+      token = ThinkThen::Cancel.new
       stream = client.decide_each("Ready?", %w[first second], cancel: token)
       fiber = Fiber.new { stream.each { |row| Fiber.yield(row.position) } }
       equal(1, fiber.resume, "caller suspends after its first row")

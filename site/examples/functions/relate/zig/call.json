@@ -1,5 +1,5 @@
 {
-  "anchor": "    const relations = try (try client.relate(",
+  "anchor": "    const relations = try client.relate(arena, finds_relations,",
   "before": 0,
   "after": 2
 }

@@ -26,10 +26,12 @@ static void saved_toolbox(const char *json) {
     assert(thinkthen_toolbox_select(tools, name, sizeof name - 1, &topic, &error) == THINKTHEN_OK);
     assert(thinkthen_run_one(client, topic, record, sizeof record - 1, THINKTHEN_RECORD_JSON, &second, &error) == THINKTHEN_OK);
     assert(first.probability == second.probability);
-    assert(first.detail.len == second.detail.len && memcmp(first.detail.data, second.detail.data, first.detail.len) == 0);
-    assert(first.status == second.status && first.answer.len == second.answer.len);
-    assert(memcmp(first.answer.data, second.answer.data, first.answer.len) == 0);
-    assert(first.source.len == second.source.len && memcmp(first.source.data, second.source.data, first.source.len) == 0);
+    assert(first.status==second.status);
+    thinkthen_buffer first_json={0},second_json={0};
+    assert(thinkthen_row_to_json(&first,&first_json,&error)==THINKTHEN_OK);
+    assert(thinkthen_row_to_json(&second,&second_json,&error)==THINKTHEN_OK);
+    assert(first_json.len==second_json.len && !memcmp(first_json.data,second_json.data,first_json.len));
+    thinkthen_buffer_free(&first_json);thinkthen_buffer_free(&second_json);
     assert(fwrite(saved.data, 1, saved.len, stdout) == saved.len);
     thinkthen_buffer_free(&saved);
     thinkthen_row_free(&first);

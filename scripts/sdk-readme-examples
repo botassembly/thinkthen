@@ -37,17 +37,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-quickstarts-') as folder:
             '-d', scratch / 'kotlin', source, cwd=scratch, env=environment)
         run('java', '-Duser.home=' + home, '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin') + os.pathsep + classpath, 'QuickstartKt', cwd=scratch, env=environment)
     elif sys.argv[1] == 'ruby':
-        guide = (ROOT / 'docs/surfaces/ruby.md').read_text()
-        examples = re.findall(r'```ruby\n(.*?)\n```', guide, re.S)
-        # The guide names one client scope and shared records for its remaining snippets.
-        scoped = 'require "thinkthen"\nThinkThen::Client.open do |client|\n' + '\n'.join(examples[2:]) + '\nend\n'
-        (scratch / 'toolbox.json').write_text(re.findall(r'```json\n(.*?)\n```', guide, re.S)[0])
-        for source_text in (*examples[:2], scoped):
-            source = scratch / 'example.rb'
-            source.write_text(source_text)
-            # The examples open a default client; the gate selects the stub through the environment.
-            subprocess.run(['ruby', str(source)], cwd=scratch, check=True, env=dict(os.environ, THINKTHEN_BACKEND='stub'))
-        print(f'Literal Ruby guide: all {len(examples)} code examples passed')
+        from ruby_guide_examples import run_ruby
+        run_ruby()
     else:
         raise SystemExit('usage: sdk-readme-examples jvm CLASSPATH MAVEN_REPOSITORY HOME | ruby')
 print('Literal README quickstarts: PASS')

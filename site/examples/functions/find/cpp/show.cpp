@@ -1,21 +1,21 @@
-#include <iostream>
 #include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
 
 int main() try {
-    thinkthen::client client;
-    const thinkthen::find requested{"Which line states the requested action?"};
-    const std::optional<thinkthen::span> action =
-        client
-            .find(requested,
-                  "Morgan works for Example Group.\nPlease refund my order.")
-            .value();
-    // Empty when no line answers the question.
-    if (action) std::cout << action->text << '\n';
-    else std::cout << "no line answers\n";
-} catch (const thinkthen::unsure&) {
-    std::cerr << "not sure: a person should read it\n";
-    return 1;
-} catch (const thinkthen::error& failure) {
-    std::cerr << failure.code().message() << ": " << failure.what() << '\n';
+    tt::client client;
+    const tt::find asks_action{"Which line states the requested action?"};
+    const auto action = client.find(asks_action,
+        "Morgan works for Example Group.\nPlease refund my order.");
+    if (const auto& span = action.answer())
+        std::cout << span->text << '\n';
+    else
+        std::cout << "no line answers\n";
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
     return 1;
 }

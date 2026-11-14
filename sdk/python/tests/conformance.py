@@ -135,7 +135,7 @@ def admitted(value: dict[str, Any]) -> Any:
 
 def request_stream(
     client: tt.Client, request: dict[str, Any], cancel: tt.Cancel | None = None
-) -> tt.RowStream[Any]:
+) -> tt.RowStream[Any] | tt.KeptStream[Any]:
     definition = request["question"]
     function = definition["function"]
     records = request.get("records", [])
@@ -155,9 +155,10 @@ def request_stream(
         )
     question = admitted(definition)
     if function in {"filter", "rank"}:
-        method = "filter_rows" if function == "filter" else function
+        method = function
         return cast(
-            tt.RowStream[Any], getattr(client, method)(question, records, **options)
+            tt.RowStream[Any] | tt.KeptStream[Any],
+            getattr(client, method)(question, records, **options),
         )
     if function in {"recognize", "relate"}:
         return cast(
@@ -167,6 +168,39 @@ def request_stream(
     return cast(
         tt.RowStream[Any],
         getattr(client, function + "_stream")(question, records, **options),
+    )
+
+
+def check_filter(
+    client: tt.Client,
+    request: dict[str, Any],
+    expected: list[Any],
+    cancel: tt.Cancel | None = None,
+) -> None:
+    """Filter exposes kept originals and failed rows, not every wire row."""
+    records = request.get("records", [])
+    kept: list[Any] = []
+    failed: list[Any] = []
+    try:
+        with client.filter(
+            admitted(request["question"]),
+            records,
+            name=request.get("name"),
+            cancel=cancel,
+        ) as stream:
+            kept.extend(stream)
+    except tt.Failed as error:
+        failed = list(error.rows)
+    wanted = [
+        records[row["position"] - 1]
+        for row in expected
+        if row["status"] == "answered" and row["answer"]
+    ]
+    assert kept == wanted
+    assert all(any(item is original for original in records) for item in kept)
+    assert_expected(
+        [normalized_row(row_json(row)) for row in failed],
+        [row for row in expected if row["status"] == "failed"],
     )
 
 
@@ -263,6 +297,12 @@ def settings_options(directory: Path) -> None:
                             }
                         )
                     )
+                if (
+                    case["request"]["question"]["function"] == "filter"
+                    and "expected_error" not in case
+                ):
+                    check_filter(client, case["request"], case["expected"])
+                    continue
                 with request_stream(client, case["request"]) as stream:
                     actual = [row_json(row) for row in stream]
             except tt.ThinkThenError as error:
@@ -311,6 +351,13 @@ def run_all(directory: Path, scratch: Path) -> None:
                     cancel = tt.Cancel()
                     if case.get("cancelled"):
                         cancel.cancel()
+                    if case["request"]["question"][
+                        "function"
+                    ] == "filter" and isinstance(case["expected"], list):
+                        check_filter(client, case["request"], case["expected"], cancel)
+                        assert server.count() == case["requests"], (backend, filename)
+                        count += 1
+                        continue
                     with request_stream(client, case["request"], cancel) as stream:
                         for row in stream:
                             wire_row = row_json(row)

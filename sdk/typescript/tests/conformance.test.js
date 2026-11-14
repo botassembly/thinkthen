@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { sdk, backend } from "./support.js";
-import { streamFor, expectedRows, hostValue } from "./contract.js";
+import { streamFor, expectedRows, hostValue, assertKept } from "./contract.js";
 import { fixtureJson } from "./canonical.js";
 
 const directory = new URL("../../../conformance/typed/", import.meta.url);
@@ -24,7 +24,7 @@ for (const file of manifest.cases) {
         if (fixture.cancelled) cancel.abort();
         if (fixture.expected.error) {
           await assert.rejects(async () => {
-            client = new sdk.ThinkThen(options);
+            client = new sdk.Client(options);
             return streamFor(client, fixture.request, cancel.signal).toArray();
           },
             error => error instanceof sdk.ThinkThenError && error.code === fixture.expected.error
@@ -32,19 +32,21 @@ for (const file of manifest.cases) {
           assert.equal(await server.count(), fixture.requests);
           return;
         }
-        client = new sdk.ThinkThen(options);
+        client = new sdk.Client(options);
+        if (name === "filter") {
+          await assertKept(client, fixture, cancel.signal);
+          assert.equal(await server.count(), fixture.requests);
+          return;
+        }
         const items = await streamFor(client, fixture.request, cancel.signal).toArray();
-        const rows = name === "filter" ? items.map(item => item.row) : items;
+        const rows = items;
         const expected = expectedRows(fixture);
         assert.equal(rows.length, expected.length);
         for (const [index, row] of rows.entries()) {
           assert.equal(row.function, name);
           assertRow(row, expected[index], selected, settings.model);
           if (name === "rank") assert.deepEqual(row.item, fixture.request.records[row.position - 1]);
-          if (name === "filter") {
-            assert.equal(items[index].item, fixture.request.records[row.position - 1]);
-            assert.equal(items[index].kept, row.status === "answered" && row.answer === true);
-          }
+
         }
         assert.equal(await server.count(), fixture.requests);
       } finally { await client?.close(); await server.close(); }
@@ -92,7 +94,7 @@ for (const fixture of admissions) {
       await assert.rejects(async () => {
         switch (fixture.boundary) {
           case "question":
-            client = new sdk.ThinkThen({backend: "stub"});
+            client = new sdk.Client({backend: "stub"});
             await streamFor(client, {question: fixture.input, records: []}).toArray();
             break;
           case "toolbox":
@@ -100,7 +102,7 @@ for (const fixture of admissions) {
             sdk.parseToolbox(JSON.stringify(fixture.input));
             break;
           case "settings":
-            client = new sdk.ThinkThen(hostSettings(fixture.input));
+            client = new sdk.Client(hostSettings(fixture.input));
             break;
           default: assert.fail(`unclassified admission boundary: ${fixture.boundary}`);
         }
@@ -122,7 +124,7 @@ for (const fixture of optionsCases) {
     let client;
     try {
       const invoke = async () => {
-        client = new sdk.ThinkThen(hostSettings(fixture.client));
+        client = new sdk.Client(hostSettings(fixture.client));
         return streamFor(client, {...fixture.request, records: fixture.request.records ?? []}).toArray();
       };
       if (fixture.expected_error) {
@@ -141,8 +143,8 @@ test("registry families select exact public error classes", async () => {
   const {engineError} = await import(new URL("./bridge.js", pathToFileURL(process.env.THINKTHEN_NODE_PACKAGE)));
   for (const entry of registry.codes) {
     const expected = entry.name === "local.cancelled" ? sdk.CancelledError
-      : entry.family === "usage" ? sdk.UsageError
-      : entry.family === "backend" ? sdk.BackendError : sdk.ThinkThenError;
+      : entry.name === "usage.key-missing" || entry.name === "usage.abi" ? sdk.SetupError
+      : entry.family === "usage" ? sdk.UsageError : entry.family === "internal" ? sdk.InternalError : sdk.SetupError;
     const error = engineError({code: entry.name, family: entry.family, message: "fixture error"});
     assert.equal(error.constructor, expected, entry.name);
     assert.equal(error.code, entry.name);
@@ -158,7 +160,7 @@ test("shared case through standalone exports", async () => {
   process.env.THINKTHEN_BASE_URL = server.url;
   try {
     const request = fixture.request;
-    const single = await sdk.decide(request.question, request.records[0]).row();
+    const single = await sdk.decide(request.question, request.records[0]);
     const rows = await sdk.decideStream(request.question, request.records).toArray();
     for (const row of [single, ...rows]) {
       assert.deepEqual(normalize(hostValue(row)), expectedRows(fixture)[0]);

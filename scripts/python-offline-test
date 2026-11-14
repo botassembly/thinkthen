@@ -98,7 +98,7 @@ def main(wheel, prepared, runtime):
         command.insert(1, '-I')
         command.insert(command.index('install') + 1, '--no-cache-dir')
         subprocess.run(command, cwd=artifact.parent, env=environment, check=True)
-        subprocess.run([str(python), '-I', '-c', "import thinkthen as tt; from typing import Literal; c = tt.Client(backend='stub'); route = c.choose('Which?', 'body', choices=Literal['a', 'b']); assert route.ok; assert str(route) in {'a', 'b'}; c.close()"], env=environment, check=True)
+        subprocess.run([str(python), '-I', '-c', "import thinkthen as tt; from typing import Literal; c = tt.Client(backend='stub'); route = c.choose('Which?', 'body', choices=Literal['a', 'b']); assert route.answered; assert str(route) in {'a', 'b'}; c.close()"], env=environment, check=True)
         print('Python 3.10 cold offline wheel install/import: pass; missing-wheel control rejects; registry runtime staging stays separate')
 
 

@@ -1,36 +1,37 @@
 #include <thinkthen.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 static void report(const thinkthen_error *error) {
-    fprintf(stderr, "%s: ", thinkthen_code_name(error->code));
-    fwrite(error->message.data, 1, error->message.len, stderr);
-    fputc('\n', stderr);
+    fprintf(stderr, "%s\n", thinkthen_error_string(error));
 }
 
 int main(void) {
-    const char *message =
-        "Morgan works for Example Group.\nPlease refund my order.";
+    thinkthen_span span;
     thinkthen_client *client = NULL;
+    thinkthen_question *question = NULL;
+    thinkthen_row action = THINKTHEN_ROW_INIT;
     thinkthen_error error = THINKTHEN_ERROR_INIT;
-    thinkthen_span action = {.present = 0};
     int rc = thinkthen_client_open(NULL, &client, &error);
-    // action points into message, so keep message while you read it.
     if (rc == THINKTHEN_OK)
-        rc = thinkthen_find(client, "Which line states the requested action?",
-                            message, THINKTHEN_NUL_TERMINATED, &action,
-                            &error);
-    if (rc == THINKTHEN_OK && action.present) {
-        fwrite(action.text.data, 1, action.text.len, stdout);
-        putchar('\n');
-    } else if (rc == THINKTHEN_OK) {
-        puts("no line answers");
-    } else if (rc == THINKTHEN_UNSURE) {
-        puts("not sure");
+        rc = thinkthen_question_new(THINKTHEN_FUNCTION_FIND, "Which line states the requested action?",
+                                    THINKTHEN_NUL_TERMINATED, &question, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_run_one(client, question, "Morgan works for Example Group.\nPlease refund my order.",
+                               THINKTHEN_NUL_TERMINATED, THINKTHEN_RECORD_TEXT,
+                               &action, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_row_answer_span(&action, &span, &error);
+    if (rc == THINKTHEN_OK) {
+        if (span.present) printf("%.*s\n", (int)span.text.len, span.text.data);
+        else puts("no line answers");
     } else {
         report(&error);
     }
+    thinkthen_row_free(&action);
+    thinkthen_question_free(question);
     thinkthen_error_free(&error);
     thinkthen_client_free(client);
-    return rc < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+    return rc == THINKTHEN_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }

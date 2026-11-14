@@ -7,24 +7,18 @@ namespace ThinkThen;
 // values using the same closed, trimming-safe families accepted by RowConverters.
 internal static class RowJson
 {
-    internal static void Write<TAnswer, TDetail>(Utf8JsonWriter writer, Row<TAnswer, TDetail> row)
+    internal static void Write(Utf8JsonWriter writer,IRowValue row)
     {
         writer.WriteStartObject();
-        writer.WriteString("function", Contract.FunctionName((int)row.Function));
-        writer.WriteNumber("position", row.Position);
-        if (row.Id is not null) Property(writer, "id", row.Id);
-        writer.WriteString("status", Contract.StatusName((int)row.Status));
-        Property(writer, "source", row.Source);
-        if (row.IsAnswered) Property(writer, "answer", row.Answer);
-        if (row.Probability is double probability) writer.WriteNumber("probability", probability);
-        object? detail = row switch
-        {
-            Answered<TAnswer, TDetail> answered => answered.Detail,
-            Unsure<TAnswer, TDetail> unsure => unsure.Detail,
-            _ => null
-        };
-        if (detail is not null) Property(writer, "detail", detail);
-        if (row is Failed<TAnswer, TDetail> failed) Property(writer, "error", failed.Error);
+        writer.WriteString("function",Contract.FunctionName((int)row.Function));
+        writer.WriteString("status",Contract.StatusName((int)row.Status));
+        writer.WriteNumber("position",row.Position);
+        if(row.Id is not null) Property(writer,"id",row.Id);
+        Property(writer,"source",row.Source);
+        if(row.IsAnswered) Property(writer,"answer",row.OwnAnswer);
+        if(row.Probability is double probability) writer.WriteNumber("probability",probability);
+        if(row.Detail is not null) Property(writer,"detail",row.Detail);
+        if(row is IFailed failed) Property(writer,"error",failed.Error);
         writer.WriteEndObject();
     }
     private static void Property(Utf8JsonWriter writer, string name, object? value)
@@ -32,16 +26,32 @@ internal static class RowJson
     private static void Span(Utf8JsonWriter writer, TextSpan span)
     {
         writer.WriteString("text", span.Text);
-        writer.WriteNumber("start", span.Start);
-        writer.WriteNumber("end", span.End);
+        writer.WriteNumber("start", span.SavedStart);
+        writer.WriteNumber("end", span.SavedEnd);
     }
     private static void Mention(Utf8JsonWriter writer, Mention mention)
     { Span(writer, mention.Span); writer.WriteString("kind", mention.Kind); }
+    private static void WriteEntry(Utf8JsonWriter writer,IRowValue row)
+    {
+        using var stream=new MemoryStream();
+        using(var output=new Utf8JsonWriter(stream)) Write(output,row);
+        using var document=JsonDocument.Parse(stream.ToArray());
+        writer.WriteStartObject();
+        foreach(var property in document.RootElement.EnumerateObject())
+            if(property.Name is not ("position" or "id" or "source")) property.WriteTo(writer);
+        writer.WriteEndObject();
+    }
     private static void Value(Utf8JsonWriter writer, object? value)
     {
         switch (value)
         {
             case null: writer.WriteNullValue(); return;
+            case Enum member: writer.WriteStringValue(Domain.Word(member)); return;
+            case IRowValue row: Write(writer,row); return;
+            case IAnnotations entries:
+                writer.WriteStartObject();
+                foreach(var pair in entries.Entries) { writer.WritePropertyName(pair.Key); WriteEntry(writer,(IRowValue)pair.Value); }
+                writer.WriteEndObject(); return;
             case string text: writer.WriteStringValue(text); return;
             case bool boolean: writer.WriteBooleanValue(boolean); return;
             case int number: writer.WriteNumberValue(number); return;
@@ -59,7 +69,7 @@ internal static class RowJson
                 writer.WriteStartObject();
                 foreach (var pair in map) writer.WriteNumber(pair.Key.ToString().ToUpperInvariant(), pair.Value);
                 writer.WriteEndObject(); return;
-            case IReadOnlyDictionary<string, AnnotationEntry> map:
+            case IReadOnlyDictionary<string, IRow> map:
                 writer.WriteStartObject();
                 foreach (var pair in map) Property(writer, pair.Key, pair.Value);
                 writer.WriteEndObject(); return;
@@ -85,9 +95,9 @@ internal static class RowJson
             case TextSpan span: Span(writer, span); break;
             case Entity entity: Mention(writer, entity.Mention); writer.WriteNumber("probability", entity.Probability); break;
             case Mention mention: Mention(writer, mention); break;
-            case Relation relation:
+            case FoundRelation relation:
                 Property(writer, "source", relation.Source); Property(writer, "target", relation.Target);
-                writer.WriteString("relation", relation.Name); writer.WriteNumber("probability", relation.Probability);
+                writer.WriteString("relation", relation.Relation); writer.WriteNumber("probability", relation.Probability);
                 if (relation.Either) writer.WriteBoolean("either", true);
                 break;
             case LabelsDetail detail: Property(writer, "labels", detail.Labels); break;
@@ -98,16 +108,7 @@ internal static class RowJson
                 writer.WriteNumber("start", detail.Start); writer.WriteNumber("end", detail.End);
                 Property(writer, "kinds", detail.Kinds); break;
             case RecognizeDetail detail: Property(writer, "pieces", detail.Pieces); Property(writer, "names", detail.Names); break;
-            case RelateDetail detail: Property(writer, "names", detail.Names); Property(writer, "pairs", detail.Pairs); break;
-            case AnnotationEntry entry:
-                writer.WriteString("function", Contract.FunctionName((int)entry.Function));
-                writer.WriteString("status", Contract.StatusName((int)entry.Status));
-                object?[] parts = entry.Value.Values;
-                if (entry.IsAnswered) Property(writer, "answer", entry.Answer);
-                if (entry.Probability is double probability) writer.WriteNumber("probability", probability);
-                if (entry.IsFailed) Property(writer, "error", parts[1]);
-                else if (parts[^1] is object detail) Property(writer, "detail", detail);
-                break;
+            case RelationDetail detail: Property(writer, "names", detail.Names); Property(writer, "pairs", detail.Pairs); break;
             default: throw new NotSupportedException($"Unsupported answer value {value.GetType().Name}.");
         }
         writer.WriteEndObject();

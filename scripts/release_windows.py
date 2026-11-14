@@ -266,7 +266,7 @@ def windows_requirements(out):
     runtime = dict(config['runtimes'])
     runtime.update(command='Windows x86-64', r='R 4.6; bundled matching R dependency binaries',
                    c='C11 compiler and Windows x64 linker to build; operating-system runtime thereafter',
-                   cpp='C++17 compiler; bundled nlohmann_json headers; standard C++ runtime thereafter',
+                   cpp='C++20 clang-cl with the Visual Studio C++ standard library; bundled nlohmann_json headers; standard C++ runtime thereafter',
                    swift='Swift >=6.3 Windows toolchain',
                    sqlite='SQLite >=3.41 with extension loading enabled',
                    duckdb=f'Official DuckDB {DUCKDB_VERSION} Windows x86-64')

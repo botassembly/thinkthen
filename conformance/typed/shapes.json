@@ -6,6 +6,7 @@
         "answer": false,
         "function": "decide",
         "position": 1,
+        "probability": 0,
         "source": {
           "backend": "systemone",
           "model": "x",
@@ -21,6 +22,7 @@
         "answer": "wrong",
         "function": "decide",
         "position": 1,
+        "probability": 0,
         "source": {
           "backend": "systemone",
           "model": "x",
@@ -141,6 +143,7 @@
         "answer": "x",
         "function": "choose",
         "position": 1,
+        "probability": 0,
         "source": {
           "backend": "systemone",
           "model": "x",
@@ -156,6 +159,7 @@
         "answer": false,
         "function": "choose",
         "position": 1,
+        "probability": 0,
         "source": {
           "backend": "systemone",
           "model": "x",
@@ -301,37 +305,6 @@
       "valid": false
     },
     {
-      "name": "tag-unsure",
-      "row": {
-        "function": "tag",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "tag-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "tag",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": false
-    },
-    {
       "name": "tag-failed",
       "row": {
         "error": {
@@ -436,37 +409,6 @@
       "valid": false
     },
     {
-      "name": "score-unsure",
-      "row": {
-        "function": "score",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "score-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "score",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": false
-    },
-    {
       "name": "score-failed",
       "row": {
         "error": {
@@ -541,141 +483,6 @@
       "valid": false
     },
     {
-      "name": "filter-answered",
-      "row": {
-        "answer": false,
-        "function": "filter",
-        "position": 1,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "answered"
-      },
-      "valid": true
-    },
-    {
-      "name": "filter-answered-wrong-fields",
-      "row": {
-        "answer": "wrong",
-        "function": "filter",
-        "position": 1,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "answered"
-      },
-      "valid": false
-    },
-    {
-      "name": "filter-unsure",
-      "row": {
-        "function": "filter",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "filter-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "filter",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": false
-    },
-    {
-      "name": "filter-failed",
-      "row": {
-        "error": {
-          "code": "record.json",
-          "message": "x"
-        },
-        "function": "filter",
-        "position": 1,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "failed"
-      },
-      "valid": true
-    },
-    {
-      "name": "filter-failed-wrong-fields",
-      "row": {
-        "error": {
-          "code": "record.json",
-          "message": "x"
-        },
-        "function": "filter",
-        "position": 1,
-        "probability": 0.5,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "failed"
-      },
-      "valid": false
-    },
-    {
-      "name": "filter-position",
-      "row": {
-        "error": {
-          "code": "record.json",
-          "message": "x"
-        },
-        "function": "filter",
-        "position": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "failed"
-      },
-      "valid": false
-    },
-    {
-      "name": "filter-raw_backend",
-      "row": {
-        "error": {
-          "code": "record.json",
-          "message": "x"
-        },
-        "function": "filter",
-        "position": 1,
-        "raw_backend": {},
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "failed"
-      },
-      "valid": false
-    },
-    {
       "name": "find-answered",
       "row": {
         "answer": {
@@ -685,6 +492,7 @@
         },
         "function": "find",
         "position": 1,
+        "probability": 0,
         "source": {
           "backend": "systemone",
           "model": "x",
@@ -700,6 +508,7 @@
         "answer": false,
         "function": "find",
         "position": 1,
+        "probability": 0,
         "source": {
           "backend": "systemone",
           "model": "x",
@@ -845,37 +654,6 @@
       "valid": false
     },
     {
-      "name": "recognize-unsure",
-      "row": {
-        "function": "recognize",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "recognize-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "recognize",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": false
-    },
-    {
       "name": "recognize-failed",
       "row": {
         "error": {
@@ -980,37 +758,6 @@
       "valid": false
     },
     {
-      "name": "relate-unsure",
-      "row": {
-        "function": "relate",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "relate-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "relate",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": false
-    },
-    {
       "name": "relate-failed",
       "row": {
         "error": {
@@ -1085,6 +832,112 @@
       "valid": false
     },
     {
+      "name": "filter-answered",
+      "row": {
+        "answer": false,
+        "function": "filter",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "filter-answered-wrong-fields",
+      "row": {
+        "answer": "wrong",
+        "function": "filter",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "filter-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
       "name": "rank-answered",
       "row": {
         "answer": 1,
@@ -1111,37 +964,6 @@
           "question_identity": "x"
         },
         "status": "answered"
-      },
-      "valid": false
-    },
-    {
-      "name": "rank-unsure",
-      "row": {
-        "function": "rank",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "rank-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "rank",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
       },
       "valid": false
     },
@@ -1246,37 +1068,6 @@
           "question_identity": "x"
         },
         "status": "answered"
-      },
-      "valid": false
-    },
-    {
-      "name": "annotate-unsure",
-      "row": {
-        "function": "annotate",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
-      },
-      "valid": true
-    },
-    {
-      "name": "annotate-unsure-wrong-fields",
-      "row": {
-        "answer": null,
-        "function": "annotate",
-        "position": 1,
-        "probability": 0,
-        "source": {
-          "backend": "systemone",
-          "model": "x",
-          "question_identity": "x"
-        },
-        "status": "unsure"
       },
       "valid": false
     },

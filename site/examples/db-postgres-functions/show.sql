@@ -45,39 +45,45 @@ FROM thinkthen.rank(
   'WHERE msg_id <= 3 ORDER BY msg_id',
   'How urgent is the request?',
   levels => ARRAY['routine', 'urgent'])
-ORDER BY urgency_rank;
+ORDER BY urgency_rank NULLS LAST;
 
 SELECT id AS msg_id, (answer).text AS requested_action, status
 FROM thinkthen.find(
   'SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 5',
   'Which line states the requested action?');
 
-SELECT id AS msg_id, (answer ->> 'refund')::boolean AS is_refund,
-       answer ->> 'topic' AS topic,
-       (answer ->> 'urgency')::float8 AS urgency, status
+SELECT id AS msg_id,
+       CASE WHEN status = 'answered' AND detail -> 'refund' ->> 'status' = 'answered'
+            THEN (answer ->> 'refund')::boolean END AS is_refund,
+       CASE WHEN status = 'answered' AND detail -> 'topic' ->> 'status' = 'answered'
+            THEN answer ->> 'topic' END AS topic,
+       CASE WHEN status = 'answered' AND detail -> 'urgency' ->> 'status' = 'answered'
+            THEN (answer ->> 'urgency')::float8 END AS urgency,
+       detail -> 'refund' ->> 'status' AS refund_status,
+       detail -> 'topic' ->> 'status' AS topic_status,
+       detail -> 'urgency' ->> 'status' AS urgency_status, status
 FROM thinkthen.annotate(
   'SELECT msg_id AS id, body AS record FROM messages '
   'WHERE msg_id <= 3 ORDER BY msg_id',
-  toolbox => '{
-    "refund": {"function": "decide", '
-    '"question": "Does the customer request a refund?"},
+  questions => '{
+    "refund": {"function": "decide", "question": "Does the customer request a refund?"},
     "topic": {"function": "choose", "question": "What is the message about?",
               "choices": ["billing", "shipping", "other"]},
     "urgency": {"function": "score", "question": "How urgent is the request?",
                 "levels": ["routine", "urgent"]}
   }');
 
-SELECT r.id AS msg_id, found.text AS name, found.kind, r.status
+SELECT r.position, r.id AS msg_id, found.text AS name, found.kind, r.status
 FROM thinkthen.recognize(
   'SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 6',
   kinds => ARRAY['person', 'organization']) AS r
 LEFT JOIN LATERAL unnest(r.answer) AS found ON true;
 
-SELECT r.id AS msg_id, (link.source).text AS person, link.relation,
+SELECT r.position, r.id AS msg_id, (link.source).text AS person, link.relation,
        (link.target).text AS organization, r.status
 FROM thinkthen.relate(
   'SELECT msg_id AS id, body AS record FROM messages WHERE msg_id = 5',
        rules => ARRAY[
-         ROW('works_for', 'person', 'organization', NULL, false)::thinkthen.rule
+         ROW('person', 'organization', 'works_for', NULL, false)::thinkthen.rule
        ]) AS r
 LEFT JOIN LATERAL unnest(r.answer) AS link ON true;

@@ -27,18 +27,12 @@ static char *line(void) {
 }
 
 static void print_row(thinkthen_row *row) {
-    const char *status = row->status == THINKTHEN_STATUS_ANSWERED ? "answered"
-        : row->status == THINKTHEN_STATUS_UNSURE ? "unsure" : "failed";
-    printf("{\"fields\":{\"status\":\"%s\"", status);
-    if (row->answer.len) { fputs(",\"answer\":", stdout); print_buffer(&row->answer); }
-    if (row->error.len) { fputs(",\"error\":", stdout); print_buffer(&row->error); }
-    if (row->id.len) { fputs(",\"id\":", stdout); print_buffer(&row->id); }
-    if (row->source.len) { fputs(",\"source\":", stdout); print_buffer(&row->source); }
-    fputs("},\"detail\":", stdout);
-    if (row->detail.len) print_buffer(&row->detail); else fputs("null", stdout);
-    printf(",\"position\":%llu}\n", (unsigned long long)row->position);
-    thinkthen_row_free(row);
-    assert(row->answer.data == NULL && row->detail.data == NULL && row->source.data == NULL);
+    thinkthen_buffer json={0};
+    assert(thinkthen_row_host_json(row,&json,NULL)==THINKTHEN_OK);
+    fputs("{\"fields\":",stdout);print_buffer(&json);
+    printf(",\"position\":%llu}\n",(unsigned long long)row->position);
+    thinkthen_buffer_free(&json);thinkthen_row_free(row);
+    assert(row->private_data==NULL);
     assert(row->struct_size == sizeof *row);
 }
 
@@ -130,8 +124,7 @@ static void *run_concurrent(void *opaque) {
         thinkthen_row row = {.struct_size = sizeof row};
         assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_OK);
         assert(row.status == THINKTHEN_STATUS_ANSWERED && row.position == 1);
-        assert((row.answer.len == 4 && memcmp(row.answer.data, "true", 4) == 0) ||
-               (row.answer.len == 5 && memcmp(row.answer.data, "false", 5) == 0));
+        bool answer=false;assert(thinkthen_row_answer_bool(&row,&answer,&error)==THINKTHEN_OK);
         thinkthen_row_free(&row);
         assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);
         assert(error.code == 0);
@@ -186,9 +179,10 @@ int main(int argc, char **argv) {
         thinkthen_question_free(question);
         thinkthen_client_free(client);
         free(request);
+        assert(row.private_data == NULL);
         assert(error.code == THINKTHEN_CODE_RECORD_MISSING);
-        thinkthen_error_free(&error);
-        print_row(&row);
+        print_error(&error);
+        thinkthen_row_free(&row);
         puts("{\"end\":true}");
         return 0;
     }
@@ -232,7 +226,7 @@ int main(int argc, char **argv) {
             printf("{\"end\":true,\"needs\":%zu}\n", needs);
             break;
         } else {
-            assert(row.answer.data == NULL && row.detail.data == NULL);
+            assert(row.private_data == NULL);
             int32_t terminal_code = error.code;
             print_error(&error);
             /* The call retains its terminal error until it is freed. */

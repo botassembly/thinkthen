@@ -316,6 +316,35 @@ impl Record {
         self.selection = selection;
         self
     }
+    #[cfg(feature = "native")]
+    pub(crate) fn selected_text<'a>(
+        &'a self,
+        pointer: &Pointer,
+    ) -> Option<std::borrow::Cow<'a, str>> {
+        match &self.input {
+            Input::Text(text) => Some(std::borrow::Cow::Borrowed(text)),
+            Input::Json(_) => self
+                .prepare(pointer)
+                .field
+                .ok()
+                .map(std::borrow::Cow::Owned),
+            Input::Failed(_) => None,
+        }
+    }
+    #[cfg(feature = "native")]
+    pub(crate) fn selected_entry_text<'a>(
+        &'a self,
+        pointer: &Pointer,
+    ) -> Option<std::borrow::Cow<'a, str>> {
+        match &self.input {
+            Input::Text(text) if pointer.is_root() => Some(std::borrow::Cow::Borrowed(text)),
+            _ => self
+                .prepare(&super::record::ROOT_POINTER)
+                .field_at(pointer)
+                .ok()
+                .map(std::borrow::Cow::Owned),
+        }
+    }
     pub(crate) fn prepare(&self, pointer: &Pointer) -> super::Record {
         match &self.input {
             Input::Text(text) => super::Record::text(text),

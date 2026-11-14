@@ -2,9 +2,11 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
+	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -12,7 +14,7 @@ import (
 func TestBackendEnvironmentAndExplicitOverride(t *testing.T) {
 	t.Setenv("THINKTHEN_BACKEND", "stub")
 	c := apiClientFor(t, tt.Config{})
-	row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence"))
+	row, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence")
 	if err != nil || row.Source().Backend != tt.Stub {
 		t.Fatalf("environment not applied: %v %v", row, err)
 	}
@@ -22,40 +24,18 @@ func TestBackendEnvironmentAndExplicitOverride(t *testing.T) {
 			t.Fatalf("invalid backend not admitted by engine: %v", err)
 		}
 		explicit := apiClientFor(t, tt.Config{Backend: tt.Stub})
-		if _, err := tt.Answer(explicit.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Text("evidence"))); err != nil {
+		if _, err := tt.Answer(explicit.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, "evidence")); err != nil {
 			t.Fatalf("explicit backend did not win: %v", err)
 		}
 	}
 }
 
 // Feature: records print their evidence without their encoding implementation.
-func TestReadableRecordsAndTextAccess(t *testing.T) {
-	for _, record := range []tt.Record{tt.Text("Hello"), tt.RawJSON([]byte(`{"id":"x","text":"Hello"}`)), tt.Missing()} {
-		got := fmt.Sprint(record)
-		if got == "" || got != fmt.Sprintf("%#v", record) {
-			t.Fatalf("unreadable record: %s", got)
-		}
-		text, isText := record.Text()
-		if isText && (text != "Hello" || got != text) {
-			t.Fatalf("text changed: %s", text)
-		}
-	}
-	text, ok := tt.Text("Hello").Text()
-	if !ok || text != "Hello" {
-		t.Fatal("text accessor unavailable")
-	}
-	if _, ok := tt.Missing().Text(); ok {
-		t.Fatal("missing record became text")
-	}
-	if _, ok := tt.RawJSON([]byte(`"Hello"`)).Text(); ok {
-		t.Fatal("JSON became text")
-	}
-}
 
 // Feature: typed selectors expose child answers in one expression and reject wrong names/types.
 func TestTypedAnnotationSelectors(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	row, err := c.Annotate(context.Background(), tt.NewAnnotate(map[string]tt.AnnotationQuestion{"ready": tt.NewDecide("Ready?")}), tt.Text("evidence"))
+	row, err := c.Annotate(context.Background(), tt.AnnotateQuestion{Questions: map[string]tt.AnnotationQuestion{"ready": tt.DecideQuestion{Question: "Ready?"}}}, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +46,7 @@ func TestTypedAnnotationSelectors(t *testing.T) {
 	if _, err := tt.Answer(answers.Decide("ready")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tt.Answer(answers.Choose("ready")); !errors.Is(err, tt.CodeUsageFunction) {
+	if _, err := tt.Answer(answers.Choose[string]("ready")); !errors.Is(err, tt.CodeUsageFunction) {
 		t.Fatalf("wrong child type: %v", err)
 	}
 	if _, err := tt.Answer(answers.Decide("absent")); !errors.Is(err, tt.CodeUsageName) {
@@ -78,46 +58,46 @@ func TestTypedAnnotationSelectors(t *testing.T) {
 func TestBlankSingleAndStream(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
-	for _, record := range []tt.Record{tt.Text(""), tt.Text(" \n "), tt.RawJSON([]byte(`{}`))} {
-		if _, err := c.Decide(ctx, tt.NewDecide("Ready?"), record); !errors.Is(err, tt.CodeRecordEmpty) {
+	for _, record := range []any{"", " \n ", json.RawMessage([]byte(`{}`))} {
+		if _, err := c.Decide(ctx, tt.DecideQuestion{Question: "Ready?"}, record); !errors.Is(err, tt.CodeRecordEmpty) {
 			t.Fatalf("blank single: %v", err)
 		}
 	}
-	rows := collect(t, c.DecideAll(ctx, tt.NewDecide("Ready?"), tt.Texts("first", " ", "last")))
+	rows := collect(t, c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, slices.Values([]string{"first", " ", "last"})))
 	if len(rows) != 3 || !errors.Is(rows[1].Err(), tt.CodeRecordEmpty) || rows[2].Status() != tt.Answered {
 		t.Fatalf("stream lost rows: %v", rows)
 	}
 	//lint:ignore SA1012 Verify invalid caller contexts produce a typed usage error.
-	if _, err := c.Decide(nil, tt.NewDecide("Ready?"), tt.Text("evidence")); !errors.Is(err, tt.CodeUsageArgument) {
+	if _, err := c.Decide(nil, tt.DecideQuestion{Question: "Ready?"}, "evidence"); !errors.Is(err, tt.CodeUsageArgument) {
 		t.Fatalf("nil context: %v", err)
 	}
 	c.Close()
-	if _, err := c.Decide(ctx, tt.NewDecide("Ready?"), tt.Text("evidence")); !errors.Is(err, tt.CodeUsageClosed) || !errors.Is(err, tt.ErrClosed) {
+	if _, err := c.Decide(ctx, tt.DecideQuestion{Question: "Ready?"}, "evidence"); !errors.Is(err, tt.CodeUsageClosed) || !errors.Is(err, tt.ErrClosed) {
 		t.Fatalf("closed client: %v", err)
 	}
 }
 
 // Feature: ranked rows keep their original records across sorting and client cleanup.
 func TestRankRetainsOriginalRecords(t *testing.T) {
-	records := []tt.Record{tt.Text("first"), tt.RawJSON([]byte(`{"id":"last","text":"last"}`)), tt.Missing(), tt.Text("fourth"), tt.RawJSON([]byte("null")), tt.RawJSON([]byte("{bad")), tt.Text(string([]byte{0xff}))}
+	records := []any{"first", json.RawMessage([]byte(`{"id":"last","text":"last"}`)), any(nil), "fourth", json.RawMessage([]byte("null")), json.RawMessage([]byte("{bad")), string([]byte{0xff})}
 	for _, stream := range []bool{false, true} {
 		c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-		input := tt.Records(records...)
+		input := slices.Values(records)
 		if stream {
-			input = tt.FromSeq(func(yield func(tt.Record, error) bool) {
+			input = func(yield func(any) bool) {
 				for _, record := range records {
-					if !yield(record, nil) {
+					if !yield(record) {
 						return
 					}
 				}
-			})
+			}
 		}
-		var retained []tt.RankRow
-		for row, err := range c.RankAll(context.Background(), tt.NewRank("Priority?", []string{"low", "high"}), input) {
+		var retained []tt.RankRow[any]
+		for row, err := range c.Rank(context.Background(), tt.RankQuestion[string]{Question: "Priority?", Levels: []string{"low", "high"}}, input) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if row.Position() < 1 || row.Position() > len(records) || row.Item() != records[row.Position()-1] {
+			if row.Position() < 1 || row.Position() > len(records) || !reflect.DeepEqual(row.Item(), records[row.Position()-1]) {
 				t.Fatalf("rank changed input: position %d item %v", row.Position(), row.Item())
 			}
 			retained = append(retained, row)
@@ -127,17 +107,17 @@ func TestRankRetainsOriginalRecords(t *testing.T) {
 			t.Fatalf("rank lost records: %v", retained)
 		}
 		for _, row := range retained {
-			if row.Item() != records[row.Position()-1] {
+			if !reflect.DeepEqual(row.Item(), records[row.Position()-1]) {
 				t.Fatalf("rank item expired: %v", row.Item())
 			}
 		}
 	}
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	for row, err := range c.RankAll(context.Background(), tt.NewRank("Priority?", []string{"low", "high"}).WithTop(1), tt.Texts("first", "second", "third")) {
+	for row, err := range c.Rank(context.Background(), tt.RankQuestion[string]{Question: "Priority?", Levels: []string{"low", "high"}, Top: 1}, slices.Values([]string{"first", "second", "third"})) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if row.Item().String() == "" {
+		if row.Item() == "" {
 			t.Fatal("top rank omitted original")
 		}
 	}
@@ -146,7 +126,7 @@ func TestRankRetainsOriginalRecords(t *testing.T) {
 // Feature: zero Batch selects defaults while negative host counts are rejected.
 func TestBatchZeroUsesDefaults(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: 0})
-	rows, err := tt.Collect(c.DecideAll(context.Background(), tt.NewDecide("Ready?"), tt.Texts("first", "second")))
+	rows, err := tt.Collect(c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, slices.Values([]string{"first", "second"})))
 	if err != nil || len(rows) != 2 {
 		t.Fatalf("default batch rejected: %v %v", rows, err)
 	}

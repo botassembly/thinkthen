@@ -1,14 +1,13 @@
-import { ThinkThen } from "thinkthen";
+import { Client } from "thinkthen";
 
-const tt = new ThinkThen();
+const tt = new Client();
 try {
-  // await throws RecordError on failure.
   const urgency = await tt.score(
     "How urgent is the request?",
     "Please refund my order.",
     { levels: ["routine", "urgent"] },
   );
-  console.log(urgency);
+  console.log(urgency.answer);
 } finally {
   await tt.close();
 }

@@ -148,19 +148,10 @@ fn zero_pairs_duplicates_and_missing_probabilities_refuse_comparison() {
     let mut duplicate = run.clone();
     duplicate.rows.push(duplicate.rows[0].clone());
     assert!(compare(run.clone(), duplicate, None, &[], AuditOptions::default()).is_err());
-    let mut missing = run;
-    let mut row = serde_json::to_value(&missing.rows[0]).unwrap();
+    let mut row = serde_json::to_value(&run.rows[0]).unwrap();
     row.as_object_mut().unwrap().remove("probability");
-    missing.rows = vec![serde_json::from_value(row).unwrap()];
-    assert!(
-        compare_threshold(
-            missing,
-            Threshold::cut(0.8).unwrap(),
-            None,
-            AuditOptions::default()
-        )
-        .is_err()
-    );
+    // The strict saved-row reader refuses the incomplete result before comparison.
+    assert!(serde_json::from_value::<thinkthen::AnyRow>(row).is_err());
 }
 
 #[test]
@@ -171,7 +162,7 @@ fn actual_choose_and_find_comparisons_do_not_invent_unsure_winners() {
         .unwrap();
     for function in ["choose", "find"] {
         let (question, sample): (thinkthen::Question, thinkthen::AnyRow) = if function == "choose" {
-            let q = thinkthen::Choose::new("Which?", ["a", "b"]).unwrap();
+            let q = thinkthen::Choose::with_strings("Which?", ["a", "b"]).unwrap();
             let sample = engine.run(&q, "a").unwrap();
             (q.into(), thinkthen::AnyRow::Choose(sample))
         } else {

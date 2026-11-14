@@ -18,6 +18,7 @@ pub const THINKTHEN_PENDING: i32 = 3;
 pub struct SqlHandle {
     call: SqlCall,
     error_reported: bool,
+    domain: std::sync::Arc<crate::row::Domain>,
 }
 /// One database row's input for thinkthen_sql_call_send_chunk; copied before return.
 #[repr(C)]
@@ -135,6 +136,7 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_question(
             out.write(Box::into_raw(Box::new(SqlHandle {
                 call: SqlCall::open(&live(client)?.0, &request)?,
                 error_reported: false,
+                domain: std::sync::Arc::new(crate::row::Domain::from_question(request.question())),
             })));
             Ok(THINKTHEN_OK)
         })
@@ -231,11 +233,34 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_json(
             out.write(Box::into_raw(Box::new(SqlHandle {
                 call: SqlCall::open(&live(client)?.0, &request)?,
                 error_reported: false,
+                domain: std::sync::Arc::new(crate::row::Domain::from_question(request.question())),
             })));
             Ok(THINKTHEN_OK)
         })
     }
 }
+/// Select whether completion reports failed records; filter always reports them.
+/// Rows remain available until the final statement failure. enabled is 0 or 1.
+/// # Safety
+/// One database thread drives call. error is NULL or an initialized, exclusive output.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_set_raise_if_failed(
+    call: *mut SqlHandle,
+    enabled: u8,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller retains its live call and exclusive error slot. */
+    unsafe {
+        operation(error, || {
+            if enabled > 1 {
+                return Err(native::abi_error());
+            }
+            live_mut(call)?.call.set_raise_if_failed(enabled != 0);
+            Ok(THINKTHEN_OK)
+        })
+    }
+}
+
 /// Send count database rows to a call.
 ///
 /// Send only after thinkthen_sql_call_poll returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK,
@@ -401,17 +426,22 @@ unsafe fn poll(
             HostRow::empty(size).write(out);
             let handle = live_mut(call)?;
             let call = &mut handle.call;
-            match call.poll(Duration::from_millis(u64::from(timeout_ms)), || {
-                interrupted.is_some_and(|probe| probe(context) != 0)
-            })? {
+            let timeout = Duration::from_millis(u64::from(timeout_ms));
+            let probe = || interrupted.is_some_and(|probe| probe(context) != 0);
+            let event = if postgres {
+                call.poll_postgres(timeout, probe)?
+            } else {
+                call.poll(timeout, probe)?
+            };
+            match event {
                 Some(SqlEvent::NeedsChunk) => Ok(THINKTHEN_NEEDS_INPUT),
                 Some(SqlEvent::Row(row)) => {
-                    let row = if postgres {
-                        native::sql_postgres_row(row)?
-                    } else {
-                        row
-                    };
-                    HostRow::from_row(size, row)?.write(out);
+                    HostRow::from_value(
+                        size,
+                        crate::values::ValueHandle::from_any(row),
+                        handle.domain.clone(),
+                    )?
+                    .write(out);
                     Ok(THINKTHEN_OK)
                 }
                 Some(SqlEvent::Finished) => {
@@ -433,12 +463,14 @@ unsafe fn poll(
 /// Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_ABI when row did not come from this library.
 /// The row is changed in place; free it with thinkthen_row_free.
 /// # Safety
-/// One database thread drives call. row is a row this library wrote. id is NULL or points to a
+/// One database thread drives call. row is the most recent row this call wrote, before the
+/// next row or completion. id is NULL or points to a
 /// readable thinkthen_text. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
 /// negative return it holds the code and message; passing it again frees what it held, so a
 /// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
+    call: *mut SqlHandle,
     row: *mut HostRow,
     id: *const TextView,
     error: *mut HostError,
@@ -447,27 +479,47 @@ pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
     unsafe {
         operation(error, || {
             row_size(row)?;
+            let call = &mut live_mut(call)?.call;
             if id.is_null() {
                 return Ok(THINKTHEN_OK);
             }
             let value = text((*id).data, (*id).len)?;
             let failure = native::sql_postgres_id_error(value)?;
-            (*row).id.release();
+            if let Some(failure) = &failure {
+                call.observe_row_failure((*row).position, failure)?;
+            }
+            let data = crate::row::data(row)?;
             if let Some(failure) = failure {
-                (*row).answer.release();
-                (*row).detail.release();
-                (*row).error.release();
-                (*row).status = thinkthen::results::Status::Failed.abi();
-                (*row).error_code = failure.code().abi();
-                (*row).probability = f64::NAN;
-                (*row).answer_bool = 0;
-                (*row).rank = 0;
-                (*row).number = 0.0;
-                (*row).error = crate::Buffer::new(
-                    serde_json::to_string(&failure).map_err(|_| native::internal_error())?,
-                );
+                let crate::values::Owned::Row(typed) = &data.value.0 else {
+                    return Err(native::abi_error());
+                };
+                let replacement = HostRow::from_value(
+                    (*row).struct_size,
+                    crate::values::ValueHandle::from_any(native::row_failed(
+                        typed.clone(),
+                        failure,
+                    )),
+                    data.domain.clone(),
+                )?;
+                HostRow::clear(row);
+                replacement.write(row);
             } else {
-                (*row).id = crate::Buffer::new(value.to_owned());
+                let raw = serde_json::value::RawValue::from_string(value.to_owned())
+                    .map_err(|_| native::abi_error())?;
+                let crate::values::Owned::Row(typed) = &data.value.0 else {
+                    return Err(native::abi_error());
+                };
+                let replacement = HostRow::from_value(
+                    (*row).struct_size,
+                    crate::values::ValueHandle::from_any(native::row_selected_id(
+                        typed.clone(),
+                        value,
+                    )),
+                    data.domain.clone(),
+                )?;
+                HostRow::clear(row);
+                replacement.write(row);
+                (*(*row).private_data).id_override = Some(raw);
             }
             Ok(THINKTHEN_OK)
         })

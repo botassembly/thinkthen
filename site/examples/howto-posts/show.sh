@@ -1,4 +1,4 @@
-thinkthen filter --field /text --json --low 0.3 --high 0.7 \
+thinkthen decide --field /text --json --low 0.3 --high 0.7 \
   'Is the post spam or an insult?' posts.jsonl > judged.jsonl
 # Publish the posts that answered no. Every other post waits for a person.
 clean=$(jq -s -c \

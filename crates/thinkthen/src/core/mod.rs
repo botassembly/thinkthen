@@ -31,7 +31,7 @@ pub(crate) use error::{escape_diagnostic, local};
 pub(crate) use function::annotate::Annotate;
 pub(crate) use function::choose::Choose;
 pub(crate) use function::decide::Decide;
-pub(crate) use function::find::{Find, Found};
+pub(crate) use function::find::{Find, Span};
 pub(crate) use function::rank::RankLimit;
 pub(crate) use function::recognize::{Name, Recognize, RecognizeDetail};
 pub(crate) use function::score::Score;

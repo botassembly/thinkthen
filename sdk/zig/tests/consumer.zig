@@ -20,27 +20,34 @@ fn fail(a: A, diagnostic: tt.Diagnostic) !void {
     try emit(a, .{ .@"error" = diagnostic.code.?, .http_status = diagnostic.http_status });
 }
 const Mode = enum { many, cancelled, single };
-fn emitItem(comptime function: tt.Function, a: A, item: anytype) !void {
-    try emit(a, if (function == .filter) item.row else item);
+fn emitRecord(a: A, record: tt.Record) !void {
+    switch (record) {
+        .text => |text| try emit(a, text),
+        .json => |json| write(json),
+        .missing => write("null"),
+    }
 }
 fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, value: std.json.Value, records: []const tt.Record, mode: Mode) !void {
     var diagnostic: tt.Diagnostic = .{};
-    var q = try fixture.question(function, a, value);
+    var saved: ?tt.Toolbox = null;
+    defer if (saved) |*toolbox| toolbox.deinit();
+    var question: tt.QuestionType(function) = if (function == .annotate) .{ .entries = value.object.get("questions").?, .field = if (value.object.get("field")) |field| field.string else null } else blk: {
+        saved = fixture.toolbox(a, value, &diagnostic) catch return fail(a, diagnostic);
+        break :blk saved.?.get("fixture").?.as(function).?;
+    };
+    if (value.object.get("name")) |name| question.name = name.string;
     if (mode == .single) {
-        std.debug.assert(records.len == 1);
         if (function == .decide) {
-            const item = try client.decide(a, q.question, records[0], q.options, &diagnostic);
+            const item = try client.decide(a, question, records[0], &diagnostic);
             write("[");
-            try emitItem(function, a, item);
+            try emit(a, item);
             write("]");
             return;
         } else return error.SingleModeRequiresDecide;
     }
-    var call = client.openAll(function, a, q, .{ .records = records }, &diagnostic) catch {
-        return fail(a, diagnostic);
-    };
+    const method = if (function == .filter or function == .rank) @tagName(function) else @tagName(function) ++ "All";
+    var call = @field(tt.Client, method)(client, a, question, records, &diagnostic) catch return fail(a, diagnostic);
     defer call.deinit();
-    q = undefined;
     if (mode == .cancelled) {
         call.cancel();
         _ = call.next(&diagnostic) catch return fail(a, diagnostic);
@@ -48,16 +55,25 @@ fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, valu
     }
     var count: usize = 0;
     while (true) {
-        const next = if (function == .filter) call.nextRow(&diagnostic) else call.next(&diagnostic);
-        const item = (next catch |err| {
+        const item = (call.next(&diagnostic) catch |err| {
+            if (function == .filter and err == error.Failed) break;
             if (count == 0) return fail(a, diagnostic);
             return err;
         }) orelse break;
-        write(if (count == 0) "[" else ",");
-        try emitItem(function, a, item);
+        if (count == 0) write(if (function == .filter) "{\"kept\":[" else "[") else write(",");
+        if (function == .filter) try emitRecord(a, item) else try emit(a, item);
         count += 1;
     }
-    write(if (count == 0) "[]" else "]");
+    if (count == 0) write(if (function == .filter) "{\"kept\":[" else "[");
+    write("]");
+    if (function == .filter) {
+        write(",\"failed\":[");
+        for (call.failed(), 0..) |failed, index| {
+            if (index != 0) write(",");
+            try emit(a, failed);
+        }
+        write("]}");
+    }
 }
 fn run(a: A, settings_json: []const u8, request_json: []const u8, mode: Mode) !void {
     const settings = try fixture.settings(a, settings_json);
@@ -82,7 +98,7 @@ fn run(a: A, settings_json: []const u8, request_json: []const u8, mode: Mode) !v
     }
     return error.UnknownFixture;
 }
-fn driveHeld(call: *tt.Call(.decide)) void {
+fn driveHeld(call: *tt.Call(tt.Decide, tt.Record)) void {
     var diag: tt.Diagnostic = .{};
     _ = call.next(&diag) catch |err| {
         std.debug.assert(err == error.Cancelled and diag.code == .local_cancelled);
@@ -90,17 +106,20 @@ fn driveHeld(call: *tt.Call(.decide)) void {
     };
     @panic("held request returned before cancellation");
 }
-fn held(a: A, settings_json: []const u8) !void {
-    const settings = try fixture.settings(a, settings_json);
+fn held(a: A, settings_json: []const u8, token: bool) !void {
+    var settings = try fixture.settings(a, settings_json);
+    var stop = try tt.Cancel.init(null);
+    defer stop.deinit();
+    if (token) settings.cancel = &stop;
     var client = try tt.Client.init(settings, null);
     defer client.deinit();
-    var call = try client.decideAll(a, "Ready?", .{ .records = &.{.{ .text = "evidence" }} }, .{}, null);
+    var call = try client.decideAll(a, tt.Decide{ .question = "Ready?" }, &[_]tt.Record{.{ .text = "evidence" }}, null);
     defer call.deinit();
     const worker = try std.Thread.spawn(.{}, driveHeld, .{&call});
     var signal: [1]u8 = undefined;
     const count = if (builtin.os.tag == .windows) _read(0, &signal, 1) else std.c.read(0, &signal, 1);
     std.debug.assert(count == 1);
-    call.cancel();
+    if (token) stop.cancel() else call.cancel();
     worker.join();
 }
 pub fn main(init: std.process.Init) !void {
@@ -135,8 +154,8 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.eql(u8, args[1], "usage")) {
         var client = try tt.Client.init(.{ .backend = .systemone, .url = args[2] }, null);
-        _ = try client.decide(a, "Ready?", .{ .text = "evidence" }, .{}, null);
-        const snapshot = try client.usage(a, null);
+        _ = try client.decide(a, tt.Decide{ .question = "Ready?" }, "evidence", null);
+        const snapshot = try client.usage(null);
         client.deinit();
         return emit(a, snapshot);
     }
@@ -144,6 +163,7 @@ pub fn main(init: std.process.Init) !void {
     if (std.mem.eql(u8, args[1], "single")) return run(a, args[2], args[3], .single);
     if (std.mem.eql(u8, args[1], "cancelled")) return run(a, args[2], args[3], .cancelled);
     if (std.mem.eql(u8, args[1], "finite-array")) return run(a, args[2], "{\"question\":{\"function\":\"tag\",\"question\":\"What applies?\",\"labels\":[\"billing\",\"refund\",\"shipping\"],\"threshold\":0.7},\"records\":[\"a\",\"b\",\"c\"]}", .many);
-    if (std.mem.eql(u8, args[1], "held")) return held(a, args[2]);
+    if (std.mem.eql(u8, args[1], "held")) return held(a, args[2], false);
+    if (std.mem.eql(u8, args[1], "held-token")) return held(a, args[2], true);
     return error.UnknownTestMode;
 }

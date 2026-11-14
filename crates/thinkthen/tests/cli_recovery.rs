@@ -47,7 +47,20 @@ fn offline_export_preserves_occurrences_and_refuses_committed_corruption() {
         .unwrap()
         .lines()
         .take(3)
-        .map(|line| serde_json::from_str(line).unwrap())
+        .enumerate()
+        .map(|(index, line)| {
+            let mut row: Value = serde_json::from_str(line).unwrap();
+            let originals = [
+                json!({"id":7,"text":"alpha"}),
+                json!({"id":7,"text":"beta"}),
+                json!({"text":"gamma"}),
+            ];
+            assert_eq!(
+                row.as_object_mut().unwrap().remove("item"),
+                Some(originals[index].clone())
+            );
+            row
+        })
         .collect();
     assert_eq!(expected.len(), 3);
     let mut bytes = b"THINKTHEN-RECOVERY-1\n".to_vec();
@@ -305,7 +318,16 @@ fn rank_top_recovery_distinguishes_unemitted_inputs_from_unfinished_work() {
         .unwrap();
     let output = child.wait_with_output().unwrap();
     assert!(output.status.success(), "{output:?}");
-    let expected: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let mut expected: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let original = if expected["position"] == 1 {
+        "alpha"
+    } else {
+        "beta"
+    };
+    assert_eq!(
+        expected.as_object_mut().unwrap().remove("item"),
+        Some(json!(original))
+    );
     let mut bytes = b"THINKTHEN-RECOVERY-1\n".to_vec();
     frame(
         &mut bytes,

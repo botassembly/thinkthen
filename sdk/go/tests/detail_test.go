@@ -71,26 +71,20 @@ func assertAnnotations(t *testing.T, got tt.Annotations, raw json.RawMessage) {
 				t.Fatal(err)
 			}
 			assertEntry(t, child, want)
-		case tt.ChooseAnnotation:
-			child, err := got.Choose(name)
+		case tt.ChooseAnnotation[string]:
+			child, err := got.Choose[string](name)
 			if err != nil {
 				t.Fatal(err)
 			}
 			assertEntry(t, child, want)
-		case tt.TagAnnotation:
-			child, err := got.Tag(name)
+		case tt.TagAnnotation[string]:
+			child, err := got.Tag[string](name)
 			if err != nil {
 				t.Fatal(err)
 			}
 			assertEntry(t, child, want)
 		case tt.ScoreAnnotation:
 			child, err := got.Score(name)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assertEntry(t, child, want)
-		case tt.FilterAnnotation:
-			child, err := got.Filter(name)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -179,9 +173,7 @@ func mutateAnswer(answer any) {
 	case []tt.Relation:
 		if len(v) > 0 {
 			v[0].Source.Text = "mutated"
-			if v[0].Either != nil {
-				*v[0].Either = !*v[0].Either
-			}
+			v[0].Either = !v[0].Either
 		}
 	}
 }
@@ -197,7 +189,7 @@ func mutateDetail(detail any) {
 		}
 	case tt.PairsDetail:
 		if len(v.Pairs) > 0 {
-			v.Pairs[0].Label = "mutated"
+			v.Pairs[0].Relation = "mutated"
 		}
 	case tt.RecognizeDetail:
 		if len(v.Pieces) > 0 {

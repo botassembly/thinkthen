@@ -3,7 +3,7 @@ stub <- tt_client(backend = "stub")
 text <- c("alpha", "bravo", "alpha")
 input <- data.frame(body = text, category = factor(c("b", "a", "b")),
                     day = as.Date("2026-01-01") + seq_len(3L), row.names = c("ten", "two", "again"))
-rows <- tt_decide_rows(input, "Ready?", field = "/body", client = stub)
+rows <- tt_decide(details = TRUE, input, "Ready?", field = "/body", client = stub)
 
 # Feature: attachment rejects malformed prefixes and unsupported frame classes.
 condition(tt_answer(input), "thinkthen_usage_error")
@@ -12,7 +12,7 @@ condition(tt_bind(input, rows), "thinkthen_usage_error")
 condition(tt_bind(structure(input, class = c("unknown_frame", "data.frame")), rows, "out"), "thinkthen_usage_error")
 
 # Feature: column expressions use the same admitted evidence as a frame call.
-answers <- tt_answer(tt_decide_rows(text, "Ready?", client = stub))
+answers <- tt_answer(tt_decide(details = TRUE, text, "Ready?", client = stub))
 tbl <- dplyr::mutate(tibble::as_tibble(input), answer = tt_decide(body, "Ready?", client = stub))
 DT <- data.table::as.data.table(input)
 DT[, answer := tt_decide(body, "Ready?", client = stub)]
@@ -21,17 +21,16 @@ stopifnot(identical(tbl$answer, answers), identical(DT$answer, answers))
 # Feature: failures sit beside plain answers in everyday table use.
 inbox <- tibble::tibble(body = c("alpha", NA, "bravo"))
 answered <- suppressWarnings(dplyr::mutate(inbox, answer = tt_decide(body, "Ready?", client = stub, errors = "na")))
-mask <- suppressWarnings(tt_keep(inbox$body, "Ready?", client = stub, errors = "na"))
+mask <- suppressWarnings(tt_decide(inbox$body, "Ready?", client = stub, errors = "na"))
 stopifnot(is.logical(answered$answer), is.na(answered$answer[[2]]),
-          nrow(suppressWarnings(dplyr::filter(inbox, tt_keep(body, "Ready?", client = stub, errors = "na")))) == sum(mask, na.rm = TRUE))
-kept <- suppressWarnings(tt_filter(data.table::as.data.table(inbox), "Ready?", field = "/body", client = stub, errors = "na"))
-clean <- tt_filter(data.table::as.data.table(inbox[-2, ]), "Ready?", field = "/body", client = stub)
-stopifnot(identical(tt_failures(kept)$position, 2), length(caught(kept[, flag := TRUE])$warnings) == 0L,
-          length(caught(clean[, flag := TRUE])$warnings) == 0L)
+          nrow(suppressWarnings(dplyr::filter(inbox, tt_decide(body, "Ready?", client = stub, errors = "na")))) == sum(mask, na.rm = TRUE))
+kept <- condition(tt_filter(data.table::as.data.table(inbox), "Ready?", field="/body",client=stub),"thinkthen_failed")$kept
+clean <- tt_filter(data.table::as.data.table(inbox[-2,]), "Ready?", field="/body",client=stub)
+stopifnot(length(caught(kept[,flag:=TRUE])$warnings)==0L,length(caught(clean[,flag:=TRUE])$warnings)==0L)
 subclassed <- data.table::as.data.table(inbox)
-class(subclassed) <- c("custom_table", class(subclassed))
-stopifnot(identical(class(suppressWarnings(tt_filter(subclassed, "Ready?", field = "/body", client = stub, errors = "na"))), class(subclassed)),
-          identical(class(tt_filter(subclassed[-2, ], "Ready?", field = "/body", client = stub)), class(subclassed)))
+class(subclassed) <- c("custom_table",class(subclassed))
+stopifnot(identical(class(condition(tt_filter(subclassed,"Ready?",field="/body",client=stub),"thinkthen_failed")$kept),class(subclassed)),
+ identical(class(tt_filter(subclassed[-2,],"Ready?",field="/body",client=stub)),class(subclassed)))
 
 # Feature: a filtered data.table with an automatic index stays queryable.
 values <- rep(letters[1:12], 2L)
@@ -42,10 +41,11 @@ for (body in list(sort(values), values)) {
   kept <- tt_filter(indexed, "Ready?", field = "/a", client = stub)
   stopifnot(nrow(kept) > 0L, nrow(kept) < nrow(indexed), identical(data.table::indices(indexed), "a"))
   for (value in letters[1:12]) stopifnot(identical(kept[a == value]$b, kept$b[kept$a == value]))
-  # An `==` lookup on a one-row item does not raise on a stale index, so check the index itself.
-  for (item in tt_filter_rows(indexed, "Ready?", field = "/a", client = stub)$item) {
-    stopifnot(is.null(data.table::indices(item)), identical(item[a == item$a]$b, item$b))
-  }
+  # Packed original rows have no stale automatic index after subsetting.
+  items <- tt_decide(details=TRUE,indexed,"Ready?",field="/a",client=stub)$item
+  stopifnot(identical(as.data.frame(items),as.data.frame(indexed)),is.null(data.table::indices(items)))
+  item <- items[1,]
+  stopifnot(is.null(data.table::indices(item)),identical(item[a==item$a]$b,item$b))
 }
 
 # Feature: attachment preserves repeated names, custom attributes and empty prototypes.
@@ -57,21 +57,21 @@ stopifnot(identical(names(bound)[1:3], names(input)), identical(bound[[1]], inpu
           identical(bound[[2]], input[[2]]), identical(bound[[3]], input[[3]]),
           identical(attr(bound, "origin"), "retain"), identical(row.names(bound), row.names(input)))
 for (data in list(input[FALSE, , drop = FALSE], tibble::tibble(body = character()))) {
-  empty <- tt_decide_rows(character(), "Ready?", client = stub)
+  empty <- tt_decide(details = TRUE, character(), "Ready?", client = stub)
   bound <- tt_bind(data, empty, "out")
   stopifnot(nrow(bound) == 0L, identical(class(bound), class(data)),
             is.logical(bound$out_answer), is.double(bound$out_probability),
-            is.factor(bound$out_status), is.factor(bound$out_error_code), is.list(bound$out_detail))
+            is.factor(bound$out_status), is.character(bound$out_error_code), is.list(bound$out_detail))
 }
 
 # Feature: an answered absent find differs from a failed projection.
-nothing <- tt_find_rows("no matching line", "Which line?", client = stub)
-stopifnot(nothing$status == "answered", inherits(tt_answer(nothing), "tt_span"), is.na(tt_answer(nothing)))
+nothing <- tt_find(details = TRUE, "no matching line", "Which line?", client = stub)
+stopifnot(nothing$status == "answered", inherits(tt_answer(nothing), "tt_span"), !is.na(tt_answer(nothing)))
 cat("R eager table expressions, names, attributes and prototypes passed\n")
 
 # Feature: factor IDs preserve labels through the public frame call.
 input <- data.frame(id = factor(c("second", "first", "second")), body = text)
-rows <- tt_decide_rows(input, "Ready?", field = "/body", client = stub)
+rows <- tt_decide(details = TRUE, input, "Ready?", field = "/body", client = stub)
 stopifnot(nrow(rows) == 3L, all(rows$status == "answered"),
           identical(rows$id, as.list(as.character(input$id))))
 
@@ -87,20 +87,20 @@ reference <- lapply(seq_len(nrow(input)), function(position) {
     dataframe = "rows", auto_unbox = TRUE, null = "null", na = "null", digits = I(17), force = FALSE))
   jsonlite::fromJSON(json, simplifyVector = FALSE)[[1]]
 })
-actual <- tt_filter_rows(input, "Ready?", client = stub)
-expected <- tt_filter_rows(reference, "Ready?", client = stub)
+actual <- tt_decide(details = TRUE, input, "Ready?", client = stub)
+expected <- tt_decide(details = TRUE, reference, "Ready?", client = stub)
 stopifnot(identical(actual[names(actual) != "item"], expected[names(expected) != "item"]),
-  identical(actual$item, lapply(seq_len(nrow(input)), function(i) input[i, , drop = FALSE])))
+  identical(actual$item,input))
 
 # Feature: an unsupported cell fails its row while serializable neighbors survive.
 input <- data.frame(body = c("alpha", "bravo", "charlie"))
 input$nested <- I(list(list(value = 1), new.env(parent = emptyenv()), list(value = 3)))
-actual <- tt_filter_rows(input, "Ready?", client = stub)
-expected <- tt_filter_rows(lapply(seq_len(nrow(input)), function(i) {
+actual <- tt_decide(details = TRUE, input, "Ready?", client = stub)
+expected <- tt_decide(details = TRUE, lapply(seq_len(nrow(input)), function(i) {
   list(body = input$body[[i]], nested = input$nested[[i]])
 }), "Ready?", client = stub)
 stopifnot(identical(as.character(actual$status), c("answered", "failed", "answered")),
-  identical(actual$kept[[2]], FALSE),
+  is.na(actual$answer[[2]]),
   identical(actual[names(actual) != "item"], expected[names(expected) != "item"]))
 
 cat("R canonical frame encoding and isolated conversion failures passed\n")

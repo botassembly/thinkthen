@@ -75,10 +75,6 @@ def annotation_members(value: object) -> Mapping[str, Mapping[str, Enum]]:
     return cast(Mapping[str, Mapping[str, Enum]], getattr(value, "_children", {}))
 
 
-# The shared question contract names a decide question's meanings by answer.
-_MEANINGS = {"yes_means": "true", "no_means": "false"}
-
-
 def _described(
     values: tuple[object, ...], descriptions: object, name: str
 ) -> tuple[tuple[object, ...], dict[object, object]]:
@@ -145,7 +141,7 @@ def definition(
             )
         ):
             binding(_native.reject_question_conversion)
-        result[_MEANINGS.get(name, name)] = value
+        result[name] = value
     if descriptions is not None:
         # Preserve unconsumed keys for the engine's unknown-field diagnostic.
         result["descriptions"] = descriptions
@@ -158,7 +154,7 @@ def _admit(
     text = encode(
         definition(function, question, **fields), _native.reject_question_conversion
     )
-    return binding(lambda: _native.NativeQuestion(text))
+    return binding(lambda: _native.NativeQuestion(text), function=function)
 
 
 class DecideQuestion(_Question):
@@ -195,7 +191,7 @@ class FilterQuestion(_Question):
         self,
         question: str,
         *,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         yes_means: str | None = None,
         no_means: str | None = None,
@@ -444,7 +440,6 @@ NonAnnotateQuestion: TypeAlias = (
 )
 AnnotationQuestion: TypeAlias = (
     DecideQuestion
-    | FilterQuestion
     | ChooseQuestion[Any]
     | TagQuestion[Any]
     | ScoreQuestion

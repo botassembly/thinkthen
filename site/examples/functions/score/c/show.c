@@ -1,28 +1,38 @@
 #include <thinkthen.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 static void report(const thinkthen_error *error) {
-    fprintf(stderr, "%s: ", thinkthen_code_name(error->code));
-    fwrite(error->message.data, 1, error->message.len, stderr);
-    fputc('\n', stderr);
+    fprintf(stderr, "%s\n", thinkthen_error_string(error));
 }
 
 int main(void) {
     const char *const levels[] = {"routine", "urgent"};
+    double score = 0;
     thinkthen_client *client = NULL;
+    thinkthen_question *question = NULL;
+    thinkthen_row urgency = THINKTHEN_ROW_INIT;
     thinkthen_error error = THINKTHEN_ERROR_INIT;
-    double urgency = 0;
     int rc = thinkthen_client_open(NULL, &client, &error);
-    // 0 means routine and 1 means urgent.
     if (rc == THINKTHEN_OK)
-        rc = thinkthen_score(client, "How urgent is the request?", levels, 2,
-                             "Please refund my order.",
-                             THINKTHEN_NUL_TERMINATED, &urgency, &error);
+        rc = thinkthen_question_new(THINKTHEN_FUNCTION_SCORE, "How urgent is the request?",
+                                    THINKTHEN_NUL_TERMINATED, &question, &error);
     if (rc == THINKTHEN_OK)
-        printf("%g\n", urgency);
-    else
+        rc = thinkthen_question_set_levels(question, levels, 2, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_run_one(client, question, "Please refund my order.",
+                               THINKTHEN_NUL_TERMINATED, THINKTHEN_RECORD_TEXT,
+                               &urgency, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_row_answer_score(&urgency, &score, &error);
+    if (rc == THINKTHEN_OK) {
+        printf("%g\n", score);
+    } else {
         report(&error);
+    }
+    thinkthen_row_free(&urgency);
+    thinkthen_question_free(question);
     thinkthen_error_free(&error);
     thinkthen_client_free(client);
     return rc == THINKTHEN_OK ? EXIT_SUCCESS : EXIT_FAILURE;

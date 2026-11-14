@@ -2,9 +2,9 @@ shape: (3, 4)
 ┌─────────────────────────────────┬────────┬──────────┬─────────┐
 │ message                         ┆ refund ┆ topic    ┆ urgency │
 │ ---                             ┆ ---    ┆ ---      ┆ ---     │
-│ str                             ┆ bool   ┆ str      ┆ f64     │
+│ str                             ┆ bool   ┆ enum     ┆ f64     │
 ╞═════════════════════════════════╪════════╪══════════╪═════════╡
 │ Please refund my order.         ┆ true   ┆ billing  ┆ 0.05    │
-│ Where is my parcel?             ┆ false  ┆ shipping ┆ 0.14    │
-│ I was charged twice for one in… ┆ true   ┆ billing  ┆ 0.45    │
+│ Where is my parcel?             ┆ false  ┆ shipping ┆ 0.16    │
+│ I was charged twice for one in… ┆ true   ┆ billing  ┆ 0.46    │
 └─────────────────────────────────┴────────┴──────────┴─────────┘

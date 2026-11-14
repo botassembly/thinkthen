@@ -1,5 +1,5 @@
 {
-  "anchor": "    const topics = try (try client.tag(",
+  "anchor": "    const topics = try client.tag(arena, asks_topics, \"I was charged twice and my parcel is late again.\", &diag);",
   "before": 0,
   "after": 2
 }

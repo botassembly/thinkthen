@@ -43,9 +43,9 @@ func TestNativeABIManifest(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer client.Close()
-		row, err := client.Decide(context.Background(), thinkthen.NewDecide("Ready?"), thinkthen.Missing())
-		if err != nil || !errors.Is(rowFailure(row.Err()), thinkthen.CodeRecordMissing) {
-			t.Fatal("accepted engine did not forward failed row")
+		_, err = client.Decide(context.Background(), thinkthen.DecideQuestion{Question: "Ready?"}, any(nil))
+		if !errors.Is(err, thinkthen.CodeRecordMissing) {
+			t.Fatal("accepted engine did not forward the scalar failure")
 		}
 		return
 	}
@@ -212,7 +212,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer client.Close()
-		row, err := client.Decide(context.Background(), thinkthen.NewDecide("Ready?"), thinkthen.Text("evidence"))
+		row, err := client.Decide(context.Background(), thinkthen.DecideQuestion{Question: "Ready?"}, "evidence")
 		if err != nil || row.Status() != thinkthen.Answered {
 			t.Fatalf("fallback did not answer: %v", err)
 		}

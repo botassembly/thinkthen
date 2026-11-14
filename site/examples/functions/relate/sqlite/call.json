@@ -1,5 +1,5 @@
 {
-  "anchor": "FROM thinkthen_relate('SELECT msg_id AS id, body AS record FROM messages')",
+  "anchor": "FROM thinkthen_relate('SELECT msg_id AS id, body AS record FROM messages') AS relations",
   "before": 0,
   "after": 2
 }

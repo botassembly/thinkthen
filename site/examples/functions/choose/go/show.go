@@ -20,10 +20,9 @@ func main() {
 	}
 	defer client.Close()
 
-	topicQuestion := tt.NewChoose("What is the message about?",
-		[]string{"billing", "shipping", "other"})
+	topicQuestion := tt.ChooseQuestion[string]{Question: "What is the message about?", Choices: []string{"billing", "shipping", "other"}}
 	topic, err := tt.Answer(client.Choose(context.Background(), topicQuestion,
-		tt.Text(string(message))))
+		string(message)))
 	if err != nil {
 		log.Fatal(err)
 	}

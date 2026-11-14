@@ -161,7 +161,7 @@ fn row_admission_and_schema_reject_fields_that_disagree_with_their_tags() {
     let source = json!({"backend":"stub","model":"stub","question_identity":"fixture"});
     let valid = [
         json!({"function":"decide","position":1,"source":source,"status":"answered","answer":true,"probability":0.8123456789012345}),
-        json!({"function":"find","position":1,"source":source,"status":"answered","answer":null}),
+        json!({"function":"find","position":1,"source":source,"status":"answered","answer":null,"probability":0.9}),
         json!({"function":"decide","position":1,"source":source,"status":"unsure","probability":0.6}),
         json!({"function":"decide","position":1,"source":source,"status":"failed","error":{"code":"record.missing","message":"missing"}}),
     ];
@@ -194,6 +194,51 @@ fn row_admission_and_schema_reject_fields_that_disagree_with_their_tags() {
     let mut value = valid[0].clone();
     value["probability"] = json!(null);
     invalid.push(value);
+    let mut value = valid[0].clone();
+    value.as_object_mut().unwrap().remove("probability");
+    invalid.push(value);
+    for field in ["id", "source.name"] {
+        let mut value = valid[0].clone();
+        if field == "id" {
+            value["id"] = Value::Null;
+        } else {
+            value["source"]["name"] = Value::Null;
+        }
+        invalid.push(value);
+    }
+    let mut value = valid[3].clone();
+    value["error"]["http_status"] = Value::Null;
+    invalid.push(value);
+    for function in [
+        "filter",
+        "tag",
+        "score",
+        "rank",
+        "recognize",
+        "relate",
+        "annotate",
+    ] {
+        let mut value = valid[2].clone();
+        value["function"] = function.into();
+        invalid.push(value);
+    }
+    let mut value = valid[0].clone();
+    value["function"] = "score".into();
+    value["answer"] = json!(0.8);
+    invalid.push(value);
+    let mut value = valid[0].clone();
+    value["item"] = json!({"mutable":"caller-owned"});
+    assert!(rows.is_valid(&value));
+    let restored: AnyRow = serde_json::from_value(value).unwrap();
+    assert!(
+        serde_json::to_value(restored)
+            .unwrap()
+            .get("item")
+            .is_none()
+    );
+    let entry = json!({"function":"score","status":"unsure","probability":0.5});
+    let form = json!({"function":"annotate","position":1,"source":source,"status":"answered","answer":{"urgency":entry}});
+    invalid.push(form);
     for value in invalid {
         assert!(!rows.is_valid(&value), "schema admitted {value}");
         assert!(

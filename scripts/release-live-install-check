@@ -108,7 +108,7 @@ def check(site, scratch, fixture, case):
         command_question(scratch / ('installed/bin/thinkthen.exe' if os.name == 'nt' else 'installed/bin/thinkthen'), case, env)
     elif site == 'go':
         shutil.copytree(ROOT / 'sdk/go/tests', scratch / 'consumer')
-        (scratch / 'consumer/go.mod').write_text('module liveconsumer\n\ngo 1.23\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v' + version() + '\n')
+        (scratch / 'consumer/go.mod').write_text('module liveconsumer\n\ngo 1.27\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v' + version() + '\n')
         run('go', 'test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=scratch / 'consumer', env=env)
     elif site == 'swift':
         consumer = scratch / 'consumer'

@@ -22,7 +22,7 @@ No: the message asks about a delivery, so `--check` exits 1. The answer still pr
 | 1 | With `--check`, the answer was no. |
 | 2 | An argument, option or setting is wrong or missing, such as an unset key or an empty text. Nothing was asked. |
 | 3 | With `--check`, the answer was not sure. |
-| 4 | The model service failed, or it failed for every line, as with a wrong key. |
+| 4 | A service error stopped the call before it produced a message result, such as a refused key. |
 | 5 | A file couldn't be read or written, or a toolbox couldn't be read. |
 | 6 | One or more lines failed. The others still hold their answers. |
 | 130 | You pressed Ctrl-C. A second Ctrl-C exits at once. |
@@ -37,7 +37,7 @@ A failed line wins over every `--check` answer, so 6 beats 0, 1 and 3.
 | decide | yes | no | not sure |
 | choose | a choice | | not sure |
 | find | a line was found | no line answers | not sure |
-| filter | at least one line kept | none kept | none kept, and one was not sure |
+| filter | at least one line kept | none kept | |
 
 decide, choose and find take one text with `--check`, from a pipe, `--text` or one file. filter takes any number of lines. Each function's page shows `--check` at work, starting with [decide](/functions/decide/).
 

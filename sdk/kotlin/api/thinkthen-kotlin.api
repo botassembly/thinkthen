@@ -1,31 +1,41 @@
-public final class dev.thinkthen.kotlin.Annotate implements dev.thinkthen.kotlin.SingleQuestion {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Annotate(dev.thinkthen.kotlin.AnnotationQuestions, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Annotate(dev.thinkthen.kotlin.AnnotationQuestions, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final dev.thinkthen.kotlin.AnnotationQuestions getQuestions();
-  public final java.lang.String getField-8pE668c();
-  public int hashCode();
-  public java.lang.String getName();
-  public java.lang.String toString();
+public class dev.thinkthen.kotlin.NoAnswerException extends java.lang.RuntimeException {
+  public dev.thinkthen.kotlin.NoAnswerException(java.lang.String);
+}
+
+public class dev.thinkthen.kotlin.ThinkThenException extends java.lang.RuntimeException {
+  public dev.thinkthen.kotlin.ThinkThenException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable);
+  public dev.thinkthen.kotlin.ThinkThenException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.ErrorCode getCode();
+  public final java.lang.Integer getHttpStatus();
 }
 
 public final class dev.thinkthen.kotlin.AnnotateCallsKt {
-  public static final <T> java.lang.Object annotate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, T, kotlinx.serialization.KSerializer<T>, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final <T> java.lang.Object annotate-vFdKlSo(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, T, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> annotateStream-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Iterable<? extends T>, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> annotateStream-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.coroutines.flow.Flow<? extends T>, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> annotateStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> annotateStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>, java.lang.String, java.lang.String);
+  public static final <T> java.lang.Object annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, ? extends T>>);
+  public static final <T> java.lang.Object annotate-vFdKlSo(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, T, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, T>> annotateStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, T>> annotateStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, T>> annotateStream-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Iterable<? extends T>, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, T>> annotateStream-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.coroutines.flow.Flow<? extends T>, java.lang.String, java.lang.String);
+  public static final java.lang.Object annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, kotlinx.serialization.json.JsonArray>>);
   public static final java.lang.Object annotate-vFdKlSo(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Void, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final java.lang.Object annotate-vFdKlSo(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.serialization.json.JsonArray, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static java.lang.Object annotate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Object, kotlinx.serialization.KSerializer, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static final java.lang.Object annotate-vFdKlSo(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.serialization.json.JsonArray, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Annotations, kotlinx.serialization.json.JsonArray>>);
   public static java.lang.Object annotate-vFdKlSo$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Object, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static java.lang.Object annotate-vFdKlSo$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Void, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static java.lang.Object annotate-vFdKlSo$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.serialization.json.JsonArray, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static kotlinx.coroutines.flow.Flow annotateStream-EEOGFL0$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Iterable, java.lang.String, java.lang.String, int, java.lang.Object);
   public static kotlinx.coroutines.flow.Flow annotateStream-EEOGFL0$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.coroutines.flow.Flow, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow annotateStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Iterable, kotlinx.serialization.KSerializer, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow annotateStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.coroutines.flow.Flow, kotlinx.serialization.KSerializer, java.lang.String, java.lang.String, int, java.lang.Object);
+}
+
+public final class dev.thinkthen.kotlin.AnnotateQuestion implements dev.thinkthen.kotlin.SingleQuestion {
+  public boolean equals(java.lang.Object);
+  public dev.thinkthen.kotlin.AnnotateQuestion(dev.thinkthen.kotlin.AnnotationQuestions, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.AnnotateQuestion(dev.thinkthen.kotlin.AnnotationQuestions, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.AnnotationQuestions getQuestions();
+  public final java.lang.String getField-8pE668c();
+  public int hashCode();
+  public java.lang.String getName();
+  public java.lang.String toString();
 }
 
 public final class dev.thinkthen.kotlin.AnnotationQuestions {
@@ -43,32 +53,19 @@ public final class dev.thinkthen.kotlin.AnnotationQuestions$Companion {
 
 public final class dev.thinkthen.kotlin.Annotations {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Annotations(java.util.Map<java.lang.String, ? extends dev.thinkthen.kotlin.EntryResult>);
-  public final dev.thinkthen.kotlin.EntryOutcome decide(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome decideOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome filter(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome filterOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome find(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome findOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.lang.Double, dev.thinkthen.kotlin.LevelDetail> score(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.lang.Double, dev.thinkthen.kotlin.LevelDetail> scoreOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.lang.String, dev.thinkthen.kotlin.LabelDetail> choose(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.lang.String, dev.thinkthen.kotlin.LabelDetail> chooseOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail> recognize(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail> recognizeOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail> relate(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail> relateOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail> tag(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryOutcome<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail> tagOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryResult get(java.lang.String);
-  public final java.util.Map<java.lang.String, dev.thinkthen.kotlin.EntryResult> getEntries();
+  public dev.thinkthen.kotlin.Annotations(java.util.Map<java.lang.String, ? extends dev.thinkthen.kotlin.Row<?, ?>>);
+  public final <E extends java.lang.Enum<E>> dev.thinkthen.kotlin.Row<E, java.lang.Object> choose(java.lang.String, kotlin.reflect.KClass<E>);
+  public final <E extends java.lang.Enum<E>> dev.thinkthen.kotlin.Row<java.util.List<E>, java.lang.Object> tag(java.lang.String, kotlin.reflect.KClass<E>);
+  public final dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, java.lang.Object> find(java.lang.String);
+  public final dev.thinkthen.kotlin.Row<java.lang.Boolean, java.lang.Object> decide(java.lang.String);
+  public final dev.thinkthen.kotlin.Row<java.lang.Double, java.lang.Object> score(java.lang.String);
+  public final dev.thinkthen.kotlin.Row<java.lang.String, java.lang.Object> choose(java.lang.String);
+  public final dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, java.lang.Object> recognize(java.lang.String);
+  public final dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, java.lang.Object> relate(java.lang.String);
+  public final dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, java.lang.Object> tag(java.lang.String);
+  public final java.util.Map<java.lang.String, dev.thinkthen.kotlin.Row<?, ?>> getEntries();
   public int hashCode();
   public java.lang.String toString();
-  public static final dev.thinkthen.kotlin.Annotations$Companion Companion;
-}
-
-public final class dev.thinkthen.kotlin.Annotations$Companion {
-  public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.Annotations> serializer();
 }
 
 public final class dev.thinkthen.kotlin.ApiKey {
@@ -106,21 +103,40 @@ public final class dev.thinkthen.kotlin.BoundaryTag$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.BoundaryTag> serializer();
 }
 
-public final class dev.thinkthen.kotlin.CallsKt {
-  public static final <A, D> java.lang.Object ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends A, ? extends D>>);
-  public static final <A, D> java.lang.Object ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends A, ? extends D>>);
-  public static final <T, A, D> java.lang.Object ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends A, ? extends D>>);
-  public static final <T, A, D> java.lang.Object ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, T, kotlinx.serialization.KSerializer<T>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends A, ? extends D>>);
-  public static final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, D>> askStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Iterable<? extends T>);
-  public static final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, D>> askStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, D>> askStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlinx.coroutines.flow.Flow<? extends T>);
-  public static final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, D>> askStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>);
+public final class dev.thinkthen.kotlin.ChooseCallsKt {
+  public static final <E extends java.lang.Enum<E>> java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends E, kotlinx.serialization.json.JsonArray>>);
+  public static final <E> java.lang.Object choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final <E> java.lang.Object choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends E, kotlinx.serialization.json.JsonArray>>);
+  public static final <T, E extends java.lang.Enum<E>> java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends E, ? extends T>>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<E, T>> chooseStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<E, T>> chooseStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T, E> java.lang.Object choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends E, ? extends T>>);
+  public static final <T, E> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<E, T>> chooseStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, java.lang.Iterable<? extends T>);
+  public static final <T, E> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<E, T>> chooseStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.String, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.String, T>> chooseStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.String, T>> chooseStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.String, kotlinx.serialization.json.JsonArray>>);
+  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow chooseStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow chooseStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow chooseStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow chooseStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
 }
 
-public final class dev.thinkthen.kotlin.Choose implements dev.thinkthen.kotlin.AnnotationQuestion<java.lang.String, dev.thinkthen.kotlin.LabelDetail>, dev.thinkthen.kotlin.SingleQuestion<java.lang.String, dev.thinkthen.kotlin.LabelDetail> {
+public final class dev.thinkthen.kotlin.ChooseQuestion<E> implements dev.thinkthen.kotlin.AnnotationQuestion<E, dev.thinkthen.kotlin.LabelDetail>, dev.thinkthen.kotlin.SingleQuestion<E, dev.thinkthen.kotlin.LabelDetail> {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Choose(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Choose(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ChooseQuestion(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ChooseQuestion(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ChooseQuestion(java.lang.String, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ChooseQuestion(java.lang.String, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
   public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getQuestion();
@@ -131,77 +147,48 @@ public final class dev.thinkthen.kotlin.Choose implements dev.thinkthen.kotlin.A
   public java.lang.String toString();
 }
 
-public final class dev.thinkthen.kotlin.ChooseCallsKt {
-  public static final <T> java.lang.Object choose-2AFAjeM(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>>);
-  public static final <T> java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>> chooseStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>> chooseStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>> chooseStream-mvpZQbI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>> chooseStream-mvpZQbI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>>);
-  public static final java.lang.Object choose-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.String, dev.thinkthen.kotlin.LabelDetail>>);
-  public static java.lang.Object choose-2AFAjeM$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object choose-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow chooseStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow chooseStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow chooseStream-mvpZQbI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow chooseStream-mvpZQbI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-}
-
-public final class dev.thinkthen.kotlin.ChooseResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.ChooseResult(dev.thinkthen.kotlin.EntryOutcome<java.lang.String, dev.thinkthen.kotlin.LabelDetail>);
-  public dev.thinkthen.kotlin.EntryOutcome<java.lang.String, dev.thinkthen.kotlin.LabelDetail> getOutcome();
-  public int hashCode();
-  public java.lang.String toString();
-}
-
 public final class dev.thinkthen.kotlin.CollectionCallsKt {
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, java.lang.Iterable<? extends T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, kotlinx.coroutines.flow.Flow<? extends T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> filter-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<T> keptOnly(kotlinx.coroutines.flow.Flow<? extends dev.thinkthen.kotlin.Filtered<? extends T>>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, java.lang.Iterable<? extends T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, kotlinx.coroutines.flow.Flow<? extends T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Filter, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterRows-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Rank, java.lang.Iterable<? extends T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Rank, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Rank, kotlinx.coroutines.flow.Flow<? extends T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.Rank, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank-mvpZQbI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rank-mvpZQbI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static kotlinx.coroutines.flow.Flow filter-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filter-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filter-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filter-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filterRows-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filterRows-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filterRows-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow filterRows-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rank-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlin.reflect.KClass<E>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rank-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.reflect.KClass<E>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T> kotlinx.coroutines.flow.Flow<T> filter(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FilterQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<T> filter(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FilterQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<T> filter-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<T> filter-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<T> keptOnly(kotlinx.coroutines.flow.Flow<? extends dev.thinkthen.kotlin.Row<java.lang.Boolean, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rank(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RankQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rank(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RankQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rank-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rank-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static kotlinx.coroutines.flow.Flow filter-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow filter-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
   public static kotlinx.coroutines.flow.Flow rank-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow rank-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static kotlinx.coroutines.flow.Flow rank-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow rank-mvpZQbI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, kotlinx.serialization.KSerializer, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow rank-mvpZQbI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, kotlinx.serialization.KSerializer, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow rank-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
 }
 
-public final class dev.thinkthen.kotlin.Decide implements dev.thinkthen.kotlin.AnnotationQuestion,dev.thinkthen.kotlin.SingleQuestion {
+public final class dev.thinkthen.kotlin.DecideCallsKt {
+  public static final <T> java.lang.Object decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Boolean, ? extends T>>);
+  public static final <T> java.lang.Object decide-iBaMHDE(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Boolean, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Boolean, T>> decideStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Boolean, T>> decideStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Boolean, T>> decideStream-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Boolean, T>> decideStream-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static final java.lang.Object decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Boolean, kotlinx.serialization.json.JsonArray>>);
+  public static final java.lang.Object decide-iBaMHDE(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object decide-iBaMHDE(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Boolean, kotlinx.serialization.json.JsonArray>>);
+  public static java.lang.Object decide-iBaMHDE$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object decide-iBaMHDE$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object decide-iBaMHDE$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow decideStream-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow decideStream-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+}
+
+public final class dev.thinkthen.kotlin.DecideQuestion implements dev.thinkthen.kotlin.AnnotationQuestion,dev.thinkthen.kotlin.SingleQuestion {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Decide(java.lang.String, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Decide(java.lang.String, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.DecideQuestion(java.lang.String, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.DecideQuestion(java.lang.String, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
   public final dev.thinkthen.kotlin.Threshold getThreshold();
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getNoMeans();
@@ -212,38 +199,15 @@ public final class dev.thinkthen.kotlin.Decide implements dev.thinkthen.kotlin.A
   public java.lang.String toString();
 }
 
-public final class dev.thinkthen.kotlin.DecideCallsKt {
-  public static final <T> java.lang.Object decide-ZBmJzJM(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final <T> java.lang.Object decide-iBaMHDE(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> decideStream-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> decideStream-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> decideStream-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> decideStream-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static final java.lang.Object decide-iBaMHDE(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final java.lang.Object decide-iBaMHDE(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static java.lang.Object decide-ZBmJzJM$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object decide-iBaMHDE$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object decide-iBaMHDE$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object decide-iBaMHDE$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow decideStream-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow decideStream-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow decideStream-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow decideStream-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-}
-
-public final class dev.thinkthen.kotlin.DecideResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.DecideResult(dev.thinkthen.kotlin.EntryOutcome);
-  public dev.thinkthen.kotlin.EntryOutcome getOutcome();
-  public int hashCode();
-  public java.lang.String toString();
-}
-
 public final class dev.thinkthen.kotlin.Entity {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.Entity(dev.thinkthen.kotlin.Mention, double);
   public final dev.thinkthen.kotlin.Mention getMention();
   public final double getProbability();
+  public final int getEnd();
+  public final int getStart();
+  public final java.lang.String getKind();
+  public final java.lang.String getText();
   public int hashCode();
   public java.lang.String toString();
   public static final dev.thinkthen.kotlin.Entity$Companion Companion;
@@ -253,66 +217,11 @@ public final class dev.thinkthen.kotlin.Entity$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.Entity> serializer();
 }
 
-public final class dev.thinkthen.kotlin.EntryOutcome$Answered<A, D> implements dev.thinkthen.kotlin.EntryOutcome<A, D> {
-  public A answer();
-  public A getOrThrow();
-  public D getDetail();
-  public boolean equals(java.lang.Object);
-  public boolean isAnswered();
-  public boolean isFailed();
-  public boolean isUnsure();
-  public dev.thinkthen.kotlin.Status getStatus();
-  public final A getAnswer();
-  public int hashCode();
-  public java.lang.Double getProbability();
-  public java.lang.String toString();
-}
-
-public final class dev.thinkthen.kotlin.EntryOutcome$DefaultImpls {
-  public static <A, D> A getOrThrow(dev.thinkthen.kotlin.EntryOutcome<? extends A, ? extends D>);
-  public static <A, D> boolean isAnswered(dev.thinkthen.kotlin.EntryOutcome<? extends A, ? extends D>);
-  public static <A, D> boolean isFailed(dev.thinkthen.kotlin.EntryOutcome<? extends A, ? extends D>);
-  public static <A, D> boolean isUnsure(dev.thinkthen.kotlin.EntryOutcome<? extends A, ? extends D>);
-}
-
-public final class dev.thinkthen.kotlin.EntryOutcome$Failed implements dev.thinkthen.kotlin.EntryOutcome {
-  public boolean equals(java.lang.Object);
-  public boolean isAnswered();
-  public boolean isFailed();
-  public boolean isUnsure();
-  public dev.thinkthen.kotlin.Status getStatus();
-  public final dev.thinkthen.kotlin.RowError getError();
-  public int hashCode();
-  public java.lang.Double getProbability();
-  public java.lang.Object answer();
-  public java.lang.Object getDetail();
-  public java.lang.Object getOrThrow();
-  public java.lang.String toString();
-  public java.lang.Void answer();
-  public java.lang.Void getDetail();
-  public java.lang.Void getOrThrow();
-}
-
-public final class dev.thinkthen.kotlin.EntryOutcome$Unsure<D> implements dev.thinkthen.kotlin.EntryOutcome {
-  public D getDetail();
-  public boolean equals(java.lang.Object);
-  public boolean isAnswered();
-  public boolean isFailed();
-  public boolean isUnsure();
-  public dev.thinkthen.kotlin.Status getStatus();
-  public int hashCode();
-  public java.lang.Double getProbability();
-  public java.lang.Object answer();
-  public java.lang.Object getOrThrow();
-  public java.lang.String toString();
-  public java.lang.Void answer();
-  public java.lang.Void getOrThrow();
-}
-
 public final class dev.thinkthen.kotlin.ErrorCode extends java.lang.Enum<dev.thinkthen.kotlin.ErrorCode> {
   public final dev.thinkthen.kotlin.ErrorFamily getFamily();
   public final int getValue();
   public final java.lang.String getWireName();
+  public java.lang.String toString();
   public static dev.thinkthen.kotlin.ErrorCode valueOf(java.lang.String);
   public static dev.thinkthen.kotlin.ErrorCode[] values();
   public static final dev.thinkthen.kotlin.ErrorCode BACKEND_REPLY;
@@ -377,11 +286,19 @@ public final class dev.thinkthen.kotlin.ErrorFamily$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.ErrorFamily> serializer();
 }
 
-public final class dev.thinkthen.kotlin.Filter implements dev.thinkthen.kotlin.AnnotationQuestion {
+public final class dev.thinkthen.kotlin.FailedException extends dev.thinkthen.kotlin.NoAnswerException {
+  public dev.thinkthen.kotlin.FailedException(dev.thinkthen.kotlin.RowError, java.util.List<? extends dev.thinkthen.kotlin.Row$Failed<?>>);
+  public final dev.thinkthen.kotlin.ErrorCode getCode();
+  public final dev.thinkthen.kotlin.RowError getError();
+  public final java.lang.Integer getHttpStatus();
+  public final java.util.List<dev.thinkthen.kotlin.Row$Failed<?>> getRows();
+}
+
+public final class dev.thinkthen.kotlin.FilterQuestion implements dev.thinkthen.kotlin.EntryQuestion {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Filter(java.lang.String, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Filter(java.lang.String, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final dev.thinkthen.kotlin.Threshold getThreshold();
+  public dev.thinkthen.kotlin.FilterQuestion(java.lang.String, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.FilterQuestion(java.lang.String, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getNoMeans();
   public final java.lang.String getQuestion();
@@ -391,63 +308,33 @@ public final class dev.thinkthen.kotlin.Filter implements dev.thinkthen.kotlin.A
   public java.lang.String toString();
 }
 
-public final class dev.thinkthen.kotlin.FilterResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.EntryOutcome getOutcome();
-  public dev.thinkthen.kotlin.FilterResult(dev.thinkthen.kotlin.EntryOutcome);
-  public int hashCode();
-  public java.lang.String toString();
+public final class dev.thinkthen.kotlin.FindCallsKt {
+  public static final <T> java.lang.Object find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, ? extends T>>);
+  public static final <T> java.lang.Object find-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, T>> findStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, T>> findStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, T>> findStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, T>> findStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final java.lang.Object find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, kotlinx.serialization.json.JsonArray>>);
+  public static final java.lang.Object find-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object find-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<dev.thinkthen.kotlin.Span, kotlinx.serialization.json.JsonArray>>);
+  public static java.lang.Object find-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object find-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object find-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow findStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow findStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
 }
 
-public final class dev.thinkthen.kotlin.Filtered<T> {
+public final class dev.thinkthen.kotlin.FindQuestion implements dev.thinkthen.kotlin.AnnotationQuestion,dev.thinkthen.kotlin.SingleQuestion {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Filtered(T, dev.thinkthen.kotlin.Row);
-  public final T getItem();
-  public final boolean answer();
-  public final boolean getKept();
-  public final boolean getOrThrow();
-  public final dev.thinkthen.kotlin.Row getRow();
-  public final long getPosition();
-  public int hashCode();
-  public java.lang.String toString();
-}
-
-public final class dev.thinkthen.kotlin.Find implements dev.thinkthen.kotlin.AnnotationQuestion,dev.thinkthen.kotlin.SingleQuestion {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Find(java.lang.String, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Find(java.lang.String, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.FindQuestion(java.lang.String, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.FindQuestion(java.lang.String, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
   public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getQuestion();
   public int hashCode();
   public java.lang.String getName();
-  public java.lang.String toString();
-}
-
-public final class dev.thinkthen.kotlin.FindCallsKt {
-  public static final <T> java.lang.Object find-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final <T> java.lang.Object find-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> findStream-VrhEZdc(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> findStream-VrhEZdc(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> findStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row> findStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final java.lang.Object find-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static final java.lang.Object find-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
-  public static java.lang.Object find-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object find-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object find-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object find-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow findStream-VrhEZdc$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow findStream-VrhEZdc$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow findStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow findStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-}
-
-public final class dev.thinkthen.kotlin.FindResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.EntryOutcome getOutcome();
-  public dev.thinkthen.kotlin.FindResult(dev.thinkthen.kotlin.EntryOutcome);
-  public int hashCode();
   public java.lang.String toString();
 }
 
@@ -472,14 +359,18 @@ public final class dev.thinkthen.kotlin.FunctionName$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.FunctionName> serializer();
 }
 
+public final class dev.thinkthen.kotlin.InternalException extends dev.thinkthen.kotlin.ThinkThenException {
+  public dev.thinkthen.kotlin.InternalException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable);
+  public dev.thinkthen.kotlin.InternalException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+
 public final class dev.thinkthen.kotlin.KindDetail {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.KindDetail(int, java.lang.String, long, long, java.util.Map, kotlinx.serialization.internal.SerializationConstructorMarker);
-  public dev.thinkthen.kotlin.KindDetail(java.lang.String, long, long, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.KindDetail(dev.thinkthen.kotlin.Span, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final int getEnd();
+  public final int getStart();
   public final java.lang.String getText();
   public final java.util.Map<java.lang.String, java.lang.Double> getKinds();
-  public final long getEnd();
-  public final long getStart();
   public int hashCode();
   public java.lang.String toString();
   public static final dev.thinkthen.kotlin.KindDetail$Companion Companion;
@@ -489,7 +380,7 @@ public final class dev.thinkthen.kotlin.KindDetail$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.KindDetail> serializer();
 }
 
-public final class dev.thinkthen.kotlin.LabelDetail {
+public final class dev.thinkthen.kotlin.LabelDetail implements dev.thinkthen.kotlin.Detail {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.LabelDetail(int, java.util.Map, kotlinx.serialization.internal.SerializationConstructorMarker);
   public dev.thinkthen.kotlin.LabelDetail(java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
@@ -503,7 +394,7 @@ public final class dev.thinkthen.kotlin.LabelDetail$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.LabelDetail> serializer();
 }
 
-public final class dev.thinkthen.kotlin.LevelDetail {
+public final class dev.thinkthen.kotlin.LevelDetail implements dev.thinkthen.kotlin.Detail {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.LevelDetail(int, java.util.List, kotlinx.serialization.internal.SerializationConstructorMarker);
   public dev.thinkthen.kotlin.LevelDetail(java.util.List, kotlin.jvm.internal.DefaultConstructorMarker);
@@ -521,7 +412,10 @@ public final class dev.thinkthen.kotlin.Mention {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.Mention(dev.thinkthen.kotlin.Span, java.lang.String);
   public final dev.thinkthen.kotlin.Span getSpan();
+  public final int getEnd();
+  public final int getStart();
   public final java.lang.String getKind();
+  public final java.lang.String getText();
   public int hashCode();
   public java.lang.String toString();
   public static final dev.thinkthen.kotlin.Mention$Companion Companion;
@@ -559,10 +453,12 @@ public final class dev.thinkthen.kotlin.Pointer {
   public static java.lang.String toString-impl(java.lang.String);
 }
 
-public final class dev.thinkthen.kotlin.Rank implements dev.thinkthen.kotlin.EntryQuestion<java.lang.Long, dev.thinkthen.kotlin.LevelDetail> {
+public final class dev.thinkthen.kotlin.RankQuestion implements dev.thinkthen.kotlin.EntryQuestion<java.lang.Long, dev.thinkthen.kotlin.LevelDetail> {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Rank(java.lang.String, java.util.List, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Rank(java.lang.String, java.util.List, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RankQuestion(java.lang.String, java.util.List, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RankQuestion(java.lang.String, java.util.List, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RankQuestion(java.lang.String, kotlin.reflect.KClass, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RankQuestion(java.lang.String, kotlin.reflect.KClass, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.Integer getTop();
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getQuestion();
@@ -573,50 +469,25 @@ public final class dev.thinkthen.kotlin.Rank implements dev.thinkthen.kotlin.Ent
   public java.lang.String toString();
 }
 
-public final class dev.thinkthen.kotlin.Ranked<T> {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Ranked(T, dev.thinkthen.kotlin.Row<java.lang.Long, dev.thinkthen.kotlin.LevelDetail>);
-  public final T getItem();
-  public final dev.thinkthen.kotlin.Row<java.lang.Long, dev.thinkthen.kotlin.LevelDetail> getRow();
-  public final long answer();
-  public final long getOrThrow();
-  public final long getPosition();
-  public int hashCode();
-  public java.lang.String toString();
-}
-
-public final class dev.thinkthen.kotlin.Recognize implements dev.thinkthen.kotlin.AnnotationQuestion<java.util.List<? extends dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>, dev.thinkthen.kotlin.SingleQuestion<java.util.List<? extends dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail> {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Recognize(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Recognize(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
-  public final java.lang.String getField-8pE668c();
-  public final java.util.List<java.lang.String> getKinds();
-  public int hashCode();
-  public java.lang.String getName();
-  public java.lang.String toString();
-}
-
 public final class dev.thinkthen.kotlin.RecognizeCallsKt {
-  public static final <T> java.lang.Object recognize-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, T, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>>);
-  public static final <T> java.lang.Object recognize-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, T, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>> recognizeStream-VrhEZdc(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>> recognizeStream-VrhEZdc(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>> recognizeStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>> recognizeStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final java.lang.Object recognize-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>>);
-  public static final java.lang.Object recognize-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>>);
+  public static final <T> java.lang.Object recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, ? extends T>>);
+  public static final <T> java.lang.Object recognize-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, T, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, T>> recognizeStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, T>> recognizeStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, T>> recognizeStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Entity>, T>> recognizeStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final java.lang.Object recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, kotlinx.serialization.json.JsonArray>>);
+  public static final java.lang.Object recognize-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object recognize-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Entity>, kotlinx.serialization.json.JsonArray>>);
   public static java.lang.Object recognize-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static java.lang.Object recognize-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static java.lang.Object recognize-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object recognize-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Object, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow recognizeStream-VrhEZdc$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow recognizeStream-VrhEZdc$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
   public static kotlinx.coroutines.flow.Flow recognizeStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
   public static kotlinx.coroutines.flow.Flow recognizeStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
 }
 
-public final class dev.thinkthen.kotlin.RecognizeDetail {
+public final class dev.thinkthen.kotlin.RecognizeDetail implements dev.thinkthen.kotlin.Detail {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.RecognizeDetail(int, java.util.List, java.util.List, kotlinx.serialization.internal.SerializationConstructorMarker);
   public dev.thinkthen.kotlin.RecognizeDetail(java.util.List, java.util.List, kotlin.jvm.internal.DefaultConstructorMarker);
@@ -631,11 +502,15 @@ public final class dev.thinkthen.kotlin.RecognizeDetail$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.RecognizeDetail> serializer();
 }
 
-public final class dev.thinkthen.kotlin.RecognizeResult implements dev.thinkthen.kotlin.EntryResult {
+public final class dev.thinkthen.kotlin.RecognizeQuestion implements dev.thinkthen.kotlin.AnnotationQuestion<java.util.List<? extends dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>, dev.thinkthen.kotlin.SingleQuestion<java.util.List<? extends dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail> {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.EntryOutcome<java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail> getOutcome();
-  public dev.thinkthen.kotlin.RecognizeResult(dev.thinkthen.kotlin.EntryOutcome<? extends java.util.List<dev.thinkthen.kotlin.Entity>, dev.thinkthen.kotlin.RecognizeDetail>);
+  public dev.thinkthen.kotlin.RecognizeQuestion(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RecognizeQuestion(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
+  public final java.lang.String getField-8pE668c();
+  public final java.util.List<java.lang.String> getKinds();
   public int hashCode();
+  public java.lang.String getName();
   public java.lang.String toString();
 }
 
@@ -665,10 +540,30 @@ public final class dev.thinkthen.kotlin.RecordId$Unsigned implements dev.thinkth
 }
 
 public final class dev.thinkthen.kotlin.RefusalsKt {
-  public static final <A, D> java.lang.Void ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Iterable<?>);
-  public static final <A, D> java.lang.Void ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Object[]);
-  public static final <A, D> java.lang.Void ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlin.sequences.Sequence<?>);
-  public static final <A, D> java.lang.Void ask(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlinx.coroutines.flow.Flow<?>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<?>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<?>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<?>, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<?>, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void tag-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<?>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void tag-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void tag-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Void tag-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<?>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <E> java.lang.Void choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, java.lang.Iterable<?>);
+  public static final <E> java.lang.Void choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, java.lang.Object[]);
+  public static final <E> java.lang.Void choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, kotlin.sequences.Sequence<?>);
+  public static final <E> java.lang.Void choose(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ChooseQuestion<E>, kotlinx.coroutines.flow.Flow<?>);
+  public static final <E> java.lang.Void tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, java.lang.Iterable<?>);
+  public static final <E> java.lang.Void tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, java.lang.Object[]);
+  public static final <E> java.lang.Void tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, kotlin.sequences.Sequence<?>);
+  public static final <E> java.lang.Void tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, kotlinx.coroutines.flow.Flow<?>);
+  public static final java.lang.Void annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, java.lang.Iterable<?>);
+  public static final java.lang.Void annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, java.lang.Object[]);
+  public static final java.lang.Void annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, kotlin.sequences.Sequence<?>);
+  public static final java.lang.Void annotate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotateQuestion, kotlinx.coroutines.flow.Flow<?>);
   public static final java.lang.Void annotate-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Iterable<?>, java.lang.String, java.lang.String);
   public static final java.lang.Void annotate-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, java.lang.Object[], java.lang.String, java.lang.String);
   public static final java.lang.Void annotate-EEOGFL0(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlin.sequences.Sequence<?>, java.lang.String, java.lang.String);
@@ -677,22 +572,42 @@ public final class dev.thinkthen.kotlin.RefusalsKt {
   public static final java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
   public static final java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
   public static final java.lang.Void choose-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<?>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final java.lang.Void decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, java.lang.Iterable<?>);
+  public static final java.lang.Void decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, java.lang.Object[]);
+  public static final java.lang.Void decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, kotlin.sequences.Sequence<?>);
+  public static final java.lang.Void decide(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.DecideQuestion, kotlinx.coroutines.flow.Flow<?>);
   public static final java.lang.Void decide-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<?>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
   public static final java.lang.Void decide-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
   public static final java.lang.Void decide-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
   public static final java.lang.Void decide-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<?>, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static final java.lang.Void find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, java.lang.Iterable<?>);
+  public static final java.lang.Void find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, java.lang.Object[]);
+  public static final java.lang.Void find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, kotlin.sequences.Sequence<?>);
+  public static final java.lang.Void find(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.FindQuestion, kotlinx.coroutines.flow.Flow<?>);
   public static final java.lang.Void find-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<?>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void find-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void find-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void find-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<?>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final java.lang.Void recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, java.lang.Iterable<?>);
+  public static final java.lang.Void recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, java.lang.Object[]);
+  public static final java.lang.Void recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, kotlin.sequences.Sequence<?>);
+  public static final java.lang.Void recognize(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RecognizeQuestion, kotlinx.coroutines.flow.Flow<?>);
   public static final java.lang.Void recognize-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<?>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void recognize-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Object[], java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void recognize-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlin.sequences.Sequence<?>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void recognize-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<?>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final java.lang.Void relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, java.lang.Iterable<?>);
+  public static final java.lang.Void relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, java.lang.Object[]);
+  public static final java.lang.Void relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, kotlin.sequences.Sequence<?>);
+  public static final java.lang.Void relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, kotlinx.coroutines.flow.Flow<?>);
   public static final java.lang.Void relate-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<?>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void relate-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Object[], java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void relate-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlin.sequences.Sequence<?>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
   public static final java.lang.Void relate-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<?>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final java.lang.Void score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, java.lang.Iterable<?>);
+  public static final java.lang.Void score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, java.lang.Object[]);
+  public static final java.lang.Void score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, kotlin.sequences.Sequence<?>);
+  public static final java.lang.Void score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, kotlinx.coroutines.flow.Flow<?>);
   public static final java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<?>, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
   public static final java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
   public static final java.lang.Void score-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence<?>, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
@@ -706,9 +621,13 @@ public final class dev.thinkthen.kotlin.RefusalsKt {
   public static java.lang.Void annotate-EEOGFL0$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlin.sequences.Sequence, java.lang.String, java.lang.String, int, java.lang.Object);
   public static java.lang.Void annotate-EEOGFL0$default(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.AnnotationQuestions, kotlinx.coroutines.flow.Flow, java.lang.String, java.lang.String, int, java.lang.Object);
   public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void choose-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void decide-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
   public static java.lang.Void decide-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
   public static java.lang.Void decide-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, dev.thinkthen.kotlin.Threshold, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
@@ -726,51 +645,50 @@ public final class dev.thinkthen.kotlin.RefusalsKt {
   public static java.lang.Void relate-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, kotlin.sequences.Sequence, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
   public static java.lang.Void relate-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
   public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void score-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object[], kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlin.sequences.Sequence, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
   public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static java.lang.Void tag-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
 }
 
-public final class dev.thinkthen.kotlin.Relate implements dev.thinkthen.kotlin.AnnotationQuestion<java.util.List<? extends dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>, dev.thinkthen.kotlin.SingleQuestion<java.util.List<? extends dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail> {
+public final class dev.thinkthen.kotlin.RelateCallsKt {
+  public static final <T> java.lang.Object relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, ? extends T>>);
+  public static final <T> java.lang.Object relate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, T, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, T>> relateStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, T>> relateStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, T>> relateStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<? extends T>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, T>> relateStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
+  public static final java.lang.Object relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object relate(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.RelateQuestion, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, kotlinx.serialization.json.JsonArray>>);
+  public static final java.lang.Object relate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object relate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, kotlinx.serialization.json.JsonArray>>);
+  public static java.lang.Object relate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object relate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object relate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow relateStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow relateStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
+}
+
+public final class dev.thinkthen.kotlin.RelateQuestion implements dev.thinkthen.kotlin.AnnotationQuestion<java.util.List<? extends dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>, dev.thinkthen.kotlin.SingleQuestion<java.util.List<? extends dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail> {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Relate(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Relate(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RelateQuestion(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.RelateQuestion(java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
   public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
   public final java.lang.String getField-8pE668c();
   public final java.util.List<dev.thinkthen.kotlin.RelationRule> getRules();
   public int hashCode();
   public java.lang.String getName();
-  public java.lang.String toString();
-}
-
-public final class dev.thinkthen.kotlin.RelateCallsKt {
-  public static final <T> java.lang.Object relate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, T, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>>);
-  public static final <T> java.lang.Object relate-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, T, java.util.List<dev.thinkthen.kotlin.RelationRule>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>> relateStream-VrhEZdc(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<? extends T>, java.util.List<dev.thinkthen.kotlin.RelationRule>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>> relateStream-VrhEZdc(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<dev.thinkthen.kotlin.RelationRule>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>> relateStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable<? extends T>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>> relateStream-gC_H_aI(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String);
-  public static final java.lang.Object relate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>>);
-  public static final java.lang.Object relate-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List<dev.thinkthen.kotlin.RelationRule>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>>);
-  public static java.lang.Object relate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object relate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object relate-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object relate-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Object, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow relateStream-VrhEZdc$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow relateStream-VrhEZdc$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow relateStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow relateStream-gC_H_aI$default(dev.thinkthen.kotlin.ThinkThen, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, int, java.lang.Object);
-}
-
-public final class dev.thinkthen.kotlin.RelateResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.EntryOutcome<java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail> getOutcome();
-  public dev.thinkthen.kotlin.RelateResult(dev.thinkthen.kotlin.EntryOutcome<? extends java.util.List<dev.thinkthen.kotlin.Relation>, dev.thinkthen.kotlin.RelationDetail>);
-  public int hashCode();
   public java.lang.String toString();
 }
 
@@ -793,7 +711,7 @@ public final class dev.thinkthen.kotlin.Relation$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.Relation> serializer();
 }
 
-public final class dev.thinkthen.kotlin.RelationDetail {
+public final class dev.thinkthen.kotlin.RelationDetail implements dev.thinkthen.kotlin.Detail {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.RelationDetail(int, java.util.List, java.util.List, kotlinx.serialization.internal.SerializationConstructorMarker);
   public dev.thinkthen.kotlin.RelationDetail(java.util.List, java.util.List, kotlin.jvm.internal.DefaultConstructorMarker);
@@ -829,6 +747,7 @@ public final class dev.thinkthen.kotlin.RelationRule$Companion {
 
 public final class dev.thinkthen.kotlin.RetryPolicy {
   public boolean equals(java.lang.Object);
+  public dev.thinkthen.kotlin.RetryPolicy(int, long, long, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public dev.thinkthen.kotlin.RetryPolicy(int, long, long, kotlin.jvm.internal.DefaultConstructorMarker);
   public final int getMaxRetries();
   public final long getAttemptTimeout-UwyO8pc();
@@ -837,71 +756,75 @@ public final class dev.thinkthen.kotlin.RetryPolicy {
   public java.lang.String toString();
 }
 
-public final class dev.thinkthen.kotlin.Row$Answered<A, D> implements dev.thinkthen.kotlin.Row<A, D> {
+public final class dev.thinkthen.kotlin.Row$Answered<A, T> implements dev.thinkthen.kotlin.Row<A, T> {
   public A answer();
-  public A getOrThrow();
-  public D getDetail();
+  public T getItem();
   public boolean equals(java.lang.Object);
   public boolean isAnswered();
   public boolean isFailed();
   public boolean isUnsure();
+  public dev.thinkthen.kotlin.Detail getDetail();
   public dev.thinkthen.kotlin.FunctionName getFunction();
   public dev.thinkthen.kotlin.RecordId getId();
+  public dev.thinkthen.kotlin.Row<A, T> throwIfFailed();
   public dev.thinkthen.kotlin.Source getSource();
   public dev.thinkthen.kotlin.Status getStatus();
-  public final A getAnswer();
   public int hashCode();
   public java.lang.Double getProbability();
+  public java.lang.String toJson();
   public java.lang.String toString();
   public long getPosition();
 }
 
 public final class dev.thinkthen.kotlin.Row$DefaultImpls {
-  public static <A, D> A getOrThrow(dev.thinkthen.kotlin.Row<? extends A, ? extends D>);
-  public static <A, D> boolean isAnswered(dev.thinkthen.kotlin.Row<? extends A, ? extends D>);
-  public static <A, D> boolean isFailed(dev.thinkthen.kotlin.Row<? extends A, ? extends D>);
-  public static <A, D> boolean isUnsure(dev.thinkthen.kotlin.Row<? extends A, ? extends D>);
+  public static <A, T> boolean isAnswered(dev.thinkthen.kotlin.Row<? extends A, ? extends T>);
+  public static <A, T> boolean isFailed(dev.thinkthen.kotlin.Row<? extends A, ? extends T>);
+  public static <A, T> boolean isUnsure(dev.thinkthen.kotlin.Row<? extends A, ? extends T>);
+  public static <A, T> dev.thinkthen.kotlin.Row<A, T> throwIfFailed(dev.thinkthen.kotlin.Row<? extends A, ? extends T>);
+  public static <A, T> java.lang.String toJson(dev.thinkthen.kotlin.Row<? extends A, ? extends T>);
 }
 
-public final class dev.thinkthen.kotlin.Row$Failed implements dev.thinkthen.kotlin.Row {
+public final class dev.thinkthen.kotlin.Row$Failed<T> implements dev.thinkthen.kotlin.Row {
+  public T getItem();
   public boolean equals(java.lang.Object);
   public boolean isAnswered();
   public boolean isFailed();
   public boolean isUnsure();
+  public dev.thinkthen.kotlin.Detail getDetail();
   public dev.thinkthen.kotlin.FunctionName getFunction();
   public dev.thinkthen.kotlin.RecordId getId();
+  public dev.thinkthen.kotlin.Row throwIfFailed();
   public dev.thinkthen.kotlin.Source getSource();
   public dev.thinkthen.kotlin.Status getStatus();
   public final dev.thinkthen.kotlin.RowError getError();
   public int hashCode();
   public java.lang.Double getProbability();
   public java.lang.Object answer();
-  public java.lang.Object getDetail();
-  public java.lang.Object getOrThrow();
+  public java.lang.String toJson();
   public java.lang.String toString();
   public java.lang.Void answer();
   public java.lang.Void getDetail();
-  public java.lang.Void getOrThrow();
   public long getPosition();
 }
 
-public final class dev.thinkthen.kotlin.Row$Unsure<D> implements dev.thinkthen.kotlin.Row {
-  public D getDetail();
+public final class dev.thinkthen.kotlin.Row$Unsure<T> implements dev.thinkthen.kotlin.Row {
+  public T getItem();
   public boolean equals(java.lang.Object);
   public boolean isAnswered();
   public boolean isFailed();
   public boolean isUnsure();
+  public dev.thinkthen.kotlin.Detail getDetail();
   public dev.thinkthen.kotlin.FunctionName getFunction();
   public dev.thinkthen.kotlin.RecordId getId();
+  public dev.thinkthen.kotlin.Row throwIfFailed();
   public dev.thinkthen.kotlin.Source getSource();
   public dev.thinkthen.kotlin.Status getStatus();
   public int hashCode();
   public java.lang.Double getProbability();
   public java.lang.Object answer();
-  public java.lang.Object getOrThrow();
+  public java.lang.String toJson();
   public java.lang.String toString();
   public java.lang.Void answer();
-  public java.lang.Void getOrThrow();
   public long getPosition();
 }
 
@@ -922,43 +845,46 @@ public final class dev.thinkthen.kotlin.RowError$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.RowError> serializer();
 }
 
-public final class dev.thinkthen.kotlin.Score implements dev.thinkthen.kotlin.AnnotationQuestion<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>, dev.thinkthen.kotlin.SingleQuestion<java.lang.Double, dev.thinkthen.kotlin.LevelDetail> {
+public final class dev.thinkthen.kotlin.ScoreCallsKt {
+  public static final <E extends java.lang.Enum<E>> java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, kotlinx.serialization.json.JsonArray>>);
+  public static final <T, E extends java.lang.Enum<E>> java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, ? extends T>>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, T>> scoreStream-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, T>> scoreStream-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.reflect.KClass<E>, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T> java.lang.Object score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, ? extends T>>);
+  public static final <T> java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, T>> scoreStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, java.lang.Iterable<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, T>> scoreStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, T>> scoreStream-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, T>> scoreStream-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final java.lang.Object score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object score(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.ScoreQuestion, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, kotlinx.serialization.json.JsonArray>>);
+  public static final java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, kotlinx.serialization.json.JsonArray>>);
+  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow scoreStream-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow scoreStream-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow scoreStream-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow scoreStream-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+}
+
+public final class dev.thinkthen.kotlin.ScoreQuestion implements dev.thinkthen.kotlin.AnnotationQuestion<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>, dev.thinkthen.kotlin.SingleQuestion<java.lang.Double, dev.thinkthen.kotlin.LevelDetail> {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Score(java.lang.String, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Score(java.lang.String, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ScoreQuestion(java.lang.String, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ScoreQuestion(java.lang.String, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ScoreQuestion(java.lang.String, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.ScoreQuestion(java.lang.String, kotlin.reflect.KClass, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getQuestion();
   public final java.util.List<java.lang.String> getLevels();
   public final java.util.Map<java.lang.String, java.lang.String> getDescriptions();
   public int hashCode();
   public java.lang.String getName();
-  public java.lang.String toString();
-}
-
-public final class dev.thinkthen.kotlin.ScoreCallsKt {
-  public static final <T> java.lang.Object score-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>>);
-  public static final <T> java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>> scoreStream-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>> scoreStream-H8BbM6s(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>> scoreStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>> scoreStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>>);
-  public static final java.lang.Object score-rPIvyW4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>>);
-  public static java.lang.Object score-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, kotlinx.serialization.KSerializer, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object score-rPIvyW4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow scoreStream-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow scoreStream-H8BbM6s$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow scoreStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, kotlinx.serialization.KSerializer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow scoreStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, kotlinx.serialization.KSerializer, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-}
-
-public final class dev.thinkthen.kotlin.ScoreResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.EntryOutcome<java.lang.Double, dev.thinkthen.kotlin.LevelDetail> getOutcome();
-  public dev.thinkthen.kotlin.ScoreResult(dev.thinkthen.kotlin.EntryOutcome<java.lang.Double, dev.thinkthen.kotlin.LevelDetail>);
-  public int hashCode();
   public java.lang.String toString();
 }
 
@@ -996,6 +922,11 @@ public final class dev.thinkthen.kotlin.SettingsBuilder {
   public final void setUrl(java.lang.String);
 }
 
+public final class dev.thinkthen.kotlin.SetupException extends dev.thinkthen.kotlin.ThinkThenException {
+  public dev.thinkthen.kotlin.SetupException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable);
+  public dev.thinkthen.kotlin.SetupException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+
 public final class dev.thinkthen.kotlin.Source {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.Source(int, java.lang.String, dev.thinkthen.kotlin.Backend, java.lang.String, java.lang.String, kotlinx.serialization.internal.SerializationConstructorMarker);
@@ -1016,11 +947,11 @@ public final class dev.thinkthen.kotlin.Source$Companion {
 
 public final class dev.thinkthen.kotlin.Span {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Span(int, java.lang.String, long, long, kotlinx.serialization.internal.SerializationConstructorMarker);
-  public dev.thinkthen.kotlin.Span(java.lang.String, long, long);
+  public dev.thinkthen.kotlin.Span(java.lang.String, int, int, int, int);
+  public dev.thinkthen.kotlin.Span(java.lang.String, int, int, int, int, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final int getEnd();
+  public final int getStart();
   public final java.lang.String getText();
-  public final long getEnd();
-  public final long getStart();
   public int hashCode();
   public java.lang.String toString();
   public static final dev.thinkthen.kotlin.Span$Companion Companion;
@@ -1044,10 +975,40 @@ public final class dev.thinkthen.kotlin.Status$Companion {
   public final kotlinx.serialization.KSerializer<dev.thinkthen.kotlin.Status> serializer();
 }
 
-public final class dev.thinkthen.kotlin.Tag implements dev.thinkthen.kotlin.AnnotationQuestion<java.util.List<? extends java.lang.String>, dev.thinkthen.kotlin.LabelDetail>, dev.thinkthen.kotlin.SingleQuestion<java.util.List<? extends java.lang.String>, dev.thinkthen.kotlin.LabelDetail> {
+public final class dev.thinkthen.kotlin.TagCallsKt {
+  public static final <E extends java.lang.Enum<E>> java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final <E extends java.lang.Enum<E>> java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<? extends E>, kotlinx.serialization.json.JsonArray>>);
+  public static final <E> java.lang.Object tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, java.lang.Void, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final <E> java.lang.Object tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, kotlinx.serialization.json.JsonArray, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<? extends E>, kotlinx.serialization.json.JsonArray>>);
+  public static final <T, E extends java.lang.Enum<E>> java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<? extends E>, ? extends T>>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<E>, T>> tagStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T, E extends java.lang.Enum<E>> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<E>, T>> tagStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.reflect.KClass<E>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<E, java.lang.String>);
+  public static final <T, E> java.lang.Object tag(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, T, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<? extends E>, ? extends T>>);
+  public static final <T, E> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<E>, T>> tagStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, java.lang.Iterable<? extends T>);
+  public static final <T, E> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<E>, T>> tagStream(dev.thinkthen.kotlin.ThinkThen, dev.thinkthen.kotlin.TagQuestion<E>, kotlinx.coroutines.flow.Flow<? extends T>);
+  public static final <T> java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<java.lang.String>, ? extends T>>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, T>> tagStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, T>> tagStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public static final java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row>);
+  public static final java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<java.lang.String>, kotlinx.serialization.json.JsonArray>>);
+  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow tagStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow tagStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow tagStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+  public static kotlinx.coroutines.flow.Flow tagStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
+}
+
+public final class dev.thinkthen.kotlin.TagQuestion<E> implements dev.thinkthen.kotlin.AnnotationQuestion<java.util.List<? extends E>, dev.thinkthen.kotlin.LabelDetail>, dev.thinkthen.kotlin.SingleQuestion<java.util.List<? extends E>, dev.thinkthen.kotlin.LabelDetail> {
   public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.Tag(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.Tag(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.TagQuestion(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.TagQuestion(java.lang.String, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.TagQuestion(java.lang.String, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public dev.thinkthen.kotlin.TagQuestion(java.lang.String, kotlin.reflect.KClass, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.jvm.internal.DefaultConstructorMarker);
   public final dev.thinkthen.kotlin.Threshold$Cut getThreshold();
   public final java.lang.String getField-8pE668c();
   public final java.lang.String getQuestion();
@@ -1058,56 +1019,21 @@ public final class dev.thinkthen.kotlin.Tag implements dev.thinkthen.kotlin.Anno
   public java.lang.String toString();
 }
 
-public final class dev.thinkthen.kotlin.TagCallsKt {
-  public static final <T> java.lang.Object tag-2AFAjeM(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>>);
-  public static final <T> java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, T, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>> tagStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>> tagStream-T9Q66r4(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>> tagStream-mvpZQbI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>> tagStream-mvpZQbI(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow<? extends T>, java.util.List<java.lang.String>, kotlinx.serialization.KSerializer<T>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
-  public static final java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>>);
-  public static final java.lang.Object tag-ezs4-_M(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List<java.lang.String>, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>>);
-  public static java.lang.Object tag-2AFAjeM$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Object, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Void, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static java.lang.Object tag-ezs4-_M$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.serialization.json.JsonArray, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, kotlin.coroutines.Continuation, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow tagStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow tagStream-T9Q66r4$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow tagStream-mvpZQbI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, java.lang.Iterable, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-  public static kotlinx.coroutines.flow.Flow tagStream-mvpZQbI$default(dev.thinkthen.kotlin.ThinkThen, java.lang.String, kotlinx.coroutines.flow.Flow, java.util.List, kotlinx.serialization.KSerializer, dev.thinkthen.kotlin.Threshold$Cut, java.lang.String, java.lang.String, java.util.Map, int, java.lang.Object);
-}
-
-public final class dev.thinkthen.kotlin.TagResult implements dev.thinkthen.kotlin.EntryResult {
-  public boolean equals(java.lang.Object);
-  public dev.thinkthen.kotlin.EntryOutcome<java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail> getOutcome();
-  public dev.thinkthen.kotlin.TagResult(dev.thinkthen.kotlin.EntryOutcome<? extends java.util.List<java.lang.String>, dev.thinkthen.kotlin.LabelDetail>);
-  public int hashCode();
-  public java.lang.String toString();
-}
-
 public final class dev.thinkthen.kotlin.ThinkThen implements java.lang.AutoCloseable {
   public dev.thinkthen.kotlin.ThinkThen();
   public dev.thinkthen.kotlin.ThinkThen(kotlin.jvm.functions.Function1, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public dev.thinkthen.kotlin.ThinkThen(kotlin.jvm.functions.Function1<? super dev.thinkthen.kotlin.SettingsBuilder, kotlin.Unit>);
-  public final <T, A, D> java.lang.Object single(dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, T, kotlinx.serialization.KSerializer<?>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends A, ? extends D>>);
-  public final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, D>> iterable(dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<?>);
-  public final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, D>> stream(dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<?>);
-  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterFlow(dev.thinkthen.kotlin.Filter, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<?>);
-  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Filtered<T>> filterIterable(dev.thinkthen.kotlin.Filter, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<?>);
-  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rankFlow(dev.thinkthen.kotlin.Rank, kotlinx.coroutines.flow.Flow<? extends T>, kotlinx.serialization.KSerializer<?>);
-  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Ranked<T>> rankIterable(dev.thinkthen.kotlin.Rank, java.lang.Iterable<? extends T>, kotlinx.serialization.KSerializer<?>);
+  public final <T, A, D> java.lang.Object single(dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, T, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>, kotlin.coroutines.Continuation<? super dev.thinkthen.kotlin.Row<? extends A, ? extends T>>);
+  public final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, T>> iterable(dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, java.lang.Iterable<? extends T>, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>);
+  public final <T, A, D> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<A, T>> stream(dev.thinkthen.kotlin.SingleQuestion<? extends A, ? extends D>, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>);
+  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Boolean, T>> filterFlow(dev.thinkthen.kotlin.FilterQuestion, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>);
+  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Boolean, T>> filterIterable(dev.thinkthen.kotlin.FilterQuestion, java.lang.Iterable<? extends T>, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>);
+  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rankFlow(dev.thinkthen.kotlin.RankQuestion, kotlinx.coroutines.flow.Flow<? extends T>, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>);
+  public final <T> kotlinx.coroutines.flow.Flow<dev.thinkthen.kotlin.Row<java.lang.Long, T>> rankIterable(dev.thinkthen.kotlin.RankQuestion, java.lang.Iterable<? extends T>, kotlin.jvm.functions.Function0<? extends kotlinx.serialization.KSerializer<?>>);
   public final dev.thinkthen.kotlin.Settings getSettings();
   public final dev.thinkthen.kotlin.Usage getUsage();
   public final kotlinx.serialization.json.Json getRecordJson();
   public void close();
-}
-
-public final class dev.thinkthen.kotlin.ThinkThenException extends java.lang.RuntimeException {
-  public dev.thinkthen.kotlin.ThinkThenException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public dev.thinkthen.kotlin.ThinkThenException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable, java.util.List<? extends dev.thinkthen.kotlin.Row<?, ?>>);
-  public final dev.thinkthen.kotlin.ErrorCode getCode();
-  public final java.lang.Integer getHttpStatus();
-  public final java.util.List<dev.thinkthen.kotlin.Row<?, ?>> getFailures();
 }
 
 public final class dev.thinkthen.kotlin.ThinkThenKt {
@@ -1151,26 +1077,18 @@ public final class dev.thinkthen.kotlin.TokenUsage {
 public final class dev.thinkthen.kotlin.Toolbox {
   public boolean equals(java.lang.Object);
   public dev.thinkthen.kotlin.Toolbox(java.util.Map<java.lang.String, ? extends dev.thinkthen.kotlin.EntryQuestion<?, ?>>);
+  public final <E extends java.lang.Enum<E>> dev.thinkthen.kotlin.ChooseQuestion<E> choose(java.lang.String, kotlin.reflect.KClass<E>);
+  public final <E extends java.lang.Enum<E>> dev.thinkthen.kotlin.TagQuestion<E> tag(java.lang.String, kotlin.reflect.KClass<E>);
   public final dev.thinkthen.kotlin.AnnotationQuestions forAnnotation();
-  public final dev.thinkthen.kotlin.Choose choose(java.lang.String);
-  public final dev.thinkthen.kotlin.Choose chooseOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Decide decide(java.lang.String);
-  public final dev.thinkthen.kotlin.Decide decideOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.EntryQuestion<?, ?> get(java.lang.String);
-  public final dev.thinkthen.kotlin.Filter filter(java.lang.String);
-  public final dev.thinkthen.kotlin.Filter filterOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Find find(java.lang.String);
-  public final dev.thinkthen.kotlin.Find findOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Rank rank(java.lang.String);
-  public final dev.thinkthen.kotlin.Rank rankOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Recognize recognize(java.lang.String);
-  public final dev.thinkthen.kotlin.Recognize recognizeOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Relate relate(java.lang.String);
-  public final dev.thinkthen.kotlin.Relate relateOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Score score(java.lang.String);
-  public final dev.thinkthen.kotlin.Score scoreOrNull(java.lang.String);
-  public final dev.thinkthen.kotlin.Tag tag(java.lang.String);
-  public final dev.thinkthen.kotlin.Tag tagOrNull(java.lang.String);
+  public final dev.thinkthen.kotlin.ChooseQuestion<java.lang.String> choose(java.lang.String);
+  public final dev.thinkthen.kotlin.DecideQuestion decide(java.lang.String);
+  public final dev.thinkthen.kotlin.FilterQuestion filter(java.lang.String);
+  public final dev.thinkthen.kotlin.FindQuestion find(java.lang.String);
+  public final dev.thinkthen.kotlin.RankQuestion rank(java.lang.String);
+  public final dev.thinkthen.kotlin.RecognizeQuestion recognize(java.lang.String);
+  public final dev.thinkthen.kotlin.RelateQuestion relate(java.lang.String);
+  public final dev.thinkthen.kotlin.ScoreQuestion score(java.lang.String);
+  public final dev.thinkthen.kotlin.TagQuestion<java.lang.String> tag(java.lang.String);
   public final java.lang.String toJson();
   public final java.util.Map<java.lang.String, dev.thinkthen.kotlin.EntryQuestion<?, ?>> getEntries();
   public int hashCode();
@@ -1195,8 +1113,9 @@ public final class dev.thinkthen.kotlin.ToolboxKt {
   public static final dev.thinkthen.kotlin.Toolbox Toolbox(kotlin.jvm.functions.Function1<? super dev.thinkthen.kotlin.ToolboxBuilder, kotlin.Unit>);
 }
 
-public final class dev.thinkthen.kotlin.UnsureException extends java.util.NoSuchElementException {
-  public dev.thinkthen.kotlin.UnsureException(double);
+public final class dev.thinkthen.kotlin.UnsureException extends dev.thinkthen.kotlin.NoAnswerException {
+  public dev.thinkthen.kotlin.UnsureException(dev.thinkthen.kotlin.Row$Unsure<?>);
+  public final dev.thinkthen.kotlin.Row$Unsure<?> getRow();
   public final double getProbability();
 }
 
@@ -1227,6 +1146,11 @@ public final class dev.thinkthen.kotlin.Usage {
   public static dev.thinkthen.kotlin.Usage copy-pEiQgeo$default(dev.thinkthen.kotlin.Usage, long, long, long, long, long, long, long, dev.thinkthen.kotlin.TokenUsage, dev.thinkthen.kotlin.TokenUsage, int, java.lang.Object);
 }
 
+public final class dev.thinkthen.kotlin.UsageException extends dev.thinkthen.kotlin.ThinkThenException {
+  public dev.thinkthen.kotlin.UsageException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable);
+  public dev.thinkthen.kotlin.UsageException(dev.thinkthen.kotlin.ErrorCode, java.lang.String, java.lang.Integer, java.lang.Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+
 public final class dev.thinkthen.kotlin.UsageKt {
   public static final dev.thinkthen.kotlin.Usage kotlinUsage(dev.thinkthen.Usage);
 }
@@ -1234,22 +1158,10 @@ public final class dev.thinkthen.kotlin.UsageKt {
 public interface dev.thinkthen.kotlin.AnnotationQuestion<A, D> extends dev.thinkthen.kotlin.EntryQuestion<A, D> {
 }
 
-public interface dev.thinkthen.kotlin.EntryOutcome<A, D> {
-  public abstract A answer();
-  public abstract D getDetail();
-  public abstract dev.thinkthen.kotlin.Status getStatus();
-  public abstract java.lang.Double getProbability();
-  public default A getOrThrow();
-  public default boolean isAnswered();
-  public default boolean isFailed();
-  public default boolean isUnsure();
+public interface dev.thinkthen.kotlin.Detail {
 }
 
 public interface dev.thinkthen.kotlin.EntryQuestion<A, D> extends dev.thinkthen.kotlin.Question<A, D> {
-}
-
-public interface dev.thinkthen.kotlin.EntryResult {
-  public abstract dev.thinkthen.kotlin.EntryOutcome<?, ?> getOutcome();
 }
 
 public interface dev.thinkthen.kotlin.Question<A, D> {
@@ -1260,19 +1172,21 @@ public interface dev.thinkthen.kotlin.RecordId {
   public static final dev.thinkthen.kotlin.RecordId$Companion Companion;
 }
 
-public interface dev.thinkthen.kotlin.Row<A, D> {
+public interface dev.thinkthen.kotlin.Row<A, T> {
   public abstract A answer();
-  public abstract D getDetail();
+  public abstract T getItem();
+  public abstract dev.thinkthen.kotlin.Detail getDetail();
   public abstract dev.thinkthen.kotlin.FunctionName getFunction();
   public abstract dev.thinkthen.kotlin.RecordId getId();
   public abstract dev.thinkthen.kotlin.Source getSource();
   public abstract dev.thinkthen.kotlin.Status getStatus();
   public abstract java.lang.Double getProbability();
   public abstract long getPosition();
-  public default A getOrThrow();
   public default boolean isAnswered();
   public default boolean isFailed();
   public default boolean isUnsure();
+  public default dev.thinkthen.kotlin.Row<A, T> throwIfFailed();
+  public default java.lang.String toJson();
 }
 
 public interface dev.thinkthen.kotlin.SingleQuestion<A, D> extends dev.thinkthen.kotlin.Question<A, D> {

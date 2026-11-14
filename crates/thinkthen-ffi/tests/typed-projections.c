@@ -65,7 +65,7 @@ static void answer(thinkthen_value *value, thinkthen_function function, thinkthe
         ok(thinkthen_value_tag_count(value, &count, error), error); putchar('[');
         for (size_t i = 0; i < count; i++) { if (i) putchar(','); thinkthen_text item = {0}; ok(thinkthen_value_tag_at(value, i, &item, error), error); text(item); } putchar(']'); break;
     case THINKTHEN_FUNCTION_FIND: {
-        thinkthen_span found = {0}; ok(thinkthen_value_found(value, &found, error), error); span(found); break;
+        thinkthen_span found = {0}; ok(thinkthen_value_span(value, &found, error), error); span(found); break;
     }
     case THINKTHEN_FUNCTION_RECOGNIZE:
         names(value, error); break;
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
         int32_t result = thinkthen_call_next(call, &row, &error);
         if (result == THINKTHEN_END) break;
         if (result < 0) {
-            assert(row.answer.data == NULL && row.detail.data == NULL);
+            assert(row.private_data == NULL);
             int32_t terminal_code = error.code;
             printf("{\"error\":\"%s\"", thinkthen_code_name(error.code));
             if (error.http_status) printf(",\"http_status\":%u", error.http_status);

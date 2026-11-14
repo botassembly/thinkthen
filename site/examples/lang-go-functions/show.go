@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 )
@@ -20,33 +21,28 @@ func main() {
 	check(err)
 	defer client.Close()
 
-	refundMessage := tt.Text("Please refund my order.")
-	inbox := tt.Texts(
+	refundMessage := "Please refund my order."
+	inbox := slices.Values([]string{
 		"Please refund my order.",
 		"Where is my parcel?",
 		"I was charged twice for one invoice.",
-	)
-	actionMessage := tt.Text(
-		"Morgan works for Example Group.\nPlease refund my order.",
-	)
+	})
+	actionMessage := "Morgan works for Example Group.\nPlease refund my order."
 	refundQuestion := "Does the customer request a refund?"
-	topicQuestion := tt.NewChoose(
-		"What is the message about?",
-		[]string{"billing", "shipping", "other"},
-	)
+	topicQuestion := tt.ChooseQuestion[string]{Question: "What is the message about?", Choices: []string{"billing", "shipping", "other"}}
 	urgencyLevels := []string{"routine", "urgent"}
 
 	isRefund, err := tt.Answer(client.Decide(
-		ctx, tt.NewDecide(refundQuestion), refundMessage,
+		ctx, tt.DecideQuestion{Question: refundQuestion}, refundMessage,
 	))
 	check(err)
 	fmt.Println("decide:", isRefund)
 
-	for refundRequest, err := range client.FilterAll(
-		ctx, tt.NewFilter(refundQuestion), inbox,
+	for refundRequest, err := range client.Filter(
+		ctx, tt.FilterQuestion{Question: refundQuestion}, inbox,
 	) {
 		check(err)
-		fmt.Println("filter:", refundRequest.Item())
+		fmt.Println("filter:", refundRequest)
 	}
 
 	topic, err := tt.Answer(client.Choose(ctx, topicQuestion, refundMessage))
@@ -55,20 +51,20 @@ func main() {
 
 	topics, err := tt.Answer(client.Tag(
 		ctx,
-		tt.NewTag("Which topics appear?", []string{"billing", "shipping"}),
-		tt.Text("I was charged twice and my parcel is late again.")))
+		tt.TagQuestion[string]{Question: "Which topics appear?", Labels: []string{"billing", "shipping"}},
+		"I was charged twice and my parcel is late again."))
 	check(err)
 	fmt.Println("tag:", topics)
 
 	urgency, err := tt.Answer(client.Score(
-		ctx, tt.NewScore("How urgent is the request?", urgencyLevels),
+		ctx, tt.ScoreQuestion[string]{Question: "How urgent is the request?", Levels: urgencyLevels},
 		refundMessage,
 	))
 	check(err)
 	fmt.Println("score:", urgency)
 
-	for ranked, err := range client.RankAll(
-		ctx, tt.NewRank("How urgent is the request?", urgencyLevels), inbox,
+	for ranked, err := range client.Rank(
+		ctx, tt.RankQuestion[string]{Question: "How urgent is the request?", Levels: urgencyLevels}, inbox,
 	) {
 		check(err)
 		urgencyRank, err := ranked.Answer()
@@ -77,7 +73,7 @@ func main() {
 	}
 
 	action, err := tt.Answer(client.Find(
-		ctx, tt.NewFind("Which line states the requested action?"),
+		ctx, tt.FindQuestion{Question: "Which line states the requested action?"},
 		actionMessage,
 	))
 	check(err)
@@ -88,35 +84,35 @@ func main() {
 	}
 
 	names, err := tt.Answer(client.Recognize(
-		ctx, tt.NewRecognize([]string{"person", "organization"}),
-		tt.Text("Morgan works for Example Group.")))
+		ctx, tt.RecognizeQuestion{Kinds: []string{"person", "organization"}},
+		"Morgan works for Example Group."))
 	check(err)
 	for _, name := range names {
 		fmt.Println("recognize:", name.Kind, name.Text)
 	}
 
-	worksFor := tt.NewRelate([]tt.Rule{
-		{Name: "works_for", Source: "person", Target: "organization"},
-	})
+	worksFor := tt.RelateQuestion{Rules: []tt.RelationRule{
+		{Relation: "works_for", Source: "person", Target: "organization"},
+	}}
 	relations, err := tt.Answer(client.Relate(ctx, worksFor, actionMessage))
 	check(err)
 	for _, relation := range relations {
 		fmt.Println(
-			"relate:", relation.Source.Text, relation.Label, relation.Target.Text,
+			"relate:", relation.Source.Text, relation.Relation, relation.Target.Text,
 		)
 	}
 
 	triage, err := tt.Answer(client.Annotate(
-		ctx, tt.NewAnnotate(map[string]tt.AnnotationQuestion{
-			"refund":  tt.NewDecide(refundQuestion),
+		ctx, tt.AnnotateQuestion{Questions: map[string]tt.AnnotationQuestion{
+			"refund":  tt.DecideQuestion{Question: refundQuestion},
 			"topic":   topicQuestion,
-			"urgency": tt.NewScore("How urgent is the request?", urgencyLevels),
-		}), refundMessage,
+			"urgency": tt.ScoreQuestion[string]{Question: "How urgent is the request?", Levels: urgencyLevels},
+		}}, refundMessage,
 	))
 	check(err)
 	formRefund, err := tt.Answer(triage.Decide("refund"))
 	check(err)
-	formTopic, err := tt.Answer(triage.Choose("topic"))
+	formTopic, err := tt.Answer(triage.Choose[string]("topic"))
 	check(err)
 	formUrgency, err := tt.Answer(triage.Score("urgency"))
 	check(err)

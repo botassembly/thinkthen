@@ -121,11 +121,11 @@
   reference_title: Error codes
   reader: A developer redirecting ThinkThen output to files in a script
   answer: |
-    Rows go to standard output and diagnostics to standard error. With `--json`, a failed record in ThinkThen {version} gives both: a row with `"status":"failed"` on standard output, and a `thinkthen: CODE: position N id ID file FILE: message` line on standard error. In text mode a failed record prints nothing on standard output, only the line on standard error. Redirect them to separate files with `>` and `2>`.
+    Results go to standard output and diagnostics to standard error. With `--json`, a failed decide result includes `"status":"failed"`, its code and reason on standard output, plus its diagnostic on standard error. In plain decide text output, it prints `failed:` with the actual code and reason on standard output as well. A produced failed result exits 6. Redirect the streams separately with `>` and `2>`.
   why: |
-    Keeping diagnostics off standard output means a pipe into `jq` or a file only ever holds rows, or answers in text mode. The exit code, 6 here, tells the script that a record failed.
+    Keeping the streams separate lets `jq` read JSON results while diagnostics go to another file. Text result output also includes failure text. The exit code, 6 here, tells the script that a record failed.
   limits: |
-    `-q` hides answers, rows and notices, not errors. A usage error, exit code 2, prints only the diagnostic and no rows. A failed row can also come from the service, such as [`backend.status`](/reference/errors/backend-status/), and its line goes to standard error the same way.
+    `--quiet` suppresses result output and optional notices; error diagnostics remain on standard error. A usage error, exit code 2, prints only the diagnostic and no rows. A failed row can also come from the service, such as [`backend.status`](/reference/errors/backend-status/), and its line goes to standard error the same way.
   examples:
     - id: ans-stderr
       says: "Write the rows to `rows.jsonl` and the diagnostics to `errors.txt`. Nothing reaches the terminal, and the command exits 6 because one record failed:"

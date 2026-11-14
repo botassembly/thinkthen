@@ -9,7 +9,7 @@ messages = [
 two_lines = "Morgan works for Example Group.\nPlease refund my order."
 
 ThinkThen::Client.open do |client|
-  is_refund = client.decide?("Does the customer request a refund?", message)
+  is_refund = client.decide("Does the customer request a refund?", message).answer
   puts "decide: #{is_refund}"
 
   topic = client.choose("What is the message about?", message,
@@ -33,8 +33,8 @@ ThinkThen::Client.open do |client|
 
   by_urgency = client.rank("How urgent is the request?", messages,
                            levels: ["routine", "urgent"])
-  by_urgency.each.with_index(1) { |request, rank|
-    puts "rank: #{rank} #{request}"
+  by_urgency.each { |ranked|
+    puts "rank: #{ranked.answer} #{ranked.item}"
   }
 
   action = client.find(
@@ -62,7 +62,7 @@ ThinkThen::Client.open do |client|
     "urgency" => ThinkThen::ScoreQuestion.new("How urgent is the request?",
                                               levels: ["routine", "urgent"]),
   }
-  form = client.annotate(questions, message)
+  form = client.annotate(questions, message).raise_if_failed.answer
   puts "annotate: #{form[:refund].answer} " \
        "#{form[:topic].answer} #{form[:urgency].answer}"
 end

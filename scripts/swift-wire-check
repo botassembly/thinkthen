@@ -1,0 +1,23 @@
+#!/bin/sh
+# Focused proof and ordinary header generation for Swift's names capability.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+if [ "${1:-}" = --generate ]; then
+    cargo run --offline --locked --quiet -p thinkthen --example schema
+    cargo run --offline --locked --quiet -p thinkthen-ffi --example headers
+else
+    cargo run --offline --locked --quiet -p thinkthen --example schema -- --check
+    cargo run --offline --locked --quiet -p thinkthen-ffi --example headers -- --check
+fi
+if [ "${1:-}" = --generate ]; then
+    python3 - <<'PY'
+import base64
+import subprocess
+patch = subprocess.check_output(['git', 'diff', '--binary'])
+print('SWIFT_HEADER_PATCH_BASE64=' + base64.b64encode(patch).decode(), flush=True)
+PY
+fi
+cargo test --offline --locked -p thinkthen-ffi --test toolbox_names
+cargo clippy --offline --locked -p thinkthen-ffi --lib --test toolbox_names -- -D warnings
+scripts/bindings-schema

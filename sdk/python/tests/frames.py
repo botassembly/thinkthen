@@ -70,6 +70,17 @@ def check_frames(cases: Path) -> None:
                     }
                     if field is not None:
                         options["field"] = field
+                    if function == "filter":
+                        options.pop("details")
+                        options.pop("errors")
+                        result = frame.thinkthen.filter(question, **options)
+                        assert result["record"].to_list() == [
+                            record
+                            for record, row in zip(records, expected)
+                            if row["status"] == "answered" and row.get("answer") is True
+                        ]
+                        assert server.count() == case["requests"]
+                        continue
                     result = getattr(frame.thinkthen, function)(question, **options)
                     assert len(result) == len(expected), (wire, frame_name, function)
                     if function == "annotate":
@@ -96,7 +107,7 @@ def check_frames(cases: Path) -> None:
                             for source in result["source"]
                         )
                     else:
-                        rows = result.get_column("result").to_list()
+                        rows = result.to_dicts()
                         assert [row["position"] for row in rows] == [
                             row["position"] for row in expected
                         ]

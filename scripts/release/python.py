@@ -77,6 +77,19 @@ for case in cases:
         url=settings.get('url'), batch=settings.get('batch'),
     )
     records = request['records']
+    if function == 'filter':
+        kept, failed = [], []
+        try:
+            with client.filter(admitted(definition), records) as stream:
+                kept.extend(stream)
+        except tt.Failed as failure:
+            failed = list(failure.rows)
+        expected = case['expected']
+        assert kept == [records[row['position'] - 1] for row in expected
+                        if row['status'] == 'answered' and row['answer']]
+        assert [row_json(row) for row in failed] == [row for row in expected if row['status'] == 'failed']
+        client.close()
+        continue
     if function == 'annotate':
         stream = client.annotate_stream(
             tt.AnnotationQuestions({
@@ -86,12 +99,13 @@ for case in cases:
     else:
         toolbox = tt.Toolbox({'case': admitted(definition)})
         question = getattr(toolbox, function)('case')
-        if function in {'filter', 'rank'}:
-            stream = getattr(client, {'filter': 'filter_rows'}.get(function, function))(question, records)
+        if function == 'rank':
+            stream = client.rank(question, records)
         else:
             stream = getattr(client, function + '_stream')(question, records)
     with stream:
         actual = [row_json(row) for row in stream]
     assert actual == case['expected'], (function, actual, case['expected'])
+    client.close()
 assert len(functions) == 10, functions
 print('candidate Python: ten shared stub cases pass')

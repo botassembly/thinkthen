@@ -126,7 +126,7 @@ public enum Record: Sendable, Codable, Equatable, Hashable, ExpressibleByStringL
   public static func encoding<T: Encodable>(_ value: T) throws -> Record {
     do {
       return .json(try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(value)))
-    } catch { throw ThinkThenError.encoding(message: String(describing: error)) }
+    } catch { throw UsageError(code: .usageArgument, message: String(describing: error)) }
   }
 }
 /// The typed RecordID value exchanged with the engine.
@@ -210,7 +210,7 @@ public struct APIKey: Sendable, Equatable, CustomStringConvertible, CustomDebugS
   public var customMirror: Mirror { Mirror(self, children: ["value": "<redacted>"]) }
 }
 /// Optional retry overrides. Omitted fields use the engine's own defaults.
-public struct Retry: Sendable, Codable, Equatable, Hashable {
+public struct RetryPolicy: Sendable, Codable, Equatable, Hashable {
   /// The retry count after the initial attempt.
   public let maxRetries: Int?, initialBackoff: Duration?, attemptTimeout: Duration?
   /// Create this value from its typed fields.
@@ -243,7 +243,7 @@ public struct Retry: Sendable, Codable, Equatable, Hashable {
     let (total, sumOverflow) = seconds.addingReportingOverflow(
       x.attoseconds / 1_000_000_000_000_000)
     guard !overflow, !sumOverflow, x.attoseconds % 1_000_000_000_000_000 == 0 else {
-      throw ThinkThenError.encoding(
+      throw CallError.encoding(
         message: "Duration cannot be represented as integer milliseconds")
     }
     return total
@@ -262,13 +262,13 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
 {
   /// The selected backend name.
   public let backend: Backend, url: URL?, model: String?, apiKey: APIKey?, batch: Int?,
-    retry: Retry?
+    retry: RetryPolicy?
   /// Client send allowance; nil is unlimited and zero forbids sends.
   public let maxRequests: UInt64?
   /// Create this value from its typed fields.
   public init(
     backend: Backend? = nil, url: URL? = nil, model: String? = nil, apiKey: APIKey? = nil,
-    batch: Int? = nil, maxRequests: UInt64? = nil, retry: Retry? = nil
+    batch: Int? = nil, maxRequests: UInt64? = nil, retry: RetryPolicy? = nil
   ) {
     self.backend = backend ?? Self.defaultBackend
     self.url = url
@@ -296,7 +296,7 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
     apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey).map(APIKey.init)
     batch = try c.decodeIfPresent(Int.self, forKey: .batch)
     maxRequests = try c.decodeIfPresent(UInt64.self, forKey: .maxRequests)
-    retry = try c.decodeIfPresent(Retry.self, forKey: .retry)
+    retry = try c.decodeIfPresent(RetryPolicy.self, forKey: .retry)
   }
   /// Encode this value in its canonical JSON representation.
   public func encode(to encoder: any Encoder) throws {
@@ -320,7 +320,7 @@ public struct ABIVersion: Sendable, Equatable { public let major: UInt32, minor:
 /// The typed IterationIssue value exchanged with the engine.
 public enum IterationIssue: Sendable, Equatable { case alreadyIterated, concurrentNext }
 /// An error reported while opening or reading a ThinkThen call.
-public struct ThinkThenError: LocalizedError, Sendable, Equatable, CustomStringConvertible {
+struct CallError: LocalizedError, Sendable, Equatable, CustomStringConvertible {
   /// An extensible category for errors originating in this package.
   public struct Kind: RawRepresentable, Sendable, Hashable {
     /// The stable wire spelling; names from newer engines remain representable.
@@ -390,12 +390,32 @@ public struct ThinkThenError: LocalizedError, Sendable, Equatable, CustomStringC
         ? "Rows have already been iterated" : "Rows cannot be advanced concurrently")
   }
 }
-func typedError(_ error: any Error) -> any Error {
-  if error is CancellationError || error is ThinkThenError || error is RowFailure
-    || error is RowError
-  {
+func typedError(_ error: any Error, setup: Bool = false) -> any Error {
+  if error is CancellationError || error is any ThinkThenError || error is any NoAnswer {
     return error
   }
-  if error is EncodingError { return ThinkThenError.encoding(message: String(describing: error)) }
-  return ThinkThenError.contract(message: String(describing: error))
+  if let transport = error as? CallError {
+    let code =
+      transport.failure?.code
+      ?? (transport.kind == .engineVersion
+        ? .usageABI
+        : [.encoding, .iteration, .toolboxSelection].contains(transport.kind)
+          ? .usageArgument : .internalBug)
+    let httpStatus = transport.failure?.httpStatus
+    if setup { return SetupError(code: code, message: transport.message, httpStatus: httpStatus) }
+    if transport.kind == .contract {
+      return InternalError(code: code, message: transport.message, httpStatus: httpStatus)
+    }
+    if code.family == "usage" || transport.kind == .encoding || transport.kind == .toolboxSelection
+      || transport.kind == .iteration
+    {
+      return UsageError(code: code, message: transport.message, httpStatus: httpStatus)
+    }
+    return InternalError(code: code, message: transport.message, httpStatus: httpStatus)
+  }
+  if setup { return SetupError(code: .localIO, message: String(describing: error)) }
+  if error is EncodingError {
+    return UsageError(code: .usageArgument, message: String(describing: error))
+  }
+  return InternalError(code: .internalBug, message: String(describing: error))
 }

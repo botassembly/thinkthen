@@ -7,17 +7,17 @@ var bars = new DecideOptions
 };
 try
 {
-    bool isRefund = await client.DecideAsync(
+    var isRefund = await client.DecideAsync(
         "Does the customer request a refund?",
         "I was charged twice for one invoice.", bars);
-    Console.WriteLine(isRefund);
+    Console.WriteLine(isRefund.Answer);
 }
 catch (UnsureException unsure)
 {
     Console.WriteLine(
         $"Not sure ({unsure.Probability}): ask a person.");
 }
-catch (ThinkThenException failure)
+catch (FailedException failure)
 {
     Console.WriteLine($"{failure.Code}: {failure.Message}");
 }

@@ -62,16 +62,24 @@ pub(super) fn request(function: &str, args: &ArgMatches) -> Result<Request, Erro
     }
     use crate::core::questions::command::ThresholdOption;
     if !matches!(spec.threshold, ThresholdOption::None) {
-        let keys: &[&str] = if matches!(spec.threshold, ThresholdOption::Band) {
-            &["threshold", "low", "high"]
-        } else {
-            &["threshold"]
-        };
+        let keys: &[&str] =
+            if matches!(spec.threshold, ThresholdOption::Band) || function == "filter" {
+                &["threshold", "low", "high"]
+            } else {
+                &["threshold"]
+            };
         let values = options::group(args, keys);
         let mut values = values.into_iter();
         let threshold = values.next().flatten();
         let low = values.next().flatten();
         let high = values.next().flatten();
+        if function == "filter" && (low.is_some() || high.is_some()) {
+            return Err(usage(
+                "threshold",
+                "thinkthen decide for two bars",
+                "filter --low/--high",
+            ));
+        }
         if threshold.is_some() && (low.is_some() || high.is_some()) {
             return Err(usage(
                 "threshold",
@@ -110,7 +118,7 @@ fn rules(args: &ArgMatches) -> Result<Value, Error> {
                 .chunks_exact(3)
                 .map(|chunk| {
                     let mut fields = chunk.iter();
-                    json!({"relation":fields.next(),"source":fields.next(),"target":fields.next()})
+                    json!({"source":fields.next(),"target":fields.next(),"relation":fields.next()})
                 })
                 .collect(),
         )

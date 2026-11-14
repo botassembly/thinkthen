@@ -28,18 +28,18 @@ public final class JavaSettingsCases {
             JavaApiCases.check(!first.source().orElseThrow().questionIdentity().equals(second.source().orElseThrow().questionIdentity()),"execution name changes question identity");
             JavaApiCases.equal(first.source().orElseThrow().name().orElseThrow(),"named","source retains explicit execution name");
             var toolbox = Toolbox.builder().put("entry",ChooseQuestion.of("Which?",List.of("a","b"))).build();
-            var selected = JavaApiCases.answered(client.choose(toolbox.choose("entry").orElseThrow(),"alpha"));
+            var selected = JavaApiCases.answered(client.choose(toolbox.choose("entry"),"alpha"));
             JavaApiCases.equal(selected.source(),unnamed.source(),"selecting an entry assigns no execution name");
-            var renamed = JavaApiCases.answered(client.choose(toolbox.choose("entry").orElseThrow().named("selected"),"alpha"));
+            var renamed = JavaApiCases.answered(client.choose(toolbox.choose("entry").named("selected"),"alpha"));
             JavaApiCases.equal(renamed.source().orElseThrow().name().orElseThrow(),"selected","selected typed questions accept explicit execution names");
             try (var rows = client.rank("Priority?",List.of("alpha","omega"),List.of("low","high"),RankOptions.builder().name("ranked").build())) {
                 var output = rows.toList();
                 JavaApiCases.equal(output.size(),2,"named rank keeps every input");
-                for (var item : output) JavaApiCases.equal(item.row().source().orElseThrow().name().orElseThrow(),"ranked","rank source retains execution name");
+                for (var item : output) JavaApiCases.equal(item.source().orElseThrow().name().orElseThrow(),"ranked","rank source retains execution name");
             }
-            JavaApiCases.equal(first.detail().orElseThrow().labels().size(),2,"question snapshots mutable choices");
-            JavaApiCases.failed(client.decide("Ready?",Map.of("body","\ud800")),"record.invalid");
-            JavaApiCases.failed(client.decide("Ready?",Map.of(42,"alpha")),"record.invalid");
+            JavaApiCases.equal(((LabelDetail) first.detail()).labels().size(),2,"question snapshots mutable choices");
+            JavaApiCases.failedCall(() -> client.decide("Ready?",Map.of("body","\ud800")),"record.invalid");
+            JavaApiCases.failedCall(() -> client.decide("Ready?",Map.of(42,"alpha")),"record.invalid");
             var exact = client.decide("Ready?",Map.of("id",new java.math.BigInteger("18446744073709551615"),"body","alpha"));
             JavaApiCases.equal(exact.id().orElseThrow(),JsonValue.parse("18446744073709551615"),"host map keeps unsigned ID exact");
         }

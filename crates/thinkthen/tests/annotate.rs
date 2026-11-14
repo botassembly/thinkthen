@@ -6,9 +6,7 @@ pub mod loopback;
 
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{
-    Annotate, BackendName, Decide, Engine, Function, Key, Recognize, Record, Settings,
-};
+use thinkthen::{Annotate, BackendName, Decide, Engine, Key, Recognize, Record, Settings};
 
 #[test]
 fn adapter_validation_fails_only_its_named_entry() {
@@ -383,7 +381,7 @@ fn missing_or_null_packed_answer_fails_only_its_entry() {
 
 #[test]
 fn invalid_records_fail_admission_before_any_function_prepares_them() {
-    fn check(engine: &Engine, question: &impl Function) {
+    fn check(engine: &Engine, question: &impl thinkthen::SingleFunction) {
         let mut rows = Vec::new();
         engine
             .rows(question, [Record::from_json("not JSON")])
@@ -409,4 +407,60 @@ fn invalid_records_fail_admission_before_any_function_prepares_them() {
     .unwrap();
     check(&engine, &toolbox);
     assert_eq!(server.count(), 0);
+}
+
+#[test]
+fn raise_if_failed_includes_each_failed_child_but_not_uncertainty() {
+    for failed in [Some("a"), Some("b"), Some("both"), None] {
+        let form = Annotate::new([
+            (
+                "a",
+                Decide::new("First?")
+                    .unwrap()
+                    .threshold(thinkthen::Threshold::band(0.2, 0.8).unwrap()),
+            ),
+            (
+                "b",
+                Decide::new("Second?")
+                    .unwrap()
+                    .threshold(thinkthen::Threshold::band(0.2, 0.8).unwrap()),
+            ),
+        ])
+        .unwrap();
+        let server = Loopback::answering(move |q| {
+            let question = q["instructions"].as_str().unwrap();
+            let fails = match failed {
+                Some("a") => question.contains("First?"),
+                Some("b") => question.contains("Second?"),
+                Some("both") => true,
+                _ => false,
+            };
+            json!({"type":"noul","noul":if fails {2.0} else {0.5}})
+        })
+        .unwrap();
+        let engine = Settings::default()
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
+            .engine(|_| None)
+            .unwrap();
+        let row = engine.run(&form, "evidence").unwrap();
+        assert_eq!(row.status(), thinkthen::Status::Answered);
+        if failed.is_some() {
+            assert_eq!(
+                row.err_if_failed().unwrap_err().code(),
+                thinkthen::Code::BackendReply
+            );
+        } else {
+            let expected = row.clone();
+            assert_eq!(row.err_if_failed().unwrap(), expected);
+        }
+    }
+}
+
+#[test]
+fn forms_refuse_filter_before_any_call() {
+    let error = thinkthen::Question::from_json(
+        &json!({"function":"annotate","questions":{"keep":{"function":"filter","question":"Keep?"}}}).to_string(),
+    ).unwrap_err();
+    assert_eq!(error.code(), thinkthen::Code::UsageQuestion);
 }

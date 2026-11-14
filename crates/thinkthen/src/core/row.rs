@@ -97,7 +97,7 @@ pub(crate) enum Answer {
     /// Names and their kinds in text order.
     Names(Vec<crate::core::Name>),
     /// A selected text unit, or no matching unit.
-    Found(Option<crate::core::Found>),
+    Span(Option<crate::core::Span>),
     /// The record's rank, starting at one.
     Position(usize),
     /// Each named question and its own outcome.

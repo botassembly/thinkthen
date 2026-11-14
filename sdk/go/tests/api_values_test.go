@@ -7,29 +7,11 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
-)
-
-// These assignments protect the public signatures without invoking the engine.
-var (
-	_ func(string, []string) tt.Choose      = tt.NewChoose
-	_ func(string, []string) tt.Tag         = tt.NewTag
-	_ func(string, []string) tt.Score       = tt.NewScore
-	_ func(string, []string) tt.Rank        = tt.NewRank
-	_ func([]string) tt.Recognize           = tt.NewRecognize
-	_ func([]tt.Rule) tt.Relate             = tt.NewRelate
-	_ tt.Row[bool, tt.NoDetail]             = tt.DecideRow{}
-	_ tt.Row[string, tt.LabelsDetail]       = tt.ChooseRow{}
-	_ tt.Row[[]string, tt.LabelsDetail]     = tt.TagRow{}
-	_ tt.Row[float64, tt.LevelsDetail]      = tt.ScoreRow{}
-	_ tt.Row[int, tt.LevelsDetail]          = tt.RankRow{}.Row
-	_ tt.Row[*tt.Span, tt.NoDetail]         = tt.FindRow{}
-	_ tt.Row[[]tt.Name, tt.RecognizeDetail] = tt.RecognizeRow{}
-	_ tt.Row[[]tt.Relation, tt.PairsDetail] = tt.RelateRow{}
-	_ tt.Row[tt.Annotations, tt.NoDetail]   = tt.AnnotateRow{}
 )
 
 type embeddedThreshold struct{ tt.Threshold }
@@ -41,20 +23,20 @@ func TestInterfaceArgumentsCannotBypassAdmission(t *testing.T) {
 	var nilCut *tt.Cut
 	var nilBand *tt.BandValue
 	for _, threshold := range []tt.Threshold{nilCut, nilBand, embeddedThreshold{}} {
-		_, err := c.Decide(context.Background(), tt.NewDecide("Ready?").WithThreshold(threshold), tt.Text("evidence"))
+		_, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?", Threshold: threshold}, "evidence")
 		if !errors.Is(err, tt.ErrUsage) {
 			t.Fatalf("invalid interface did not fail admission: %v", err)
 		}
 	}
-	var nilDecide *tt.Decide
+	var nilDecide *tt.DecideQuestion
 	for _, question := range []tt.AnnotationQuestion{nilDecide, embeddedQuestion{}} {
-		q := tt.NewAnnotate(map[string]tt.AnnotationQuestion{"invalid": question})
-		_, err := c.Annotate(context.Background(), q, tt.Text("evidence"))
+		q := tt.AnnotateQuestion{Questions: map[string]tt.AnnotationQuestion{"invalid": question}}
+		_, err := c.Annotate(context.Background(), q, "evidence")
 		if !errors.Is(err, tt.ErrUsage) {
 			t.Fatalf("invalid annotation question: %v", err)
 		}
 	}
-	if _, err := c.Decide(context.Background(), tt.NewDecide("Ready?").WithThreshold(nil), tt.Text("evidence")); err != nil {
+	if _, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?", Threshold: nil}, "evidence"); err != nil {
 		t.Fatalf("nil threshold should omit the setting: %v", err)
 	}
 }
@@ -63,70 +45,58 @@ func TestInterfaceArgumentsCannotBypassAdmission(t *testing.T) {
 func TestQuestionListsAndToolboxesOwnTheirStorage(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	choices := []string{"red", "green"}
-	q := tt.NewChoose("Which?", choices)
-	copiedChoices := q.Choices()
-	copiedChoices[0] = ""
+	entries := map[string]tt.Question{"color": tt.ChooseQuestion[string]{Question: "Which?", Choices: choices}}
+	box := tt.NewToolbox(entries)
 	choices[0] = ""
 	choices[1] = ""
-	entries := map[string]tt.Question{"color": q}
-	box := tt.NewToolbox(entries)
-	entries["color"] = tt.NewChoose("Which?", nil)
-	exported := box.Questions()
-	exported["color"] = tt.NewChoose("Which?", nil)
-	selected, ok := box.Choose("color")
-	if !ok {
-		t.Fatal("toolbox lost typed question")
-	}
-	if _, ok := box.Decide("color"); ok {
-		t.Fatal("toolbox selected wrong function")
-	}
-	if _, ok := box.Choose("missing"); ok {
-		t.Fatal("toolbox invented entry")
-	}
-	row, err := c.Choose(context.Background(), selected, tt.Text("evidence"))
+	delete(entries, "color")
+	selected, err := box.Choose[string]("color")
 	if err != nil {
 		t.Fatal(err)
 	}
-	answer, ok := valueOf(row)
-	if !ok || (answer != "red" && answer != "green") {
-		t.Fatal("caller mutation changed choices")
+	if _, err := box.Decide("color"); !errors.Is(err, tt.ErrUsage) {
+		t.Fatal("selected wrong function")
+	}
+	if _, err := box.Choose[string]("missing"); !errors.Is(err, tt.ErrUsage) {
+		t.Fatal("invented missing entry")
+	}
+	answer, err := tt.Answer(c.Choose(context.Background(), selected, "evidence"))
+	if err != nil || (answer != "red" && answer != "green") {
+		t.Fatal("toolbox lost choices")
 	}
 }
 
 // Feature: relation constructors snapshot optional rule strings before admission.
 func TestRulesOwnOptionalReadsPointers(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	reads := "works for"
-	rules := []tt.Rule{{Name: "works_for", Source: "person", Target: "company", Reads: &reads}}
-	q := tt.NewRelate(rules)
-	reads = ""
-	rules[0].Name = ""
-	rules[0].Source = ""
-	actual, err := c.Relate(context.Background(), q, tt.Text("Ada works for Acme."))
-	if err != nil {
-		t.Fatalf("rule snapshot was invalidated: %v", err)
-	}
-	expected, err := c.Relate(context.Background(), tt.NewRelate([]tt.Rule{{Name: "works_for", Source: "person", Target: "company", Reads: ptr("works for")}}), tt.Text("Ada works for Acme."))
+	rules := []tt.RelationRule{{Relation: "works_for", Source: "person", Target: "company", Reads: "works for"}}
+	box := tt.NewToolbox(map[string]tt.Question{"relation": tt.RelateQuestion{Rules: rules}})
+	rules[0].Relation = ""
+	q, err := box.Relate("relation")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatal("mutating a rule pointer changed the question")
+	actual, err := c.Relate(context.Background(), q, "Ada works for Acme.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected, err := c.Relate(context.Background(), tt.RelateQuestion{Rules: []tt.RelationRule{{Relation: "works_for", Source: "person", Target: "company", Reads: "works for"}}}, "Ada works for Acme.")
+	if err != nil || !actual.Equal(expected) {
+		t.Fatal("toolbox retained caller rules")
 	}
 }
-
-func ptr[T any](v T) *T { return &v }
 
 // Feature: annotation maps retain typed entries after caller mutation.
 func TestAnnotationsOwnQuestionMapsAndAnswers(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	questions := map[string]tt.AnnotationQuestion{"color": tt.NewChoose("Which?", []string{"red", "green"})}
-	q := tt.NewAnnotate(questions)
-	delete(questions, "color")
-	row, err := c.Annotate(context.Background(), q, tt.Text("evidence"))
+	questions := map[string]tt.AnnotationQuestion{"color": tt.ChooseQuestion[string]{Question: "Which?", Choices: []string{"red", "green"}}}
+	q := tt.AnnotateQuestion{Questions: questions}
+
+	row, err := c.Annotate(context.Background(), q, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
+	delete(questions, "color")
 	values, ok := valueOf(row)
 	if !ok {
 		t.Fatal("annotation lost its answer")
@@ -135,7 +105,7 @@ func TestAnnotationsOwnQuestionMapsAndAnswers(t *testing.T) {
 	if !ok {
 		t.Fatal("constructor retained mutable question map")
 	}
-	color, ok := entry.(tt.ChooseAnnotation)
+	color, ok := entry.(tt.ChooseAnnotation[string])
 	if !ok {
 		t.Fatalf("annotation lost function type: %T", entry)
 	}
@@ -157,14 +127,23 @@ func TestAnnotationsOwnQuestionMapsAndAnswers(t *testing.T) {
 func TestRequiredDomainsAreNeverSilentlyDefaulted(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
-	r := tt.Text("evidence")
+	r := "evidence"
 	calls := []func() error{
-		func() error { _, e := c.Choose(ctx, tt.NewChoose("Which?", nil), r); return e },
-		func() error { _, e := c.Tag(ctx, tt.NewTag("Which?", nil), r); return e },
-		func() error { _, e := c.Score(ctx, tt.NewScore("How?", nil), r); return e },
-		func() error { _, e := c.Rank(ctx, tt.NewRank("How?", nil), r); return e },
-		func() error { _, e := c.Recognize(ctx, tt.NewRecognize(nil), r); return e },
-		func() error { _, e := c.Relate(ctx, tt.NewRelate(nil), r); return e },
+		func() error {
+			_, e := c.Choose(ctx, tt.ChooseQuestion[string]{Question: "Which?", Choices: nil}, r)
+			return e
+		},
+		func() error { _, e := c.Tag(ctx, tt.TagQuestion[string]{Question: "Which?", Labels: nil}, r); return e },
+		func() error {
+			_, e := c.Score(ctx, tt.ScoreQuestion[string]{Question: "How?", Levels: nil}, r)
+			return e
+		},
+		func() error {
+			_, e := tt.Collect(c.Rank(ctx, tt.RankQuestion[string]{Question: "How?", Levels: nil}, slices.Values([]string{r})))
+			return e
+		},
+		func() error { _, e := c.Recognize(ctx, tt.RecognizeQuestion{Kinds: nil}, r); return e },
+		func() error { _, e := c.Relate(ctx, tt.RelateQuestion{Rules: nil}, r); return e },
 	}
 	for i, call := range calls {
 		if err := call(); !errors.Is(err, tt.ErrUsage) {
@@ -185,20 +164,20 @@ func TestRecordIDsAndInvalidIDs(t *testing.T) {
 		{`18446744073709551615`, func(id tt.RecordID) bool { v, ok := id.UnsignedValue(); return ok && v == math.MaxUint64 }},
 	} {
 		raw := []byte(`{"id":` + tc.raw + `,"body":"evidence"}`)
-		r := tt.RawJSON(raw)
-		raw[0] = '!'
-		row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), r)
+		r := json.RawMessage(raw)
+		row, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, r)
 		if err != nil {
 			t.Fatal(err)
 		}
+		raw[0] = '!'
 		id, ok := row.ID()
 		if !ok || !tc.check(id) {
 			t.Fatalf("ID changed: %s", tc.raw)
 		}
 	}
 	for _, id := range []string{`null`, `true`, `1.5`, `[]`, `{}`, `18446744073709551616`, `-9223372036854775809`} {
-		row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.RawJSON([]byte(`{"id":`+id+`,"body":"evidence"}`)))
-		if err != nil || row.Status() != tt.Failed || rowFailure(row.Err()) == nil || rowFailure(row.Err()).Code().String() != "record.invalid" {
+		_, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, json.RawMessage([]byte(`{"id":`+id+`,"body":"evidence"}`)))
+		if !errors.Is(err, tt.CodeRecordInvalid) || !errors.Is(err, tt.ErrNoAnswer) {
 			t.Fatalf("invalid ID did not produce record.invalid: %s", id)
 		}
 	}
@@ -207,8 +186,8 @@ func TestRecordIDsAndInvalidIDs(t *testing.T) {
 // Feature: failed records remain rows and native errors support errors.Is and As.
 func TestMissingRowsAndTypedErrorIdentity(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	records := []tt.Record{tt.Missing(), {}, tt.RawJSON([]byte("null"))}
-	rows := collect(t, c.DecideAll(context.Background(), tt.NewDecide("Ready?"), tt.Records(records...)))
+	records := []any{nil, nil, json.RawMessage([]byte("null"))}
+	rows := collect(t, c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, slices.Values(records)))
 	if len(rows) != 3 {
 		t.Fatal("missing records vanished")
 	}
@@ -228,17 +207,17 @@ func TestMissingRowsAndTypedErrorIdentity(t *testing.T) {
 			t.Fatal("typed row error lost identity")
 		}
 	}
-	row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.Missing())
-	if err != nil || row.Status() != tt.Failed {
-		t.Fatalf("single failed record became a call error: %v", err)
+	_, err := c.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, any(nil))
+	if !errors.Is(err, tt.CodeRecordMissing) || !errors.Is(err, tt.ErrNoAnswer) {
+		t.Fatalf("single missing record did not fail at the call: %v", err)
 	}
 }
 
 // Feature: filter returns its original item for failed records.
 func TestFilterRetainsOriginalFailedItems(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
-	records := []tt.Record{tt.Text("evidence"), tt.RawJSON([]byte("{bad")), tt.Missing()}
-	rows := collect(t, c.FilterRowsAll(context.Background(), tt.NewFilter("Ready?"), tt.Records(records...)))
+	records := []any{"evidence", json.RawMessage([]byte("{bad")), any(nil)}
+	rows := collect(t, c.DecideAll(context.Background(), tt.DecideQuestion{Question: "Ready?"}, slices.Values(records)))
 	if len(rows) != 3 {
 		t.Fatal("filter dropped failed records")
 	}
@@ -246,7 +225,7 @@ func TestFilterRetainsOriginalFailedItems(t *testing.T) {
 		if !reflect.DeepEqual(row.Item(), records[i]) || row.Position() != i+1 {
 			t.Fatal("filter changed original item")
 		}
-		if row.Status() == tt.Failed && row.Kept() {
+		if row.IsFailed() && row.IsAnswered() {
 			t.Fatal("filter kept a failed record")
 		}
 	}

@@ -1,10 +1,8 @@
-# Compile the unchanged example against the shared staged rust package.
+# --prepare is forwarded to the shared language launcher.
 set -eu
-root=$(cd ../../../../.. && pwd)
-packages=${SITE_PACKAGES:-$root/target/site-packages}
-shown=$(pwd)/show.rs
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+shown="$PWD/show.rs"
+SITE_CASE_FILE=${SITE_CASE_FILE:-$PWD/../case.json}
+export SITE_CASE_FILE
 # Keep the question and options aligned with the shared capture case.
 jq -r '[.question?, .choices[]?, .labels[]?, .levels[]?, .kinds[]?,
         (.rules[]? | .source, .target, .relation),
@@ -19,9 +17,6 @@ jq -c '.records[]' "$SITE_CASE_FILE" |
   while IFS= read -r record; do
     grep -qF "$record" "$shown" || { echo 'show.rs does not use a record from case.json' >&2; exit 1; }
   done
-rustc --edition=2024 --extern thinkthen="$packages/rust/libthinkthen.rlib" \
-  -L "dependency=$packages/rust/deps" "$shown" -o "$work/example"
-(cd "$work" && ./example) > "$work/output.txt"
-cat "$work/output.txt"
-jq -R -s -c --slurpfile case "$SITE_CASE_FILE" 'split("\n") | map(select(length > 0)) | map(fromjson | sort)' \
-  "$work/output.txt" > "$SITE_ANSWERS_FILE"
+SITE_FUNCTION_NORMALIZER="$PWD/normalize.sh"
+export SITE_FUNCTION_NORMALIZER
+. ../../../lang-rust/run.sh

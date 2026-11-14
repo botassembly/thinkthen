@@ -17,6 +17,43 @@ impl Loopback {
 
 pub(crate) fn reply(rules: &[Value], request: &super::Request) -> Reply {
     let body = request.json().unwrap_or_default();
+    let questions: Vec<_> = field(&body, "questions").as_array().map_or_else(
+        || {
+            field(&body, "questions")
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(_, q)| q.clone())
+                .collect()
+        },
+        |questions| questions.iter().map(normalize).collect(),
+    );
+    if let Some(rule) = rules
+        .iter()
+        .find(|rule| rule.get("status").is_some() && questions.iter().any(|q| matches(rule, q)))
+    {
+        let status = field(rule, "status")
+            .as_u64()
+            .and_then(|n| u16::try_from(n).ok())
+            .unwrap_or(500);
+        return Reply::json(status, field(rule, "body"));
+    }
+    reply_with(request, |q, openai| {
+        let rule = rules.iter().find(|rule| {
+            (rule.get("answer").is_some()
+                || rule.get("probability").is_some()
+                || rule.get("distribution").is_some())
+                && matches(rule, q)
+        });
+        rule.map_or(Value::Null, |rule| answer(q, rule, openai))
+    })
+}
+
+pub(super) fn reply_with(
+    request: &super::Request,
+    answer_question: impl Fn(&Value, bool) -> Value,
+) -> Reply {
+    let body = request.json().unwrap_or_default();
     let openai = field(&body, "questions").is_array();
     let questions: Vec<(String, Value)> =
         if let Some(questions) = field(&body, "questions").as_array() {
@@ -33,29 +70,9 @@ pub(crate) fn reply(rules: &[Value], request: &super::Request) -> Reply {
                 .map(|(k, q)| (k.clone(), q.clone()))
                 .collect()
         };
-    if let Some(rule) = rules.iter().find(|rule| {
-        rule.get("status").is_some() && questions.iter().any(|(_, q)| matches(rule, q))
-    }) {
-        let status = field(rule, "status")
-            .as_u64()
-            .and_then(|n| u16::try_from(n).ok())
-            .unwrap_or(500);
-        return Reply::json(status, field(rule, "body"));
-    }
     let answers: Vec<_> = questions
         .iter()
-        .map(|(key, q)| {
-            let rule = rules.iter().find(|rule| {
-                (rule.get("answer").is_some()
-                    || rule.get("probability").is_some()
-                    || rule.get("distribution").is_some())
-                    && matches(rule, q)
-            });
-            (
-                key.clone(),
-                rule.map_or(Value::Null, |rule| answer(q, rule, openai)),
-            )
-        })
+        .map(|(key, q)| (key.clone(), answer_question(q, openai)))
         .collect();
     let answers = if openai {
         Value::Array(answers.into_iter().map(|(_, v)| v).collect())
@@ -95,7 +112,7 @@ fn matches(rule: &Value, question: &Value) -> bool {
         .as_str()
         .is_none_or(|name| field(question, "criteria").get(name).is_some())
 }
-fn answer(question: &Value, rule: &Value, openai: bool) -> Value {
+pub(super) fn answer(question: &Value, rule: &Value, openai: bool) -> Value {
     if !openai && rule.get("answer").is_some() {
         return field(rule, "answer").clone();
     }

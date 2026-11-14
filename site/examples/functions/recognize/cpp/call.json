@@ -1,5 +1,5 @@
 {
-  "anchor": "        client.recognize(people_and_groups, \"Morgan works for Example Group.\")",
+  "anchor": "    const auto names = client.recognize(finds_names, \"Morgan works for Example Group.\");",
   "before": 0,
   "after": 2
 }

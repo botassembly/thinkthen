@@ -162,6 +162,7 @@ void tt_release(void *context)
         thinkthen_client_free(owner->temporary_client);
         owner->temporary_client = NULL;
         thinkthen_row_free(&owner->row);
+        thinkthen_buffer_free(&owner->projection);
         thinkthen_error_free(&owner->error);
     });
 }
@@ -188,7 +189,9 @@ void tt_check(TtOwner *owner, int result)
     if (thinkthen_code_name(owner->error.code) == NULL)
         ereport(ERROR, (errcode(tt_sqlstate(THINKTHEN_CODE_USAGE_ABI)), errmsg("%s", THINKTHEN_ABI_ERROR_MESSAGE), errdetail_internal("%s", THINKTHEN_ABI_ERROR_CODE)));
     tt_raise(owner->error.code, text_to_cstring(tt_server_text((const char *)owner->error.message.data,
-        owner->error.message.len)), NULL);
+        owner->error.message.len)),
+        owner->function == THINKTHEN_FUNCTION_FILTER && owner->error.code == THINKTHEN_CODE_USAGE_THRESHOLD
+            ? "Use thinkthen.decide for not-sure results" : NULL);
 }
 
 thinkthen_client *tt_client(TtOwner *owner)

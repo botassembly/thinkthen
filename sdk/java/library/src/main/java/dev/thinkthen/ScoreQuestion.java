@@ -40,4 +40,7 @@ public final class ScoreQuestion implements AnnotationQuestion<Double,LevelDetai
         values.put("question",java.util.Objects.requireNonNull(question,"question")); values.put("levels",Questions.options(levels,values));
         return new ScoreQuestion(Values.tree(values),options.name());
     }
+
+    public static <E extends Enum<E>> ScoreQuestion of(String question, Class<E> type) { return of(question,type,ScoreOptions.defaults()); }
+    public static <E extends Enum<E>> ScoreQuestion of(String question, Class<E> type, ScoreOptions options) { return of(question,Domain.of(type).words(),options); }
 }

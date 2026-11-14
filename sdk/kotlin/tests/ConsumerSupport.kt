@@ -63,6 +63,7 @@ internal class Fixture private constructor(arguments: List<String>) : AutoClosea
         }
     }
     companion object {
+        fun guide(name: String) = Fixture(listOf("--guide-scenario", name))
         fun case(path: Path) = Fixture(listOf(path.toAbsolutePath().toString()))
         fun held(mode: String) = Fixture(listOf("--held", mode))
         fun unavailable() = Fixture(listOf("--unavailable"))
@@ -75,9 +76,9 @@ internal fun assertError(actual: RowError, expected: JsonObject) {
     check(actual.httpStatus == expected["http_status"]?.jsonPrimitive?.int)
 }
 
-internal fun <A, D> assertRow(
-    actual: Row<A, D>, expected: JsonObject, expectedBackend: Backend,
-    answer: (A) -> JsonElement, detail: (D) -> JsonElement,
+internal fun <A, T> assertRow(
+    actual: Row<A, T>, expected: JsonObject, expectedBackend: Backend,
+    answer: (A) -> JsonElement, detail: (Detail) -> JsonElement,
 ) {
     val position: Long = actual.position
     check(position == expected.required("position").jsonPrimitive.content.toLong())
@@ -92,29 +93,13 @@ internal fun <A, D> assertRow(
             if ("name" in wanted) check(source.name == wanted["name"]?.jsonPrimitive?.contentOrNull)
         }
     }
-    when (actual) {
-        is Row.Answered -> {
-            check(actual.status == Status.ANSWERED)
-            check(expected.required("status").jsonPrimitive.content == "answered")
-            check(contractMatches(answer(actual.answer),expected.required("answer"))) { "Answer mismatch: ${answer(actual.answer)} expected ${expected.required("answer")}" }
-            check(actual.probability?.toBits() == expected["probability"]?.jsonPrimitive?.double?.toBits())
-            check(actual.detail?.let(detail) == expected["detail"])
-            check("error" !in expected)
-        }
-        is Row.Unsure -> {
-            check(actual.status == Status.UNSURE)
-            check(expected.required("status").jsonPrimitive.content == "unsure")
-            check(actual.probability.toBits() == expected.required("probability").jsonPrimitive.double.toBits())
-            check(actual.detail?.let(detail) == expected["detail"])
-            check("answer" !in expected && "error" !in expected)
-        }
-        is Row.Failed -> {
-            check(actual.status == Status.FAILED)
-            check(expected.required("status").jsonPrimitive.content == "failed")
-            assertError(actual.error, expected.required("error").jsonObject)
-            check("answer" !in expected && "probability" !in expected && "detail" !in expected)
-        }
+    val saved = Json.parseToJsonElement(actual.toJson()).jsonObject
+    for (field in listOf("status", "answer", "probability", "error", "detail")) {
+        val got = saved[field]
+        val wanted = expected[field]
+        check(if (got == null || wanted == null) got == wanted else contractMatches(got, wanted)) { "$field mismatch: $got expected $wanted" }
     }
+
 }
 
 internal fun contractMatches(actual: JsonElement, expected: JsonElement): Boolean = when(expected) {

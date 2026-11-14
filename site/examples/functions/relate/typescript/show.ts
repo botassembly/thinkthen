@@ -1,14 +1,13 @@
-import { ThinkThen } from "thinkthen";
+import { Client } from "thinkthen";
 
 const message = "Morgan works for Example Group.\nPlease refund my order.";
-const tt = new ThinkThen();
+const tt = new Client();
 try {
-  // await throws RecordError on failure.
   const relations = await tt.relate(
-    [{ name: "works_for", source: "person", target: "organization" }],
     message,
+    { rules: [{ source: "person", target: "organization", relation: "works_for" }] },
   );
-  for (const relation of relations) {
+  for (const relation of relations.answer) {
     console.log(relation.source.text, relation.relation, relation.target.text);
   }
 } finally {

@@ -42,18 +42,18 @@ public final class FilterOptions {
      * @param value the value value
      * @return the yesMeans result
      */
-        public Builder yesMeans(String value) { values.put("true",java.util.Objects.requireNonNull(value,"yesMeans")); return this; }
+        public Builder yesMeans(String value) { values.put("yes_means",java.util.Objects.requireNonNull(value,"yesMeans")); return this; }
         /** Describe what a no answer means for this question.
      * @param value the value value
      * @return the noMeans result
      */
-        public Builder noMeans(String value) { values.put("false",java.util.Objects.requireNonNull(value,"noMeans")); return this; }
+        public Builder noMeans(String value) { values.put("no_means",java.util.Objects.requireNonNull(value,"noMeans")); return this; }
         /**
          * Set the cutoff or uncertainty band.
          * @param value the value to set
          * @return the threshold result
          */
-        public Builder threshold(Threshold value) { values.put("threshold", value instanceof Threshold.Cut cut ? cut.value() : value); return this; }
+        public Builder threshold(Threshold.Cut value) { values.put("threshold", value.value()); return this; }
         /**
          * Build this immutable value.
          * @return the build result

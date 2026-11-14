@@ -23,7 +23,7 @@ private suspend fun stressConsume(client: ThinkThen, sample: JsonObject, call: I
         check(row.id?.let { contractValue(it) } == JsonPrimitive("call-${basis + call}-record-${basis + received - 1}")) { "Stress id changed" }
         when (row) {
             is Row.Answered -> {
-                check(row.answer)
+                check(row.answer())
                 check(row.probability == sample.required("probability").jsonPrimitive.double)
             }
             is Row.Failed -> {

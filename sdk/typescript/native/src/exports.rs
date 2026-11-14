@@ -354,3 +354,22 @@ pub fn serialize_toolbox(json: String) -> napi::Result<String> {
         .and_then(|toolbox| toolbox.to_json())
         .map_err(host_error)
 }
+
+/// Select a named question and enforce its function through shared admission.
+/// # Errors
+/// Returns the shared function/name error for a missing or mismatched entry.
+#[napi]
+pub fn toolbox_question(json: String, name: String, expected: String) -> napi::Result<String> {
+    let function = serde_json::from_value(serde_json::Value::String(expected)).map_err(|_| {
+        host_error(thinkthen::native::argument_error(
+            thinkthen::Code::UsageFunction,
+        ))
+    })?;
+    let toolbox = thinkthen::native::ToolboxBuilder::from_json(&json).map_err(host_error)?;
+    let question = toolbox.select_as(&name, function).map_err(host_error)?;
+    let mut selected = thinkthen::native::ToolboxBuilder::default();
+    selected
+        .insert(&name, question.build().map_err(host_error)?)
+        .map_err(host_error)?;
+    selected.to_json().map_err(host_error)
+}

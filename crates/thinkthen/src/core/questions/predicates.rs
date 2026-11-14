@@ -48,8 +48,8 @@ impl Decide {
     }
     /// Set this function's typed threshold.
     #[must_use]
-    pub fn threshold(mut self, threshold: Threshold) -> Self {
-        self.inner.threshold = threshold;
+    pub fn threshold(mut self, threshold: impl Into<Threshold>) -> Self {
+        self.inner.threshold = threshold.into();
         self
     }
 }
@@ -58,9 +58,9 @@ impl Decide {
 pub(crate) struct DecideWire {
     #[serde(deserialize_with = "crate::core::diagnostic::question")]
     question: String,
-    #[serde(default, rename = "true", skip_serializing_if = "Option::is_none")]
+    #[serde(default, rename = "yes_means", skip_serializing_if = "Option::is_none")]
     yes: Option<String>,
-    #[serde(default, rename = "false", skip_serializing_if = "Option::is_none")]
+    #[serde(default, rename = "no_means", skip_serializing_if = "Option::is_none")]
     no: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "crate::core::diagnostic::threshold")]
@@ -140,10 +140,14 @@ impl Filter {
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
-    /// Set this function's typed threshold.
+    /// Set the single decision cut; use decide for a low/high band.
+    /// ```compile_fail
+    /// let filter = thinkthen::Filter::new("Keep?").unwrap()
+    ///     .threshold(thinkthen::Threshold::band(0.2, 0.8).unwrap());
+    /// ```
     #[must_use]
-    pub fn threshold(mut self, threshold: Threshold) -> Self {
-        self.inner.threshold = threshold;
+    pub fn threshold(mut self, threshold: Cut) -> Self {
+        self.inner.threshold = threshold.into();
         self
     }
 }
@@ -152,12 +156,13 @@ impl Filter {
 pub(crate) struct FilterWire {
     #[serde(deserialize_with = "crate::core::diagnostic::question")]
     question: String,
-    #[serde(default, rename = "true", skip_serializing_if = "Option::is_none")]
+    #[serde(default, rename = "yes_means", skip_serializing_if = "Option::is_none")]
     yes: Option<String>,
-    #[serde(default, rename = "false", skip_serializing_if = "Option::is_none")]
+    #[serde(default, rename = "no_means", skip_serializing_if = "Option::is_none")]
     no: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "crate::core::diagnostic::threshold")]
+    #[schemars(with = "Cut")]
     threshold: ThresholdInput,
     #[serde(
         default,
@@ -174,7 +179,7 @@ impl TryFrom<FilterWire> for Filter {
         question.inner.yes = value.yes;
         question.inner.no = value.no;
         question.field = admit_field(value.field)?;
-        question.inner.threshold = value.threshold.admit()?;
+        question.inner.threshold = value.threshold.admit()?.filter_cut()?.into();
         Ok(question)
     }
 }

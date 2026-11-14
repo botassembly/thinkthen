@@ -20,12 +20,13 @@ typedef struct {
 } Registration;
 
 enum { ARG_SOURCE, ARG_QUESTION, ARG_CHOICES, ARG_LABELS, ARG_LEVELS, ARG_KINDS,
-    ARG_RULES, ARG_TOOLBOX, ARG_THRESHOLD, ARG_LOW, ARG_HIGH, ARG_TOP,
+    ARG_RULES, ARG_QUESTIONS, ARG_THRESHOLD, ARG_LOW, ARG_HIGH, ARG_TOP,
     ARG_FIELD, ARG_PARAMS, ARG_RECORD, ARG_ID, ARG_FORMAT, ARG_NAME,
-    ARG_YES_MEANS, ARG_NO_MEANS, ARG_DESCRIPTIONS, ARG_FAILURES, ARG_COUNT };
+    ARG_YES_MEANS, ARG_NO_MEANS, ARG_DESCRIPTIONS, ARG_RAISE, ARG_COUNT };
 /* The shared SQL row shape, in the order DuckDB and PostgreSQL also use. */
-enum { COL_POSITION, COL_ID, COL_ANSWER, COL_PROBABILITY, COL_STATUS, COL_CODE, COL_MESSAGE,
+enum { COL_POSITION, COL_ID, COL_RECORD, COL_ANSWER, COL_PROBABILITY, COL_STATUS, COL_CODE, COL_MESSAGE,
     COL_HTTP, COL_SOURCE, COL_DETAIL, COL_COUNT };
+extern const char *const tt_columns[COL_COUNT];
 
 typedef struct {
     sqlite3_vtab base;
@@ -38,7 +39,8 @@ typedef struct {
     sqlite3_vtab_cursor base;
     sqlite3_stmt *source;
     sqlite3 *replay;
-    sqlite3_stmt *save, *read;
+    sqlite3_stmt *save, *read, *projection;
+    thinkthen_buffer projected_id;
     int complete, replaying, mask;
     sqlite3_int64 changes, data_version;
     unsigned generation;
@@ -46,24 +48,11 @@ typedef struct {
     thinkthen_row row;
     json_t *fields;
     sqlite3_value *arguments[ARG_COUNT];
-    sqlite3_value **ids;
-    /* Rank emits after its whole input, so its native ids wait in the spool. */
-    int spool_ids;
-    sqlite3_stmt *id_save, *id_read;
-    sqlite3_int64 spooled_ids;
-    size_t ids_count, ids_capacity, ids_start;
-    uint64_t ids_offset;
+    /* Exact SQLite input values wait in the cursor's disk-backed spool. */
+    sqlite3_stmt *input_save, *input_read;
+    sqlite3_int64 input_count;
     int record_column, id_column, json;
     json_t *answer, *error;
-    /* Filter keeps answered-yes rows; failures raise after the source drains. */
-    int keep_failures;
-    uint64_t failed, first_failed_position;
-    char *first_failed_code, *first_failed_message;
-    /* Backend failures wait in the spool until a record is answered, so a run the
-     * backend fails throughout raises its error instead of returning failed rows. */
-    uint64_t held;
-    int released, draining;
-    char *held_error;
     sqlite3_int64 rowid;
     int eof;
 } Cursor;
@@ -71,8 +60,10 @@ typedef struct {
 int replay_open(Cursor *cursor);
 int replay_save(Cursor *cursor);
 int replay_next(Cursor *cursor);
+int row_projection(Cursor *cursor,const char *json,sqlite3_uint64 length);
 int replay_same(Cursor *cursor,int mask,sqlite3_value **argv);
-int replay_save_id(Cursor *cursor,sqlite3_value *id);
+int replay_save_input(Cursor *cursor,sqlite3_value *id,sqlite3_value *record);
+sqlite3_value *row_input(Cursor *cursor,int column);
 sqlite3_value *row_id(Cursor *cursor);
 
 void connection_release(void *pointer);
@@ -81,7 +72,6 @@ int connection_client(Connection *connection, const char *settings, size_t len,
 int engine_error(thinkthen_error *error, char **diagnostic);
 int usage_error(Cursor *cursor, const char *format, ...);
 void cursor_clear(Cursor *cursor);
-void filter_reset(Cursor *cursor);
 int cursor_error(Cursor *cursor, int code, const char *message);
 int question_open(Cursor *cursor);
 int source_open(Cursor *cursor);

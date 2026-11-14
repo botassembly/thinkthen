@@ -39,7 +39,7 @@ pub(super) fn drive(
                         source.clone(),
                         r.outcome,
                     )
-                    .map(AnyRow::$variant)
+                    .map(|row| AnyRow::$variant(row.with_original(r.original)))
                     .map(Some)
                 },
                 &mut sink,
@@ -56,7 +56,7 @@ pub(super) fn drive(
             &context,
             |r| {
                 Row::<questions::Choose>::from_outcome(r.position, r.id, source.clone(), r.outcome)
-                    .map(AnyRow::Choose)
+                    .map(|row| AnyRow::Choose(row.with_original(r.original)))
                     .map(Some)
             },
             &mut sink,
@@ -134,7 +134,6 @@ fn ordinary<F: core::Function>(
         question.field_pointer()
     }
     .clone();
-    let keeps_original = matches!(question, Question::Rank(_));
     let mut ordinal = 0_u64;
     let mut failure = None;
     let records = records.map(move |event| {
@@ -147,7 +146,7 @@ fn ordinary<F: core::Function>(
                     NonZeroU64::new(ordinal).unwrap_or(NonZeroU64::MIN),
                     record.id().cloned(),
                     prepared.clone(),
-                    keeps_original.then_some(record),
+                    Some(record),
                 ));
             prepared
         })
@@ -172,32 +171,30 @@ fn ordinary<F: core::Function>(
                 failure = Some(results::mismatch());
                 return;
             };
-            let mut outcome = row.outcome().clone();
-            if let Question::Annotate(q) = question {
-                if let core::Outcome::Answered {
-                    answer: core::Answer::Annotations(entries),
-                    ..
-                } = &mut outcome
-                {
-                    for (name, outcome) in entries {
-                        if let Some(entry) = q.questions().get(name)
-                            && let Ok(text) =
-                                record.field_at(entry.field_override().unwrap_or(q.field_pointer()))
-                        {
-                            core::spans::outcome(outcome, &text, offsets);
-                        }
-                    }
-                }
-            } else if let Ok(text) = &record.field {
-                core::spans::outcome(&mut outcome, text, offsets);
-            }
+            let outcome = row.outcome().clone();
             match convert(Evaluated {
                 position,
                 id,
                 outcome,
                 original,
             }) {
-                Ok(Some(row)) => sink(Ok(row)),
+                Ok(Some(mut row)) => {
+                    if let Question::Annotate(q) = question {
+                        results::offsets::project_form(
+                            &mut row,
+                            |name| {
+                                let entry = q.questions().get(name)?;
+                                record
+                                    .field_at(entry.field_override().unwrap_or(q.field_pointer()))
+                                    .ok()
+                            },
+                            offsets,
+                        );
+                    } else if let Ok(text) = &record.field {
+                        results::offsets::project(&mut row, text, offsets);
+                    }
+                    sink(Ok(row));
+                }
                 Ok(None) => {}
                 Err(error) => {
                     failure = Some(error.clone());
@@ -230,19 +227,22 @@ fn annotation(
                 Ok((name, member.entry(outcome)?))
             })
             .collect::<Result<results::Annotations, Error>>()?;
-        Ok(AnyRow::Annotate(Row::new(
-            row.position,
-            row.id,
-            source.clone(),
-            Outcome::Answered {
-                answer: answers,
-                probability: None,
-                detail: None,
-            },
-        )))
+        Ok(AnyRow::Annotate(
+            Row::new(
+                row.position,
+                row.id,
+                source.clone(),
+                Outcome::Answered {
+                    answer: answers,
+                    probability: None,
+                    detail: None,
+                },
+            )
+            .with_original(row.original),
+        ))
     } else {
         Row::<questions::Annotate>::from_outcome(row.position, row.id, source.clone(), row.outcome)
-            .map(AnyRow::Annotate)
+            .map(|value| AnyRow::Annotate(value.with_original(row.original)))
     }
 }
 fn rank(

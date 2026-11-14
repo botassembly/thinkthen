@@ -7,13 +7,13 @@ records_for <- function(offset) lapply(seq_len(count), function(i) list(id = pas
 failed <- 0L
 widths <- 0L
 if (test$cancel) {
-  result <- tryCatch(tt_decide_rows(records_for(0L), "Ready?", field = "/body", client = client), thinkthen_cancelled_error = identity)
+  result <- tryCatch(tt_decide(details = TRUE, records_for(0L), "Ready?", field = "/body", client = client), thinkthen_cancelled_error = identity)
   stopifnot(inherits(result, "thinkthen_cancelled_error"), result$code == "local.cancelled")
 } else {
   for (round in seq_len(test$concurrency * test$rounds)) {
     offset <- test$identifier_base + (round - 1L) * count
     records <- records_for(offset)
-    rows <- suppressWarnings(tt_decide_rows(records, "Ready?", field = "/body", client = client))
+    rows <- suppressWarnings(tt_decide(details = TRUE, records, "Ready?", field = "/body", client = client))
     stopifnot(nrow(rows) == count, all(rows$position == seq_len(count)),
               identical(unlist(rows$id, use.names = FALSE), paste0("record-", sprintf("%.0f", offset + seq_len(count) - 1L))))
     for (width in unique(nchar(unlist(rows$id, use.names = FALSE)))) widths <- bitwOr(widths, bitwShiftL(1L, width))

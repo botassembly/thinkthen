@@ -24,7 +24,7 @@ from testing import child_environment
 
 
 @contextmanager
-def server(environment):
+def server(environment, install=True):
     with tempfile.TemporaryDirectory(prefix='thinkthen-pg-typed-') as scratch:
         path = Path(scratch)
         data = path / 'data'
@@ -37,9 +37,10 @@ def server(environment):
         try:
             database = psycopg2.connect(host=str(path), user='thinkthen', dbname='postgres')
             database.autocommit = True
-            with database.cursor() as cursor:
-                cursor.execute('CREATE SCHEMA thinkthen')
-                cursor.execute('CREATE EXTENSION thinkthen SCHEMA thinkthen')
+            if install:
+                with database.cursor() as cursor:
+                    cursor.execute('CREATE SCHEMA thinkthen')
+                    cursor.execute('CREATE EXTENSION thinkthen SCHEMA thinkthen')
             yield database
         finally:
             if database is not None:
@@ -54,19 +55,17 @@ def query(database, statement, parameters=()):
         return cursor.fetchall() if cursor.description else []
 
 
-def guide(database):
+def database_defaults(database):
     query(database, 'CREATE DATABASE guide_example')
     try:
-        # The test, not the guide, selects the stub, so readers see the real setup.
         query(database, "ALTER DATABASE guide_example SET thinkthen.allowed_backends = 'stub:*'")
         query(database, "ALTER DATABASE guide_example SET thinkthen.backend = 'stub'")
         with closing(psycopg2.connect(database.dsn, dbname='guide_example')) as example:
-            with tempfile.TemporaryDirectory() as temporary:
-                helper = ROOT / 'scripts/surface-example'
-                subprocess.run([sys.executable, str(helper), 'prepare', 'postgresql', temporary], check=True)
-                subprocess.run([sys.executable, str(helper), 'check', 'postgresql', 'psql', '-XAt',
-                                '-v', 'ON_ERROR_STOP=1', '-d', example.dsn, '-f', 'example.sql'],
-                               env=child_environment(), cwd=temporary, check=True)
+            query(example, 'CREATE SCHEMA thinkthen')
+            query(example, 'CREATE EXTENSION thinkthen SCHEMA thinkthen')
+            with example.cursor() as cursor:
+                cursor.execute("SELECT status::text FROM thinkthen.decide('SELECT ''body''::text AS record', 'Ready?')")
+                assert cursor.fetchall() == [('answered',)]
     finally:
         query(database, 'DROP DATABASE guide_example')
 
@@ -82,7 +81,7 @@ def set_settings(database, settings):
 
 
 # The one SQL row shape DuckDB, SQLite and PostgreSQL share.
-COLUMNS = ['position', 'id', 'answer', 'probability', 'status', 'error_code', 'error_message',
+COLUMNS = ['position', 'id', 'record', 'answer', 'probability', 'status', 'error_code', 'error_message',
            'error_http_status', 'source', 'detail']
 SPANS = {'start_offset': 'start', 'end_offset': 'end'}
 
@@ -103,17 +102,10 @@ def sqlstate(code):
 
 
 def visible(question, expected):
-    """Filter returns kept rows, plus failed rows under failures => 'row'."""
+    """Filter returns only kept rows; failures raise through the shared call."""
     if question['function'] != 'filter':
         return expected
-    return [row for row in expected if row['status'] == 'failed'
-            or (row['status'] == 'answered' and row.get('answer') is True)]
-
-
-def backend_down(expected):
-    """No record answered and every failure is the backend's: the statement raises."""
-    return (isinstance(expected, list) and len(expected) > 0
-            and all(row['status'] == 'failed' and row['error']['code'].startswith('backend.') for row in expected))
+    return [row for row in expected if row['status'] == 'answered' and row.get('answer') is True]
 
 
 def contract_row(row, function):
@@ -158,21 +150,18 @@ def invoke(database, request):
                 arguments.append(sql.SQL('{} => %s').format(sql.Identifier(bound)))
                 values.append(number)
             continue
-        key = 'toolbox' if key == 'questions' else key
         if key == 'rules':
             rules = []
             for rule in value:
                 rules.append(sql.SQL('ROW(%s,%s,%s,%s,%s)::thinkthen.rule'))
-                values.extend((rule['relation'], rule['source'], rule['target'], rule.get('reads'), rule.get('either', False)))
+                values.extend((rule['source'], rule['target'], rule['relation'], rule.get('reads'), rule.get('either', False)))
             arguments.append(sql.SQL('rules => ARRAY[{}]::thinkthen.rule[]').format(sql.SQL(',').join(rules)))
         else:
-            arguments.append(sql.SQL('{} => %s' + ('::jsonb' if key == 'toolbox' else '')).format(sql.Identifier(key)))
-            values.append(json.dumps(value) if key == 'toolbox' else value)
+            arguments.append(sql.SQL('{} => %s' + ('::jsonb' if key == 'questions' else '')).format(sql.Identifier(key)))
+            values.append(json.dumps(value) if key == 'questions' else value)
     if 'name' in request:
         arguments.append(sql.SQL('name => %s'))
         values.append(request['name'])
-    if question['function'] == 'filter':
-        arguments.append(sql.SQL("failures => 'row'"))
     arguments.append(sql.SQL('params => %s::jsonb'))
     values.append(json.dumps([json.dumps(request.get('records', []))]))
     statement = sql.SQL('SELECT to_jsonb(t) FROM thinkthen.{}({}) t').format(
@@ -329,7 +318,22 @@ def conformance(options):
         query(database, "SET thinkthen.allowed_backends = 'stub:*'")
         set_settings(database, {'backend': 'stub'})
         for case in json.loads((ROOT / 'construction/stub.json').read_text()):
-            expected = visible(case['request']['question'], case['expected'])
+            question = case['request']['question']
+            failed = [row for row in case['expected'] if row['status'] == 'failed']
+            if question['function'] == 'filter' and failed:
+                first = failed[0]
+                code = first['error']['code']
+                try:
+                    invoke(database, case['request'])
+                except psycopg2.Error as error:
+                    assert (error.pgcode, error.diag.message_detail) == (sqlstate(code), code), error
+                    prefix = (f"{len(failed)} of {len(case['expected'])} records failed; "
+                              f"the first, at position {first['position']}, failed with {code}: ")
+                    assert error.diag.message_primary.startswith(prefix), error
+                else:
+                    raise AssertionError(('filter failure returned rows', case['request']))
+                continue
+            expected = visible(question, case['expected'])
             assert strict_equal(invoke(database, case['request']), expected), case['request']
         for case in json.loads((ROOT / 'construction/options.json').read_text()):
             if 'expected_error' in case:
@@ -409,15 +413,15 @@ def conformance(options):
                         assert int(command(loopback, 'count')) == case['requests'], path
                         continue
                     set_settings(database, settings)
-                    if backend_down(case['expected']):
-                        # Feature: a statement whose every record the backend failed raises that error.
-                        code = case['expected'][0]['error']['code']
+                    if question['function'] == 'filter' and any(row['status'] == 'failed' for row in case['expected']):
+                        code = next(row['error']['code'] for row in case['expected'] if row['status'] == 'failed')
                         try:
                             invoke(database, case['request'])
                         except psycopg2.Error as error:
                             assert (error.pgcode, error.diag.message_detail) == (sqlstate(code), code), (path, error)
+                            assert 'records failed' in error.diag.message_primary, error
                         else:
-                            raise AssertionError(('backend failure returned rows', path))
+                            raise AssertionError(('filter failure returned rows', path))
                         assert int(command(loopback, 'count')) == case['requests'], path
                         covered.add((question['function'], backend))
                         continue
@@ -549,11 +553,31 @@ def adapter_contracts():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('loopback', type=Path)
-    parser.add_argument('--group', choices=['all', 'native', 'ownership', 'conformance', 'admission', 'adapter'], default='all')
+    parser.add_argument('--group', choices=['all', 'native', 'ownership', 'conformance', 'admission', 'adapter', 'ideal', 'migration'], default='all')
     parser.add_argument('--abi-mismatch-extension', type=Path, required=True)
     parser.add_argument('--systemone-url-env', required=True)
     parser.add_argument('--openai-url-env', required=True)
     options = parser.parse_args()
+    if options.group in ('ideal', 'migration'):
+        if options.group == 'ideal':
+            subprocess.run([sys.executable, str(ROOT / 'scripts/guide-examples'), '--surface', 'postgresql',
+                            '--postgres-loopback', str(options.loopback)], check=True)
+        else:
+            from ideal import migration
+            import os
+            os.environ['THINKTHEN_LOOPBACK'] = str(options.loopback)
+            migration(options, server, query, failure)
+        with server(child_environment()) as database:
+            query(database, "SET thinkthen.allowed_backends = 'stub:*'")
+            set_settings(database, {'backend': 'stub'})
+            from interface import shape, kept_only, ids, numeric_ids
+            from sources import verify
+            shape(database, query)
+            kept_only(database, query, failure)
+            ids(database, query, failure)
+            numeric_ids(database, query)
+            verify(database, query, failure)
+        sys.exit(0)
     if options.group == 'adapter':
         adapter_contracts()
         statement_timeout(options)
@@ -579,9 +603,12 @@ if __name__ == '__main__':
             interface(database, query, failure)
     def guide_checks():
         with server(child_environment()) as database:
-            guide(database)
+            database_defaults(database)
     if options.group in ('all', 'native', 'ownership'):
-        stage('guide', guide_checks)
+        stage('database-defaults', guide_checks)
+    if options.group == 'all':
+        stage('ideal-guide', subprocess.run, [sys.executable, str(ROOT / 'scripts/guide-examples'),
+              '--surface', 'postgresql', '--postgres-loopback', str(options.loopback)], check=True)
     stage('admission', admission)
     if options.group == 'admission':
         sys.exit(1 if failed else 0)

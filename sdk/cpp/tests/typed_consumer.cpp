@@ -13,7 +13,7 @@
 
 #if __cplusplus >= 202002L
 #include <ranges>
-static_assert(std::ranges::input_range<thinkthen::stream<thinkthen::decide>>);
+static_assert(std::ranges::input_range<thinkthen::stream<thinkthen::decide, thinkthen::record>>);
 #endif
 namespace tt = thinkthen;
 
@@ -43,22 +43,22 @@ static void typed_signatures() {
     assert(initialized_error.struct_size == sizeof initialized_error && initialized_error.code == 0);
     assert(initialized_row.struct_size == sizeof initialized_row && initialized_row.error_code == 0);
     static_assert(!std::is_copy_constructible_v<tt::client>);
-    static_assert(!std::is_constructible_v<tt::choose, std::string>);
-    static_assert(!std::is_constructible_v<tt::tag, std::string>);
-    static_assert(!std::is_constructible_v<tt::score, std::string>);
-    static_assert(!std::is_constructible_v<tt::rank, std::string>);
+    static_assert(!std::is_constructible_v<tt::choose<>, std::string>);
+    static_assert(!std::is_constructible_v<tt::tag<>, std::string>);
+    static_assert(!std::is_constructible_v<tt::score<>, std::string>);
+    static_assert(!std::is_constructible_v<tt::rank<>, std::string>);
     static_assert(!std::is_default_constructible_v<tt::recognize>);
     static_assert(!std::is_default_constructible_v<tt::relate>);
     static_assert(!std::is_same_v<tt::text, tt::json_text>);
-    static_assert(!std::is_same_v<tt::record, tt::owned_record>);
-    static_assert(std::is_same_v<decltype(std::declval<const tt::row<tt::choose>&>().value()),
+    static_assert(std::is_same_v<tt::record, tt::owned_record>);
+    static_assert(std::is_same_v<decltype(std::declval<const tt::row<tt::choose<>>&>().answer()),
                                  const std::string&>);
 }
 
 /* Feature: C++ questions admit their required lists through the engine. */
 static void empty_domain() {
     try {
-        tt::choose question{"Which team?", std::vector<std::string>{}};
+        tt::choose<> question{"Which team?", std::vector<std::string>{}};
         (void)question;
         assert(false);
     } catch (const tt::error& error) {
@@ -80,23 +80,21 @@ static void native_argument_errors() {
 static void owned_answer_and_detail() {
     const auto retained = [] {
         tt::client owner(stub_settings());
-        auto row = owner.choose(tt::choose{"Which team?", {"billing", "shipping"}},
+        auto row = owner.choose(tt::choose<>{"Which team?", {"billing", "shipping"}},
                                 tt::text{"refund please"});
         assert(row.status() == tt::status::answered);
-        assert(row.answer() != nullptr);
-        assert(row.failure() == nullptr);
+        assert(row.answered());
+        assert(row.error() == nullptr);
         return row;
     }();
     assert(retained.position() == 1);
-    const auto* value = retained.answer();
-    assert(*value == "billing" || *value == "shipping");
+    const auto& value = retained.answer();
+    assert(value == "billing" || value == "shipping");
     const auto detail = retained.detail();
     assert(detail.has_value());
     assert(detail->labels.size() == 2);
-    assert(detail->labels.at(*value) == 1.0);
-    const auto copy = retained;
-    assert(*copy.answer() == *value);
-    assert(copy.detail()->labels == detail->labels);
+    assert(detail->labels.at(value) == 1.0);
+    static_assert(!std::is_copy_constructible_v<decltype(retained)>);
 }
 
 /* Feature: deferred callbacks own strings that were local to the producer. */
@@ -113,7 +111,7 @@ static void callback_local_record() {
     for (const auto& row : rows) {
         assert(row.status() == tt::status::answered);
         assert(row.id_json() == "18446744073709551615");
-        assert(row.answer() != nullptr);
+        assert(row.answered());
         ++count;
     }
     assert(count == 1);
@@ -129,28 +127,32 @@ static void owned_collection() {
         local.emplace_back(tt::owned_json_text{"{\"id\":\"second\",\"body\":\"beta\"}"});
         return owner.decide_each(tt::decide{"Ready?"}, std::move(local));
     }();
-    std::vector<tt::row<tt::decide>> retained;
-    for (const auto& row : rows) retained.push_back(row);
+    std::vector<tt::row<tt::decide, tt::record>> retained;
+    for (auto& row : rows) retained.push_back(std::move(row));
     assert(retained.size() == 2);
     assert(retained[0].position() == 1 && retained[1].position() == 2);
     assert(retained[0].id_json() == "-9223372036854775808");
     assert(retained[1].id_json() == "\"second\"");
-    assert(retained[0].answer() && retained[1].answer());
+    assert(retained[0].answered() && retained[1].answered());
 }
 
 /* Feature: missing records and invalid ids stay typed failed rows. */
 static void record_failures() {
     tt::client owner(stub_settings());
-    const auto missing = owner.decide(tt::decide{"Ready?"}, tt::missing_record{});
+    auto missing_rows = owner.decide_each(tt::decide{"Ready?"},std::vector<tt::owned_record>{tt::missing_record{}});
+    const auto missing = std::move(*missing_rows.next());
     assert(missing.status() == tt::status::failed);
-    assert(missing.answer() == nullptr && !missing.probability());
-    assert(missing.failure());
-    assert(code_name(missing.failure()->code()) == "record.missing");
-    const auto invalid = owner.decide(tt::decide{"Ready?"},
-        tt::json_text{"{\"id\":{\"nested\":1},\"body\":\"evidence\"}"});
+    assert(!missing.probability());
+    try{(void)missing.answer();assert(false);}catch(const tt::no_answer&){}
+    assert(missing.error());
+    assert(code_name(missing.error()->code()) == "record.missing");
+    auto invalid_rows = owner.decide_each(tt::decide{"Ready?"},
+        std::vector<tt::owned_record>{tt::owned_json_text{"{\"id\":{\"nested\":1},\"body\":\"evidence\"}"}});
+    const auto invalid = std::move(*invalid_rows.next());
     assert(invalid.status() == tt::status::failed);
-    assert(invalid.answer() == nullptr && invalid.failure());
-    assert(code_name(invalid.failure()->code()) == "record.invalid");
+    assert(invalid.error());
+    try{(void)invalid.answer();assert(false);}catch(const tt::no_answer&){}
+    assert(code_name(invalid.error()->code()) == "record.invalid");
 }
 
 /* Feature: moved-from C++ owners report host misuse without an invented code. */
@@ -172,7 +174,7 @@ static void moved_owners() {
     first.cancel_handle().request_cancel();
     assert(first.begin() == first.end());
     std::size_t count = 0;
-    for (const auto& row : moved) { assert(row.answer()); ++count; }
+    for (const auto& row : moved) { assert(row.answered()); ++count; }
     assert(count == 1);
 }
 
@@ -190,21 +192,21 @@ static void source_exception() {
     }
     assert(propagated);
     const auto row = owner.decide(tt::decide{"Still usable?"}, tt::text{"evidence"});
-    assert(row.answer());
+    assert(row.answered());
 }
 
 /* Feature: immutable questions preserve options, execution names and toolbox domains. */
 static void snapshots_and_names() {
     tt::client owner(stub_settings());
-    auto original = tt::choose{"Which?", {"red", "blue"}};
-    tt::toolbox tools{{{"color", original}, {"rank", tt::rank{"How much?", {"low", "high"}}}}};
-    const auto selected = tools.select<tt::choose>("color");
+    auto original = tt::choose<>{"Which?", {"red", "blue"}};
+    tt::toolbox tools{{{"color", original}, {"rank", tt::rank<>{"How much?", {"low", "high"}}}}};
+    const auto selected = tools.select<tt::choose<>>("color");
     const auto unnamed = owner.choose(selected, tt::text{"evidence"});
     const auto named = owner.choose(selected, tt::text{"evidence"}, "execution");
     assert(!unnamed.source().name && named.source().name == "execution");
     assert(unnamed.source().question_identity != named.source().question_identity);
-    assert(*unnamed.answer() == *named.answer());
-    assert(std::holds_alternative<tt::rank>(tools.select("rank")));
+    assert(unnamed.answer() == named.answer());
+    assert(std::holds_alternative<tt::rank<>>(tools.select("rank")));
     try { (void)tools.select<tt::decide>("color"); assert(false); }
     catch (const tt::error& error) { assert(error.code() == tt::errc::usage_name); }
     const auto cut = original.threshold(0.8);
@@ -212,22 +214,25 @@ static void snapshots_and_names() {
     assert(owner.choose(original, tt::text{"evidence"}).source().question_identity == unnamed.source().question_identity);
     tt::annotation_questions entries{{"ready", tt::decide{"Ready?"}}};
     const auto annotation = owner.annotate(tt::annotate{entries}, tt::text{"evidence"});
-    assert(annotation.answer() && annotation.answer()->size() == 1);
-    assert(std::get<tt::outcome<tt::decide>>(annotation.answer()->at("ready")).answer());
+    assert(tt::get<tt::decide>(annotation.answer(),"ready").answered());
     std::error_code code = tt::errc::record_missing;
     assert(code.category() == tt::category() && code.message() == "record.missing");
 }
 /* Feature: filter retains each original record even when the record fails. */
 static void filter_originals() {
     tt::client owner(stub_settings());
-    std::vector<tt::row<tt::filter>> retained;
-    for (const auto& row : owner.filter_rows_each(tt::filter{"Ready?"},
-            std::vector<tt::owned_record>{tt::owned_text{"alpha"}, tt::missing_record{}, tt::owned_json_text{"{\"body\":\"beta\"}"}})) retained.push_back(row);
-    assert(retained.size() == 3);
-    assert(std::get<tt::owned_text>(retained[0].item()).value == "alpha");
-    assert(std::holds_alternative<tt::missing_record>(retained[1].item()));
-    assert(retained[1].failure() && !retained[1].kept());
-    assert(std::get<tt::owned_json_text>(retained[2].item()).value == "{\"body\":\"beta\"}");
+    std::size_t kept=0;
+    try {
+        for(const auto& item:owner.filter_each(tt::filter{"Ready?"}.threshold(0.01),
+            std::vector<tt::record>{tt::owned_text{"alpha"},tt::missing_record{},tt::owned_json_text{"{\"body\":\"beta\"}"}})) {
+            assert(!std::holds_alternative<tt::missing_record>(item));++kept;
+        }
+        assert(false);
+    } catch(const tt::filter_error<tt::record>& failure) {
+        assert(kept==2);assert(failure.rows().size()==1);
+        assert(failure.rows()[0].position()==2);
+        assert(std::holds_alternative<tt::missing_record>(failure.rows()[0].item()));
+    }
 }
 
 /* Feature: C++ saved toolboxes hydrate native typed snapshots through engine admission. */
@@ -235,12 +240,12 @@ static void saved_toolbox(const char* json) {
     auto tools = tt::toolbox::from_json(json);
     assert(std::holds_alternative<tt::filter>(tools.select("ready")));
     assert(std::holds_alternative<tt::relate>(tools.select("names")));
-    const auto topic = tools.select<tt::choose>("topic");
+    const auto topic = tools.select<tt::choose<>>("topic");
     tt::client client(stub_settings());
     const auto loaded = client.choose(topic, tt::json_text{R"({"body":"Bill"})"});
-    const auto direct = client.choose(tt::choose{"Which topic?", {"billing", "shipping"}}.field("/body").threshold(0.7), tt::json_text{R"({"body":"Bill"})"});
+    const auto direct = client.choose(tt::choose<>{"Which topic?", {"billing", "shipping"}}.field("/body").threshold(0.7), tt::json_text{R"({"body":"Bill"})"});
     assert(loaded.source().question_identity == direct.source().question_identity);
-    assert(loaded.answer() && direct.answer() && *loaded.answer() == *direct.answer());
+    assert(loaded.answer() == direct.answer());
     std::map<std::string, tt::toolbox_question> entries;
     for (const auto* name : {"ready", "topic", "names", "decision", "tags", "urgency", "priority", "find", "recognized"})
         entries.emplace(name, tools.select(name));
@@ -265,7 +270,10 @@ int main(int argc, char** argv) {
     }
     if (argc == 3 && std::string_view(argv[1]) == "toolbox-invalid") {
         try { (void)tt::toolbox::from_json(argv[2]); assert(false); }
-        catch (const tt::error& error) { std::cout << code_name(error.code()) << '\n' << error.what() << '\n'; }
+        catch (const tt::error& error) { const auto prefix=code_name(error.code())+": ";
+            const std::string_view message=error.what();assert(message.starts_with(prefix));
+            // Shared admission driver protocol carries code and native message separately.
+            std::cout << code_name(error.code()) << '\n' << message.substr(prefix.size()) << '\n'; }
         return 0;
     }
     if (argc == 3 && std::string_view(argv[1]) == "toolbox") {

@@ -5,8 +5,8 @@ def ruby_execution_names
   question = ThinkThen::DecideQuestion.new("Ready?")
   toolbox = ThinkThen::Toolbox.new(questions: {"selection" => question})
   ThinkThen::Client.open(backend: :stub) do |client|
-    unnamed = client.decide(toolbox["selection"], "record")
-    named = client.decide(toolbox["selection"], "record", name: "review")
+    unnamed = client.decide(toolbox.decide(:selection), "record")
+    named = client.decide(toolbox.decide(:selection), "record", name: "review")
     assert(unnamed.source.name.nil?, "toolbox lookup does not set a call name")
     equal("review", named.source.name, "execution name joins the source")
     equal(client.decide(question, "record", name: "review").source.to_h, named.source.to_h,
@@ -14,8 +14,8 @@ def ruby_execution_names
     raises(ThinkThen::UsageError) { client.decide(question, "record", name: "") }
     rank = ThinkThen::RankQuestion.new("Urgency?", levels: %w[low high])
     retained = ThinkThen::Toolbox.new(questions: {"ranking" => rank})
-    assert(retained["ranking"].equal?(rank), "general toolbox retains rank")
-    error = raises(ThinkThen::UsageError) { ThinkThen::AnnotationQuestions.new(questions: {"bad" => rank}) }
+    assert(retained.rank(:ranking).equal?(rank), "general toolbox retains rank")
+    error = raises(ThinkThen::UsageError) { ThinkThen::AnnotationQuestions.new(**{"bad" => rank}) }
     equal(:"usage.question", error.code, "engine refuses rank in annotation")
   end
 end
@@ -43,7 +43,7 @@ def ruby_conversion_contract
       equal(:"usage.threshold", error.code, "nonfinite numeric threshold uses engine admission")
     end
     raises(ThinkThen::UsageError) { client.rank("Urgency?", ["record"], levels: %w[low high], top: 1.5) }
-    token = ThinkThen::CancelToken.new
+    token = ThinkThen::Cancel.new
     token.cancel
     raises(ThinkThen::CancelledError) { client.decide_each("Ready?", ["record"], cancel: token).to_a }
   end
@@ -90,26 +90,27 @@ def ruby_saved_calls
     record = test.fetch("request").fetch("records").first
     question = if function == "annotate"
                  children = definition.fetch("questions").transform_values { |child| typed_question(child) }
-                 ThinkThen::AnnotateQuestion.new(ThinkThen::AnnotationQuestions.new(questions: children))
+                 ThinkThen::AnnotateQuestion.new(ThinkThen::AnnotationQuestions.new(**children))
                else
                  typed_question(definition)
                end
     ThinkThen::Client.open(backend: :stub) do |client|
-      stream = client.public_send("#{function}_each", question, [record]).to_a
-      equal(1, stream.length, "saved #{function} returns one row")
       if function == "filter"
-        actual = client.filter(question, [record]).to_a
-        expected = stream.first.kept? ? [record] : []
-        equal(expected, actual, "saved filter keeps the original record")
-        next
+        # Filter's full decision transport is private; its public view yields records.
+        assert(client.filter(question,[record]).to_a.all? { |item| item.equal?(record) },"saved filter original")
       elsif function == "rank"
-        equal([record], client.rank(question, [record]).map(&:item), "saved rank copies the original record")
-        next
+        result = client.rank(question,[record]).to_a
+        equal(1,result.length,"saved rank row")
+        assert(result.first.item.equal?(record),"saved rank original")
+      elsif %w[recognize relate].include?(function)
+        raises(ArgumentError) { client.public_send(function,question,record) }
+        form = client.annotate(ThinkThen::AnnotationQuestions.new(saved: question),record)
+        equal(function.to_sym,form.answer[:saved].function,"saved record-first question in a form")
       else
-        single = client.public_send(function, question, record)
-        expected = stream.first
+        streamed = client.public_send("#{function}_each",question,[record]).to_a
+        single = client.public_send(function,question,record)
+        equal(streamed.first.to_h,single.to_h,"saved #{function} maps identical question and record")
       end
-      equal(expected.to_h, single.to_h, "saved #{function} maps the same question and record")
     end
   end
 end

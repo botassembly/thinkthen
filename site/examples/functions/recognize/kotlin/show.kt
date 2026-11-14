@@ -9,7 +9,7 @@ fun main() = runBlocking {
             message, listOf("person", "organization"),
         ).answer()
         for (name in names) {
-            println("${name.mention.kind}: ${name.mention.span.text}")
+            println("${name.kind}: ${name.text}")
         }
     }
 }

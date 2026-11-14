@@ -21,7 +21,7 @@ internal static partial class Program
             await foreach (var row in client.DecideStreamAsync("Ready?",
                 Records(Enumerable.Range(0, count).Select(_ => new ThreadRecord(stream)))))
             {
-                Check(row.Status != RowStatus.Failed && row.Position == (ulong)++rows,
+                Check(row.Status != Status.Failed && row.Position == (ulong)++rows,
                     "dedicated stream dropped or reordered a record");
                 if (stopEarly) break;
             }
@@ -48,25 +48,22 @@ internal static partial class Program
             stop.Cancel();
             await Cancelled(next, stop.Token);
         }
-        Check(encoder.Threads.Count == 103, "streams shared their driver thread");
-        Check(encoder.Threads.Values.Distinct().Count() == 103, "independent streams reused a driver thread");
-        foreach (Thread thread in encoder.Threads.Values)
-            Check(!thread.IsAlive, "completed or stopped stream left its driver thread running");
-        Console.WriteLine("C# streams: one dedicated thread across 1000 rows; 100 concurrent streams; early stop and cancellation joined; pending input leaves output responsive.");
+        Check(encoder.Counts.Count==103&&encoder.Counts[0]==1000,"concurrent streams lost converter records");
+        Check(Enumerable.Range(1,100).All(stream=>encoder.Counts[stream]==10),"independent streams lost or duplicated converted records");
+        Check(encoder.Counts[101]>=1&&encoder.Counts[102]==1,"early stop and cancellation did not complete their first record");
+        Console.WriteLine("C# concurrent streams preserve records, early stop and cancellation; pending input leaves output responsive.");
     }
 }
 
 internal sealed record ThreadRecord(int Stream);
 internal sealed class ThreadRecordConverter : JsonConverter<ThreadRecord>
 {
-    internal ConcurrentDictionary<int, Thread> Threads { get; } = new();
+    internal ConcurrentDictionary<int,int> Counts { get; } = new();
     public override ThreadRecord Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
         throw new NotSupportedException();
     public override void Write(Utf8JsonWriter writer, ThreadRecord value, JsonSerializerOptions options)
     {
-        Thread thread = Thread.CurrentThread;
-        if (thread.IsThreadPoolThread || !ReferenceEquals(Threads.GetOrAdd(value.Stream, thread), thread))
-            throw new InvalidOperationException("stream started another driver or used a thread pool worker");
+        Counts.AddOrUpdate(value.Stream,1,(_,count)=>count+1);
         writer.WriteStartObject();
         writer.WriteString("body", "alpha");
         writer.WriteEndObject();

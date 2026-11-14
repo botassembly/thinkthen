@@ -6,7 +6,7 @@ package thinkthen
 // tt.Answer(client.Decide(...)), including uncertainty and failed child outcomes.
 func selectAnnotation[A Annotation](a Annotations, name string) (A, error) {
 	var zero A
-	child, present := a.entries[name]
+	child, present := a.Get(name)
 	if !present {
 		return zero, &Error{code: CodeUsageName, message: "annotation entry not found: " + name}
 	}
@@ -23,23 +23,28 @@ func (a Annotations) Decide(name string) (DecideAnnotation, error) {
 }
 
 // Choose selects a choose child for tt.Answer.
-func (a Annotations) Choose(name string) (ChooseAnnotation, error) {
-	return selectAnnotation[ChooseAnnotation](a, name)
+func (a Annotations) Choose[C ~string](name string) (ChooseAnnotation[C], error) {
+	original, err := selectAnnotation[ChooseAnnotation[string]](a, name)
+	if err != nil {
+		return ChooseAnnotation[C]{}, err
+	}
+	entry, err := typedEntry[C, LabelsDetail](original.row)
+	return ChooseAnnotation[C]{entry}, err
 }
 
 // Tag selects a tag child for tt.Answer.
-func (a Annotations) Tag(name string) (TagAnnotation, error) {
-	return selectAnnotation[TagAnnotation](a, name)
+func (a Annotations) Tag[C ~string](name string) (TagAnnotation[C], error) {
+	original, err := selectAnnotation[TagAnnotation[string]](a, name)
+	if err != nil {
+		return TagAnnotation[C]{}, err
+	}
+	entry, err := typedEntry[[]C, LabelsDetail](original.row)
+	return TagAnnotation[C]{entry}, err
 }
 
 // Score selects a score child for tt.Answer.
 func (a Annotations) Score(name string) (ScoreAnnotation, error) {
 	return selectAnnotation[ScoreAnnotation](a, name)
-}
-
-// Filter selects a filter child for tt.Answer.
-func (a Annotations) Filter(name string) (FilterAnnotation, error) {
-	return selectAnnotation[FilterAnnotation](a, name)
 }
 
 // Find selects a find child for tt.Answer.

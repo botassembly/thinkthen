@@ -4,14 +4,11 @@ module ThinkThen
   # A single-pass Enumerable of native outcomes. Close it when external iteration stops early.
   class Rows < Enumerator
 
-    def initialize(client, request, records, cancel, filter)
-      @client, @filter, @items, @position = client, filter, {}, 0
+    def initialize(client, request, records, cancel, question)
+      @client, @question, @items, @position = client, question, {}, 0
       initial = records.is_a?(Array) ? Array.new(records) : nil
-      # Filter returns the caller's own objects. Rank keeps only the engine's
-      # snapshots and returns a copy of each record read back from JSON, with String keys.
-      @initial = filter == :filter ? initial : nil
-      @invalid = Hash.new #: Hash[Integer, String]
-      @owner = CallOwner.new(client.send(:admit, request, initial, @invalid))
+      @initial = initial
+      @owner = CallOwner.new(client.send(:admit, request, initial))
       @cancel = cancel
       @cancel&.attach(@owner)
       # @type var input: untyped
@@ -121,7 +118,6 @@ module ThinkThen
         @reader = nil
         @initial = nil
         @items.clear
-        @invalid.clear
         @records = nil
       ensure
         @driver.unlock
@@ -134,14 +130,9 @@ module ThinkThen
         begin
           status = blocking_next(native)
           if status == 0
-            row = explain(Row.decode(native))
-            if @filter == :rank
-              return RankRow.new(item: Native.original(native), row: row)
-            elsif @filter
-              item = @initial ? @initial[row.position - 1] : @items.delete(row.position)
-              return FilterRow.new(item: item, row: row)
-            end
-            return row
+            position = native[:position]
+            item = @initial ? @initial[position - 1] : @items.delete(position)
+            return Row.decode(native, question: @question, item: item)
           end
           raise StopIteration if status == 1
         ensure
@@ -172,15 +163,6 @@ module ThinkThen
       end
     end
 
-    # The engine reports only record.invalid; name the record's class and reason.
-    def explain(row)
-      reason = @invalid.delete(row.position)
-      return row unless reason && row.failed? && row.error.code == :"record.invalid"
-      error = row.error
-      row.with(error: RowError.new(code: error.code, message: "record #{row.position}: #{reason}", http_status: error.http_status,
-                                   raw_code: error.raw_code, raw_name: error.raw_name))
-    end
-
     def supply_input
       record = begin
         # Caller input may block in Ruby; native storage stays protected outside it.
@@ -190,9 +172,8 @@ module ThinkThen
         return
       end
       @position += 1
-      @items[@position] = record if @filter == :filter
-      kind, value, reason = Native.record_value(record)
-      @invalid[@position] = reason if reason
+      @items[@position] = record
+      kind, value = Native.record_value(record)
       if value.nil?
         @owner.use do |pointer|
           Native.checked do |error|

@@ -71,4 +71,5 @@ mod exports;
 pub use exports::{
     Client, Operation, abi_version, parse_toolbox, reject_cancellation, reject_non_finite_json,
     reject_question_conversion, reject_record_kind, reject_settings_conversion, serialize_toolbox,
+    toolbox_question,
 };

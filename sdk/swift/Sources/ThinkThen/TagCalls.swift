@@ -1,87 +1,79 @@
 import Foundation
+import Synchronization
 
 extension Client {
-  /// Evaluate a lazy stream of records with tag.
-  public func tag<S: Sequence & Sendable>(_ question: TagQuestion, records: S, name: String? = nil)
-    -> TagRows where S.Element == Record
-  {
-    rows(question, source: source(records), name: name) { wire, _ in
-      try wire.decode(TagQuestion.self)
-    }
+  public func tag<C: Sendable, S: Sequence & Sendable>(
+    _ question: TagQuestion<C>, records: S, name: String? = nil
+  ) -> TagRows<C, S.Element> where S.Element: Encodable & Sendable {
+    evaluate(question, input: source(records), item: S.Element.self, name: name)
   }
-  /// Evaluate a lazy stream of records with tag.
-  public func tag<S: AsyncSequence & Sendable>(
-    _ question: TagQuestion, records: S, name: String? = nil
-  ) -> TagRows where S.Element == Record {
-    rows(question, source: source(records), name: name) { wire, _ in
-      try wire.decode(TagQuestion.self)
-    }
+  public func tag<C: Sendable, S: AsyncSequence & Sendable>(
+    _ question: TagQuestion<C>, records: S, name: String? = nil
+  ) -> TagRows<C, S.Element> where S.Element: Encodable & Sendable {
+    evaluate(question, input: source(records), item: S.Element.self, name: name)
   }
-  /// Evaluate one record with tag.
-  public func tag(_ question: TagQuestion, record: Record, name: String? = nil)
-    async throws -> TagRow
-  {
-    try await single(tag(question, records: [record], name: name))
+  public func tag<C: Sendable, T: Encodable & Sendable>(
+    _ question: TagQuestion<C>, record: T, name: String? = nil
+  ) async throws -> TagRow<C, T> {
+    try requireSingleRecord(record, function: .tag)
+    return try await single(tag(question, records: [record], name: name))
   }
-  /// Evaluate a lazy stream of records with tag.
   public func tag<S: Sequence & Sendable>(
-    _ question: String, labels: [Choice], records: S, options: TagOptions = .init(),
-    name: String? = nil
-  ) -> TagRows where S.Element == Record {
-    tag(TagQuestion(question, labels: labels, options: options), records: records, name: name)
+    _ question: String, records: S, labels: [String], descriptions: [String: String] = [:],
+    threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) -> TagRows<String, S.Element> where S.Element: Encodable & Sendable {
+    tag(
+      TagQuestion(
+        question, labels: labels, descriptions: descriptions, threshold: threshold, field: field),
+      records: records, name: name)
   }
-  /// Evaluate a lazy stream of records with tag.
   public func tag<S: AsyncSequence & Sendable>(
-    _ question: String, labels: [Choice], records: S, options: TagOptions = .init(),
-    name: String? = nil
-  ) -> TagRows where S.Element == Record {
-    tag(TagQuestion(question, labels: labels, options: options), records: records, name: name)
+    _ question: String, records: S, labels: [String], descriptions: [String: String] = [:],
+    threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) -> TagRows<String, S.Element> where S.Element: Encodable & Sendable {
+    tag(
+      TagQuestion(
+        question, labels: labels, descriptions: descriptions, threshold: threshold, field: field),
+      records: records, name: name)
   }
-  /// Evaluate one record with tag.
-  public func tag(
-    _ question: String, labels: [Choice], record: Record, options: TagOptions = .init(),
-    name: String? = nil
-  ) async throws -> TagRow {
+  public func tag<T: Encodable & Sendable>(
+    _ question: String, record: T, labels: [String], descriptions: [String: String] = [:],
+    threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) async throws -> TagRow<String, T> {
     try await tag(
-      TagQuestion(question, labels: labels, options: options), record: record, name: name)
+      TagQuestion(
+        question, labels: labels, descriptions: descriptions, threshold: threshold, field: field),
+      record: record, name: name)
   }
-  /// Evaluate text records without wrapping each string in Record.text.
-  public func tag<S: Sequence & Sendable>(
-    _ question: TagQuestion, records: S, name: String? = nil
-  ) -> TagRows where S.Element == String {
-    tag(question, records: TextRecords(records), name: name)
+  public func tag<C: RawRepresentable & CaseIterable & Hashable & Sendable, S: Sequence & Sendable>(
+    _ question: String, records: S, labels: C.Type, descriptions: [C: String] = [:],
+    threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) -> TagRows<C, S.Element> where S.Element: Encodable & Sendable, C.RawValue == String {
+    tag(
+      TagQuestion(
+        question, labels: labels, descriptions: descriptions, threshold: threshold, field: field),
+      records: records, name: name)
   }
-  /// Evaluate text records using a question and options.
-  public func tag<S: Sequence & Sendable>(
-    _ question: String, labels: [Choice], records: S, options: TagOptions = .init(),
-    name: String? = nil
-  ) -> TagRows where S.Element == String {
-    tag(TagQuestion(question, labels: labels, options: options), records: records, name: name)
+  public func tag<
+    C: RawRepresentable & CaseIterable & Hashable & Sendable, S: AsyncSequence & Sendable
+  >(
+    _ question: String, records: S, labels: C.Type, descriptions: [C: String] = [:],
+    threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) -> TagRows<C, S.Element> where S.Element: Encodable & Sendable, C.RawValue == String {
+    tag(
+      TagQuestion(
+        question, labels: labels, descriptions: descriptions, threshold: threshold, field: field),
+      records: records, name: name)
   }
-  /// Evaluate text records without wrapping each string in Record.text.
-  public func tag<S: AsyncSequence & Sendable>(
-    _ question: TagQuestion, records: S, name: String? = nil
-  ) -> TagRows where S.Element == String {
-    tag(question, records: records.map { Record.text($0) }, name: name)
-  }
-  /// Evaluate text records using a question and options.
-  public func tag<S: AsyncSequence & Sendable>(
-    _ question: String, labels: [Choice], records: S, options: TagOptions = .init(),
-    name: String? = nil
-  ) -> TagRows where S.Element == String {
-    tag(TagQuestion(question, labels: labels, options: options), records: records, name: name)
-  }
-  /// Evaluate a text value without wrapping it in Record.text.
-  public func tag(_ question: TagQuestion, record: String, name: String? = nil)
-    async throws -> TagRow
-  {
-    try await tag(question, record: .text(record), name: name)
-  }
-  /// Evaluate a text value without wrapping it in Record.text.
-  public func tag(
-    _ question: String, labels: [Choice], record: String, options: TagOptions = .init(),
-    name: String? = nil
-  ) async throws -> TagRow {
-    try await tag(question, labels: labels, record: .text(record), options: options, name: name)
+  public func tag<
+    C: RawRepresentable & CaseIterable & Hashable & Sendable, T: Encodable & Sendable
+  >(
+    _ question: String, record: T, labels: C.Type, descriptions: [C: String] = [:],
+    threshold: Double? = nil, field: String? = nil, name: String? = nil
+  ) async throws -> TagRow<C, T> where C.RawValue == String {
+    try await tag(
+      TagQuestion(
+        question, labels: labels, descriptions: descriptions, threshold: threshold, field: field),
+      record: record, name: name)
   }
 }

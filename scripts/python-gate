@@ -2,6 +2,11 @@
 # Use prepared build tools offline; install the wheel alone before adding pytest.
 set -eu
 cd "$(dirname "$0")/.."
+case "${1:-}" in
+  --guide-framework) export THINKTHEN_GUIDE_FRAMEWORK_ONLY=1 ;;
+  "") ;;
+  *) echo 'usage: scripts/python-gate [--guide-framework]' >&2; exit 2 ;;
+esac
 exec uv run --offline --no-project --python 3.10 \
   --with 'maturin>=1.5,<2' --with 'pytest>=8,<9' \
   --with 'ruff>=0.11,<1' --with 'mypy>=1.19,<2' \
@@ -15,9 +20,11 @@ python_checks=0
 ruff check sdk/python --exclude _codes.py --exclude _contract.py || python_checks=1
 ruff format --check sdk/python --exclude _codes.py --exclude _contract.py || python_checks=1
 mypy --enable-incomplete-feature=TypeForm --strict --no-incremental sdk/python/thinkthen/*.py sdk/python/tests || python_checks=1
-python scripts/python-docs-check || python_checks=1
+python scripts/python-docs-check --ideal || python_checks=1
+python scripts/day-one-docs-test --surface python --surface pandas --surface polars || python_checks=1
+ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/python_guide_examples.py scripts/pandas_guide_examples.py scripts/polars_guide_examples.py scripts/python-guide-examples || python_checks=1
 [ "$python_checks" = 0 ]
-cargo build -p loopback --bin loopback --locked
+cargo build -p loopback -p thinkthen --bins --locked
 mkdir "$scratch/wheels"
 (cd sdk/python && python -c 'import build_backend, sys; build_backend.build_wheel(sys.argv[1], {"build-args": "--locked --profile dev"})' "$scratch/wheels")
 python -m venv "$scratch/venv"
@@ -26,16 +33,50 @@ installed_package=$("$scratch/venv/bin/python" -c 'import sysconfig; print(sysco
 export THINKTHEN_LOOPBACK="${CARGO_TARGET_DIR:-$root/target}/debug/loopback"
 export THINKTHEN_CASES="$root/conformance"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_BACKEND PYTHONPATH
+guide_controls() {
+    for surface in python pandas polars; do
+        for control in output branch exit refusal; do
+            if "$scratch/venv/bin/python" "$root/scripts/guide-examples" --surface "$surface" --python "$scratch/venv/bin/python" --negative-control "$control" > "$scratch/control.log" 2>&1; then
+                echo "Guide runner accepted wrong $surface $control" >&2
+                return 1
+            fi
+            case "$control" in
+                output) witness='deliberately wrong output' ;;
+                branch) witness='deliberately wrong branch' ;;
+                exit) witness='expected 99' ;;
+                refusal) witness='refusal/' ;;
+            esac
+            if ! grep -q "$witness" "$scratch/control.log"; then
+                cat "$scratch/control.log"
+                return 1
+            fi
+            echo "PASS $surface runner rejects wrong $control"
+        done
+    done
+}
+if [ "${THINKTHEN_GUIDE_FRAMEWORK_ONLY:-0}" = 1 ]; then
+    uv pip install --offline --python "$scratch/venv/bin/python" 'pandas>=2.2' 'polars>=1.0' pandas-stubs
+    guide_status=0
+    for surface in python pandas polars; do
+        "$scratch/venv/bin/python" "$root/scripts/guide-examples" --surface "$surface" --python "$scratch/venv/bin/python" || guide_status=1
+    done
+    guide_controls || guide_status=1
+    "$scratch/venv/bin/python" "$root/scripts/guide-examples" --inventory --require-all || guide_status=1
+    exit "$guide_status"
+fi
 cd "$scratch"
-"$scratch/venv/bin/python" "$root/scripts/surface-example" prepare python "$scratch/guide"
-# Readers see the default client; the guide's examples run on the stub.
-(cd "$scratch/guide" && THINKTHEN_BACKEND=stub "$scratch/venv/bin/python" "$root/scripts/surface-example" check python "$scratch/venv/bin/python" example.py)
+# Run independent installed-package checks even when another finds a regression.
+runtime_checks=0
+runtime_check() {
+    "$@" || runtime_checks=1
+}
+# The installed wheel runs the literal ideal guide after optional table dependencies.
 uv pip install --offline --python "$scratch/venv/bin/python" 'pytest>=8,<9'
-"$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests/test_readme.py" -q --tb=short
-"$scratch/venv/bin/python" "$root/scripts/module-abi-fixtures" python "$installed_package" --runtime "$scratch/venv/bin/python"
-"$scratch/venv/bin/python" "$root/scripts/release/python.py" "$root/construction/stub.json"
-"$scratch/venv/bin/python" "$root/sdk/python/tests/conformance.py" --cases "$root/conformance" --scratch "$scratch"
-"$scratch/venv/bin/python" - <<'BASE'
+runtime_check "$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests/test_readme.py" -q --tb=short
+runtime_check "$scratch/venv/bin/python" "$root/scripts/module-abi-fixtures" python "$installed_package" --runtime "$scratch/venv/bin/python"
+runtime_check "$scratch/venv/bin/python" "$root/scripts/release/python.py" "$root/construction/stub.json"
+runtime_check "$scratch/venv/bin/python" "$root/sdk/python/tests/conformance.py" --cases "$root/conformance" --scratch "$scratch"
+runtime_check "$scratch/venv/bin/python" - <<'BASE'
 import asyncio
 import sys
 import thinkthen as tt
@@ -64,7 +105,9 @@ async def check_async():
 asyncio.run(check_async())
 BASE
 uv pip install --offline --python "$scratch/venv/bin/python" 'pandas>=2.2' 'polars>=1.0' pandas-stubs
-mypy --enable-incomplete-feature=TypeForm --strict --no-incremental --python-executable "$scratch/venv/bin/python" "$root/sdk/python/tests/typing_examples.py"
-"$scratch/venv/bin/python" "$root/scripts/python-guide-examples" "$scratch/venv/bin/python"
-"$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests" --ignore="$root/sdk/python/tests/test_readme.py" -q --tb=short
+runtime_check mypy --enable-incomplete-feature=TypeForm --strict --no-incremental --python-executable "$scratch/venv/bin/python" "$root/sdk/python/tests/typing_examples.py"
+runtime_check "$scratch/venv/bin/python" "$root/scripts/python-guide-examples" "$scratch/venv/bin/python"
+runtime_check guide_controls
+runtime_check "$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests" --ignore="$root/sdk/python/tests/test_readme.py" -q --tb=short
+[ "$runtime_checks" = 0 ]
 CHECKS

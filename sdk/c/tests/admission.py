@@ -16,6 +16,9 @@ def check(consumer, root, surface, env):
         if surface == "c":
             mode = "admission-" + boundary
             coverage = "direct"
+        elif surface == "swift" and boundary == "question":
+            mode = "admission-question"
+            coverage = "direct saved question decode and public call admission"
         elif boundary == "settings":
             reason = ("JSONDecoder rejects the string before library admission"
                       if surface == "swift" else
@@ -33,14 +36,7 @@ def check(consumer, root, surface, env):
             assert message.startswith("question."), message
             message = "toolbox.entries.[0]." + message
             coverage = "public saved-entry projection of serialized question"
-            if surface == "swift":
-                reason = {
-                    "score": "ScoreQuestion JSONDecoder requires string levels before library admission",
-                    "tag": "TagQuestion JSONDecoder requires labels before canonical unknown-field admission",
-                    "relate": "RelateQuestion JSONDecoder requires string rule endpoints before library admission",
-                }[case["input"]["function"]]
-            else:
-                reason = "typed questions cannot represent malformed serialized fields"
+            reason = "typed questions cannot represent malformed serialized fields"
             print(f"{surface} admission: {case['name']}: direct question unsupported: {reason}")
         assert_error(consumer, mode, value, case, message, env)
         print(f"{surface} admission: {case['name']}: {coverage}")

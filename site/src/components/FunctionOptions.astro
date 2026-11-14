@@ -1,12 +1,13 @@
 ---
 import { functionOptions } from '../lib/function-options.mjs';
-interface Props { name: string }
-const { name } = Astro.props;
-const options = functionOptions(name);
+interface Props { name: string; scope?: 'function' | 'command' }
+const { name, scope = 'function' } = Astro.props;
+const complete = scope === 'command';
+const options = functionOptions(name, scope);
 ---
-<table data-function-options={name}>
-  <thead><tr><th>Option</th><th>What it does</th></tr></thead>
-  <tbody>{options.map((row) => <tr><td><code>{row.option}</code></td><td>{row.description}</td></tr>)}</tbody>
+<table data-function-options={complete ? undefined : name} data-command-options={complete ? name : undefined}>
+  <thead><tr><th>Option</th><th>{complete ? 'Current program help' : 'What it does'}</th>{complete && <th>In help</th>}</tr></thead>
+  <tbody>{options.map((row) => <tr><td><code>{row.option}</code></td><td>{complete && row.description ? <code>{row.description}</code> : row.description}</td>{complete && <td>{row.origin}</td>}</tr>)}</tbody>
 </table>
 
-<p><a href="/reference/options/">Shared options</a></p>
+{!complete && <p><a href="/reference/options/">Shared options</a></p>}

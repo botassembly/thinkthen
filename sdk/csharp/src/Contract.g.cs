@@ -3,7 +3,7 @@
 namespace ThinkThen;
 internal static class Contract
 {
-    internal const uint AbiVersion = 131076;
+    internal const uint AbiVersion = 327681;
     internal const string AbiCode = "usage.abi";
     internal const string AbiMessage = "the native ABI is incompatible";
     internal const string LibraryVariable = "THINKTHEN_LIBRARY";
@@ -14,10 +14,10 @@ internal static class Contract
         2 => "choose",
         3 => "tag",
         4 => "score",
-        5 => "filter",
         7 => "find",
         8 => "recognize",
         9 => "relate",
+        5 => "filter",
         6 => "rank",
         10 => "annotate",
         _ => null
@@ -100,7 +100,7 @@ internal static class Contract
         5001 => "internal.bug",
         _ => null
     };
-    internal static readonly string[] Exports = ["thinkthen_call_events","thinkthen_events_version","thinkthen_events_wait","thinkthen_events_wake","thinkthen_events_free","thinkthen_settings_conversion_error","thinkthen_question_conversion_error","thinkthen_client_open_json","thinkthen_client_free","thinkthen_client_usage","thinkthen_client_usage_settled","thinkthen_call_open_question","thinkthen_call_send_utf16","thinkthen_call_send_json","thinkthen_call_end_input","thinkthen_call_next","thinkthen_call_cancel","thinkthen_call_free","thinkthen_error_free","thinkthen_code_family","thinkthen_code_name","thinkthen_call_send_missing","thinkthen_row_free","thinkthen_row_original","thinkthen_question_from_json","thinkthen_question_free","thinkthen_toolbox_from_json","thinkthen_toolbox_from_definitions_json","thinkthen_toolbox_to_json","thinkthen_toolbox_definitions_json","thinkthen_buffer_free","thinkthen_toolbox_free","thinkthen_call_send_invalid","thinkthen_toolbox_select_as","thinkthen_settings_from_json","thinkthen_settings_free"];
+    internal static readonly string[] Exports = ["thinkthen_call_events","thinkthen_events_version","thinkthen_events_wait","thinkthen_events_wake","thinkthen_events_free","thinkthen_settings_conversion_error","thinkthen_question_conversion_error","thinkthen_client_open_json","thinkthen_client_free","thinkthen_client_usage","thinkthen_client_usage_settled","thinkthen_call_open_question","thinkthen_call_send_utf16","thinkthen_call_send_json","thinkthen_call_end_input","thinkthen_call_next","thinkthen_call_cancel","thinkthen_call_free","thinkthen_error_free","thinkthen_code_family","thinkthen_code_name","thinkthen_call_send_missing","thinkthen_row_to_json","thinkthen_row_host_json","thinkthen_row_free","thinkthen_question_from_json","thinkthen_question_free","thinkthen_toolbox_from_json","thinkthen_toolbox_from_definitions_json","thinkthen_toolbox_to_json","thinkthen_toolbox_definitions_json","thinkthen_buffer_free","thinkthen_toolbox_free","thinkthen_call_send_invalid","thinkthen_toolbox_select_as","thinkthen_settings_from_json","thinkthen_settings_free"];
 }
 /// <summary>Stable error codes from the shared engine registry.</summary>
 [System.Text.Json.Serialization.JsonConverter(typeof(ErrorCodeConverter))]

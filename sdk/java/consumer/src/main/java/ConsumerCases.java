@@ -47,10 +47,14 @@ public final class ConsumerCases {
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
             for (var sample : cases) {
                 var actual = JSON.createArrayNode();
-                try (var rows = ConformanceCases.execute(client, sample.get("request"), sample.get("expected"))) {
-                    rows.forEach(row -> actual.add(canonicalRow(row)));
+                if (sample.get("request").path("question").path("function").asText().equals("filter")) {
+                    equal(ConformanceCases.filterResult(client,sample.get("request"),true), ConformanceCases.expectedFilter(sample.get("request"),expectedRows(sample.get("expected"))), "canonical stub filter projection");
+                } else {
+                    try (var rows = ConformanceCases.execute(client, sample.get("request"), sample.get("expected"))) {
+                        rows.forEach(row -> actual.add(canonicalRow(row)));
+                    }
+                    equal(JSON.readTree(JSON.writeValueAsBytes(actual)), expectedRows(sample.get("expected")), "canonical stub rows");
                 }
-                equal(JSON.readTree(JSON.writeValueAsBytes(actual)), expectedRows(sample.get("expected")), "canonical stub rows");
                 count++;
             }
         }

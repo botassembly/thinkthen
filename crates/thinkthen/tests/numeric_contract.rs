@@ -141,7 +141,7 @@ fn transport_errors_keep_their_cause_and_status_without_serializing_the_cause() 
     use loopback::{KEY, Loopback, Reply, UnavailableBackend};
     use std::error::Error as _;
     use std::time::Duration;
-    use thinkthen::{Decide, Key, Outcome, Record, Retry, Settings};
+    use thinkthen::{Decide, Key, Record, Retry, Settings};
 
     {
         let status = 500;
@@ -152,15 +152,12 @@ fn transport_errors_keep_their_cause_and_status_without_serializing_the_cause() 
             .retry(Retry::new(0, Duration::ZERO, Duration::from_secs(5)).unwrap())
             .engine(|_| None)
             .unwrap();
-        let row = engine
+        let error = engine
             .run(&Decide::new("Ready?").unwrap(), Record::text("yes"))
-            .unwrap();
-        let Outcome::Failed { error } = row.outcome() else {
-            panic!("expected failed row")
-        };
+            .unwrap_err();
         assert_eq!(error.code(), Code::BackendStatus);
         assert_eq!(error.http_status(), Some(status));
-        assert!(!serde_json::to_string(error).unwrap().contains("source"));
+        assert!(!serde_json::to_string(&error).unwrap().contains("source"));
     }
     let server = UnavailableBackend::new().unwrap();
     let base = server.base();
@@ -170,10 +167,9 @@ fn transport_errors_keep_their_cause_and_status_without_serializing_the_cause() 
         .retry(Retry::new(0, Duration::ZERO, Duration::from_secs(5)).unwrap())
         .engine(|_| None)
         .unwrap();
-    let row = engine
+    let error = engine
         .run(&Decide::new("Ready?").unwrap(), Record::text("yes"))
-        .unwrap();
-    let error = row.error().unwrap();
+        .unwrap_err();
     assert_eq!(error.code(), Code::BackendTransport);
     assert!(error.source().is_some());
     assert!(

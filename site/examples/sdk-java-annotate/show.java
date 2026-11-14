@@ -19,12 +19,8 @@ public class Annotate {
             .build();
         try (var client = ThinkThen.builder().build()) {
             for (String message : messages) {
-                Annotations form =
-                    client.annotate(questions, message).answer();
-                System.out.println(
-                    form.decide("refund").answer() + " "
-                    + form.choose("topic").answer() + " "
-                    + form.score("urgency").answer());
+                var form = client.annotate(questions, message);
+                System.out.println(form.toJson());
             }
         }
     }

@@ -1,5 +1,5 @@
 {
-  "anchor": "        rc = thinkthen_decide(client, \"Does the customer request a refund?\",",
+  "anchor": "        rc = thinkthen_run_one(client, question, \"Please refund my order.\",",
   "before": 0,
   "after": 2
 }

@@ -18,7 +18,7 @@ if (templateReview && searchOnly) throw new Error('Choose template geometry or t
 // required phone viewport; the normal four journeys retain all six views.
 const selectedRoutes = templateReview
   ? menuPages.filter(({ route }) => /^\/(?:functions|sdks)\/[^/]+\/$/.test(route)).map(({ route }) => route)
-  : ['/', '/functions/decide/', '/sdks/python/', '/reference/troubleshooting/'];
+  : ['/', '/functions/decide/', '/sdks/python/', '/sdks/pandas/', '/sdks/polars/', '/reference/troubleshooting/'];
 const routes = selectedRoutes.filter((route) => !only || only.test(route));
 const viewports = templateReview ? [[375, 667]] : [[375, 667], [820, 1180], [1280, 800]];
 if (!routes.length) throw new Error('No required reader routes selected');
@@ -336,6 +336,19 @@ try {
         await page.keyboard.press('Enter');
         if (await summary.evaluate((node) => node.parentElement.open)) fail('Keyboard cannot close folded section');
       }
+      if (route === '/sdks/python/') {
+        for (const library of ['pandas', 'polars']) {
+          await page.goto(origin + route + '#' + library, { waitUntil: 'networkidle0' });
+          await page.waitForFunction((destination) => location.pathname === destination, {}, `/sdks/${library}/`);
+          if (await page.$eval('h1', (node) => node.textContent.trim()) !== (library === 'pandas' ? 'pandas SDK' : 'Polars SDK')) {
+            fail('Old Python table anchor does not reach its dedicated guide', library);
+          }
+        }
+        await page.goto(origin + route, { waitUntil: 'networkidle0' });
+        for (const anchor of ['yes-no-or-something-else', 'did-it-work', 'not-sure-or-failed', 'raise-if-it-failed']) {
+          if (!await page.$(`[id="${anchor}"]`)) fail('Moved Python heading lost its old link', anchor);
+        }
+      }
     } catch (error) { fail('Browser check did not complete', error.message); }
     finally {
       const name = `${route.replace(/[^a-z0-9]+/gi, '-') || 'home'}-${width}-${theme}.png`;
@@ -435,12 +448,20 @@ try {
       }],
       ['Find Python choose and not sure', async (notes) => {
         await menu('SDKs', '/sdks/python/', notes);
-        const summary = await page.$('#choose + details > summary, .sl-heading-wrapper:has(#choose) + details > summary');
+        const summary = await page.$('details#choose > summary, #choose + details > summary, .sl-heading-wrapper:has(#choose) + details > summary');
         if (!summary) throw new Error('Python choose disclosure is missing');
         notes.push({ action: 'disclosure', label: await summary.evaluate((node) => node.textContent.trim()) });
         await summary.click();
         if (!await summary.evaluate((node) => node.parentElement.open)) throw new Error('Choose did not open');
-        return answer(['topic == "billing"', 'topic.unsure']);
+        return answer(['Topic.BILLING', 'topic.unsure', 'team_for(topic.answer)']);
+      }],
+      ['Find pandas collection failures', async (notes) => {
+        await menu('SDKs', '/sdks/pandas/', notes);
+        return answer(['failure.outcomes', 'details=True', 'pd.NA']);
+      }],
+      ['Find Polars collection failures', async (notes) => {
+        await menu('SDKs', '/sdks/polars/', notes);
+        return answer(['failure.outcomes', 'details=True', 'null']);
       }],
     ];
     try {

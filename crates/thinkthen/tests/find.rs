@@ -127,7 +127,20 @@ fn finds_one_nonblank_line_with_scalar_offsets_and_settled_ties() {
             .rows(&question, [Record::text(text)])
             .unwrap()
             .map(|row| row.unwrap())
-            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+            .for_each(|row| {
+                if let Ok(Some(span)) = row.answer() {
+                    assert_eq!(&text[span.start()..span.end()], span.text());
+                }
+                rows.push(serde_json::to_value(row).unwrap());
+            });
+        let answer = if answer.is_null() {
+            answer
+        } else {
+            let start = answer["start"].as_u64().unwrap() as usize;
+            let end = answer["end"].as_u64().unwrap() as usize;
+            json!({"text":answer["text"],"start":text[..start].chars().count(),"end":text[..end].chars().count()})
+        };
+
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["status"], status);
         assert_eq!(rows[0]["answer"], answer);

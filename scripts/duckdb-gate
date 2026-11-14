@@ -68,6 +68,8 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
 fi
 python3 databases/duckdb/tests/run.py "$scratch/consumer" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}"
 python3 databases/duckdb/tests/run.py "$scratch/consumer" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" --limit-only
+THINKTHEN_LOOPBACK="${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" \
+    scripts/guide-examples --surface duckdb --surface sql --duckdb-package "$scratch/consumer"
 "$scratch/consumer/sql" "$scratch/consumer/thinkthen.duckdb_extension" --parallel \
     "SELECT count(*) AS total FROM thinkthen_decide((SELECT record_thread(i)::VARCHAR AS record FROM evidence ORDER BY record), 'Ready?')"
 community="$HOME/.local/share/thinkthen-build-tools/duckdb-community/$duckdb_version"

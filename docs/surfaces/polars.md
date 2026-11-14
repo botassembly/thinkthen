@@ -1,0 +1,463 @@
+# Polars columns that answer questions about text
+
+ThinkThen reads text and answers a bounded question for each record. Polars calls return eager, materialized columns: the answers have Polars types, and a missing answer is `null`, never false or zero.
+
+Use Python 3.10 or later. Install `python -m pip install 'thinkthen[polars]'` and set `THINKTHEN_API_KEY` in the environment. The extra is part of the Python package and includes the engine. Import the namespace before using it:
+
+```python
+import polars as pl
+import thinkthen as tt
+import thinkthen.polars  # registers .thinkthen on Series and DataFrame
+```
+
+Examples below use these imports. Each numbered example supplies its own records and questions; run it after the imports. The calls use `tt.Failed` for failed judgements; table operations retain each input's state in their details.
+
+Three rules hold even for a table with one row:
+
+1. A plain call returns one answer per input row. Not sure becomes `null`. A failed record makes the call raise once, after all inputs have been judged, with the completed details frame on `failure.outcomes`.
+2. `details=True` returns the answers and their states together, including failed rows and failed form entries. Those failures neither raise nor warn. It does not suppress usage, setup or cancellation errors.
+3. Printing an answer column or details frame uses Polars printing and makes no requests. There is no table `.answer` or `.raise_if_failed()` method: read native columns and check `status` where the answer alone is insufficient.
+
+## decide
+
+### The simplest if
+
+A decide answer column has dtype `Boolean`. Read a cell for Python's `if` only when its answer cannot be missing.
+
+```python
+messages = pl.Series("message", ["Please refund my order."])
+is_refund = messages.thinkthen.decide("Does the customer request a refund?")
+if is_refund[0]:
+    print("refund queue")
+else:
+    print("inbox")
+```
+
+With one bar an answered decide cell is true or false. The plain call raises for a failed row, so this example cannot quietly send a failed judgement to the inbox. With two bars, use the state-aware example below: Python treats `None` as false, which would lose not sure.
+
+### Yes, no, or not sure
+
+```python
+messages = pl.Series("message", ["Where is my parcel?"])
+is_refund = messages.thinkthen.decide(
+    "Does the customer request a refund?", threshold=(0.2, 0.8), details=True,
+)
+for row in is_refund.iter_rows(named=True):
+    if row["status"] == "failed":
+        print("try again later:", row["error_code"], row["error_message"])
+    elif row["status"] == "unsure":
+        print("a person reads it")
+    else:
+        print("refund queue" if row["answer"] else "inbox")
+```
+
+A details frame has one `status` per result: `answered`, `unsure` or `failed`. Not sure and failed both have a null answer. Only the answered branch reads the boolean. A not-sure result is a successful judgement, not a failure.
+
+### Did the call work
+
+```python
+messages = pl.Series("message", ["Please refund my order."])
+try:
+    is_refund = messages.thinkthen.decide("Does the customer request a refund?")
+except tt.Failed as failure:
+    print("could not judge every record:", failure)
+    print(failure.outcomes.select("position", "status", "error_code"))
+except tt.ThinkThenError as failure:
+    print("the call did not complete:", failure)
+else:
+    print(is_refund)
+```
+
+The aggregate failure retains every completed result, not just the first failed row. A one-row Series still uses this table rule; it does not switch to the scalar Python call's boundary. Other errors keep their classifications: usage, setup, authentication and cancellation errors do not all become `tt.Failed`.
+
+### Both bars and the probability
+
+```python
+messages = pl.Series("message", ["Where is my parcel?"])
+is_refund = messages.thinkthen.decide(
+    "Does the customer request a refund?", threshold=(0.2, 0.8), details=True,
+)
+print(is_refund.select("status", "answer", "probability"))
+```
+
+No `threshold` means one bar at 0.5. `threshold=0.7` means yes at 0.7 or above and no below. With `(0.2, 0.8)`, no is below 0.2, not sure is from 0.2 up to 0.8, and yes is at 0.8 or above. `probability` is the model's probability of yes, including on unsure rows; failed rows have null probability. A confident no has a low probability. Compare these numbers against examples you have labelled before choosing bars.
+
+## choose with your own choices
+
+```python
+from enum import Enum
+
+class Topic(Enum):
+    BILLING = "billing"
+    SHIPPING = "shipping"
+    OTHER = "other"
+
+
+def team_for(topic: Topic) -> str:
+    match topic:
+        case Topic.BILLING:
+            return "billing team"
+        case Topic.SHIPPING:
+            return "warehouse"
+        case Topic.OTHER:
+            return "front desk"
+
+messages = pl.Series("message", ["I was charged twice for one invoice."])
+topic = messages.thinkthen.choose(
+    "What is the message about?", choices=Topic, details=True,
+)
+for row in topic.iter_rows(named=True):
+    if row["status"] == "failed":
+        print("try again later:", row["error_code"])
+    elif row["status"] == "unsure":
+        print("a person reads it")
+    else:
+        print(team_for(Topic(row["answer"])))
+```
+
+The answer column is a Polars `Enum` whose domain is the choices' text values. Cells read into Python are strings; after checking status, construct `Topic` and pass it to the typed `team_for` function. A type checker reports its missing return when you add an Enum member without a branch; it does not check the completeness of an untyped loop over DataFrame rows. The model reads `billing`, not the Python name `BILLING`. A string list also works. choose can be unsure even with no threshold: its default bar is 0.5 on the best choice, and all choices may fall below it. `threshold=0.3` changes that bar. Missing choice cells remain null rather than gaining an extra category.
+
+## Many records
+
+```python
+messages = pl.DataFrame({"message": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]})
+refund_checks = messages["message"].thinkthen.decide(
+    "Does the customer request a refund?", threshold=(0.2, 0.8),
+)
+for row in messages.with_columns(refund_checks.alias("refund_checks")).iter_rows(named=True):
+    if row["refund_checks"] is None:
+        print("a person reads it:", row["message"])
+    else:
+        print("refund queue" if row["refund_checks"] else "inbox", row["message"])
+```
+
+The plain call itself supplies the aggregate failure check: any failed record raises after collection, before this loop. Unlike a scalar result, the table has no raise-if-failed method. In this successful plain call a missing decide answer therefore means not sure.
+
+The answer Series has the input length and input order. A Series input keeps its name; a DataFrame call's plain answer Series is named `answer`. Polars has no pandas index: alignment is positional. The accessor does not change or automatically attach columns to the caller's frame. Add a materialized Series with `with_columns`, or a same-length annotation frame with `hstack`, yourself.
+
+## Many-result not sure or failed
+
+```python
+messages = pl.Series("message", [
+    "Please refund my order.", None, "Where is my parcel?",
+])
+refund_checks = messages.thinkthen.decide(
+    "Does the customer request a refund?", threshold=(0.2, 0.8), details=True,
+)
+for row in refund_checks.iter_rows(named=True):
+    if row["status"] == "failed":
+        print("try again later:", row["position"], row["error_code"])
+    elif row["status"] == "unsure":
+        print("a person reads it:", row["position"])
+    else:
+        print("refund queue" if row["answer"] else "inbox", row["position"])
+```
+
+The null input has a failed row with `record.missing`, without a paid request for that row. Empty text also fails; it is not a no. `position` starts at 1. The details frame preserves input order, the caller's original value in `item`, optional `id`, and source information. No branch asks a failed or unsure answer to act as false.
+
+## filter
+
+```python
+messages = pl.DataFrame({"message": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]})
+refund_requests = messages.thinkthen.filter(
+    "Does the customer request a refund?", field="/message", threshold=0.7,
+)
+print(refund_requests)
+```
+
+filter returns the original rows that answered yes, with their original columns and order. A Series input returns kept Series values. It accepts one bar only: a two-bar tuple is refused with a usage error. There is no `details` or `errors` argument. Any failed row raises after collection with the completed outcomes attached. To keep not-sure rows for review, use decide with two bars and `details=True`, then select by `status`; filter cannot silently discard that middle state.
+
+## tag
+
+```python
+from enum import Enum
+
+class Topic(Enum):
+    BILLING = "billing"
+    SHIPPING = "shipping"
+
+messages = pl.Series("message", ["I was charged twice and my parcel is late again."])
+topics = messages.thinkthen.tag("Which topics appear?", labels=Topic, details=True)
+print(topics.select("position", "id", "status", "answer"))
+print(topics.select("position", "id", "status", "answer").with_columns(
+    pl.when(pl.col("answer").list.len() == 0)
+    .then(pl.lit([None]))
+    .otherwise(pl.col("answer"))
+    .alias("answer")
+).explode("answer"))
+```
+
+The answer is `List(String)`, holding the text values of the matching labels. An empty list is a successful answer; a null list is no answer. tag is never unsure. `threshold=0.7` sets the bar for each label. Before expanding, replace an empty list with a one-null placeholder. This keeps the input row across Polars versions whose explode behavior differs for empty lists. Keep position, id and status so that placeholder is not mistaken for a label or lost input.
+
+## score
+
+```python
+from enum import Enum
+
+class Urgency(Enum):
+    ROUTINE = "routine"
+    URGENT = "urgent"
+
+messages = pl.Series("message", ["Please refund my order."])
+urgency = messages.thinkthen.score("How urgent is the request?", levels=Urgency)
+print(urgency.round(2))
+print(urgency > 0.5)
+```
+
+The answer is `Float64` from 0 to 1, a position along your scale, not an enum member. Levels follow the Enum's declaration order, lowest first, or the explicit order of a supplied list. Text values do not sort the scale. The same order applies to rank and form questions. score is never unsure. Use choose to return exactly one of the named levels.
+
+## rank
+
+```python
+messages = pl.DataFrame({"message": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]})
+urgency_rank = messages["message"].thinkthen.rank(
+    "How urgent is the request?", levels=["routine", "urgent"],
+)
+print(messages.with_columns(urgency_rank.alias("urgency_rank")).sort("urgency_rank"))
+```
+
+Each `Int64` answer is that record's rank, starting at 1. Both the plain column and details frame use input-position order; sort explicitly to display rank order. rank reads the whole collection before returning. `top=5` still judges the collection: the plain Series retains input length, with null ranks outside the top five; the details frame contains the selected ranks and failed records at their original positions, not every unselected input. Do not attach a top details frame to the source by length; use `position` to align it. Failed records retain null rank and a failed status in details, and make plain default calls raise.
+
+## find
+
+```python
+messages = pl.Series("message", [
+    "Morgan works for Example Group.\nPlease refund my order.",
+])
+action = messages.thinkthen.find(
+    "Which line states the requested action?", details=True,
+)
+for row in action.iter_rows(named=True):
+    if row["status"] == "failed":
+        print("try again later:", row["error_code"])
+    elif row["status"] == "unsure":
+        print("a person reads it")
+    elif row["answer"] is None:
+        print("no line answers")
+    else:
+        print(row["answer"]["text"])
+print(action.filter(pl.col("status") == "answered").select(
+    pl.col("answer").struct.field("text").alias("text"),
+))
+```
+
+An answered span is a typed Struct with `text`, `start` and `end`. An answered null span means no line answers. A null on an unsure or failed row means no answer was available: check status before testing the span or reading its fields. find can be unsure with no bar set. The offsets select the same text using Python's `message[start:end]`; they are not byte offsets. Use Polars' `.struct.field(...)` for column operations; there is no Python `tt.Span` object in the column.
+
+## recognize
+
+```python
+messages = pl.Series("message", ["Morgan works for Example Group."])
+names = messages.thinkthen.recognize(
+    kinds=["person", "organization"], details=True,
+)
+print(names.select("position", "id", "status", "answer").with_columns(
+    pl.when(pl.col("answer").list.len() == 0)
+    .then(pl.lit([None]))
+    .otherwise(pl.col("answer"))
+    .alias("answer")
+).explode("answer").with_columns(
+    pl.col("answer").struct.field("kind").alias("kind"),
+    pl.col("answer").struct.field("text").alias("text"),
+))
+```
+
+The answer is a typed list of name structs with `kind`, `text`, `start`, `end` and `probability`. Empty lists are answered; failed rows have null lists. recognize is never unsure. The expansion retains the empty and failed rows, with position, id and status. Inspect status before consuming an expanded name; a null placeholder is not a name.
+
+## relate
+
+```python
+messages = pl.Series("message", [
+    "Morgan works for Example Group.\nPlease refund my order.",
+])
+rules = [tt.RelationRule(source="person", target="organization", relation="works_for")]
+relations = messages.thinkthen.relate(rules=rules, details=True)
+print(relations.select("position", "id", "status", "answer").with_columns(
+    pl.when(pl.col("answer").list.len() == 0)
+    .then(pl.lit([None]))
+    .otherwise(pl.col("answer"))
+    .alias("answer")
+).explode("answer").with_columns(
+    pl.col("answer").struct.field("source").struct.field("text").alias("source_text"),
+    pl.col("answer").struct.field("relation").alias("relation"),
+    pl.col("answer").struct.field("target").struct.field("text").alias("target_text"),
+))
+```
+
+Each list element is a relation struct with nested `source` and `target` name structs, `relation`, `probability` and `either`. An empty list is an answer. The expansion keeps empty and failed inputs and their status. `detail` is a struct whose `names` field includes names in no relation and whose `pairs` field holds scored pairs; use `.struct.field("names")` to select them. Rule order is preserved; the engine may accept a pair in either direction when the rule allows it.
+
+## annotate
+
+```python
+from enum import Enum
+
+class Topic(Enum):
+    BILLING = "billing"
+    SHIPPING = "shipping"
+    OTHER = "other"
+
+messages = pl.Series("message", [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+])
+questions = tt.AnnotationQuestions({
+    "refund": tt.DecideQuestion("Does the customer request a refund?", threshold=(0.2, 0.8)),
+    "topic": tt.ChooseQuestion("What is the message about?", choices=Topic),
+    "urgency": tt.ScoreQuestion("How urgent is the request?", levels=["routine", "urgent"]),
+})
+forms = messages.thinkthen.annotate(questions, details=True)
+for row in forms.iter_rows(named=True):
+    if row["status"] == "failed":
+        print("try again later:", row["position"])
+        continue
+    states = [row[name + "_status"] for name in ("refund", "topic", "urgency")]
+    if "failed" in states:
+        print("try again later:", row["position"])
+    elif "unsure" in states:
+        print("a person reads it:", row["position"])
+    elif row["refund"]:
+        print("refund queue:", row["topic"], round(row["urgency"], 2))
+```
+
+Plain annotate returns a DataFrame of answer columns, one per question, without copying the input columns. Details add the parent metadata and each question's `<name>_status`, `_probability`, `_detail`, `_error_code`, `_error_message` and `_error_http_status`. Each child has its own state: an answered parent can have one, several or all children failed. This example checks every child it consumes before reading answers. Not sure is not a failure.
+
+A plain form call raises for a failed parent or any failed entry after collection. Its `Failed.outcomes` includes the other entries. `details=True` retains partial and whole failures without raising or warning. Coercion replaces only unavailable answers with null and lists failed children by question name; not-sure entries are missing without being failures.
+
+Annotation names cannot collide with generated columns (`status`, `probability`, `position`, `id`, `function`, `source`, `detail`, `item`, or the error columns) or another question's generated columns. `refund` beside `refund_status` is refused with a `tt.UsageError` naming the clash before any paid request, for plain and details calls alike. A suffix alone is not forbidden: `refund_status` is valid when no other question produces that column. There is no outer `answer` column for annotate, so `answer` itself is a valid question name.
+
+## Say what each answer means
+
+Put explanations in a saved question rather than inventing table-only keyword arguments:
+
+```python
+messages = pl.Series("message", ["I was charged twice for one invoice."])
+asks_refund = tt.DecideQuestion(
+    "Does the customer request a refund?",
+    yes_means="the customer wants money back, including for a duplicate charge",
+    no_means="the customer wants anything else",
+)
+is_refund = messages.thinkthen.decide(asks_refund)
+print(is_refund)
+```
+
+`FilterQuestion` also takes `yes_means` and `no_means`. Choice, tag, score and rank question objects take `descriptions`, keyed by choices, labels or levels. The accessors accept these question objects in place of question text.
+
+## Records and fields
+
+A Series supplies one record per value. A DataFrame supplies one dictionary per row; `field="/message"` selects the text from it. Without a field the whole structured record is used. Scalar missing inputs become failed records without a request. Missing values inside structured input become JSON null, not the text `"None"`. Input IDs may be strings or admitted integers; invalid IDs fail their record rather than being silently changed.
+
+```python
+messages = pl.DataFrame({"id": ["a1"], "message": ["Please refund my order."]})
+is_refund = messages.thinkthen.decide(
+    "Does the customer request a refund?", field="/message", details=True,
+)
+print(is_refund.select(
+    "position", "status", pl.col("id").struct.field("string").alias("record_id"),
+))
+```
+
+Details IDs are tagged structs: `kind` is `string`, `signed` or `unsigned`, and the corresponding `string`, `signed` or `unsigned` field holds the value. An absent ID is null. The `item` column holds the original record as `Object`; answer columns use native typed structs and lists. Do not treat the ID struct as a bare string or copy the opaque `item` into a query that expects native struct operations.
+
+## Tables
+
+A plain missing answer alone cannot distinguish unsure from failed, and find also uses it for an answered absence. Ask for details when the distinction matters. Polars filters drop rows whose predicate is null; choosing that behavior requires first deciding what to do with the missing states. No ThinkThen option turns not sure into false.
+
+```python
+messages = pl.Series("message", ["Please refund my order.", None])
+is_refund = messages.thinkthen.decide(
+    "Does the customer request a refund?", errors="coerce",
+)
+failures = is_refund.thinkthen.failures()  # read on the exact returned object
+print(failures.select("position", "question", "error_code", "error_message"))
+print(is_refund)
+```
+
+Plain `errors="coerce"` warns once if records or entries failed, with failure codes and counts, and keeps null in each unavailable answer cell. `.thinkthen.failures()` returns position, tagged id, question (null except for an annotation child), error code, message and HTTP status. Read it before any transformation: a new Polars object can lose this attached list, and an empty list on that new object does not prove the original call had no failures. Details already show failures and do not warn, including when `errors="coerce"` is supplied.
+
+| Function | Plain answer dtype |
+| --- | --- |
+| decide | `Boolean` |
+| choose | `Enum` of the choice text values |
+| tag | `List(String)` |
+| score | `Float64` |
+| rank | `Int64` |
+| find | `Struct(text: String, start: Int64, end: Int64)` |
+| recognize | `List(Struct)` of scored names |
+| relate | `List(Struct)` of scored relations |
+| annotate | DataFrame of each question's native answer column |
+| filter | Kept input Series or DataFrame |
+
+All calls are eager. Materialize the answer once, attach it to a frame, then build or collect lazy queries over that data. ThinkThen is not registered on `Expr` or `LazyFrame`; repeated collection of a lazy query over materialized answers makes no new model calls. Empty inputs retain the declared answer schema and make no requests. Bound the input before calling if you want to limit cost; `top` limits retained rank answers, not the records judged.
+
+## Saved questions
+
+```python
+messages = pl.DataFrame({"id": ["a1"], "text": ["Please refund my order."]})
+asks_refund = tt.DecideQuestion(
+    "Does the customer request a refund?", threshold=(0.2, 0.8), field="/text",
+)
+is_refund = messages.thinkthen.decide(asks_refund, details=True)
+print(is_refund.select("status", "answer"))
+```
+
+Each function has its own question class. A `tt.Toolbox` loads saved definitions from JSON; pass `toolbox.decide("refund")` to decide, for example. A saved question carries its options, including its field and threshold. Table annotation collision validation also applies to saved `AnnotateQuestion` objects before requests.
+
+## Settings
+
+```python
+messages = pl.Series("message", ["Please refund my order."])
+with tt.Client(batch=16, retry=tt.RetryPolicy(max_retries=5)) as client:
+    is_refund = messages.thinkthen.decide(
+        "Does the customer request a refund?", client=client,
+    )
+    print(is_refund)
+```
+
+Without `client=`, the shared client reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND`. Explicit clients also accept `backend`, `url`, `model` and `api_key`. Keep keys in the environment. Retry times are in seconds. Table calls take `client=`; they are not methods such as `client.polars`.
+
+## Usage
+
+```python
+messages = pl.Series("message", ["Please refund my order."])
+with tt.Client() as client:
+    messages.thinkthen.decide("Does the customer request a refund?", client=client)
+    usage = client.usage
+    print(usage.attempts, usage.input_tokens.reported, usage.output_tokens.reported)
+```
+
+Usage counts every request sent by the client so far, including attempts, responses, retries, bytes and service-reported input/output tokens. Reusing or printing materialized columns does not add usage.
+
+## Cancel
+
+Pass `cancel=tt.Cancel()` to a table call. Calling that object's `cancel()` from another thread stops the operation with `tt.Cancelled`; Ctrl-C does the same. Cancellation is a call error, not a completed details row for each unprocessed input. These are blocking accessors, with no async or lazy variant.
+
+## Errors
+
+| What happened | Result |
+| --- | --- |
+| Invalid argument, threshold band for filter, or generated annotation-name collision | `tt.UsageError` or a Python argument `TypeError`; collisions are refused before requests |
+| Client could not start, such as no key | `tt.SetupError` |
+| Call cancelled | `tt.Cancelled` |
+| Failed record or annotation entry in a plain default call | `tt.Failed` after collection; `outcomes` is the completed details frame |
+| Failed record or annotation entry with `details=True` | Failed status and error columns; no failure warning or aggregate raise |
+| Failed record or entry with plain `errors="coerce"` | Null answer, one `tt.FailedRowsWarning`, and `.thinkthen.failures()` |
+| Not sure | Null answer, `unsure` in details, no failure warning |
+| Printing or reusing a materialized answer | No request or answer-read exception |
+
+`tt.Failed` is a `tt.ThinkThenError`; its existing `code`, `http_status` and failed `rows` payloads remain. The aggregate adds `outcomes`. Other general call errors retain their own classifications and payloads. Wire codes such as `record.empty` and `record.missing` do not change. The table API does not raise `tt.Unsure` for a null cell; native missing values take its place. Check state before Python truth testing if a cell may be null.
+
+## Upgrading from 0.1
+
+The package baseline is [Python 0.1.2](https://pypi.org/project/thinkthen/0.1.2/). Use the dedicated namespace instead of passing a Polars object to scalar `tt.decide`. `series.thinkthen.decide(...)` returns an answer Series; `details=True` returns a DataFrame with states. Replace `true=`, `false=` and `options=` in question definitions with `yes_means=`, `no_means=` and `choices=`. Do not assume null means no or that row failures are silently dropped. Code using the pre-release `RecordError` name must use `tt.Failed`; do not rename wire error codes. Scalar Python's new call-time failure rule does not change table aggregation, even for a one-row input.

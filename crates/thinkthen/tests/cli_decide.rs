@@ -135,7 +135,7 @@ fn a_missing_key_exits_2_and_sends_nothing() {
 }
 
 #[test]
-fn a_backend_failure_exits_4_and_never_prints_the_key() {
+fn a_backend_failure_exits_6_and_never_prints_the_key() {
     let server =
         Loopback::start(|_| Reply::json(401, &json!({"error": format!("bad key {KEY}")}))).unwrap();
     for args in [
@@ -143,7 +143,7 @@ fn a_backend_failure_exits_4_and_never_prints_the_key() {
         &["decide", "Is it?", "--json"][..],
     ] {
         let output = run(&server, args, Some(KEY));
-        assert_eq!(output.status.code(), Some(4), "{args:?}");
+        assert_eq!(output.status.code(), Some(6), "{args:?}");
         assert_eq!(reported(&output), "backend.status");
         assert!(output.stdout.is_empty());
         assert!(!text(&output.stdout).contains(KEY));
@@ -195,7 +195,7 @@ fn usage_reports_backend_failure_and_invalid_usage_sends_nothing() {
     })
     .unwrap();
     let output = run(&server, &["decide", "Relevant?", "--usage"], Some(KEY));
-    assert_eq!(output.status.code(), Some(4));
+    assert_eq!(output.status.code(), Some(6));
     let summary: serde_json::Value = text(&output.stderr)
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())

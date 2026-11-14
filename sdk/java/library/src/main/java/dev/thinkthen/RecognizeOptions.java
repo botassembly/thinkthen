@@ -49,7 +49,6 @@ public final class RecognizeOptions {
          * @param value the value to set
          * @return the threshold result
          */
-        public Builder threshold(double value) { return threshold(Threshold.cut(value)); }
         /**
          * Build this immutable value.
          * @return the build result

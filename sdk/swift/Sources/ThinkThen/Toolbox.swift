@@ -1,238 +1,139 @@
 import Foundation
 
-/// A typed question that can be saved and reused for this function.
-public enum ToolboxQuestion: Sendable, Codable, Equatable, Hashable {
-  /// A yes-or-no question or its typed outcome.
-  case decide(DecideQuestion)
-  /// A one-label choice or its typed outcome.
-  case choose(ChooseQuestion)
-  /// A set of labels or its typed outcome.
-  case tag(TagQuestion)
-  /// A score on ordered levels or its typed outcome.
-  case score(ScoreQuestion)
-  /// A kept-or-not decision or its typed outcome.
-  case filter(FilterQuestion)
-  /// A ranking question on ordered levels.
-  case rank(RankQuestion)
-  /// A matching text span, including an answered absence.
-  case find(FindQuestion)
-  /// Recognized names and their typed detail.
-  case recognize(RecognizeQuestion)
-  /// Relationships between names and their typed detail.
-  case relate(RelateQuestion)
-  /// Decode this value from its canonical JSON representation.
-  public init(from decoder: any Decoder) throws {
-    let tag = try decoder.container(keyedBy: FunctionKey.self).decode(
-      FunctionName.self, forKey: .function)
-    switch tag {
-    case .decide: self = .decide(try DecideQuestion(from: decoder))
-    case .choose: self = .choose(try ChooseQuestion(from: decoder))
-    case .tag: self = .tag(try TagQuestion(from: decoder))
-    case .score: self = .score(try ScoreQuestion(from: decoder))
-    case .filter: self = .filter(try FilterQuestion(from: decoder))
-    case .rank: self = .rank(try RankQuestion(from: decoder))
-    case .find: self = .find(try FindQuestion(from: decoder))
-    case .recognize: self = .recognize(try RecognizeQuestion(from: decoder))
-    case .relate: self = .relate(try RelateQuestion(from: decoder))
-    default:
-      throw DecodingError.dataCorrupted(
-        .init(codingPath: decoder.codingPath, debugDescription: "Ineligible toolbox function"))
-    }
+/// Named question definitions, supplied directly without function wrappers.
+public struct AnnotationQuestions: Sendable, Encodable, Equatable, Hashable {
+  public let definition: JSONValue
+  public init(_ questions: [String: any SavedQuestion]) {
+    definition = .object(questions.mapValues(\.definition))
   }
-  /// Encode this value in its canonical JSON representation.
-  public func encode(to encoder: any Encoder) throws {
-    switch self {
-    case .decide(let x): try x.encode(to: encoder)
-    case .choose(let x): try x.encode(to: encoder)
-    case .tag(let x): try x.encode(to: encoder)
-    case .score(let x): try x.encode(to: encoder)
-    case .filter(let x): try x.encode(to: encoder)
-    case .rank(let x): try x.encode(to: encoder)
-    case .find(let x): try x.encode(to: encoder)
-    case .recognize(let x): try x.encode(to: encoder)
-    case .relate(let x): try x.encode(to: encoder)
-    }
-  }
-}
-/// A typed question that can be saved and reused for this function.
-public enum AnnotationQuestion: Sendable, Codable, Equatable, Hashable {
-  /// A yes-or-no question or its typed outcome.
-  case decide(DecideQuestion)
-  /// A one-label choice or its typed outcome.
-  case choose(ChooseQuestion)
-  /// A set of labels or its typed outcome.
-  case tag(TagQuestion)
-  /// A score on ordered levels or its typed outcome.
-  case score(ScoreQuestion)
-  /// A kept-or-not decision or its typed outcome.
-  case filter(FilterQuestion)
-  /// A matching text span, including an answered absence.
-  case find(FindQuestion)
-  /// Recognized names and their typed detail.
-  case recognize(RecognizeQuestion)
-  /// Relationships between names and their typed detail.
-  case relate(RelateQuestion)
-  /// Decode this value from its canonical JSON representation.
-  public init(from decoder: any Decoder) throws {
-    let tag = try decoder.container(keyedBy: FunctionKey.self).decode(
-      FunctionName.self, forKey: .function)
-    switch tag {
-    case .decide: self = .decide(try DecideQuestion(from: decoder))
-    case .choose: self = .choose(try ChooseQuestion(from: decoder))
-    case .tag: self = .tag(try TagQuestion(from: decoder))
-    case .score: self = .score(try ScoreQuestion(from: decoder))
-    case .filter: self = .filter(try FilterQuestion(from: decoder))
-    case .find: self = .find(try FindQuestion(from: decoder))
-    case .recognize: self = .recognize(try RecognizeQuestion(from: decoder))
-    case .relate: self = .relate(try RelateQuestion(from: decoder))
-    default:
-      throw DecodingError.dataCorrupted(
-        .init(codingPath: decoder.codingPath, debugDescription: "Ineligible toolbox function"))
-    }
-  }
-  /// Encode this value in its canonical JSON representation.
-  public func encode(to encoder: any Encoder) throws {
-    switch self {
-    case .decide(let x): try x.encode(to: encoder)
-    case .choose(let x): try x.encode(to: encoder)
-    case .tag(let x): try x.encode(to: encoder)
-    case .score(let x): try x.encode(to: encoder)
-    case .filter(let x): try x.encode(to: encoder)
-    case .find(let x): try x.encode(to: encoder)
-    case .recognize(let x): try x.encode(to: encoder)
-    case .relate(let x): try x.encode(to: encoder)
-    }
-  }
-}
-/// The typed AnnotationQuestions value exchanged with the engine.
-public struct AnnotationQuestions: Sendable, Codable, Equatable, Hashable {
-  /// The saved questions indexed by their entry names.
-  public let questions: [String: AnnotationQuestion]
-  /// Create this value from its typed fields.
-  public init(_ questions: [String: AnnotationQuestion]) { self.questions = questions }
-  /// Decode the saved mapping of child question names to definitions.
   public init(json: String) throws {
-    self = try JSONDecoder().decode(Self.self, from: Data(json.utf8))
+    do {
+      let admitted = try Native.loaded.get().annotationJSON(Data(json.utf8))
+      definition = try JSONDecoder().decode(JSONValue.self, from: admitted)
+    } catch { throw typedError(error) }
   }
-  /// Load the saved JSON value from a UTF-8 file.
   public init(contentsOf url: URL) throws {
-    try self.init(json: String(contentsOf: url, encoding: .utf8))
+    try self.init(json: readSavedJSON(url))
   }
-  /// Create this value from its typed fields.
-  public init(_ toolbox: Toolbox) throws {
-    self = try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(toolbox.questions))
-  }
-  /// Decode this value from its canonical JSON representation.
-  public init(from decoder: any Decoder) throws {
-    questions = try decoder.singleValueContainer().decode([String: AnnotationQuestion].self)
-  }
-  /// Encode this value in its canonical JSON representation.
-  public func encode(to encoder: any Encoder) throws {
-    var c = encoder.singleValueContainer()
-    try c.encode(questions)
-  }
+  public init(_ toolbox: Toolbox) { definition = toolbox.definitions }
+  public func encode(to encoder: any Encoder) throws { try definition.encode(to: encoder) }
 }
-/// The typed Toolbox value exchanged with the engine.
-public struct Toolbox: Sendable, Codable, Equatable, Hashable {
-  /// The saved questions indexed by their entry names.
-  public let questions: [String: ToolboxQuestion]
-  /// Create this value from its typed fields.
-  public init(_ questions: [String: ToolboxQuestion]) { self.questions = questions }
-  /// Load the saved JSON representation.
-  public init(json: String) throws {
-    let native = try Native.loaded.get()
-    let definitions = try native.toolboxJSON(Data(json.utf8), loading: true)
-    self.init(try JSONDecoder().decode([String: ToolboxQuestion].self, from: definitions))
+
+public struct Toolbox: Sendable, Encodable, Equatable, Hashable {
+  let definitions: JSONValue
+  public init(_ questions: [String: any SavedQuestion]) {
+    definitions = .object(questions.mapValues(\.definition))
   }
-  /// Serialize the saved toolbox in the engine-owned JSON format.
+  public init(json: String) throws {
+    do {
+      let admitted = try Native.loaded.get().toolboxJSON(Data(json.utf8), loading: true)
+      definitions = try JSONDecoder().decode(JSONValue.self, from: admitted)
+    } catch { throw typedError(error) }
+  }
+  public init(contentsOf url: URL) throws {
+    try self.init(json: readSavedJSON(url))
+  }
   public func jsonString() throws -> String {
-    let native = try Native.loaded.get()
-    let saved = try native.toolboxJSON(JSONEncoder().encode(questions), loading: false)
-    return String(decoding: saved, as: UTF8.self)
+    do {
+      return String(
+        decoding: try Native.loaded.get().toolboxJSON(
+          JSONEncoder().encode(definitions), loading: false), as: UTF8.self)
+    } catch { throw typedError(error) }
   }
-  /// Load the saved JSON value from a UTF-8 file.
-  public init(contentsOf url: URL) throws {
-    try self.init(json: String(contentsOf: url, encoding: .utf8))
-  }
-  /// Write the saved toolbox JSON to a file atomically.
   public func write(to url: URL) throws {
-    try jsonString().write(to: url, atomically: true, encoding: .utf8)
+    let json = try jsonString()
+    do { try json.write(to: url, atomically: true, encoding: .utf8) } catch {
+      throw InternalError(code: .localIO, message: error.localizedDescription)
+    }
   }
-  /// Decode this value from its canonical JSON representation.
-  public init(from decoder: any Decoder) throws {
-    let value = try JSONValue(from: decoder)
-    self = try Self(json: String(decoding: JSONEncoder().encode(value), as: UTF8.self))
-  }
-  /// Encode this value in its canonical JSON representation.
   public func encode(to encoder: any Encoder) throws {
-    let value = try JSONDecoder().decode(JSONValue.self, from: Data(jsonString().utf8))
-    try value.encode(to: encoder)
+    try JSONDecoder().decode(JSONValue.self, from: Data(jsonString().utf8)).encode(to: encoder)
   }
-  /// Read an entry by its name, or nil if the name is absent.
-  public subscript(name: String) -> ToolboxQuestion? { questions[name] }
-  /// Look up a saved question by its entry name.
-  public func question(named name: String) -> ToolboxQuestion? { self[name] }
-  /// Select a saved decide question, throwing if the entry has a different function.
-  public func decide(named name: String) throws -> DecideQuestion {
-    guard case .decide(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .decide)
+  private func select(_ name: String, function: String) throws -> JSONValue {
+    guard let question = exactValue(definitions.object, name),
+      question.object["function"]?.string == function
+    else {
+      throw UsageError(message: "Toolbox question \(name) must use \(function)")
     }
-    return x
+    return question
   }
-  /// Select a saved choose question, throwing if the entry has a different function.
-  public func choose(named name: String) throws -> ChooseQuestion {
-    guard case .choose(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .choose)
-    }
-    return x
+  public func decide(_ name: String) throws -> DecideQuestion {
+    DecideQuestion(definition: try select(name, function: "decide"))
   }
-  /// Select a saved tag question, throwing if the entry has a different function.
-  public func tag(named name: String) throws -> TagQuestion {
-    guard case .tag(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .tag)
-    }
-    return x
+  public func find(_ name: String) throws -> FindQuestion {
+    FindQuestion(definition: try select(name, function: "find"))
   }
-  /// Select a saved score question, throwing if the entry has a different function.
-  public func score(named name: String) throws -> ScoreQuestion {
-    guard case .score(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .score)
-    }
-    return x
+  public func recognize(_ name: String) throws -> RecognizeQuestion {
+    RecognizeQuestion(definition: try select(name, function: "recognize"))
   }
-  /// Select a saved filter question, throwing if the entry has a different function.
-  public func filter(named name: String) throws -> FilterQuestion {
-    guard case .filter(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .filter)
-    }
-    return x
+  public func relate(_ name: String) throws -> RelateQuestion {
+    RelateQuestion(definition: try select(name, function: "relate"))
   }
-  /// Select a saved rank question, throwing if the entry has a different function.
-  public func rank(named name: String) throws -> RankQuestion {
-    guard case .rank(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .rank)
-    }
-    return x
+  public func filter(_ name: String) throws -> FilterQuestion {
+    FilterQuestion(definition: try select(name, function: "filter"))
   }
-  /// Select a saved find question, throwing if the entry has a different function.
-  public func find(named name: String) throws -> FindQuestion {
-    guard case .find(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .find)
-    }
-    return x
+  public func score(_ name: String) throws -> ScoreQuestion {
+    ScoreQuestion(definition: try select(name, function: "score"))
   }
-  /// Select a saved recognize question, throwing if the entry has a different function.
-  public func recognize(named name: String) throws -> RecognizeQuestion {
-    guard case .recognize(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .recognize)
-    }
-    return x
+  public func rank(_ name: String) throws -> RankQuestion {
+    RankQuestion(definition: try select(name, function: "rank"))
   }
-  /// Select a saved relate question, throwing if the entry has a different function.
-  public func relate(named name: String) throws -> RelateQuestion {
-    guard case .relate(let x) = questions[name] else {
-      throw ThinkThenError.toolboxSelection(name: name, expected: .relate)
+  public func choose(_ name: String) throws -> ChooseQuestion<String> {
+    ChooseQuestion(definition: try select(name, function: "choose"))
+  }
+  public func choose<E: RawRepresentable & CaseIterable & Hashable & Sendable>(
+    _ name: String, choices: E.Type
+  ) throws -> ChooseQuestion<E> where E.RawValue == String {
+    let value = try select(name, function: "choose")
+    try checkDomain(value, key: "choices", type: E.self, name: name)
+    return ChooseQuestion(definition: value)
+  }
+  public func tag(_ name: String) throws -> TagQuestion<String> {
+    TagQuestion(definition: try select(name, function: "tag"))
+  }
+  public func tag<E: RawRepresentable & CaseIterable & Hashable & Sendable>(
+    _ name: String, labels: E.Type
+  ) throws -> TagQuestion<E> where E.RawValue == String {
+    let value = try select(name, function: "tag")
+    try checkDomain(value, key: "labels", type: E.self, name: name)
+    return TagQuestion(definition: value)
+  }
+}
+func checkDomain<E: RawRepresentable & CaseIterable>(
+  _ definition: JSONValue, key: String, type: E.Type, name: String
+) throws where E.RawValue == String {
+  let actual =
+    definition.object[key]?.array.map { $0.string ?? $0.object["name"]?.string ?? "" } ?? []
+  let expected = E.allCases.map(\.rawValue)
+  guard actual.count == expected.count,
+    Set(actual.map { Data($0.utf8) }) == Set(expected.map { Data($0.utf8) })
+  else {
+    throw UsageError(message: "Question \(name) has a different enum domain")
+  }
+}
+
+private func readSavedJSON(_ url: URL) throws -> String {
+  do { return try String(contentsOf: url, encoding: .utf8) } catch {
+    throw InternalError(code: .localIO, message: error.localizedDescription)
+  }
+}
+
+// Names arrive as values in a native-owned JSON array, before host object decoding.
+func checkSavedNames(_ inventory: [String]) throws {
+  var names: [String: String] = [:]
+  for name in inventory {
+    if let previous = names[name], !previous.utf8.elementsEqual(name.utf8) {
+      func identify(_ name: String) -> String {
+        let scalars = name.unicodeScalars.map {
+          "U+" + String($0.value, radix: 16, uppercase: true)
+        }
+        return String(reflecting: name) + " (" + scalars.joined(separator: " ") + ")"
+      }
+      throw UsageError(
+        code: .usageArgument,
+        message: "Saved question names collide in Swift: " + identify(previous) + " and "
+          + identify(name))
     }
-    return x
+    names[name] = name
   }
 }

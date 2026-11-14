@@ -1,5 +1,5 @@
 {
-  "anchor": "FROM thinkthen_recognize('SELECT msg_id AS id, body AS record FROM messages')",
+  "anchor": "FROM thinkthen_recognize('SELECT msg_id AS id, body AS record FROM messages') AS names",
   "before": 0,
-  "after": 1
+  "after": 2
 }

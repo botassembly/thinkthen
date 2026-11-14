@@ -3,6 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
+if [ "${1:-}" = --development ]; then shift; exec sh sdk/ruby/tests/development.sh "$@"; fi
 : "${THINKTHEN_NATIVE_FIXTURES:?prepare native ABI fixtures before running ruby-gate}"
 dev_gems=${THINKTHEN_RUBY_DEV_GEMS:-$HOME/.local/share/thinkthen-build-tools/ruby/dev}
 sdk/ruby/tests/type-gate --dev-gems "$dev_gems"

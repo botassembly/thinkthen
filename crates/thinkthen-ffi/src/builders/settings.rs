@@ -235,6 +235,7 @@ pub unsafe extern "C" fn thinkthen_settings_clone(
         operation(error, || {
             out.write(Box::into_raw(Box::new(SettingsHandle(
                 live(source)?.0.clone(),
+                live(source)?.1.clone(),
             ))));
             Ok(THINKTHEN_OK)
         })
@@ -291,7 +292,7 @@ pub unsafe extern "C" fn thinkthen_settings_from_json(
         operation(error, || {
             out.write(std::ptr::null_mut());
             let settings = thinkthen::Settings::from_json(text(data, len)?)?;
-            out.write(Box::into_raw(Box::new(SettingsHandle(settings))));
+            out.write(Box::into_raw(Box::new(SettingsHandle(settings, None))));
             Ok(THINKTHEN_OK)
         })
     }
@@ -312,6 +313,67 @@ pub unsafe extern "C" fn thinkthen_settings_set_max_requests(
         operation(error, || {
             let handle = live_mut(settings)?;
             handle.0 = handle.0.clone().max_requests(Some(max_requests));
+            Ok(THINKTHEN_OK)
+        })
+    }
+}
+
+/// A cancellation token shared with the settings and clients that copy it.
+#[derive(Debug)]
+pub struct CancelHandle(thinkthen::Cancel);
+/// Make a cancellation token.
+/// # Safety
+/// out is writable; error is NULL or initialized.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancel_new(
+    out: *mut *mut CancelHandle,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the output slots are exclusive until return.
+    unsafe {
+        operation(error, || {
+            out.write(Box::into_raw(Box::new(CancelHandle(
+                thinkthen::Cancel::default(),
+            ))));
+            Ok(THINKTHEN_OK)
+        })
+    }
+}
+/// Request cancellation from any thread.
+/// # Safety
+/// stop is NULL or a live token not freed concurrently.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancel_request(stop: *const CancelHandle) {
+    // SAFETY: the caller lends a live shared token.
+    if let Ok(stop) = unsafe { live(stop) } {
+        stop.0.cancel();
+    }
+}
+/// Free the caller's token; copies held by settings and clients stay live.
+/// # Safety
+/// stop is NULL or uniquely transferred after its last use.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancel_free(stop: *mut CancelHandle) {
+    if !stop.is_null() {
+        // SAFETY: caller transfers the unique handle allocation.
+        drop(unsafe { Box::from_raw(stop) });
+    }
+}
+/// Copy a cancellation token into settings.
+/// # Safety
+/// settings is exclusive and live; stop is live; error is NULL or initialized.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_settings_set_cancel(
+    settings: *mut SettingsHandle,
+    stop: *const CancelHandle,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: settings is exclusively borrowed while stop is copied.
+    unsafe {
+        operation(error, || {
+            let token = live(stop)?.0.clone();
+            let settings = live_mut(settings)?;
+            settings.1 = Some(token);
             Ok(THINKTHEN_OK)
         })
     }

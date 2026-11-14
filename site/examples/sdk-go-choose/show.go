@@ -16,10 +16,8 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	topicQuestion := tt.NewChoose(
-		"What is the message about?",
-		[]string{"billing", "shipping", "other"})
-	message := tt.Text("Please refund my order.")
+	topicQuestion := tt.ChooseQuestion[string]{Question: "What is the message about?", Choices: []string{"billing", "shipping", "other"}}
+	message := "Please refund my order."
 	topic, err := tt.Answer(
 		client.Choose(ctx, topicQuestion, message))
 	if err != nil {

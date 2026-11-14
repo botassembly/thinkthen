@@ -13,4 +13,4 @@ FROM thinkthen.rank(
                     'How urgent is the request?',
                     levels => ARRAY['routine', 'urgent'], top => 2) AS r
 JOIN messages AS m ON m.msg_id = (r.id)::integer
-ORDER BY urgency_rank;
+ORDER BY urgency_rank NULLS LAST;

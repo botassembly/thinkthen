@@ -12,7 +12,9 @@ public final class DriverCall implements AutoCloseable {
     public sealed interface Event permits NeedsInput, End, DriverRow {}
     public record NeedsInput(long version) implements Event {}
     public record End() implements Event {}
-    public record DriverRow(byte[] fields, byte[] detail, long position, @org.jspecify.annotations.Nullable DriverRecord original) implements Event {}
+    public record DriverRow(byte[] fields, byte[] detail, long position, @org.jspecify.annotations.Nullable DriverRecord original,byte[] canonical) implements Event {
+        public DriverRow(byte[] fields,byte[] detail,long position,@org.jspecify.annotations.Nullable DriverRecord original) { this(fields,detail,position,original,fields); }
+    }
     private final Object lifetime = new Object();
     private volatile Thread driverThread;
     private final java.util.concurrent.BlockingQueue<Runnable> tasks = new java.util.concurrent.LinkedBlockingQueue<>();
@@ -122,21 +124,9 @@ public final class DriverCall implements AutoCloseable {
                 if (status == 1) return new End();
                 if (status == 2) return new NeedsInput(version);
                 try {
-                    var fields = Json.MAPPER.createObjectNode();
-                    long position = row.get(Native.SIZE,Native.offset("position"));
-                    fields.put("position",position);
-                    fields.put("function",Contract.functionName(row.get(ValueLayout.JAVA_INT,Native.offset("function"))));
-                    String nativeStatus = Contract.statusName(row.get(ValueLayout.JAVA_INT,Native.offset("status")));
-                    fields.put("status",nativeStatus);
-                    double probability = row.get(ValueLayout.JAVA_DOUBLE,Native.offset("probability"));
-                    if (!Double.isNaN(probability)) fields.put("probability",probability);
-                    for (String field : new String[]{"id","answer","source","error"}) {
-                        byte[] bytes = Native.rowBytes(row,field);
-                        if (field.equals("answer") && bytes.length != 0 && !"answered".equals(nativeStatus))
-                            throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
-                        if (bytes.length != 0) fields.set(field,Json.read(bytes));
-                    }
-                    byte[] detail = Native.rowBytes(row,"detail");
+                    var fields = Json.read(Native.host(row,arena,error));
+                    long position=fields.path("position").asLong();
+                    byte[] detail=fields.has("detail") ? Json.bytes(fields.get("detail")) : new byte[0];
                     if (!expectedFunction.equals(fields.path("function").asText())) throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
                     validateOutcome(fields,detail.length != 0);
                     var source = fields.path("source");
@@ -146,7 +136,7 @@ public final class DriverCall implements AutoCloseable {
                         throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
                     if (expectedFunction.equals("annotate") && fields.path("answer").isObject())
                         fields.get("answer").forEach(entry -> validateOutcome(entry,entry.has("detail")));
-                    return new DriverRow(Json.bytes(fields),detail,position,expectedFunction.equals("rank") ? Native.original(row,arena,error) : null);
+                    return new DriverRow(Json.bytes(fields),detail,position,expectedFunction.equals("rank") ? Native.original(row,arena,error) : null,Native.canonical(row,arena,error));
                 } catch (java.io.UncheckedIOException cause) {
                     throw DriverClient.invalidRow(cause);
                 } finally { NativeStream.row_free(row); }

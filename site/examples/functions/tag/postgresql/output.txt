@@ -1,2 +1,3 @@
-msg_id,topics,status
-1,"{billing,shipping}",answered
+position,msg_id,status,topic
+1,1,answered,billing
+1,1,answered,shipping

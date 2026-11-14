@@ -104,11 +104,28 @@ fn canonical_rows_survive_database_chunks_through_both_wires() {
                         }
                     }
                     if let Some(error) = call.final_error() {
-                        assert!(
-                            actual.is_empty(),
-                            "terminal admission/cancellation error yielded rows"
-                        );
-                        return Err(error.clone());
+                        if matches!(request.question(), thinkthen::Question::Filter(_))
+                            && actual.iter().any(|row| row.failure().is_some())
+                        {
+                            let failed: Vec<_> = actual
+                                .iter()
+                                .filter(|row| row.failure().is_some())
+                                .collect();
+                            let first = failed.iter().min_by_key(|row| row.position()).unwrap();
+                            assert_eq!(error.code(), first.failure().unwrap().code());
+                            assert!(error.to_string().starts_with(&format!(
+                                "{} of {} records failed; the first, at position {}, failed with ",
+                                failed.len(),
+                                records.len(),
+                                first.position()
+                            )));
+                        } else {
+                            assert!(
+                                actual.is_empty(),
+                                "terminal admission/cancellation error yielded rows"
+                            );
+                            return Err(error.clone());
+                        }
                     }
                     Ok(actual)
                 })();

@@ -53,7 +53,7 @@
       ]
     },
     "Cut": {
-      "description": "A finite probability from 0 to 1, inclusive.\n\nSerialization and [`Self::get`] retain full precision.",
+      "description": "A finite decision cut above 0 and at most 1.",
       "type": "number",
       "format": "double",
       "exclusiveMinimum": 0,
@@ -84,18 +84,18 @@
         {
           "type": "object",
           "properties": {
-            "false": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
               "type": "string",
               "const": "decide"
+            },
+            "no_means": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "question": {
               "type": "string"
@@ -104,7 +104,7 @@
               "$ref": "#/$defs/Threshold",
               "default": 0.5
             },
-            "true": {
+            "yes_means": {
               "type": [
                 "string",
                 "null"
@@ -207,42 +207,6 @@
             "function",
             "question",
             "levels"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "false": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "field": {
-              "$ref": "#/$defs/Pointer"
-            },
-            "function": {
-              "type": "string",
-              "const": "filter"
-            },
-            "question": {
-              "type": "string"
-            },
-            "threshold": {
-              "$ref": "#/$defs/Threshold",
-              "default": 0.5
-            },
-            "true": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question"
           ]
         },
         {
@@ -339,18 +303,18 @@
         {
           "type": "object",
           "properties": {
-            "false": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
               "type": "string",
               "const": "decide"
+            },
+            "no_means": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "question": {
               "type": "string"
@@ -359,7 +323,7 @@
               "$ref": "#/$defs/Threshold",
               "default": 0.5
             },
-            "true": {
+            "yes_means": {
               "type": [
                 "string",
                 "null"
@@ -467,42 +431,6 @@
         {
           "type": "object",
           "properties": {
-            "false": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "field": {
-              "$ref": "#/$defs/Pointer"
-            },
-            "function": {
-              "type": "string",
-              "const": "filter"
-            },
-            "question": {
-              "type": "string"
-            },
-            "threshold": {
-              "$ref": "#/$defs/Threshold",
-              "default": 0.5
-            },
-            "true": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
             "field": {
               "$ref": "#/$defs/Pointer"
             },
@@ -578,6 +506,42 @@
           "required": [
             "function",
             "rules"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "filter"
+            },
+            "no_means": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            },
+            "yes_means": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question"
           ]
         },
         {

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import ThinkThen
 
 #if os(macOS) || os(Linux)
@@ -81,13 +82,13 @@ import ThinkThen
 
     let early = client.decide(
       "Ready?", records: ConfinedSource(records: (0..<1000).map { .text("record \($0)") }))
-    var iterator: DecideRows.AsyncIterator? = early.makeAsyncIterator()
+    var iterator: DecideRows<Record>.AsyncIterator? = early.makeAsyncIterator()
     let first = try await iterator!.next()
     precondition(first?.position == 1 && BridgeAudit.worker() != 0)
     iterator = nil
     await BridgeAudit.join()
 
-    let unopened = client.decide("Ready?", records: [.text("never sent")])
+    let unopened = client.decide("Ready?", records: [Record.text("never sent")])
     unopened.cancel()
     do {
       _ = try await unopened.makeAsyncIterator().next()
@@ -122,6 +123,7 @@ import ThinkThen
 private struct PausedTail: AsyncSequence, Sendable {
   typealias Element = Record
   let entered: Signal, released: Signal, returned: Signal
+  var onCancel: (@Sendable () -> Void)? = nil
   struct AsyncIterator: AsyncIteratorProtocol {
     let source: PausedTail
     var first = true
@@ -132,7 +134,13 @@ private struct PausedTail: AsyncSequence, Sendable {
       }
       FileHandle.standardOutput.write(Data("input\n".utf8))
       await source.entered.fire()
-      await source.released.wait()
+      let released = source.released
+      let onCancel = source.onCancel
+      await withTaskCancellationHandler {
+        await released.wait()
+      } onCancel: {
+        onCancel?()
+      }
       await source.returned.fire()
       return nil
     }
@@ -183,4 +191,43 @@ func auditStreamThreadStarts(_ records: Int) async throws {
   precondition(received == records)
   FileHandle.standardOutput.write(Data("rows \(received)\n".utf8))
   precondition(FileHandle.standardInput.readData(ofLength: 1) == Data("x".utf8))
+}
+
+// Feature: cancelling or dropping a stream frees native work while caller input
+// ignores cancellation. The parent always releases that input through stdin.
+func heldInputCleanup(_ url: String, drop: Bool) async throws {
+  let client = try Client(url: URL(string: url)!, batch: 1)
+  let entered = Signal()
+  let released = Signal()
+  let returned = Signal()
+  DispatchQueue.global().async {
+    _ = FileHandle.standardInput.readData(ofLength: 1)
+    Task { await released.fire() }
+  }
+  let callback = CallerCancellation()
+  let onCancel: (@Sendable () -> Void)?
+  if drop { onCancel = nil } else { onCancel = { callback.invoke() } }
+  let records = PausedTail(
+    entered: entered, released: released, returned: returned, onCancel: onCancel)
+  let rows = client.decide("Ready?", records: records)
+  callback.set { rows.cancel() }
+  defer { callback.set(nil) }
+  var iterator: DecideRows<Record>.AsyncIterator? = rows.makeAsyncIterator()
+  let row = try await iterator!.next()
+  precondition(row?.position == 1)
+  FileHandle.standardOutput.write(Data("row\n".utf8))
+  if drop { iterator = nil } else { rows.cancel() }
+  await BridgeAudit.join()
+  FileHandle.standardOutput.write(Data("closed\n".utf8))
+  await returned.wait()
+  withExtendedLifetime(iterator) {}
+}
+
+private final class CallerCancellation: Sendable {
+  private let callback = Mutex<(@Sendable () -> Void)?>(nil)
+  func set(_ value: (@Sendable () -> Void)?) { callback.withLock { $0 = value } }
+  func invoke() {
+    let value = callback.withLock { $0 }
+    value?()
+  }
 }

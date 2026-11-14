@@ -13,7 +13,7 @@ case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
 engine="$native_target/debug/libthinkthen_ffi.dylib"
 cc -std=c11 -Wall -Wextra -Werror -I crates/thinkthen-ffi/include \
     sdk/c/tests/consumer.c "$engine" -Wl,-rpath,"$native_target/debug" -o "$scratch/c-consumer"
-c++ -std=c++17 -Wall -Wextra -Werror -I crates/thinkthen-ffi/include -I sdk/cpp/include \
+c++ -std=c++20 -Wall -Wextra -Werror -I crates/thinkthen-ffi/include -I sdk/cpp/include \
     sdk/cpp/tests/typed_consumer.cpp "$engine" -Wl,-rpath,"$native_target/debug" -o "$scratch/cpp-consumer"
 "$scratch/cpp-consumer"
 mkdir -p "$scratch/assets/osx-arm64"

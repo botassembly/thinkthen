@@ -2,7 +2,7 @@
 # Generated native requirement. Do not edit.
 module ThinkThen
   module NativeContract
-    ABI_VERSION = 131076
+    ABI_VERSION = 327681
     ABI_CODE = "usage.abi"
     ABI_MESSAGE = "the native ABI is incompatible"
     LIBRARY_VARIABLE = "THINKTHEN_LIBRARY"
@@ -12,10 +12,10 @@ module ThinkThen
     2 => "choose",
     3 => "tag",
     4 => "score",
-    5 => "filter",
     7 => "find",
     8 => "recognize",
     9 => "relate",
+    5 => "filter",
     6 => "rank",
     10 => "annotate",
     }.freeze

@@ -1,5 +1,5 @@
 {
-  "anchor": "             Stream<Ranked<JsonValue>> byUrgency = client.rank(",
+  "anchor": "             var byUrgency = client.rank(",
   "before": 0,
   "after": 2
 }

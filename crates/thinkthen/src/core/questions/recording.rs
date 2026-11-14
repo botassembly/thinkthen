@@ -19,14 +19,18 @@ fn span(field: &str, text: &str, start: usize, end: usize) -> bool {
 fn names(question: &Recognize, answer: Vec<results::Name>, field: &str) -> bool {
     answer
         .windows(2)
-        .all(|pair| matches!(pair, [left,right] if left.end <= right.start))
+        .all(|pair| matches!(pair, [left,right] if left.end.canonical() <= right.start.canonical()))
         && answer.iter().all(|name| {
-            span(field, &name.text, name.start, name.end)
-                && question
-                    .inner
-                    .kinds
-                    .iter()
-                    .any(|kind| kind.label() == name.kind)
+            span(
+                field,
+                &name.text,
+                name.start.canonical(),
+                name.end.canonical(),
+            ) && question
+                .inner
+                .kinds
+                .iter()
+                .any(|kind| kind.label() == name.kind)
         })
 }
 fn relations(question: &Relate, answer: Vec<results::Relation>, field: &str) -> bool {
@@ -34,10 +38,21 @@ fn relations(question: &Relate, answer: Vec<results::Relation>, field: &str) -> 
         let source = &relation.source;
         let target = &relation.target;
         (source.text != target.text || source.kind != target.kind)
-            && (!relation.either || source.start < target.start)
-            && (source.end <= target.start || target.end <= source.start)
-            && span(field, &source.text, source.start, source.end)
-            && span(field, &target.text, target.start, target.end)
+            && (!relation.either || source.start.canonical() < target.start.canonical())
+            && (source.end.canonical() <= target.start.canonical()
+                || target.end.canonical() <= source.start.canonical())
+            && span(
+                field,
+                &source.text,
+                source.start.canonical(),
+                source.end.canonical(),
+            )
+            && span(
+                field,
+                &target.text,
+                target.start.canonical(),
+                target.end.canonical(),
+            )
             && !answer.iter().take(position).any(|prior| {
                 prior.relation == relation.relation
                     && prior.source.text == source.text
@@ -46,7 +61,7 @@ fn relations(question: &Relate, answer: Vec<results::Relation>, field: &str) -> 
                     && prior.target.kind == target.kind
             })
             && question.inner.rules.iter().any(|rule| {
-                rule.name == relation.relation
+                rule.relation == relation.relation
                     && rule.either == relation.either
                     && ((rule.source == source.kind && rule.target == target.kind)
                         || (relation.either
@@ -89,14 +104,14 @@ pub(crate) fn validate(question: &Question, json: &str, field: &str) -> Result<(
             true
         }
         Question::Find(_) => {
-            let answer: Option<results::Found> = read(json)?;
+            let answer: Option<results::Span> = read(json)?;
             answer.is_none_or(|answer| {
                 crate::core::function::find::units(field)
                     .iter()
                     .any(|found| {
                         found.text == answer.text
-                            && found.start == answer.start
-                            && found.end == answer.end
+                            && found.start == answer.start.canonical()
+                            && found.end == answer.end.canonical()
                     })
             })
         }

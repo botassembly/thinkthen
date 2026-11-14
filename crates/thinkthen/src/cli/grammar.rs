@@ -216,7 +216,7 @@ fn data_command(name: &str) -> Command {
                 "Required probability [THINKTHEN_THRESHOLD]",
             ));
         }
-        if matches!(spec.threshold, ThresholdOption::Band) {
+        if matches!(spec.threshold, ThresholdOption::Band) || name == "filter" {
             command = command
                 .arg(option("low", "Low probability bar [THINKTHEN_LOW]"))
                 .arg(option("high", "High probability bar [THINKTHEN_HIGH]"));
@@ -239,10 +239,19 @@ fn data_command(name: &str) -> Command {
     }
     if matches!(name, "decide" | "filter") {
         command = command
-            .arg(option("true", "Meaning of a true answer [THINKTHEN_TRUE]").value_name("TEXT"))
-            .arg(option("false", "Meaning of a false answer [THINKTHEN_FALSE]").value_name("TEXT"));
+            .arg(
+                option(
+                    "yes-means",
+                    "Meaning of a true answer [THINKTHEN_YES_MEANS]",
+                )
+                .value_name("TEXT"),
+            )
+            .arg(
+                option("no-means", "Meaning of a false answer [THINKTHEN_NO_MEANS]")
+                    .value_name("TEXT"),
+            );
     }
-    if matches!(name, "choose" | "tag") {
+    if matches!(name, "choose" | "tag" | "score" | "rank") {
         command = command.arg(
             option("describe", "Description for a label; repeat")
                 .value_name("LABEL=TEXT")
@@ -257,10 +266,10 @@ fn data_command(name: &str) -> Command {
             .arg(
                 option(
                     "rule",
-                    "NAME SOURCE TARGET; repeat [THINKTHEN_RULES: JSON array]",
+                    "SOURCE TARGET RELATION; repeat [THINKTHEN_RULES: JSON array]",
                 )
                 .num_args(3)
-                .value_names(["NAME", "SOURCE", "TARGET"])
+                .value_names(["SOURCE", "TARGET", "RELATION"])
                 .action(ArgAction::Append),
             )
             .arg(switch(
@@ -297,7 +306,7 @@ fn backends() -> String {
 
 fn environment_help() -> String {
     format!(
-        "{}\nCredentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_URL or THINKTHEN_BASE_URL (System One only), OPENAI_BASE_URL (OpenAI only); --url overrides the chosen backend; certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 4 backend failure; 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe.",
+        "{}\nCredentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_URL or THINKTHEN_BASE_URL (System One only), OPENAI_BASE_URL (OpenAI only); --url overrides the chosen backend; certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe.",
         backends()
     )
 }

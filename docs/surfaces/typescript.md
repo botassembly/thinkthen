@@ -1,353 +1,610 @@
-# JavaScript and TypeScript functions that answer questions about text
+# TypeScript and JavaScript functions that answer questions about text
 
-ThinkThen is a classifier you call like a function: it reads text, answers one bounded question, and returns a typed value. `await` gives you the answer, ready for an `if`.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-Run `npm install thinkthen@0.2.0` in a Node.js 22.12 or later project. The package runs on Linux (x64 or Arm64, with glibc 2.28 or later), macOS on Apple silicon and Windows x64, and carries its native engine and TypeScript types. It is an ES module: `import` it, or `require` it on Node.js 22.12 and later. Every example below runs as written in a `.mjs` file with `node example.mjs`. In TypeScript, each answer gets its type from the call.
+Use Node.js 22.12 or later. Run `npm install thinkthen`. The package includes the engine and its TypeScript types. It is an ES module: `import` it, or `require` it. Set `THINKTHEN_API_KEY` in the environment first.
 
-## Ask a question
+The examples are TypeScript. In plain JavaScript, leave out the type annotations, the `type` lines and `as const`. Everything else is the same.
 
-```js
-import { ThinkThen, UnsureError } from "thinkthen";
+A one-record call rejects with `tt.FailedError` when its record could not be judged. Successfully awaiting it returns an answered or unsure result, with `.failed` false and its own `.error` set to `undefined`. The shared result type also represents bulk results, so it retains all three states:
 
-const tt = new ThinkThen();
+- **answered**: there is an answer, and `result.answer` is it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the record could not be judged, or the service did not respond.
+
+Three rules hold for every function on this page.
+
+1. **Reading the answer throws when there is none.** On a successfully returned scalar result, `result.answer` can throw `tt.UnsureError`. On a bulk result, form entry or saved row, it can also throw `tt.FailedError`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never throws.** `result.answered`, `result.unsure`, `result.failed`, `result.probability` and `result.error` are always safe to read.
+3. **Printing never throws.** `console.log(result)`, `String(result)` and `` `${result}` `` show the answer, `unsure`, or `failed:` with the reason. A yes prints as `true` and a no as `false`, the same words the `thinkthen` command prints.
+
+## decide
+
+### The simplest if
+
+Read a decide result's `.answer` in an `if`.
+
+```ts
+import * as tt from "thinkthen";
+
+const isRefund = await tt.decide("Does the customer request a refund?", "Please refund my order.");
+
+if (isRefund.answer) {
+  console.log("refund queue");
+} else {
+  console.log("inbox");
+}
+```
+
+If the message could not be judged, awaiting `tt.decide` throws `tt.FailedError` at the call. The `if` never receives a failed result and never falls through to `inbox` for a failure. With one bar a returned decide result is yes or no; two bars can make its answer read throw `tt.UnsureError`.
+
+Always write `.answer`. A result is an object, and JavaScript counts every object as true, so `if (isRefund)` takes the yes branch every time. The language gives a library no way to make that throw. The typescript-eslint rule `no-unnecessary-condition` reports it.
+
+### Yes, no, or not sure
+
+Set two bars and decide can also be not sure. `answered` tells you whether there is a yes or no to read.
+
+```ts
+import * as tt from "thinkthen";
+
+const isRefund = await tt.decide(
+  "Does the customer request a refund?",
+  "Where is my parcel?",
+  { threshold: { low: 0.2, high: 0.8 } },
+);
+
+if (isRefund.answered) {
+  console.log(isRefund.answer ? "refund queue" : "inbox");
+} else {
+  console.log("a person reads it");
+}
+```
+
+You can also let the read throw and catch `tt.UnsureError`. The call above has already succeeded, so this read cannot report a failed result.
+
+```ts
+try {
+  console.log(isRefund.answer ? "refund queue" : "inbox");
+} catch (error) {
+  if (!(error instanceof tt.UnsureError)) throw error;
+  console.log("a person reads it");
+}
+```
+
+### Did the call work
+
+```ts
+import * as tt from "thinkthen";
+
 try {
   const isRefund = await tt.decide(
-    "Does the customer request a refund?",
-    "Please refund my order.",
-    { threshold: { low: 0.2, high: 0.8 } },
+    "Does the customer request a refund?", "Please refund my order.",
   );
-  console.log(isRefund ? "refund queue" : "inbox");
+  console.log(isRefund);
 } catch (error) {
-  if (!(error instanceof UnsureError)) throw error;
-  console.log("a person reads it", error.probability);
-} finally {
-  await tt.close();
-}
-```
-
-<!-- output: capture -->
-
-`isRefund` is a `boolean`. Set `THINKTHEN_API_KEY` in the environment first; the client reads it from there. [Where record text goes](service.md) covers keys, backends and connection settings.
-
-## Handle not sure and failures
-
-Awaiting a call gives its answer or throws:
-
-| Thrown | When | What it carries |
-| --- | --- | --- |
-| `UnsureError` | The probability falls inside the not-sure band | `probability`, `row` |
-| `RecordError` | ThinkThen could not judge the record | `code`, `message`, `row`, `rows` |
-| `UsageError` | The call itself is wrong, such as an array passed to a one-record call | `code`, `message` |
-| `BackendError` | The backend service failed | `code`, `message`, `httpStatus` when the service sent one |
-| `CancelledError` | Your `AbortSignal` fired | `code` `local.cancelled`, `cause` |
-
-Send not sure to a person. Let the others stop your program, or catch `ThinkThenError`, the parent of every class except `UnsureError`. Not sure is not a failure.
-
-To read the probability and details without a throw, call `.row()` on the same call. It makes no second request.
-
-```js
-import { ThinkThen } from "thinkthen";
-
-const tt = new ThinkThen();
-try {
-  const refundCheck = await tt.decide(
-    "Does the customer request a refund?",
-    { id: "a2", text: "Where is my parcel?" },
-    { field: "/text", threshold: { low: 0.3, high: 0.7 } },
-  ).row();
-  if (refundCheck.status === "answered") {
-    console.log(refundCheck.id, refundCheck.answer ? "refund queue" : "inbox", refundCheck.probability);
-  } else if (refundCheck.status === "unsure") {
-    console.log(refundCheck.id, "a person reads it", refundCheck.probability);
+  if (error instanceof tt.FailedError) {
+    console.log("could not judge it:", error.message);
+  } else if (error instanceof tt.ThinkThenError) {
+    console.log("the call did not complete:", error.message);
   } else {
-    console.error(refundCheck.id, refundCheck.error.code, refundCheck.error.message);
+    throw error;
   }
-} finally {
-  await tt.close();
 }
 ```
 
-<!-- output: capture -->
+`tt.FailedError` reports a failed judgement, including a service failure on that record. Other usage, setup, authentication and cancellation failures retain their classifications; not every call error becomes `FailedError`. JavaScript catch blocks must rethrow errors they do not handle. There is no answer read inside either handler.
 
-A row has `status` (`answered`, `unsure` or `failed`), `function`, `position`, `id` when the record has one, and `source`. Only an answered row has `answer`; only a failed row has `error`. TypeScript makes you check `status` before reading either.
+Not sure counts as a successful call. The returned result's answer read can throw `tt.UnsureError`, which is not a `tt.ThinkThenError`.
 
-`threshold` sets when an answer counts. A number is a cut: yes at or above it, no below. `{ low, high }` is a band: no below `low`, not sure from `low` up to `high`, yes at or above `high`. The default is a cut at 0.5, so decide is never not sure until you set a band. Choose takes only a number and is not sure unless its best choice reaches it. Tag, find, recognize and relate take only a number.
+### Both bars and the probability
 
-## Judge many messages at once
+```ts
+const isRefund = await tt.decide(
+  "Does the customer request a refund?",
+  "Where is my parcel?",
+  { threshold: { low: 0.2, high: 0.8 } },
+);
+console.log(isRefund.probability);
+```
 
-Each function has a `Stream` form that takes many records and yields one row per record, with its `position` from 1. Pass the whole collection to one stream so the engine can batch it.
+- No `threshold`: one bar at 0.5. The answer is always yes or no.
+- `threshold: 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `threshold: { low: 0.2, high: 0.8 }`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
 
-```js
-import { ThinkThen } from "thinkthen";
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. A returned scalar decide result has it even when unsure; a failed bulk row has `undefined`.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `tt.decideStream`, save each `probability`, and compare with your labels.
+
+## choose with your own choices
+
+Give your choices as an `as const` array. The answer comes back as one of them, typed as their union.
+
+```ts
+import * as tt from "thinkthen";
+
+const Topic = ["billing", "shipping", "other"] as const;
+type Topic = (typeof Topic)[number];
+
+function teamFor(topic: Topic): string {
+  switch (topic) {
+    case "billing":
+      return "billing team";
+    case "shipping":
+      return "warehouse";
+    case "other":
+      return "front desk";
+  }
+}
+
+const topic = await tt.choose(
+  "What is the message about?",
+  "I was charged twice for one invoice.",
+  { choices: Topic },
+);
+
+if (topic.unsure) {
+  console.log("a person reads it");
+} else {
+  console.log(teamFor(topic.answer));
+}
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.unsure` before reading the answer. `threshold: 0.3` moves the bar.
+
+The strings in the array (`"billing"`, `"shipping"`, `"other"`) are the words the model reads, so make them plain words or short phrases, not codes. The same strings are what your code switches on.
+
+Add a string to `Topic` and TypeScript points at `teamFor` until you handle it. This check needs `strict` on in your `tsconfig.json`.
+
+A choose result is not equal to its answer. `topic === "billing"` is a compile error in TypeScript. In plain JavaScript it is quietly false every time, because `===` can't be made to throw, so always compare `topic.answer`. `topic == "billing"` throws `TypeError` and tells you to read `topic.answer`.
+
+An array without `as const` also works, `{ choices: someStrings }`, and the answer is then typed `string`.
+
+## Many records
+
+Each one-record function has a `Stream` form that takes many records and gives one result per record, in order. Each result carries your own record as `.item`.
+
+```ts
+import * as tt from "thinkthen";
 
 const messages = [
-  { id: "a1", text: "Please refund my order." },
-  { id: "a2", text: "Where is my parcel?" },
-  { id: "a3", text: "I was charged twice for one invoice." },
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
 ];
-const tt = new ThinkThen();
-try {
-  const refundChecks = tt.decideStream("Does the customer request a refund?", messages, {
-    field: "/text",
-    threshold: { low: 0.3, high: 0.7 },
-  });
-  for await (const refundCheck of refundChecks) {
-    if (refundCheck.status === "answered") {
-      console.log(refundCheck.id, refundCheck.answer ? "refund queue" : "inbox", refundCheck.probability);
-    } else if (refundCheck.status === "unsure") {
-      console.log(refundCheck.id, "a person reads it", refundCheck.probability);
-    } else {
-      console.error(refundCheck.id, refundCheck.error.code, refundCheck.error.message);
-    }
+
+const refundChecks = tt.decideStream("Does the customer request a refund?", messages, {
+  threshold: { low: 0.2, high: 0.8 },
+});
+
+for await (const isRefund of refundChecks) {
+  if (isRefund.unsure) {
+    console.log("a person reads it:", isRefund.item);
+  } else if (isRefund.failed) {
+    console.log("try again later:", isRefund.item);
+  } else if (isRefund.answer) {
+    console.log("refund queue:", isRefund.item);
+  } else {
+    console.log("inbox:", isRefund.item);
   }
-} finally {
-  await tt.close();
 }
 ```
 
-<!-- output: capture -->
+One failed record does not stop the stream. Each result keeps its own state, with `position` counted from 1 and the record's `id` when it has one.
 
-A stream keeps going past a not-sure or failed record, so check each row's `status`. To stop at the first one instead, read each row with `answer(row)`, exported from `thinkthen`: it returns the answer or throws `UnsureError` or `RecordError`. `for await` closes the stream when the loop ends or breaks; `.toArray()` collects every row. Streams take arrays, iterables and async iterables.
+Pass the whole collection to one stream so ThinkThen can send the records in batches. A stream takes an array, an iterable or an async iterable. `for await` closes the stream when the loop ends, even after an early `break`. `await stream.toArray()` collects every result and closes the stream.
 
-## Judge a file of records
+To save every result, write `JSON.stringify(result)` as a line of JSON. It includes the state, so nothing is lost.
 
-Create `records.jsonl` with one JSON value per line:
+## Many-result not sure or failed
 
-```text
-{"id":"a1","text":"Please refund my order."}
-{"id":"a2","text":"Where is my parcel?"}
-null
-{"id":"a3"}
-{"id":"a4","text":null}
-```
+Yes and no are the two answers. Not sure and failed are the two ways a bulk result has none. A stream retains a failed row even when its input collection has only one element. To name every state, use a switch in a function with a declared return type:
 
-```js
-import { readFile } from "node:fs/promises";
-import { ThinkThen } from "thinkthen";
+```ts
+import * as tt from "thinkthen";
 
-const records = (await readFile("records.jsonl", "utf8"))
-  .split(/\r?\n/).filter(line => line.trim()).map(line => JSON.parse(line));
-const tt = new ThinkThen();
-try {
-  for await (const refundCheck of tt.decideStream("Does the customer request a refund?", records, { field: "/text" })) {
-    if (refundCheck.status === "answered") {
-      console.log(refundCheck.position, "answered", refundCheck.answer);
-    } else if (refundCheck.status === "unsure") {
-      console.log(refundCheck.position, "unsure", refundCheck.probability);
-    } else {
-      console.log(refundCheck.position, "failed", refundCheck.error.code, refundCheck.error.message);
-    }
+function whereItGoes(isRefund: tt.DecideRow): string {
+  switch (isRefund.status) {
+    case "answered":
+      return isRefund.answer ? "refund queue" : "inbox";
+    case "unsure":
+      return "a person reads it";
+    case "failed":
+      return "try again later";
   }
-} finally {
-  await tt.close();
 }
-```
 
-<!-- output: capture -->
-
-Look for one line per record, numbered from 1, with the failures in place. A `null` record, a record without `text` and a `text` that is `null` all fail with `record.missing` and send nothing to the backend.
-
-## Records
-
-A record is a string or a JSON value. `field` picks the part to judge: a JSON Pointer such as `"/text"` (`~1` is a literal slash, `~0` a literal tilde), or a key path such as `["text"]`. Without it, ThinkThen judges the whole record. A pointer picks one value; to judge two fields together, nest them, as in `{ id: "a1", message: { subject: "Invoice", body: "Please refund my order." } }` with `field: "/message"`.
-
-Give object records an `id`: a string, a safe integer or a `bigint`. Rows carry it back, so keep it to join answers to your data; `position` only counts within one call. `JSON.stringify` cannot write a `bigint`, so convert those ids before you save rows.
-
-A one-record call rejects an array or any other iterable, and a stream rejects a string, with `UsageError` code `usage.record-kind`. `null` and `undefined` records, and a selected value that is `null`, fail with `record.missing`.
-
-## The ten functions
-
-Each function below uses the support inbox. Any call that is not sure throws `UnsureError`, which ends this script at the `catch`.
-
-```js
-import { ThinkThen, UnsureError, answer } from "thinkthen";
-
-const refund = "Please refund my order.";
-const note = "Morgan works for Example Group.\nPlease refund my order.\n";
 const messages = [
-  { id: "a1", text: "Please refund my order." },
-  { id: "a2", text: "Where is my parcel?" },
-  { id: "a3", text: "I was charged twice for one invoice." },
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
 ];
-const asksRefund = "Does the customer request a refund?";
-const topics = ["billing", "shipping", "other"];
-const urgency = ["routine", "urgent"];
-
-const tt = new ThinkThen();
-try {
-  const isRefund = await tt.decide(asksRefund, refund);
-  console.log("decide:", isRefund);
-
-  const topic = await tt.choose("What is the message about?", refund, { choices: topics });
-  console.log("choose:", topic);
-
-  const mentioned = await tt.tag("Which topics appear?",
-    "I was charged twice and my parcel is late again.", { labels: ["billing", "shipping"] });
-  console.log("tag:", mentioned.join(", "));
-
-  const howUrgent = await tt.score("How urgent is the request?", refund, { levels: urgency });
-  console.log("score:", howUrgent);
-
-  const refundRequests = await tt.filter(asksRefund, messages, { field: "/text" }).toArray();
-  console.log("filter:", refundRequests.map(message => message.id).join(", "));
-
-  for await (const urgencyRank of tt.rankStream("How urgent is the request?", messages,
-    { levels: urgency, field: "/text" })) {
-    console.log("rank:", answer(urgencyRank), urgencyRank.id);
-  }
-
-  const actionLine = await tt.find("Which line states the requested action?", note);
-  console.log("find:", actionLine ? actionLine.text : "no line answers it");
-
-  const triage = await tt.annotate({
-    refund: { function: "decide", question: asksRefund },
-    topic: { function: "choose", question: "What is the message about?", choices: topics },
-    urgency: { function: "score", question: "How urgent is the request?", levels: urgency },
-  }, refund);
-  for (const [question, outcome] of Object.entries(triage)) {
-    console.log("annotate:", question, answer(outcome));
-  }
-
-  const names = await tt.recognize(["person", "organization"], "Morgan works for Example Group.");
-  for (const name of names) console.log("recognize:", name.kind, name.text);
-
-  const employers = await tt.relate(
-    [{ name: "works_for", source: "person", target: "organization" }], note);
-  for (const link of employers) console.log("relate:", link.source.text, link.relation, link.target.text);
-} catch (error) {
-  if (!(error instanceof UnsureError)) throw error;
-  console.log("not sure:", error.row.function, error.probability);
-} finally {
-  await tt.close();
+for await (const isRefund of tt.decideStream(
+  "Does the customer request a refund?", messages,
+  { threshold: { low: 0.2, high: 0.8 } },
+)) {
+  console.log(whereItGoes(isRefund), isRefund.item);
 }
 ```
 
-<!-- output: capture -->
+With `strict` enabled, omitting a state makes TypeScript report that the function lacks an ending return statement. The same shared `DecideRow` type is used for scalar and bulk calls: its static failed arm remains even though a successfully awaited scalar call never returns that arm at runtime. There is no second scalar-only result type.
 
-| Function | `await` gives |
+To reject a failed bulk result explicitly, call `isRefund.throwIfFailed()` before reading it:
+
+```ts
+for await (const isRefund of tt.decideStream(
+  "Does the customer request a refund?", ["Please refund my order."],
+  { threshold: { low: 0.2, high: 0.8 } },
+)) {
+  isRefund.throwIfFailed();
+  console.log(isRefund);
+}
+```
+
+It returns the same result for answered or unsure rows; unsure still throws only when its answer is read. The one-item stream keeps bulk behavior: a failed row reaches the explicit check rather than rejecting a scalar call. This helper remains available on the shared type but is redundant after an ordinary successful scalar call.
+
+## filter
+
+filter means "give me the yeses". It hands back your own records, in order.
+
+```ts
+import * as tt from "thinkthen";
+
+const messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+];
+
+for await (const refundRequest of tt.filter("Does the customer request a refund?", messages)) {
+  console.log("refund queue:", refundRequest);
+}
+```
+
+filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `threshold: 0.7` moves the bar. Two bars are refused: TypeScript does not compile them, and plain JavaScript throws `tt.UsageError`. When you want not sure, use `tt.decideStream`, as in the section above.
+
+If a record fails, you still get every kept record first. Then filter throws one `tt.FailedError`, and its `rows` holds every failed result with its `.item`.
+
+```ts
+try {
+  for await (const refundRequest of tt.filter("Does the customer request a refund?", messages)) {
+    console.log("refund queue:", refundRequest);
+  }
+} catch (failure) {
+  if (!(failure instanceof tt.FailedError)) throw failure;
+  for (const failed of failure.rows) {
+    console.log("try again later:", failed.item, failed.error.code);
+  }
+}
+```
+
+## tag
+
+Labels work as choices do. The answer is an array of the labels that fit, and it can be empty.
+
+```ts
+import * as tt from "thinkthen";
+
+const Topic = ["billing", "shipping"] as const;
+
+const topics = await tt.tag(
+  "Which topics appear?",
+  "I was charged twice and my parcel is late again.",
+  { labels: Topic },
+);
+
+if (topics.answer.includes("billing")) {
+  console.log("billing team");
+}
+for (const topic of topics.answer) {
+  console.log(topic);
+}
+```
+
+tag is never not sure. `threshold` sets how likely a label must be to count.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. The order of the supplied `as const` array defines the scale.
+
+```ts
+import * as tt from "thinkthen";
+
+const Urgency = ["routine", "urgent"] as const;
+
+const urgency = await tt.score(
+  "How urgent is the request?",
+  "Please refund my order.",
+  { levels: Urgency },
+);
+
+if (urgency.answer > 0.5) {
+  console.log("answer today");
+}
+console.log(urgency.answer.toFixed(2));
+```
+
+The score is a position between your levels, not one of them, so it is a `number` and there is nothing to `switch` on. To get exactly one level back, ask with `tt.choose`. score is never not sure.
+
+## rank
+
+rank puts many records in order along your levels, highest first.
+
+```ts
+import * as tt from "thinkthen";
+
+const messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+];
+
+for await (const ranked of tt.rank("How urgent is the request?", messages, { levels: Urgency })) {
+  console.log(ranked.answer, ranked.item);
+}
+```
+
+`ranked.answer` is the rank, starting at 1, and `ranked.item` is your record. rank reads the whole collection before it gives anything back. `top: 5` retains the five highest-ranked records after judging the collection. A failed record comes back after the ranked ones, with `failed` set.
+
+## find
+
+find points to the one line that answers.
+
+```ts
+import * as tt from "thinkthen";
+
+const message = "Morgan works for Example Group.\nPlease refund my order.";
+const action = await tt.find("Which line states the requested action?", message);
+
+if (action.unsure) {
+  console.log("a person reads it");
+} else if (action.answer === null) {
+  console.log("no line answers");
+} else {
+  console.log(action.answer.text);
+}
+```
+
+The answer is a `tt.Span` with `text`, `start` and `end`, or `null` when no line answers. `message.slice(span.start, span.end)` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```ts
+import * as tt from "thinkthen";
+
+const names = await tt.recognize(
+  "Morgan works for Example Group.",
+  { kinds: ["person", "organization"] },
+);
+
+for (const name of names.answer) {
+  console.log(name.kind, name.text);
+}
+```
+
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure.
+
+## relate
+
+```ts
+import * as tt from "thinkthen";
+
+const message = "Morgan works for Example Group.\nPlease refund my order.";
+const rules = [{ source: "person", target: "organization", relation: "works_for" }] as const;
+
+const relations = await tt.relate(message, { rules });
+
+for (const relation of relations.answer) {
+  console.log(relation.source.text, relation.relation, relation.target.text);
+}
+```
+
+Each relation has `source`, `target`, `relation`, `probability` and `either`. `relations.detail.names` holds every name found, including names in no relation.
+
+## annotate
+
+annotate asks several questions of each record and gives back one form per record.
+
+```ts
+import * as tt from "thinkthen";
+
+const messages = [
+  "Please refund my order.",
+  "Where is my parcel?",
+  "I was charged twice for one invoice.",
+];
+
+const questions = {
+  refund: { function: "decide", question: "Does the customer request a refund?", threshold: { low: 0.2, high: 0.8 } },
+  topic: { function: "choose", question: "What is the message about?", choices: Topic },
+  urgency: { function: "score", question: "How urgent is the request?", levels: Urgency },
+} as const;
+
+const forms = tt.annotateStream(questions, messages);
+
+for await (const form of forms) {
+  if (form.failed) {
+    console.log("try again later:", form.item);
+    continue;
+  }
+  const entries = form.answer;
+  const { refund: isRefund, topic, urgency } = entries;
+  if (isRefund.answered && topic.answered && urgency.answered) {
+    if (isRefund.answer) {
+      console.log("refund queue:", topic.answer, urgency.answer.toFixed(2));
+    }
+  } else if (isRefund.failed || topic.failed || urgency.failed) {
+    console.log("try again later:", form.item);
+  } else {
+    console.log("a person reads it:", form.item);
+  }
+}
+```
+
+`form.answer` holds one entry per question, under the name you gave it. Each entry is a result of its own function, with its own state. `form.answer.refund` is a decide result, so its `.answer` is the yes or no. One entry can be not sure or failed while the others answer. Check every entry used by a branch before reading its answer; an answered form alone does not mean its entries all answered. Here `Topic` is the three-choice array from the choose section, and `Urgency` is the array from the score section.
+
+A scalar `await tt.annotate(questions, message)` throws `tt.FailedError` only if the parent form failed. An answered parent is returned even if one, several or all entries failed. Promotion at the scalar call checks the parent's own state, not the recursive helper.
+
+```ts
+const form = await tt.annotate(questions, "Please refund my order.");
+form.throwIfFailed();
+```
+
+The optional second line explicitly checks the form and all entries. It throws `tt.FailedError` for a failed form or any failed entry, never just for an unsure entry; otherwise it returns the same form unchanged. It also works on bulk forms. Checking only the parent's status never authorizes reading an unchecked child's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```ts
+const isRefund = await tt.decide(
+  "Does the customer request a refund?",
+  "I was charged twice for one invoice.",
+  {
+    yesMeans: "the customer wants money back, including for a duplicate charge",
+    noMeans: "the customer wants anything else",
+  },
+);
+
+const topic = await tt.choose(
+  "What is the message about?",
+  "I was charged twice for one invoice.",
+  {
+    choices: Topic,
+    descriptions: {
+      billing: "charges, invoices and refunds",
+      shipping: "parcels and delivery",
+    },
+  },
+);
+```
+
+decide and filter take `yesMeans` and `noMeans`. choose, tag, score and rank take `descriptions`, keyed by your choices, labels or levels. TypeScript refuses a key that is not one of them.
+
+## Records and fields
+
+A record is a string, or an object or other JSON-like value. `field: "/text"` picks one field of an object. Without it, ThinkThen judges the whole record.
+
+Give object records an `id`: a string, a whole number or a `bigint`. Each result carries it back as `.id`.
+
+A one-record call given an array throws `TypeError` and names the `Stream` form. A blank record (an empty string, only spaces, or `{}`) rejects the scalar call with `tt.FailedError` and code `record.empty` before any service request. The corresponding stream, even with one input, retains a failed row instead.
+
+## Async
+
+Every call is asynchronous. A one-record call gives a promise of its result, and a many-record call gives an async iterable for `for await`. There is no second, blocking set of functions. A failed scalar parent rejects its promise at `await`; an unsure result fulfills it normally. Stream startup or cancellation errors can reject iteration, while per-record failures remain stream rows.
+
+```ts
+import * as tt from "thinkthen";
+
+const isRefund = await tt.decide("Does the customer request a refund?", "Please refund my order.");
+console.log(isRefund.answer ? "refund queue" : "inbox");
+
+const messages = ["Please refund my order.", "Where is my parcel?"];
+for await (const isRefund of tt.decideStream("Does the customer request a refund?", messages)) {
+  console.log(`${isRefund}`, isRefund.item);
+}
+```
+
+If you forget the `await`, you hold a promise and not a result. TypeScript reports it. In plain JavaScript, reading `.answer` or any state from the promise throws `TypeError` and tells you to `await` the call.
+
+## Saved questions
+
+A question object holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
+
+```ts
+const asksRefund: tt.DecideQuestion = {
+  function: "decide",
+  question: "Does the customer request a refund?",
+  threshold: { low: 0.2, high: 0.8 },
+  field: "/text",
+};
+const isRefund = await tt.decide(asksRefund, { id: "a1", text: "Please refund my order." });
+```
+
+There is one type per function, such as `tt.ChooseQuestion` and `tt.ScoreQuestion`. A `tt.Toolbox` keeps named questions in a JSON file:
+
+```ts
+const toolbox = await tt.Toolbox.load("toolbox.json");
+const topic = await tt.choose(toolbox.choose("topic"), { id: "a1", text: "Where is my parcel?" });
+```
+
+## Settings
+
+The functions on `tt` use a shared client that reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, make a client and call the same functions on it.
+
+```ts
+const client = new tt.Client({ model: "...", batch: 16, retry: { maxRetries: 5 } });
+try {
+  const isRefund = await client.decide("Does the customer request a refund?", "Please refund my order.");
+} finally {
+  await client.close();
+}
+```
+
+The options are `backend`, `url`, `model`, `apiKey`, `batch` and `retry`. Times in `retry` are in milliseconds and say so in their names: `initialBackoffMs` and `attemptTimeoutMs`. Keep the key in the environment, not in your code. Close a client you made. The shared client needs no closing.
+
+## Usage
+
+```ts
+const client = new tt.Client();
+try {
+  await client.decide("Does the customer request a refund?", "Please refund my order.");
+  const usage = client.usage;
+  console.log(usage.attempts, usage.inputTokens.reported, usage.outputTokens.reported);
+} finally {
+  await client.close();
+}
+```
+
+`client.usage` counts everything the client has sent so far: `attempts`, `responses`, retries, bytes sent, and tokens in and out as the service reported them. The counts are `bigint` values.
+
+## Cancel
+
+```ts
+const stop = new AbortController();
+const isRefund = await tt.decide(
+  "Does the customer request a refund?",
+  "Please refund my order.",
+  { signal: stop.signal },
+);
+```
+
+Calling `stop.abort()` stops the call, which throws `tt.CancelledError`. Any `AbortSignal` works, such as `AbortSignal.timeout(5000)`.
+
+## Errors
+
+| What happened | When it throws | What is thrown |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold or an array given to a one-record call | When you `await` the call, or at the first step of a `for await` | `tt.UsageError`, `TypeError` |
+| The client could not start, such as no API key | When you `await` the call, or at `new tt.Client()` | `tt.SetupError` |
+| The call was cancelled | When you `await` the call, or at the next step of a `for await` | `tt.CancelledError` |
+| A scalar judgement failed, including blank input or service failure on its row | When you await the call | `tt.FailedError` |
+| A bulk result or form entry failed | At its answer read or `throwIfFailed()` | `tt.FailedError` |
+| A scalar annotate parent failed | When you await the call; bulk keeps a failed form | `tt.FailedError` at the scalar call or a later bulk read/check |
+| An answered annotate parent contains failed entries | Call returns it; a failed-entry read or explicit form check throws | `tt.FailedError` |
+| Not sure | When you read the answer | `tt.UnsureError` |
+| You print a result, store it, or ask about its state | Never | |
+
+JavaScript's `catch` takes everything, so test what you caught with `instanceof` and throw the rest again. Two parents let you test by meaning:
+
+- `error instanceof tt.NoAnswerError` is true for `tt.UnsureError` and `tt.FailedError`: there was no answer to read.
+- `error instanceof tt.ThinkThenError` is true for everything that went wrong, including `tt.FailedError`. It is false for `tt.UnsureError`, because not sure is a result and not an error.
+
+`tt.FailedError` is the renamed concrete `RecordError`; wire codes such as `record.empty` stay unchanged. Other call errors keep their existing classifications and payloads. It carries `code`, `httpStatus`, `row` and `rows`, the failed results, each affected record included once. A form contributes its first failed entry in question-name order, carrying the form's record, position, id and source. `tt.UnsureError` carries `probability` and `row`.
+
+Three things JavaScript itself decides, which no library can change:
+
+- `if (result)` is always true. Read `result.answer`.
+- `result === "billing"` is always false. Compare `result.answer`. TypeScript reports the comparison; the lint rule above reports the always-true condition.
+- Joining a result to a string with `+`, comparing it with `==`, and using it as a number all throw `TypeError`, in every state, so the first run shows the slip. To print a result, use a template literal, `String(result)` or `console.log(result)`.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 package/source](https://registry.npmjs.org/thinkthen/-/thinkthen-0.1.2.tgz). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
 | --- | --- |
-| decide | `true` or `false` |
-| choose | one of your choices, typed as their union |
-| tag | an array of the labels that fit, possibly empty |
-| score | a number from 0 to 1 along your levels, lowest first |
-| filter | the records that pass, unchanged |
-| rank | `rankStream` only: each row's answer is its rank, 1 for highest |
-| find | `{ text, start, end }` for the line that answers, or `null` |
-| annotate | each named question's outcome; read each with `answer(outcome)` |
-| recognize | an array of `{ text, kind, start, end, probability }` |
-| relate | an array of `{ source, target, relation, probability }`, with `symmetric` on undirected rules |
+| `Call<T>.value` and nullable answers | Await the result, then read `.answer`; scalar failures reject at the call and unsure throws at the answer read. Bulk results retain all three states |
+| `Engine` and `question(...)` | `Client` and typed saved questions |
+| Per-call `.facts` and `.details` | Client usage and result detail |
 
-- **filter** yields only the records answered yes, as the objects you passed in. Not-sure records are left out. If any record fails, the kept records still arrive first, then the loop throws one `RecordError` whose `rows` lists every failed record. Use `filterStream` for every row as `{ item, row, kept }`.
-- **rank** reads the whole collection before it yields. `top` limits how many ranks it returns; failed records still come back.
-- **choose** needs distinct choices; **score** and **rank** need distinct levels ordered from lowest to highest.
-- **find** picks one whole line, so keep the line breaks. Spans use JavaScript string offsets: `text.slice(start, end)`.
-- **annotate** answers when the record is judged, but each question inside it can still be not sure or fail. `answer(outcome)` gives that question's answer or throws `UnsureError` or `RecordError`, as a one-record call does. Rank cannot be one of its questions.
-- **relate** finds the names itself. On its row from `.row()`, `detail.names` lists every name it found, including names with no relation. A rule can add `phrase` for its wording and `symmetric: true` for a relation that reads both ways.
-
-## Say what the answers mean
-
-`yesMeans` and `noMeans` tell decide and filter what each answer stands for. `descriptions` does the same for the choices of choose, the labels of tag and the levels of score and rank; a key that is not one of them is refused.
-
-```js
-import { ThinkThen, UnsureError } from "thinkthen";
-
-const tt = new ThinkThen();
-try {
-  const topic = await tt.choose("What is the message about?", "I was charged twice for one invoice.", {
-    choices: ["billing", "shipping", "other"],
-    descriptions: { billing: "charges, invoices and refunds", shipping: "parcels and delivery" },
-  });
-  const isRefund = await tt.decide("Does the customer request a refund?", "I was charged twice for one invoice.", {
-    yesMeans: "the customer wants money back",
-    noMeans: "the customer wants something else",
-  });
-  console.log(topic, isRefund ? "refund queue" : "inbox");
-} catch (error) {
-  if (!(error instanceof UnsureError)) throw error;
-  console.log("a person reads it", error.row.function, error.probability);
-} finally {
-  await tt.close();
-}
-```
-
-<!-- output: capture -->
-
-## Save and load questions
-
-A toolbox saves named questions for reuse here, in another language or in the command. Save this as `toolbox.json`:
-
-```json
-{"entries":{"refund":{"question":{"function":"filter","question":"Does the customer request a refund?","field":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"]}}}}
-```
-
-```js
-import { ThinkThen, UnsureError, loadToolbox } from "thinkthen";
-
-const box = await loadToolbox("toolbox.json");
-if (box.refund?.function !== "filter" || box.topic?.function !== "choose") {
-  throw new Error("toolbox.json needs refund as a filter and topic as a choose question");
-}
-const messages = [
-  { id: "a1", text: "Please refund my order." },
-  { id: "a2", text: "Where is my parcel?" },
-  { id: "a3", text: "I was charged twice for one invoice." },
-];
-const tt = new ThinkThen();
-try {
-  for await (const refundRequest of tt.filter(box.refund, messages)) {
-    try {
-      const topic = await tt.choose(box.topic, refundRequest.text);
-      console.log(refundRequest.id, topic);
-    } catch (error) {
-      if (!(error instanceof UnsureError)) throw error;
-      console.log(refundRequest.id, "a person reads it");
-    }
-  }
-} finally {
-  await tt.close();
-}
-```
-
-<!-- output: capture -->
-
-Look for one line per kept record: its id and the topic choose picked.
-
-Check each entry's `function` before you pass it, as the `if` does; TypeScript then knows which call it fits. A saved question carries its own options, such as `field` and `choices`, so the call takes only the record. `defineToolbox({...})` builds the same named questions in code, and `serializeToolbox(box)` turns them back into JSON text.
-
-## Call without a client
-
-The package also exports each function, such as `decide` and `filter`. With no default client set, each call opens a client for the default backend and closes it afterwards. `setDefaultClient(tt)` sends them through your client, which they never close; `setDefaultClient(undefined)` resets it. A client you create and close yourself makes ownership plain, so prefer it in applications.
-
-## Cancel a call
-
-Pass an `AbortSignal` as `signal` to any call. Aborting stops the call, and the pending `await` throws `CancelledError`, named `AbortError`, with code `local.cancelled` and the abort reason as its `cause`. Rows you already read stay yours.
-
-```js
-import { ThinkThen, CancelledError } from "thinkthen";
-
-const messages = [
-  { id: "a1", text: "Please refund my order." },
-  { id: "a2", text: "Where is my parcel?" },
-  { id: "a3", text: "I was charged twice for one invoice." },
-];
-const controller = new AbortController();
-const stop = () => controller.abort();
-process.once("SIGINT", stop);
-const tt = new ThinkThen();
-try {
-  const refundRequests = tt.filter("Does the customer request a refund?", messages, {
-    field: "/text", signal: controller.signal,
-  });
-  for await (const refundRequest of refundRequests) console.log("refund request", refundRequest.id);
-} catch (error) {
-  if (!(error instanceof CancelledError)) throw error;
-  console.error("cancelled", error.code);
-} finally {
-  process.removeListener("SIGINT", stop);
-  await tt.close();
-}
-```
-
-<!-- output: capture -->
-
-Closing a client also closes its open streams. Client options include `batch` for records per request, and `retry` with `maxRetries`, `initialBackoffMs` and `attemptTimeoutMs`.
+Code using the pre-release `RecordError` name must use `FailedError`. Filter aggregation, one-element streams and failed form entries retain their existing result behavior; no wire error code is renamed.

@@ -5,6 +5,6 @@ import kotlinx.coroutines.flow.flowOf
 
 // Feature: SingleRejectsFlow. A one-record call refuses many records when the code is compiled.
 suspend fun rejectedSingleRejectsFlow(client: ThinkThen) {
-// Expect: pass many records to findStream
+// Expect: use findStream
     client.find("Which line?", flowOf("alpha", "beta"))
 }

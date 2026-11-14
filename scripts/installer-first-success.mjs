@@ -51,6 +51,6 @@ try {
     exit: result?.exit, signal: result?.signal, seconds: (performance.now() - started) / 1000,
     served: recorder.served(), usage, failure: recorder.failure(), cache_sha256: hash(),
   }, null, 2) + '\n');
-  assert.deepEqual(usage, { calls: 0, bytes: 0 }, 'replay must never pay');
+  assert.deepEqual(usage, { calls: 0, bytes: 0, inputBytes: 0 }, 'replay must never pay');
   assert.equal(hash(), before, 'replay must preserve the cache');
 }

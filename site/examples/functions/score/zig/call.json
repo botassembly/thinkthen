@@ -1,5 +1,5 @@
 {
-  "anchor": "    const urgency = try (try client.score(",
+  "anchor": "    const urgency = try client.score(arena, asks_urgency, \"Please refund my order.\", &diag);",
   "before": 0,
   "after": 2
 }

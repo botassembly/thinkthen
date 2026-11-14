@@ -1,5 +1,5 @@
 {
-  "anchor": "    var refunds = try client.filterAll(",
+  "anchor": "    var refunds = try client.filter(init.gpa, asks_refund, &messages, &diag);",
   "before": 0,
   "after": 2
 }

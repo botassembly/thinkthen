@@ -24,10 +24,11 @@ from ._questions import (
     TagQuestion,
     Toolbox,
 )
-from ._runtime import Cancel, normalize
+from ._runtime import Cancel, binding, normalize
 from ._types import (
+    ChoiceInput,
+    Failed,
     FailedRowsWarning,
-    RecordError,
     RelationRule,
     Strings,
     Threshold,
@@ -44,9 +45,23 @@ def annotation_definitions(question: object, rows: list[Any]) -> dict[str, Any]:
     return {
         name: {"function": value.function.value}
         for row in rows
-        if row.answer is not None
-        for name, value in row.answer.items()
+        if row._answer is not None
+        for name, value in row._answer.items()
     }
+
+
+def choice_domain(question: object) -> list[str]:
+    definition = (
+        json.loads(question._native.definition)
+        if isinstance(question, ChooseQuestion)
+        else question
+    )
+    if not isinstance(definition, Mapping):
+        return []
+    return [
+        value["name"] if isinstance(value, Mapping) else str(value)
+        for value in definition.get("choices", [])
+    ]
 
 
 def failure_entries(function: str, rows: list[Any]) -> list[dict[str, Any]]:
@@ -54,8 +69,8 @@ def failure_entries(function: str, rows: list[Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for row in sorted(rows, key=lambda row: row.position):
         outcomes: list[tuple[str | None, Any]] = [(None, row)]
-        if function == "annotate" and row.answer is not None:
-            outcomes.extend(row.answer.items())
+        if function == "annotate" and row._answer is not None:
+            outcomes.extend(row._answer.items())
         entries.extend(
             {
                 "position": row.position,
@@ -89,6 +104,34 @@ def failed_rows_warning(
             if row.position in positions
         ),
     )
+
+
+ANNOTATION_COLUMNS = (
+    "position",
+    "id",
+    "function",
+    "status",
+    "probability",
+    "source",
+    "detail",
+    "item",
+    "error_code",
+    "error_message",
+    "error_http_status",
+)
+ANNOTATION_SUFFIXES = (
+    "_status",
+    "_probability",
+    "_detail",
+    "_error_code",
+    "_error_message",
+    "_error_http_status",
+)
+
+
+def answer_value(row: Any) -> Any:
+    """Read a projected cell without applying the result's loud answer read."""
+    return row._answer if row.answered else None
 
 
 A = TypeVar("A")
@@ -127,6 +170,9 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         """
         return self._failure_frame(self._read_failures())
 
+    def _columns(self) -> list[str]:
+        return list(ANNOTATION_COLUMNS)
+
     def _missing(self, value: object) -> bool:
         return False
 
@@ -144,6 +190,17 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
     ) -> A | D | K:
         if errors not in {"raise", "coerce"}:
             raise ValueError('errors must be "raise" or "coerce"')
+        if function == "annotate":
+            admitted = (
+                question
+                if isinstance(question, AnnotateQuestion)
+                else AnnotateQuestion(cast(Any, question))
+            )
+            binding(
+                lambda: admitted._native.validate_table_columns(
+                    self._columns(), list(ANNOTATION_SUFFIXES)
+                )
+            )
         selected = default_client() if client is None else client
         with selected._rows(
             function,
@@ -154,15 +211,16 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
             cancel=cancel,
             **options,
         ) as stream:
-            rows = stream.to_list()
-        if errors == "raise":
+            rows = sorted(stream.to_list(), key=lambda row: row.position)
+            if function == "choose":
+                question = stream._question
+        if (not details or function == "filter") and (
+            errors == "raise" or function == "filter"
+        ):
             try:
                 for row in rows:
-                    row.raise_for_error()
-                    if function == "annotate" and row.answer is not None:
-                        for child in row.answer.values():
-                            child.raise_for_error()
-            except RecordError as error:
+                    row.raise_if_failed()
+            except Failed as error:
                 cast(Any, error).outcomes = self._frame(function, rows, question)
                 raise
         result: A | D | K
@@ -227,59 +285,36 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         """
         return self._call("decide", question, **options)
 
-    @overload
     def filter(
         self,
         question: FilterQuestion | str,
         *,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-        details: Literal[False] = False,
-        errors: Literal["raise", "coerce"] = "raise",
-    ) -> K: ...
-    @overload
-    def filter(
-        self,
-        question: FilterQuestion | str,
-        *,
-        threshold: Threshold | None = None,
-        field: str | None = None,
-        client: Client | None = None,
-        name: str | None = None,
-        cancel: Cancel | None = None,
-        details: Literal[True],
-        errors: Literal["raise", "coerce"] = "raise",
-    ) -> D: ...
-    @overload
-    def filter(
-        self,
-        question: FilterQuestion | str,
-        *,
-        threshold: Threshold | None = None,
-        field: str | None = None,
-        client: Client | None = None,
-        name: str | None = None,
-        cancel: Cancel | None = None,
-        details: bool,
-        errors: Literal["raise", "coerce"] = "raise",
-    ) -> K | D: ...
-    def filter(self, question: Any, **options: Any) -> A | D | K:
-        """Return the kept input rows; use details=True for outcomes.
-
-        Failed rows raise by default. With errors="coerce", the default subset
-        omits failed rows, warns with every failed code, and failures() lists them.
-        """
-        return self._call("filter", question, **options)
+    ) -> K:
+        """Return kept input rows, then raise if any record failed."""
+        return cast(
+            K,
+            self._call(
+                "filter",
+                question,
+                threshold=threshold,
+                field=field,
+                client=client,
+                name=name,
+                cancel=cancel,
+            ),
+        )
 
     @overload
     def choose(
         self,
         question: ChooseQuestion | str,
         *,
-        choices: Strings | None = None,
+        choices: ChoiceInput[Any] | None = None,
         threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -293,7 +328,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: ChooseQuestion | str,
         *,
-        choices: Strings | None = None,
+        choices: ChoiceInput[Any] | None = None,
         threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -307,7 +342,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: ChooseQuestion | str,
         *,
-        choices: Strings | None = None,
+        choices: ChoiceInput[Any] | None = None,
         threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -329,7 +364,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: TagQuestion | str,
         *,
-        labels: Strings | None = None,
+        labels: ChoiceInput[Any] | None = None,
         threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -343,7 +378,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: TagQuestion | str,
         *,
-        labels: Strings | None = None,
+        labels: ChoiceInput[Any] | None = None,
         threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -357,7 +392,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: TagQuestion | str,
         *,
-        labels: Strings | None = None,
+        labels: ChoiceInput[Any] | None = None,
         threshold: float | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -379,7 +414,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: ScoreQuestion | str,
         *,
-        levels: Strings | None = None,
+        levels: ChoiceInput[Any] | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
@@ -392,7 +427,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: ScoreQuestion | str,
         *,
-        levels: Strings | None = None,
+        levels: ChoiceInput[Any] | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
@@ -405,7 +440,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: ScoreQuestion | str,
         *,
-        levels: Strings | None = None,
+        levels: ChoiceInput[Any] | None = None,
         field: str | None = None,
         client: Client | None = None,
         name: str | None = None,
@@ -426,7 +461,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: RankQuestion | str,
         *,
-        levels: Strings | None = None,
+        levels: ChoiceInput[Any] | None = None,
         top: int | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -440,7 +475,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: RankQuestion | str,
         *,
-        levels: Strings | None = None,
+        levels: ChoiceInput[Any] | None = None,
         top: int | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -454,7 +489,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         self,
         question: RankQuestion | str,
         *,
-        levels: Strings | None = None,
+        levels: ChoiceInput[Any] | None = None,
         top: int | None = None,
         field: str | None = None,
         client: Client | None = None,
@@ -630,7 +665,7 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         cancel: Cancel | None = None,
         details: Literal[False] = False,
         errors: Literal["raise", "coerce"] = "raise",
-    ) -> A: ...
+    ) -> F: ...
     @overload
     def annotate(
         self,
@@ -656,16 +691,19 @@ class ColumnMethods(ABC, Generic[A, D, K, F]):
         cancel: Cancel | None = None,
         details: bool,
         errors: Literal["raise", "coerce"] = "raise",
-    ) -> A | D: ...
-    def annotate(self, question: Any = None, **options: Any) -> A | D | K:
+    ) -> F | D: ...
+    def annotate(self, question: Any = None, **options: Any) -> F | D:
         """Return an answer column; use details=True for outcomes.
 
         Failed rows raise by default; errors="coerce" replaces failed answers with
         null, warns with every failed code, and failures() lists them.
         """
         toolbox = options.pop("toolbox", None)
-        return self._call(
-            "annotate", question if question is not None else toolbox, **options
+        return cast(
+            F | D,
+            self._call(
+                "annotate", question if question is not None else toolbox, **options
+            ),
         )
 
 

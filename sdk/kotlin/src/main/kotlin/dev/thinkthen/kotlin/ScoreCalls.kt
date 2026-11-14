@@ -1,42 +1,65 @@
 package dev.thinkthen.kotlin
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlin.reflect.KClass
 
-/**
- * Scores one [record] on the scale of [levels], lowest first. [descriptions] optionally says what a level means.
- *
- * Throws [ThinkThenException] with `record.empty` for blank text, before any backend call. A missing record (null) gives a failed row. The row's `answer()` throws on not sure or failure. Pass many records to [scoreStream].
- */
-public suspend inline fun <reified T> ThinkThen.score(question: String, record: T?, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, LevelDetail> =
-    single(Score(question, levels, field, name, descriptions), record, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend inline fun <reified T> ThinkThen.score(question: String, record: T, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, T> =
+    single(ScoreQuestion(question, levels, field, name, descriptions), record, { recordSerializer<T>() })
 
-/** The same as the other `score`, encoding [record] with [serializer]. */
-public suspend fun <T> ThinkThen.score(question: String, record: T?, levels: List<String>, serializer: KSerializer<T>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, LevelDetail> =
-    single(Score(question, levels, field, name, descriptions), record, serializer)
+/** Enum words and scale order follow declaration order. */
+public suspend inline fun <reified T, E : Enum<E>> ThinkThen.score(question: String, record: T, levels: KClass<E>, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Row<Double, T> =
+    single(ScoreQuestion(question, levels, field, name, descriptions), record, { recordSerializer<T>() })
 
-/** The same as the other `score`, for a missing record written as `null`. It returns a failed `record.missing` row. */
-public suspend fun ThinkThen.score(question: String, record: Nothing?, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, LevelDetail> =
-    single(Score(question, levels, field, name, descriptions), record, JsonElement.serializer())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public suspend fun ThinkThen.score(question: String, record: Nothing?, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, Nothing?> =
+    single(ScoreQuestion(question, levels, field, name, descriptions), record, { JsonElement.serializer() })
 
-/** The same as the other `score`, for one JSON array record. A JSON array is one record, not many records. */
-public suspend fun ThinkThen.score(question: String, record: JsonArray, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, LevelDetail> =
-    single(Score(question, levels, field, name, descriptions), record, JsonElement.serializer())
+/** Enum words and scale order follow declaration order. */
+public suspend fun <E : Enum<E>> ThinkThen.score(question: String, record: Nothing?, levels: KClass<E>, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Row<Double, Nothing?> =
+    single(ScoreQuestion(question, levels, field, name, descriptions), record, { JsonElement.serializer() })
 
-/** Many records as a cold flow of rows in input order. Each collection makes its own call; a failed record gives a failed row and the rest continue. */
-public inline fun <reified T> ThinkThen.scoreStream(question: String, records: Flow<T>, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<Double, LevelDetail>> =
-    stream(Score(question, levels, field, name, descriptions), records, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.scoreStream(question: String, records: Flow<T>, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<Double, T>> =
+    stream(ScoreQuestion(question, levels, field, name, descriptions), records, { recordSerializer<T>() })
 
-/** The same as the other `scoreStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.scoreStream(question: String, records: Flow<T?>, levels: List<String>, serializer: KSerializer<T>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<Double, LevelDetail>> =
-    stream(Score(question, levels, field, name, descriptions), records, serializer)
+/** Enum words and scale order follow declaration order. */
+public inline fun <reified T, E : Enum<E>> ThinkThen.scoreStream(question: String, records: Flow<T>, levels: KClass<E>, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Flow<Row<Double, T>> =
+    stream(ScoreQuestion(question, levels, field, name, descriptions), records, { recordSerializer<T>() })
 
-/** Many records from a collection, as a cold flow of rows in input order. */
-public inline fun <reified T> ThinkThen.scoreStream(question: String, records: Iterable<T>, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<Double, LevelDetail>> =
-    iterable(Score(question, levels, field, name, descriptions), records, recordSerializer<T>())
+/** One record or a cold flow of records, using the client’s JSON configuration. */
+public inline fun <reified T> ThinkThen.scoreStream(question: String, records: Iterable<T>, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<Double, T>> =
+    iterable(ScoreQuestion(question, levels, field, name, descriptions), records, { recordSerializer<T>() })
 
-/** The same as the other `scoreStream`, encoding records with [serializer]. */
-public fun <T> ThinkThen.scoreStream(question: String, records: Iterable<T?>, levels: List<String>, serializer: KSerializer<T>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Flow<Row<Double, LevelDetail>> =
-    iterable(Score(question, levels, field, name, descriptions), records, serializer)
+/** Enum words and scale order follow declaration order. */
+public inline fun <reified T, E : Enum<E>> ThinkThen.scoreStream(question: String, records: Iterable<T>, levels: KClass<E>, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Flow<Row<Double, T>> =
+    iterable(ScoreQuestion(question, levels, field, name, descriptions), records, { recordSerializer<T>() })
+
+/** Ask an immutable typed question. */
+public suspend inline fun <reified T> ThinkThen.score(question: ScoreQuestion, record: T): Row<Double, T> =
+    single(question, record, { recordSerializer<T>() })
+
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.scoreStream(question: ScoreQuestion, records: Iterable<T>): Flow<Row<Double, T>> =
+    iterable(question, records, { recordSerializer<T>() })
+
+/** Ask an immutable typed question. */
+public inline fun <reified T> ThinkThen.scoreStream(question: ScoreQuestion, records: Flow<T>): Flow<Row<Double, T>> =
+    stream(question, records, { recordSerializer<T>() })
+
+/** One JSON array is one record. */
+public suspend fun ThinkThen.score(question: String, record: kotlinx.serialization.json.JsonArray, levels: List<String>, field: Pointer? = null, name: String? = null, descriptions: Map<String, String> = emptyMap()): Row<Double, kotlinx.serialization.json.JsonArray> =
+    single(ScoreQuestion(question, levels, field, name, descriptions), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun <E : Enum<E>> ThinkThen.score(question: String, record: kotlinx.serialization.json.JsonArray, levels: KClass<E>, field: Pointer? = null, name: String? = null, descriptions: Map<E, String> = emptyMap()): Row<Double, kotlinx.serialization.json.JsonArray> =
+    single(ScoreQuestion(question, levels, field, name, descriptions), record, { JsonElement.serializer() })
+
+/** One JSON array is one record. */
+public suspend fun ThinkThen.score(question: ScoreQuestion, record: kotlinx.serialization.json.JsonArray): Row<Double, kotlinx.serialization.json.JsonArray> =
+    single(question, record, { JsonElement.serializer() })
+
+/** A missing record retains null as its original item. */
+public suspend fun ThinkThen.score(question: ScoreQuestion, record: Nothing?): Row<Double, Nothing?> =
+    single(question, record, { JsonElement.serializer() })

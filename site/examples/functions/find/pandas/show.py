@@ -7,9 +7,9 @@ messages = pd.DataFrame(
 actions = messages["message"].thinkthen.find(
     "Which line states the requested action?"
 )
-# NA when there is no answer: no line found, not sure, or failed.
+# Use details=True to distinguish no span from a missing answer.
 for action in actions:
-    if action is pd.NA:
+    if action is None or action is pd.NA:
         print("no answer")
     else:
         print(action.text)

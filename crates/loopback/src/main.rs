@@ -43,9 +43,16 @@ impl Fixture {
     fn open() -> Result<Self, Box<dyn std::error::Error>> {
         let mut args = std::env::args().skip(1);
         let first = args.next().ok_or(
-            "usage: loopback CASE.json | --stress NAME [--prime REQUESTS] | --held headers|body|refusal-body | --unavailable",
+            "usage: loopback CASE.json | --guide-scenario NAME | --stress NAME [--prime REQUESTS] | --held headers|body|refusal-body | --unavailable",
         )?;
         match first.as_str() {
+            "--guide-scenario" => {
+                let name = args.next().ok_or("expected guide scenario name")?;
+                if args.next().is_some() {
+                    return Err("expected one guide scenario name".into());
+                }
+                Ok(Self::Case(Loopback::guide_scenario(&name)?))
+            }
             "--stress" => {
                 let name = args.next().ok_or("expected stress scenario name")?;
                 let prime = match (args.next().as_deref(), args.next()) {

@@ -1,64 +1,55 @@
 import Foundation
 
-/// Field selection and options for this function.
-public struct ChooseOptions: Sendable, Codable, Equatable, Hashable {
-  /// A JSON pointer selecting the field, or nil to use the whole record.
-  public let field: String?
-  /// The threshold used to decide whether the engine is sure enough.
-  public let threshold: Double?
-  /// Create this value from its typed fields.
-  public init(field: String? = nil, threshold: Double? = nil) {
-    self.field = field
-    self.threshold = threshold
-  }
-}
-/// A typed question that can be saved and reused for this function.
-public struct ChooseQuestion: FunctionShape, Codable, Equatable, Hashable {
-  /// The plain answer returned by this function.
-  public typealias Answer = String
-  /// The probability detail returned by this function.
+public struct ChooseQuestion<ChoiceValue: Sendable>: SavedQuestion, FunctionShape, Equatable,
+  Hashable
+{
+  public typealias Answer = ChoiceValue
   public typealias Detail = LabelDetail
-  /// The function this question or result belongs to.
-  public static let function = FunctionName.choose
-  /// The question supplied to the engine.
-  public let question: String
-  /// The allowed answer labels and their optional descriptions.
-  public let choices: [Choice]
-  /// The field selection and function-specific options for this question.
-  public let options: ChooseOptions
-  /// Create this value from its typed fields.
-  public init(_ question: String, choices: [Choice], options: ChooseOptions = .init()) {
-    self.question = question
-    self.choices = choices
-    self.options = options
+  public static var function: FunctionName { .choose }
+  public func encode(to encoder: any Encoder) throws { try definition.encode(to: encoder) }
+  public let definition: JSONValue
+  public init(
+    _ question: String, choices: ChoiceValue.Type, descriptions: [ChoiceValue: String] = [:],
+    threshold: Double? = nil, field: String? = nil
+  ) where ChoiceValue: RawRepresentable & CaseIterable & Hashable, ChoiceValue.RawValue == String {
+    definition = describedDefinition(
+      "choose",
+      [
+        "question": .string(question), "choices": choicesJSON(ChoiceValue.self, descriptions),
+        "threshold": json(threshold), "field": json(field),
+      ], names: ChoiceValue.allCases.map(\.rawValue), descriptions: rawDescriptions(descriptions))
   }
-  /// Use every case of a String-backed enum as a choice label.
-  public init<C: RawRepresentable & CaseIterable>(
-    _ question: String, choices: C.Type,
-    options: ChooseOptions = .init()
-  ) where C.RawValue == String {
-    self.init(question, choices: C.allCases.map { Choice($0.rawValue) }, options: options)
+  public init(
+    _ question: String, choices: [String], descriptions: [String: String] = [:],
+    threshold: Double? = nil, field: String? = nil
+  ) where ChoiceValue == String {
+    definition = describedDefinition(
+      "choose",
+      [
+        "question": .string(question), "choices": choicesJSON(choices, descriptions),
+        "threshold": json(threshold), "field": json(field),
+      ], names: choices, descriptions: descriptions)
   }
-  enum CodingKeys: String, CodingKey { case question, choices }
-  /// Decode this value from its canonical JSON representation.
-  public init(from decoder: any Decoder) throws {
-    try checkFunction(Self.function, from: decoder)
-    let c = try decoder.container(keyedBy: CodingKeys.self)
-    question = try c.decode(String.self, forKey: .question)
-    choices = try c.decode([Choice].self, forKey: .choices)
-    options = try ChooseOptions(from: decoder)
+  init(definition: JSONValue) { self.definition = definition }
+  private static func convert(_ raw: String) throws -> ChoiceValue {
+    if let string = raw as? ChoiceValue { return string }
+    if let type = ChoiceValue.self as? any RawRepresentable.Type,
+      let value = rawValue(type, raw) as? ChoiceValue
+    {
+      return value
+    }
+    throw InternalError(code: .internalBug, message: "Answer is outside the enum's choices")
   }
-  /// Encode this value in its canonical JSON representation.
-  public func encode(to encoder: any Encoder) throws {
-    var c = encoder.container(keyedBy: CodingKeys.self)
-    try c.encode(question, forKey: .question)
-    try c.encode(choices, forKey: .choices)
-    try options.encode(to: encoder)
-    var tag = encoder.container(keyedBy: FunctionKey.self)
-    try tag.encode(Self.function, forKey: .function)
+  public static func decodeAnswer(_ data: Data, using decoder: JSONDecoder) throws -> Answer {
+    return try convert(decoder.decode(String.self, from: data))
   }
 }
-/// The typed result for one record.
-public typealias ChooseRow = Row<ChooseQuestion>
-/// The lazy stream of typed results for this function.
-public typealias ChooseRows = Rows<ChooseRow>
+extension ChooseQuestion: Decodable where ChoiceValue == String {
+  public init(from decoder: any Decoder) throws { definition = try JSONValue(from: decoder) }
+}
+public typealias ChooseRow<ChoiceValue: Sendable, Item: Sendable> = Row<
+  ChooseQuestion<ChoiceValue>, Item
+>
+public typealias ChooseRows<ChoiceValue: Sendable, Item: Sendable> = Rows<
+  ChooseRow<ChoiceValue, Item>
+>

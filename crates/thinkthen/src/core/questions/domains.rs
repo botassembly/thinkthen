@@ -7,34 +7,24 @@ use super::*;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(try_from = "ChooseWire", into = "ChooseWire")]
 #[schemars(with = "ChooseWire")]
-pub struct Choose {
+pub struct Choose<C: Choice = String> {
+    #[serde(skip)]
+    pub(super) choice: std::marker::PhantomData<C>,
     pub(crate) inner: crate::core::Choose,
     pub(super) field: Option<Pointer>,
 }
-impl Choose {
-    /// Admit this function's required question and domain.
-    /// # Errors
-    /// Returns the shared question or name validation error.
-    pub fn new(
-        question: impl Into<String>,
-        choices: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Result<Self, Error> {
-        Self::with_options(
-            question,
-            choices
-                .into_iter()
-                .map(|value| AnswerOption::new(value.into()))
-                .collect::<Result<Vec<_>, _>>()?,
-        )
-    }
+impl<C: Choice> Choose<C> {
     /// Admit named choices with optional descriptions.
     /// # Errors
     /// Returns the shared question or domain validation error.
-    pub fn with_options(
+    pub(super) fn from_options(
         question: impl Into<String>,
         choices: impl IntoIterator<Item = AnswerOption>,
     ) -> Result<Self, Error> {
+        let choices: Vec<_> = choices.into_iter().collect();
+        choice::validate::<C>(&choices)?;
         Ok(Self {
+            choice: std::marker::PhantomData,
             inner: crate::core::Choose::new(question, choices)?,
             field: None,
         })
@@ -58,7 +48,67 @@ impl Choose {
         self.inner.threshold = threshold.into();
         self
     }
+    pub(super) fn typed<D: Choice>(self) -> Result<Choose<D>, Error> {
+        choice::validate::<D>(&self.inner.options)?;
+        Ok(Choose {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+        })
+    }
+    pub(crate) fn erase(self) -> Choose {
+        Choose {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+        }
+    }
 }
+impl Choose<String> {
+    /// Admit explicit string labels and descriptions.
+    /// # Errors
+    /// Refuses invalid question text or label domains.
+    pub fn with_options(
+        question: impl Into<String>,
+        values: impl IntoIterator<Item = AnswerOption>,
+    ) -> Result<Self, Error> {
+        Self::from_options(question, values)
+    }
+
+    /// Admit this function's required question and domain.
+    /// # Errors
+    /// Returns the shared question or name validation error.
+    pub fn with_strings(
+        question: impl Into<String>,
+        choices: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Result<Self, Error> {
+        Self::from_options(
+            question,
+            choices
+                .into_iter()
+                .map(|value| AnswerOption::new(value.into()))
+                .collect::<Result<Vec<_>, _>>()?,
+        )
+    }
+}
+impl<C: Choices> Choose<C> {
+    /// Admit a question using this enum's declaration order.
+    /// # Errors
+    /// Refuses invalid question text or an invalid enum domain.
+    pub fn new(question: impl Into<String>) -> Result<Self, Error> {
+        Self::from_options(question, choice::options::<C>()?)
+    }
+    /// Describe enum members without changing their declaration order.
+    #[must_use]
+    pub fn descriptions(
+        mut self,
+        values: impl IntoIterator<Item = (C, impl Into<String>)>,
+    ) -> Self {
+        choice::descriptions(&mut self.inner.options, values);
+        self
+    }
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ChooseWire {
@@ -80,10 +130,10 @@ pub(crate) struct ChooseWire {
     #[schemars(with = "Pointer")]
     field: Option<String>,
 }
-impl TryFrom<ChooseWire> for Choose {
+impl<C: Choice> TryFrom<ChooseWire> for Choose<C> {
     type Error = Error;
     fn try_from(value: ChooseWire) -> Result<Self, Error> {
-        let mut question = Self::with_options(
+        let mut question = Self::from_options(
             value.question,
             value
                 .choices
@@ -98,8 +148,8 @@ impl TryFrom<ChooseWire> for Choose {
         Ok(question)
     }
 }
-impl From<Choose> for ChooseWire {
-    fn from(value: Choose) -> Self {
+impl<C: Choice> From<Choose<C>> for ChooseWire {
+    fn from(value: Choose<C>) -> Self {
         Self {
             question: value.inner.text,
             choices: value.inner.options.into_iter().map(Into::into).collect(),
@@ -114,34 +164,24 @@ impl From<Choose> for ChooseWire {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(try_from = "TagWire", into = "TagWire")]
 #[schemars(with = "TagWire")]
-pub struct Tag {
+pub struct Tag<C: Choice = String> {
+    #[serde(skip)]
+    pub(super) choice: std::marker::PhantomData<C>,
     pub(crate) inner: crate::core::Tag,
     pub(super) field: Option<Pointer>,
 }
-impl Tag {
-    /// Admit this function's required question and domain.
-    /// # Errors
-    /// Returns the shared question or name validation error.
-    pub fn new(
-        question: impl Into<String>,
-        labels: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Result<Self, Error> {
-        Self::with_options(
-            question,
-            labels
-                .into_iter()
-                .map(|value| AnswerOption::new(value.into()))
-                .collect::<Result<Vec<_>, _>>()?,
-        )
-    }
+impl<C: Choice> Tag<C> {
     /// Admit named answers with optional descriptions.
     /// # Errors
     /// Returns the shared question or domain validation error.
-    pub fn with_options(
+    pub(super) fn from_options(
         question: impl Into<String>,
         labels: impl IntoIterator<Item = AnswerOption>,
     ) -> Result<Self, Error> {
+        let labels: Vec<_> = labels.into_iter().collect();
+        choice::validate::<C>(&labels)?;
         Ok(Self {
+            choice: std::marker::PhantomData,
             inner: crate::core::Tag::with_options(question, labels)?,
             field: None,
         })
@@ -165,7 +205,67 @@ impl Tag {
         self.inner.threshold = threshold.into();
         self
     }
+    pub(super) fn typed<D: Choice>(self) -> Result<Tag<D>, Error> {
+        choice::validate::<D>(&self.inner.labels)?;
+        Ok(Tag {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+        })
+    }
+    pub(crate) fn erase(self) -> Tag {
+        Tag {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+        }
+    }
 }
+impl Tag<String> {
+    /// Admit explicit string labels and descriptions.
+    /// # Errors
+    /// Refuses invalid question text or label domains.
+    pub fn with_options(
+        question: impl Into<String>,
+        values: impl IntoIterator<Item = AnswerOption>,
+    ) -> Result<Self, Error> {
+        Self::from_options(question, values)
+    }
+
+    /// Admit this function's required question and domain.
+    /// # Errors
+    /// Returns the shared question or name validation error.
+    pub fn with_strings(
+        question: impl Into<String>,
+        labels: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Result<Self, Error> {
+        Self::from_options(
+            question,
+            labels
+                .into_iter()
+                .map(|value| AnswerOption::new(value.into()))
+                .collect::<Result<Vec<_>, _>>()?,
+        )
+    }
+}
+impl<C: Choices> Tag<C> {
+    /// Admit a question using this enum's declaration order.
+    /// # Errors
+    /// Refuses invalid question text or an invalid enum domain.
+    pub fn new(question: impl Into<String>) -> Result<Self, Error> {
+        Self::from_options(question, choice::options::<C>()?)
+    }
+    /// Describe enum members without changing their declaration order.
+    #[must_use]
+    pub fn descriptions(
+        mut self,
+        values: impl IntoIterator<Item = (C, impl Into<String>)>,
+    ) -> Self {
+        choice::descriptions(&mut self.inner.labels, values);
+        self
+    }
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct TagWire {
@@ -187,10 +287,10 @@ pub(crate) struct TagWire {
     #[schemars(with = "Pointer")]
     field: Option<String>,
 }
-impl TryFrom<TagWire> for Tag {
+impl<C: Choice> TryFrom<TagWire> for Tag<C> {
     type Error = Error;
     fn try_from(value: TagWire) -> Result<Self, Error> {
-        let mut question = Self::with_options(
+        let mut question = Self::from_options(
             value.question,
             value
                 .labels
@@ -205,8 +305,8 @@ impl TryFrom<TagWire> for Tag {
         Ok(question)
     }
 }
-impl From<Tag> for TagWire {
-    fn from(value: Tag) -> Self {
+impl<C: Choice> From<Tag<C>> for TagWire {
+    fn from(value: Tag<C>) -> Self {
         Self {
             question: value.inner.text,
             labels: value.inner.labels.into_iter().map(Into::into).collect(),
@@ -221,34 +321,24 @@ impl From<Tag> for TagWire {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(try_from = "ScoreWire", into = "ScoreWire")]
 #[schemars(with = "ScoreWire")]
-pub struct Score {
+pub struct Score<C: Choice = String> {
+    #[serde(skip)]
+    pub(super) choice: std::marker::PhantomData<C>,
     pub(crate) inner: crate::core::Score,
     pub(super) field: Option<Pointer>,
 }
-impl Score {
-    /// Admit this function's required question and domain.
-    /// # Errors
-    /// Returns the shared question or name validation error.
-    pub fn new(
-        question: impl Into<String>,
-        levels: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Result<Self, Error> {
-        Self::with_options(
-            question,
-            levels
-                .into_iter()
-                .map(|value| AnswerOption::new(value.into()))
-                .collect::<Result<Vec<_>, _>>()?,
-        )
-    }
+impl<C: Choice> Score<C> {
     /// Admit named answers with optional descriptions.
     /// # Errors
     /// Returns the shared question or domain validation error.
-    pub fn with_options(
+    pub(super) fn from_options(
         question: impl Into<String>,
         levels: impl IntoIterator<Item = AnswerOption>,
     ) -> Result<Self, Error> {
+        let levels: Vec<_> = levels.into_iter().collect();
+        choice::validate::<C>(&levels)?;
         Ok(Self {
+            choice: std::marker::PhantomData,
             inner: crate::core::Score::with_options(question, levels)?,
             field: None,
         })
@@ -266,7 +356,67 @@ impl Score {
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
+    pub(super) fn typed<D: Choice>(self) -> Result<Score<D>, Error> {
+        choice::validate::<D>(&self.inner.levels)?;
+        Ok(Score {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+        })
+    }
+    pub(crate) fn erase(self) -> Score {
+        Score {
+            inner: self.inner,
+            field: self.field,
+            choice: std::marker::PhantomData,
+        }
+    }
 }
+impl Score<String> {
+    /// Admit explicit string labels and descriptions.
+    /// # Errors
+    /// Refuses invalid question text or label domains.
+    pub fn with_options(
+        question: impl Into<String>,
+        values: impl IntoIterator<Item = AnswerOption>,
+    ) -> Result<Self, Error> {
+        Self::from_options(question, values)
+    }
+
+    /// Admit this function's required question and domain.
+    /// # Errors
+    /// Returns the shared question or name validation error.
+    pub fn with_strings(
+        question: impl Into<String>,
+        levels: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Result<Self, Error> {
+        Self::from_options(
+            question,
+            levels
+                .into_iter()
+                .map(|value| AnswerOption::new(value.into()))
+                .collect::<Result<Vec<_>, _>>()?,
+        )
+    }
+}
+impl<C: Choices> Score<C> {
+    /// Admit a question using this enum's declaration order.
+    /// # Errors
+    /// Refuses invalid question text or an invalid enum domain.
+    pub fn new(question: impl Into<String>) -> Result<Self, Error> {
+        Self::from_options(question, choice::options::<C>()?)
+    }
+    /// Describe enum members without changing their declaration order.
+    #[must_use]
+    pub fn descriptions(
+        mut self,
+        values: impl IntoIterator<Item = (C, impl Into<String>)>,
+    ) -> Self {
+        choice::descriptions(&mut self.inner.levels, values);
+        self
+    }
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ScoreWire {
@@ -284,10 +434,10 @@ pub(crate) struct ScoreWire {
     #[schemars(with = "Pointer")]
     field: Option<String>,
 }
-impl TryFrom<ScoreWire> for Score {
+impl<C: Choice> TryFrom<ScoreWire> for Score<C> {
     type Error = Error;
     fn try_from(value: ScoreWire) -> Result<Self, Error> {
-        let mut question = Self::with_options(
+        let mut question = Self::from_options(
             value.question,
             value
                 .levels
@@ -299,8 +449,8 @@ impl TryFrom<ScoreWire> for Score {
         Ok(question)
     }
 }
-impl From<Score> for ScoreWire {
-    fn from(value: Score) -> Self {
+impl<C: Choice> From<Score<C>> for ScoreWire {
+    fn from(value: Score<C>) -> Self {
         Self {
             question: value.inner.text,
             levels: value.inner.levels.into_iter().map(Into::into).collect(),

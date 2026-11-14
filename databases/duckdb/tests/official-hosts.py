@@ -11,7 +11,6 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from testing import child_environment
 from cases import quote
-from documented_sql import documents
 
 package, deps = map(Path, sys.argv[1:])
 root = Path(__file__).resolve().parents[3]
@@ -58,12 +57,6 @@ print(dependencies)
 cli = deps / 'cli/duckdb'
 assert subprocess.check_output([str(cli), '--version'], env=env, text=True).startswith('v' + VERSION + ' ')
 
-with tempfile.TemporaryDirectory() as temporary:
-    helper = root / 'scripts/surface-example'
-    subprocess.run([sys.executable, str(helper), 'prepare', 'duckdb', temporary, str(extension)], env=env, check=True)
-    subprocess.run([sys.executable, str(helper), 'check', 'duckdb', str(cli), '-unsigned', '-json',
-                    '-init', '/dev/null', ':memory:', '-f', str(Path(temporary) / 'example.sql')],
-                   env=env, cwd=temporary, check=True)
 
 prefix = f"LOAD {quote(str(extension))}; SET thinkthen_backend = 'stub';"
 prefix += " SET thinkthen_model='temporary'; RESET thinkthen_model; RESET thinkthen_batch; RESET thinkthen_max_retries; RESET thinkthen_initial_backoff_ms; RESET thinkthen_attempt_timeout_ms;"
@@ -81,11 +74,6 @@ for statement, count in zip(statements, counts, strict=True):
     result = json.loads(output)
     assert len(result) == count and all(row['status'] != 'failed' for row in result), result
 with tempfile.TemporaryDirectory() as temporary:
-    authored = documents(root, extension, temporary)
-    for document in authored:
-        executed = subprocess.run([str(cli), '-bail', '-unsigned', '-json', '-init', '/dev/null', ':memory:'],
-                                  input=document['sql'], env=env, cwd=temporary, capture_output=True, text=True)
-        assert executed.returncode == 0, (document['source'], executed.stderr, executed.stdout)
     venv = Path(temporary) / 'venv'
     subprocess.run([sys.executable, '-m', 'venv', '--without-pip', str(venv)], env=env, check=True)
     python = venv / 'bin/python3'
@@ -102,10 +90,7 @@ with duckdb.connect(config={'allow_unsigned_extensions': 'true'}) as connection:
         status = [column[0] for column in cursor.description].index('status')
         rows = cursor.fetchall()
         assert len(rows) == count and all(row[status] != 'failed' for row in rows), rows
-for document in json.loads(sys.argv[4]):
-    with duckdb.connect(config={'allow_unsigned_extensions': 'true'}) as connection:
-        connection.execute(document['sql'])
 """
-    subprocess.run([str(python), '-I', '-c', script, prefix, query, json.dumps(statements), json.dumps(authored)], env=env, cwd=temporary, check=True)
-    print('Official CLI and Python execute every authored SQL block:', {document['source']: document['blocks'] for document in authored})
+    subprocess.run([str(python), '-I', '-c', script, prefix, query, json.dumps(statements)], env=env, cwd=temporary, check=True)
+    print('Official CLI and Python execute all ten functions and retain local NULL failures')
 print('Official DuckDB command and Python load the packaged canonical ABI')

@@ -39,6 +39,30 @@ for (const name of names) {
     fs.cpSync(source, target, { recursive: true, dereference: false, verbatimSymlinks: true });
   }
 }
+// Close absolute runtime links over the copied files. Configuration links to
+// system files (for example Java's public CA store) become immutable copies.
+for (const name of names) {
+  const closeLinks = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const destination = path.join(directory, entry.name);
+      if (entry.isDirectory()) { closeLinks(destination); continue; }
+      if (!entry.isSymbolicLink()) continue;
+      const target = fs.readlinkSync(destination);
+      const selected = names.find((candidate) => path.isAbsolute(target) &&
+        (target === roots[candidate].root || target.startsWith(roots[candidate].root + path.sep)));
+      if (selected) {
+        fs.unlinkSync(destination);
+        fs.symlinkSync(path.join(mapped[selected], path.relative(roots[selected].root, target)), destination);
+      } else if (!fs.existsSync(destination) || !Object.values(mapped).some((root) => fs.realpathSync(destination).startsWith(root + path.sep))) {
+        const original = path.join(roots[name].root, path.relative(mapped[name], destination));
+        const resolved = fs.realpathSync(original);
+        fs.unlinkSync(destination);
+        fs.cpSync(resolved, destination, { recursive: true, dereference: true });
+      }
+    }
+  };
+  closeLinks(mapped[name]);
+}
 // Ruby embeds its original load paths even when its executable is copied.
 // Query the selected runtime rather than duplicating its version/architecture.
 const rubyPaths = spawnSync(roots.ruby.executable,
@@ -70,22 +94,32 @@ const environment = {
   LD_LIBRARY_PATH: [mapped.swift, path.join(packages, 'swift-libs'), path.join(packages, 'c/lib')].join(path.delimiter),
 };
 fs.writeFileSync(path.join(out, 'environment.json'), JSON.stringify(environment, null, 2) + '\n');
+// Redirect staged interpreter links into the copied closure before freezing it.
+// Other package links must already resolve when the closure is consumed.
+const stagedPython = path.join(packages, 'bin/python3');
+if (fs.readdirSync(path.dirname(stagedPython)).includes('python3')) {
+  if (!fs.lstatSync(stagedPython).isSymbolicLink()) throw new Error('Staged Python must be a runtime link');
+  fs.unlinkSync(stagedPython);
+  fs.symlinkSync(runtimeExecutable('python'), stagedPython);
+}
 const files = {}, links = {};
-const inventory = (directory) => {
+const inventory = (directory, base = out, targetFiles = files, targetLinks = links) => {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
-    const relative = path.relative(out, file);
+    const relative = path.relative(base, file);
     if (entry.isSymbolicLink()) {
-      links[relative] = fs.readlinkSync(file);
+      targetLinks[relative] = fs.readlinkSync(file);
       if (!fs.existsSync(file)) throw new Error(`Unresolved runtime link: ${file}`);
-    } else if (entry.isDirectory()) inventory(file);
-    else if (entry.isFile()) files[relative] = createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    } else if (entry.isDirectory()) inventory(file, base, targetFiles, targetLinks);
+    else if (entry.isFile()) targetFiles[relative] = createHash('sha256').update(fs.readFileSync(file)).digest('hex');
     else throw new Error(`Unsupported runtime file: ${file}`);
   }
 };
 inventory(out);
+const packageFiles = {}, packageLinks = {};
+inventory(packages, packages, packageFiles, packageLinks);
 const source = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
 if (source.status !== 0) throw new Error('Cannot identify runtime bundle source');
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ source: source.stdout.trim(), packageSource,
-  packages, preparedSource: prepared.source, prepared: prepared.directory, roots, mapped, files, links }, null, 2) + '\n');
+  packages, preparedSource: prepared.source, prepared: prepared.directory, roots, mapped, files, links, packageFiles, packageLinks }, null, 2) + '\n');
 console.log(`Bundled six prepared runtimes (${Object.keys(files).length} files) in ${out}`);

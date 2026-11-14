@@ -134,8 +134,8 @@ static int recognize(const thinkthen_client *client) {
 }
 
 static int relate(const thinkthen_client *client) {
-    const thinkthen_rule rules[] = {{.relation = {"works_for", 9}, .source = {"person", 6},
-                                     .target = {"company", 7}, .either = 1}};
+    const thinkthen_rule rules[] = {{{"person", 6}, {"company", 7},
+                                     {"works_for", 9}, {NULL, 0}, 1}};
     thinkthen_value *links = NULL;
     thinkthen_error error = THINKTHEN_ERROR_INIT;
     int rc = thinkthen_relate(client, rules, 1, "Ada Acme Bea", THINKTHEN_NUL_TERMINATED, &links, &error);
@@ -187,7 +187,7 @@ static int filter(const thinkthen_client *client) {
     thinkthen_question *ready = NULL;
     thinkthen_call *call = NULL;
     if (thinkthen_question_new(THINKTHEN_FUNCTION_FILTER, "Ready?", THINKTHEN_NUL_TERMINATED, &ready, &error) != THINKTHEN_OK
-        || thinkthen_question_set_band(ready, 0.2, 0.8, &error) != THINKTHEN_OK)
+        || thinkthen_question_set_cut(ready, 0.8, &error) != THINKTHEN_OK)
         return failed("question", &error);
     thinkthen_record_input records[5] = {
         {sizeof(thinkthen_record_input), THINKTHEN_RECORD_TEXT, "refund", 6},
@@ -202,14 +202,25 @@ static int filter(const thinkthen_client *client) {
     /* One row variable for every pull: passing it again frees what it held. */
     thinkthen_row complaint = THINKTHEN_ROW_INIT;
     int rc;
-    while ((rc = thinkthen_call_next_kept(call, &complaint, &error)) != THINKTHEN_END) {
-        if (rc < 0 && complaint.position == 0) return failed("next", &error);
+    while ((rc = thinkthen_call_next_kept(call, &complaint, &error)) == THINKTHEN_OK) {
         thinkthen_record_view original;
         if (thinkthen_row_original(&complaint, &original, NULL) != THINKTHEN_OK) return 1;
         printf("rc=%d position=%" PRIu64 " text=", rc, complaint.position);
         fwrite(original.data, 1, original.len, stdout);
         putchar('\n');
     }
+    if (rc < 0) {
+        printf("failed rc=%d\n", rc);
+        if (thinkthen_call_next_kept(call, &complaint, &error) != THINKTHEN_END) return 1;
+        while ((rc = thinkthen_call_next_failed(call, &complaint, &error)) == THINKTHEN_OK) {
+            thinkthen_record_view original;
+            if (thinkthen_row_original(&complaint, &original, NULL) != THINKTHEN_OK) return 1;
+            printf("rc=%d position=%" PRIu64 " text=", -(int)complaint.error_code, complaint.position);
+            fwrite(original.data, 1, original.len, stdout);
+            putchar('\n');
+        }
+    }
+    if (rc != THINKTHEN_END) return failed("next", &error);
     thinkthen_row_free(&complaint);
     thinkthen_error_free(&error);
     thinkthen_call_free(call);
@@ -237,11 +248,12 @@ static int meanings(const thinkthen_client *client) {
     thinkthen_row row = THINKTHEN_ROW_INIT;
     rc = thinkthen_run_one(client, ready, "The build passed.", THINKTHEN_NUL_TERMINATED,
                            THINKTHEN_RECORD_TEXT, &row, &error);
-    printf("ready rc=%d answer=%d\n", rc, row.answer_bool);
+    bool answer=false; if(rc==THINKTHEN_OK)rc=thinkthen_row_answer_bool(&row,&answer,&error);
+    printf("ready rc=%d answer=%d\n", rc, answer);
     rc = thinkthen_run_one(client, team, "A refund.", THINKTHEN_NUL_TERMINATED,
                            THINKTHEN_RECORD_TEXT, &row, &error);
     printf("team rc=%d answer=", rc);
-    fwrite(row.answer.data, 1, row.answer.len, stdout);
+    printf("\"%s\"",thinkthen_row_string(&row));
     putchar('\n');
     thinkthen_row_free(&row);
     thinkthen_error_free(&error);

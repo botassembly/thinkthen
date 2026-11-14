@@ -49,9 +49,10 @@ static void execute(void) {
     assert(open_question(client, question, NULL, THINKTHEN_OFFSET_CODE_POINTS, &call, &error) == THINKTHEN_OK);
     call_free(call);
     thinkthen_row row = {0}; row.struct_size = sizeof(row);
+    assert(run_one(client, question, "body", 4, THINKTHEN_RECORD_TEXT, &row, &error) == THINKTHEN_OK);
+    assert(row.status == THINKTHEN_STATUS_ANSWERED && row.position == 1);
     assert(run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING, &row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
-    assert(row.status == THINKTHEN_STATUS_FAILED && row.error_code == THINKTHEN_CODE_RECORD_MISSING);
-    assert(row.position == 1);
+    assert(row.private_data == NULL && error.code == THINKTHEN_CODE_RECORD_MISSING);
     question_free(question); client_free(client); row_free(&row); error_free(&error);
 }
 int main(int argc, char **argv) {

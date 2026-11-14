@@ -1,5 +1,5 @@
 {
-  "anchor": "    const names = try (try client.recognize(",
+  "anchor": "    const names = try client.recognize(arena, finds_names, \"Morgan works for Example Group.\", &diag);",
   "before": 0,
   "after": 2
 }

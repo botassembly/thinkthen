@@ -1,5 +1,5 @@
 {
-  "anchor": "ValueList<Relation> relations = await client.RelateAsync(message, [worksFor]);",
+  "anchor": "var relations = await client.RelateAsync(message, [worksFor]);",
   "before": 0,
   "after": 2
 }

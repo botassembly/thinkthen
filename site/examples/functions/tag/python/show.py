@@ -5,4 +5,4 @@ topics = tt.tag(
     "I was charged twice and my parcel is late again.",
     labels=["billing", "shipping"],
 )
-print(list(topics))
+print(list(topics.answer))

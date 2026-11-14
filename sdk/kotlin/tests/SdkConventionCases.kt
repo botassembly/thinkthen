@@ -42,7 +42,7 @@ private suspend fun detailStrings() {
     check(Json.decodeFromString(RecognizeDetail.serializer(), """{"pieces":[],"names":[]}""").toString() == "RecognizeDetail(pieces=[], names=[])")
     ThinkThen { backend = Backend.STUB }.use { client ->
         val row = client.choose("Which?", "alpha", listOf("yes", "no")) as Row.Answered
-        check(row.detail.toString() == "LabelDetail(labels=${row.detail!!.labels})")
+        check(row.detail.toString() == "LabelDetail(labels=${(row.detail as LabelDetail).labels})")
     }
 }
 

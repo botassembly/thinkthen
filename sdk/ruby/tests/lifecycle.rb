@@ -21,7 +21,7 @@ def ruby_abandoned_streams
   end
   ThinkThen::Client.open(backend: :stub) do |client|
     before = Thread.list
-    token = ThinkThen::CancelToken.new
+    token = ThinkThen::Cancel.new
     100.times do |index|
       stream = client.decide_each("Ready?", %w[first second], cancel: token)
       stream.next if index.even?
@@ -107,6 +107,7 @@ def ruby_killed_helper
     raises(ThreadError) { stream.next }
 
     held, gate, queues = Queue.new, Queue.new, []
+    reader.singleton_class.remove_method(:worker)
     reader.define_singleton_method(:worker) do |requests, reference|
       first = true
       requests.define_singleton_method(:pop) do |*arguments|
@@ -130,7 +131,10 @@ def ruby_killed_helper
     driver.value
   end
 ensure
-  reader&.define_singleton_method(:worker, original) if original
+  if reader && original
+    reader.singleton_class.remove_method(:worker)
+    reader.define_singleton_method(:worker, original)
+  end
 end
 
 # Feature: each Ruby call opens one native call and never opens a temporary client.

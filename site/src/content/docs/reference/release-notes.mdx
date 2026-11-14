@@ -9,30 +9,41 @@ head:
   - tag: title
     content: "Release notes: what ThinkThen 0.2.0 holds and its limits"
 ---
+The tested guides describe the current result API. Read your language’s upgrade section before changing a caller.
 
-ThinkThen answers questions about text with ten functions, from the command line, thirteen language SDKs and three databases.
+## Results and errors
 
-## What 0.2.0 holds
+An SDK’s separate one-message call fails at the call if that message could not be judged. A successful call returns answered or not sure; reading an unsure answer fails loudly. Collection calls keep failed results beside the other answers, even with one input. State checks, printing and saving remain safe.
 
-- **Ten functions:** [decide](/functions/decide/), [choose](/functions/choose/), [filter](/functions/filter/), [tag](/functions/tag/), [score](/functions/score/), [rank](/functions/rank/), [find](/functions/find/), [recognize](/functions/recognize/), [relate](/functions/relate/) and [annotate](/functions/annotate/).
-- **A not-sure answer.** decide, choose and filter say not sure when the model's answer doesn't reach your bar, so you can send those texts to a person.
-- **Answers a script can branch on.** `--check` makes yes, no and not sure the exit codes 0, 1 and 3. [Exit codes](/command-line/exit-codes/) lists every code.
-- **Text from anywhere.** `--text`, a pipe, or files: plain text, one text per line, JSON Lines, CSV, TSV and Excel. [File types](/command-line/file-types/) shows each.
-- **Answers beside your data.** `--field` picks the part of each JSON line to judge, and `--into` adds the answer to each line, or a new column to a CSV, TSV or Excel file. [JSON Lines](/command-line/json-lines/) shows both.
-- **Every detail as JSON.** `--json` prints each answer with its status, probability and details. [JSON output](/reference/json-output/) lists the fields.
-- **Toolboxes.** A file of named questions, asked together with annotate or run from a saved entry with `run`. [Toolboxes](/command-line/toolboxes/) covers them.
-- **SDKs** for Python, with pandas and Polars, TypeScript, Go, Java, Kotlin, C#, R, Ruby, Rust, Swift, Zig, C and C++, and extensions for DuckDB, SQLite and PostgreSQL. Each returns the same answers as the command.
-- **Two services:** System One, with its model Jev as the default, and OpenAI. [Configuration](/configuration/) sets them up.
-- **36 error codes.** [Troubleshooting](/reference/troubleshooting/) gives the fix for 35 of them. The one it doesn't cover is `local.accounting`. 0.2.0 also has a manual page and shell completions.
-- **Platforms:** Linux with glibc 2.28 or later, macOS 15 on Apple silicon, and Windows on x86-64. The Swift SDK on Linux needs glibc 2.35 or later. Windows is tested on Windows Server 2022; Windows 10 and 11 are expected to work but are not tested. The PostgreSQL extension runs on Linux only.
+The SDKs that offer a separate one-message annotate call fail it only for a failed parent form. An answered form can contain failed questions; check each answer you use, or explicitly check the form for failed entries. That explicit check includes children and never treats not sure as failure.
 
-## Upgrading from 0.1
+The concrete failure exception is now named after the failed state, such as Python’s `Failed` and Java’s `FailedException`. General call errors retain their own classifications. Follow your SDK’s error table rather than renaming every error.
 
-0.2.0 changes the command and the SDKs, with no compatibility with 0.1, so update your scripts and code. The [release page on GitHub](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) lists every command and option that changed or went away.
+[pandas](/sdks/pandas/) and [Polars](/sdks/polars/) have dedicated guides. They remain Python extras and keep their collection behavior, native missing values and details columns. R, SQL and the command retain their existing failure behavior.
 
-The default answer cache from 0.1 is gone, so each run calls the service again. To reuse answers, save them in a table or a file.
+Filter takes one bar and yields the original messages it keeps. Use decide collections for a result about every input, including not sure. The command’s filter has no JSON view. Produced failed results make the command exit 6, including a service outage affecting every message.
 
-ThinkThen is still at 0.x, so commands, options and SDKs can change between releases.
+## Command upgrade
+
+
+The baseline is the [published 0.1.2 crate’s command source](https://static.crates.io/crates/thinkthen/thinkthen-0.1.2.crate). Every result now prints, `--check` turns the answer into the exit code, and several options have new names. That release already has `--field` and `--backend`.
+
+| 0.1 | Now |
+| --- | --- |
+| `--true`, `--false` | `--yes-means`, `--no-means` |
+| `--threshold 0.2:0.8` | `--low 0.2 --high 0.8` |
+| `--lines` | `--from lines` |
+| `--details` on a plain call | `--json` |
+| `--option billing`, `--option 'billing=charges'` | `--choice billing`, and `--describe 'billing=charges'` |
+| `--label 'billing=charges'` | `--label billing`, and `--describe 'billing=charges'` |
+| find picked one message out of many | find picks one line inside each message. Send the candidates as one message, one per line |
+| Answers were cached between runs | Each run asks the service again. Save the results to reuse them |
+
+## Language requirements
+
+Go requires 1.27 or later. C++ requires C++20 with GCC 13/libstdc++, Clang 20/libc++20, or the documented Windows compiler route. Swift requires 6.3; arrays passed to one-message functions are refused before any request, with the diagnostic naming the collection form.
+
+See the [command guide](/command-line/guide/), [Python](/sdks/python/#upgrading-from-01), [TypeScript](/sdks/typescript/#upgrading-from-01), [Go](/sdks/go/#upgrading-from-01) and the other SDK guides for their exact migration steps.
 
 ## Known limits
 
@@ -47,7 +58,10 @@ ThinkThen is still at 0.x, so commands, options and SDKs can change between rele
 | PostgreSQL LIMIT | PostgreSQL answers every input before it applies LIMIT, so LIMIT 1 can pay for them all. | Limit the input inside a subquery, before the ThinkThen function. |
 | DuckDB LIMIT | An outer LIMIT can wait for other questions and pay for answers it never returns. | Put LIMIT inside the input subquery. |
 | Cancelling a database query | Cancellation can discard the current statement's results, and does not refund sent requests. Earlier committed chunks remain saved. | Commit each chunk's answers and completed-range marker in the same transaction before starting the next chunk. |
-| Swift 6.3.2 optimized builds on macOS | We observed an Apple Swift 6.3.2 compiler abort when `result().get()` caught only `RowError.failed` and let `RowError.unsure` propagate implicitly. | Explicitly catch `RowError.unsure(let probability)` and rethrow `RowError.unsure(probability: probability)`. This preserves the error payload and let the packaged consumer build and run with release optimization. |
+| Swift arrays in one-message calls | Swift’s generic `Encodable & Sendable` constraint also accepts arrays. The call refuses them before any request. | Use the `records:` form for a collection; keep arrays inside a message when they are part of its data. |
 | DuckDB version | The extension loads only into DuckDB 2.0.0, with unsigned extensions allowed. | Start DuckDB with `duckdb -unsigned`. [DuckDB](/sdks/duckdb/) shows the steps. |
 | Toolbox shell steps | A toolbox can run programs on your machine. | ThinkThen runs them only with `--allow-shell`, and passes your key only to a step whose `env` names it. Run only toolboxes you have read. |
 | Slow memory leaks | Releases are not tested for memory over long runs on any platform. Each release runs one short engine leak check, and the engine has a check that later calls start no new threads. A slow leak in one SDK or database extension that shows only after hours of use can go uncaught. Older measurements on Linux left memory growth unresolved for C#, Java and TypeScript. | Keep long-running programs bounded, restart them from time to time and watch their memory. The [resource observations](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/resource-observations.md) hold the older measurements. |
+| Full disk during a write | A full disk can interrupt writing output. | Keep the input, check the error and treat incomplete output as unsaved work. |
+| Hard termination | A hard kill can leave an empty temporary file. | Treat empty temporary files as incomplete, and keep the original input. A rerun may send requests again. |
+| Temporary-file access lists | A newly created empty temporary file has a brief interval before its final access list is applied. | Use a private working folder for sensitive inputs and outputs. |

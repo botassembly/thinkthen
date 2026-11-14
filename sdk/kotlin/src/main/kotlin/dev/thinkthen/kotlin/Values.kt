@@ -129,17 +129,19 @@ public sealed interface Threshold {
 }
 
 /** Matched text and its place in the field, in UTF-16 units from zero with an exclusive end, as Kotlin strings count. */
-@Serializable
+@Serializable(with = dev.thinkthen.kotlin.internal.SpanSerializer::class)
 public class Span internal constructor(
     /** The matched text. */
     public val text: String,
     /** The first UTF-16 unit. */
-    public val start: Long,
+    public val start: Int,
     /** One past the last UTF-16 unit. */
-    public val end: Long,
+    public val end: Int,
+    internal val canonicalStart: Int = start,
+    internal val canonicalEnd: Int = end,
 ) {
-    override fun equals(other: Any?): Boolean = other is Span && text == other.text && start == other.start && end == other.end
-    override fun hashCode(): Int = Objects.hash(text, start, end)
+    override fun equals(other: Any?): Boolean = other is Span && text == other.text && canonicalStart == other.canonicalStart && canonicalEnd == other.canonicalEnd
+    override fun hashCode(): Int = Objects.hash(text, canonicalStart, canonicalEnd)
     override fun toString(): String = "Span(text=$text, start=$start, end=$end)"
 }
 
@@ -151,6 +153,9 @@ public class Mention internal constructor(
     /** The kind, one of the kinds asked for. */
     public val kind: String,
 ) {
+    public val text: String get() = span.text
+    public val start: Int get() = span.start
+    public val end: Int get() = span.end
     override fun equals(other: Any?): Boolean = other is Mention && span == other.span && kind == other.kind
     override fun hashCode(): Int = Objects.hash(span, kind)
     override fun toString(): String = "Mention(span=$span, kind=$kind)"
@@ -164,6 +169,10 @@ public class Entity internal constructor(
     /** The probability that the name has this kind. */
     public val probability: Double,
 ) {
+    public val text: String get() = mention.text
+    public val start: Int get() = mention.start
+    public val end: Int get() = mention.end
+    public val kind: String get() = mention.kind
     override fun equals(other: Any?): Boolean = other is Entity && mention == other.mention && probability.compareTo(other.probability) == 0
     override fun hashCode(): Int = Objects.hash(mention, probability)
     override fun toString(): String = "Entity(mention=$mention, probability=$probability)"
@@ -278,32 +287,29 @@ public class RowError internal constructor(
     override fun toString(): String = "${code.wireName}: $message" + (httpStatus?.let { " (HTTP $it)" } ?: "")
 }
 
-/**
- * A ThinkThen failure with a shared engine [code].
- *
- * Calls throw it for bad usage, setup and call-level failures. Reading the answer of a failed row throws it
- * with that row's code. A kept-only [filter] throws it after its kept records, with every failed row in [failures].
- */
-public class ThinkThenException internal constructor(
-    /** The shared engine code. */
-    public val code: ErrorCode,
-    message: String,
-    /** The backend's HTTP status, when a backend reply caused the failure. */
-    public val httpStatus: Int? = null,
-    cause: Throwable? = null,
-    failures: List<Row<*, *>> = emptyList(),
-) : RuntimeException(message, cause) {
-    /** Every failed row behind this error, in input order. Empty unless the error reports failed records. */
-    public val failures: List<Row<*, *>> = immutableList(failures)
-}
+/** A call-level failure with the shared native code and message. */
+public open class ThinkThenException internal constructor(
+    public val code: ErrorCode, message: String, public val httpStatus: Int? = null, cause: Throwable? = null,
+) : RuntimeException(message, cause)
 
-/**
- * Thrown by `answer()` and `getOrThrow()` when the answer is not sure.
- *
- * Not sure is not a failure, so this is not a [ThinkThenException]. It extends [NoSuchElementException], which
- * `Optional.orElseThrow()` throws for a missing value. Check `isUnsure` first to handle it without an exception.
- */
-public class UnsureException internal constructor(
-    /** The probability that fell inside the band. */
-    public val probability: Double,
-) : NoSuchElementException("The answer is not sure (probability $probability); check isUnsure before reading it")
+/** Bad call or question usage, refused by the engine. */
+public class UsageException internal constructor(code: ErrorCode, message: String, httpStatus: Int? = null, cause: Throwable? = null) :
+    ThinkThenException(code, message, httpStatus, cause)
+/** A client or backend setup failure. */
+public class SetupException internal constructor(code: ErrorCode, message: String, httpStatus: Int? = null, cause: Throwable? = null) :
+    ThinkThenException(code, message, httpStatus, cause)
+/** An internal engine failure. */
+public class InternalException internal constructor(code: ErrorCode, message: String, httpStatus: Int? = null, cause: Throwable? = null) :
+    ThinkThenException(code, message, httpStatus, cause)
+/** One catch for an answer that does not exist. */
+public open class NoAnswerException internal constructor(message: String) : RuntimeException(message)
+/** A probability inside the unsure band. */
+public class UnsureException internal constructor(public val row: Row.Unsure<*>) : NoAnswerException("The answer is not sure") {
+    public val probability: Double get() = row.probability
+}
+/** Failed records, in input order; the first supplies [error]. */
+public class FailedException internal constructor(public val error: RowError, rows: List<Row.Failed<*>>) : NoAnswerException(error.message) {
+    public val code: ErrorCode get() = error.code
+    public val httpStatus: Int? get() = error.httpStatus
+    public val rows: List<Row.Failed<*>> = immutableList(rows)
+}

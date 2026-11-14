@@ -31,47 +31,18 @@ impl Default for Buffer {
     }
 }
 impl Buffer {
-    // Every engine allocation has the same private prefix: an optional owner pointer, then
-    // the byte length cleanup frees by, because a caller can reach the public len. Only
-    // source allocations attach an Original. Cleanup never probes foreign allocations.
-    const OWNER: usize = size_of::<*mut crate::original::Original>();
-    const PREFIX: usize = Self::OWNER + size_of::<usize>();
+    const PREFIX: usize = size_of::<usize>();
     pub(crate) fn new(text: String) -> Self {
         #[cfg(test)]
         LIVE.with(|live| live.set(live.get() + 1));
         let len = text.len();
-        let mut allocation = vec![0_u8; Self::OWNER];
-        allocation.extend_from_slice(&len.to_ne_bytes());
+        let mut allocation = Vec::from(len.to_ne_bytes());
         allocation.extend_from_slice(text.as_bytes());
+        allocation.push(0);
         let base = Box::into_raw(allocation.into_boxed_slice()).cast::<u8>();
         /* SAFETY: PREFIX leaves room for one unaligned optional owner pointer. */
         let data = unsafe { base.add(Self::PREFIX) };
         Self { data, len }
-    }
-    pub(crate) unsafe fn attach_original(&mut self, original: crate::original::Original) {
-        /* SAFETY: only an exclusive source allocation created above reaches this path. */
-        unsafe {
-            let slot = self
-                .data
-                .sub(Self::PREFIX)
-                .cast::<*mut crate::original::Original>();
-            debug_assert!(ptr::read_unaligned(slot).is_null());
-            ptr::write_unaligned(slot, Box::into_raw(Box::new(original)));
-        }
-    }
-    pub(crate) unsafe fn original(&self) -> Option<&crate::original::Original> {
-        if self.data.is_null() {
-            return None;
-        }
-        /* SAFETY: a live engine source allocation has this private pointer prefix. */
-        unsafe {
-            let owner = ptr::read_unaligned(
-                self.data
-                    .sub(Self::PREFIX)
-                    .cast::<*mut crate::original::Original>(),
-            );
-            owner.as_ref()
-        }
     }
     pub(crate) unsafe fn release(&mut self) {
         if !self.data.is_null() {
@@ -81,14 +52,10 @@ impl Buffer {
              * boxed slice length is the stored length plus the fixed prefix. */
             unsafe {
                 let base = self.data.sub(Self::PREFIX);
-                let owner = ptr::read_unaligned(base.cast::<*mut crate::original::Original>());
-                let len = ptr::read_unaligned(base.add(Self::OWNER).cast::<usize>());
-                if !owner.is_null() {
-                    drop(Box::from_raw(owner));
-                }
+                let len = ptr::read_unaligned(base.cast::<usize>());
                 drop(Box::from_raw(ptr::slice_from_raw_parts_mut(
                     base,
-                    len + Self::PREFIX,
+                    len + Self::PREFIX + 1,
                 )));
             }
             *self = Self::default();
@@ -97,7 +64,7 @@ impl Buffer {
 }
 #[cfg(test)]
 thread_local! {
-    /// Engine buffers this thread made and has not freed, so a test can see a leak.
+    /// Engine buffers and row payloads this thread made and has not freed.
     pub(crate) static LIVE: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
 }
 /// Why a function failed. Initialize it with THINKTHEN_ERROR_INIT and free it with
@@ -133,17 +100,25 @@ impl HostError {
         }
     }
     pub(crate) fn from_error(size: u32, error: &Error) -> Self {
+        // One allocation owns both the exact counted message and its C display string.
+        let mut text = error.message().to_owned();
+        let message_len = text.len();
+        text.push('\0');
+        text.push_str(
+            &format!("{}: {}", error.code().as_str(), error.message()).replace('\0', "\\0"),
+        );
+        let mut message = Buffer::new(text);
+        message.len = message_len;
         Self {
             struct_size: size,
             code: error.code().abi(),
             http_status: error.http_status().unwrap_or(0),
-            message: Buffer::new(error.message().to_owned()),
+            message,
         }
     }
 }
 /// One record's result. Initialize it with THINKTHEN_ROW_INIT and free it with
-/// thinkthen_row_free; passing it again frees what it held. Read the answer fields only when
-/// status is THINKTHEN_STATUS_ANSWERED, or use thinkthen_row_values for typed access.
+/// thinkthen_row_free; passing it again frees what it held. Read answers with thinkthen_row_answer_*.
 #[repr(C)]
 #[cfg_attr(test, repr(align(256)))]
 #[derive(Debug)]
@@ -160,36 +135,10 @@ pub struct HostRow {
     pub probability: f64,
     /// A failed record's thinkthen_code, or 0.
     pub error_code: i32,
-    /// A decide or filter answer: 1 for yes, 0 for no. 0 also when not answered.
-    pub answer_bool: u8,
-    /// A rank answer, 1 for the first.
-    pub rank: u64,
-    /// A score answer, from 0 to 1.
-    pub number: f64,
-    /// The record's id as JSON, or empty.
-    pub id: Buffer,
-    /// The answer as JSON; empty when not sure or failed.
-    pub answer: Buffer,
-    /// The answer's detail as JSON, or empty.
-    pub detail: Buffer,
-    /// Which question, backend and model gave the row, as JSON.
-    pub source: Buffer,
-    /// A failed record's error as JSON, or empty.
-    pub error: Buffer,
+    /// Private owned result storage. Never read, change or free this pointer directly.
+    pub private_data: *mut crate::row::RowData,
 }
 impl HostRow {
-    pub(crate) unsafe fn read(out: *const Self) -> Self {
-        let mut value = Self::empty(Self::PREFIX_SIZE);
-        /* SAFETY: callers validate a readable 0.2 prefix; copied buffers stay borrowed. */
-        unsafe {
-            ptr::copy_nonoverlapping(
-                out.cast::<u8>(),
-                ptr::from_mut(&mut value).cast::<u8>(),
-                Self::PREFIX_SIZE as usize,
-            );
-        }
-        value
-    }
     pub(crate) fn empty(size: u32) -> Self {
         Self {
             struct_size: size,
@@ -198,14 +147,7 @@ impl HostRow {
             position: 0,
             probability: f64::NAN,
             error_code: 0,
-            answer_bool: 0,
-            rank: 0,
-            number: 0.0,
-            id: Buffer::default(),
-            answer: Buffer::default(),
-            detail: Buffer::default(),
-            source: Buffer::default(),
-            error: Buffer::default(),
+            private_data: ptr::null_mut(),
         }
     }
     /// Free what an output row still holds from an earlier result, then empty it,
@@ -217,11 +159,9 @@ impl HostRow {
     pub(crate) unsafe fn release(out: *mut Self) {
         /* SAFETY: the validated 0.2 prefix owns each distinct buffer independently. */
         unsafe {
-            (*ptr::addr_of_mut!((*out).id)).release();
-            (*ptr::addr_of_mut!((*out).answer)).release();
-            (*ptr::addr_of_mut!((*out).detail)).release();
-            (*ptr::addr_of_mut!((*out).source)).release();
-            (*ptr::addr_of_mut!((*out).error)).release();
+            if !(*out).private_data.is_null() {
+                drop(Box::from_raw((*out).private_data));
+            }
             Self::empty((*out).struct_size).write(out);
         }
     }
@@ -230,34 +170,41 @@ impl HostRow {
 /// thinkthen_client_free.
 #[derive(Debug)]
 pub struct ClientHandle(pub(crate) Engine);
+#[derive(Debug, Default)]
+pub(crate) struct KeptState {
+    pub(crate) failed: std::collections::VecDeque<thinkthen::AnyRow>,
+    pub(crate) first: Option<(Error, u64)>,
+    pub(crate) failures: usize,
+    pub(crate) total: u64,
+    pub(crate) finished: bool,
+}
 /// An open call. One thread drives it at a time; thinkthen_call_cancel may run on any thread.
 /// Free it with thinkthen_call_free.
 #[derive(Debug)]
 pub struct CallHandle {
     pub(crate) call: UnsafeCell<native::Call>,
     pub(crate) cancel: Cancel,
-    pub(crate) originals: UnsafeCell<Option<std::collections::VecDeque<crate::original::Original>>>,
+    pub(crate) filter: bool,
+    pub(crate) c_surface: bool,
+    pub(crate) domain: std::sync::Arc<crate::row::Domain>,
+    pub(crate) kept: UnsafeCell<KeptState>,
 }
 impl CallHandle {
-    pub(crate) fn new(
-        call: native::Call,
-        request: &thinkthen::Request,
-        originals: Vec<crate::original::Original>,
-    ) -> Self {
+    pub(crate) fn new(call: native::Call, request: &thinkthen::Request) -> Self {
         let cancel = call.cancellation();
         Self {
             call: UnsafeCell::new(call),
             cancel,
-            originals: UnsafeCell::new(
-                (request.question().function() == thinkthen::FunctionName::Filter)
-                    .then(|| originals.into()),
-            ),
+            filter: request.question().function() == thinkthen::FunctionName::Filter,
+            kept: UnsafeCell::new(KeptState::default()),
+            c_surface: false,
+            domain: std::sync::Arc::new(crate::row::Domain::from_question(request.question())),
         }
     }
 }
 /// Settings for a client, copied when it opens. Free them with thinkthen_settings_free.
 #[derive(Debug, Default)]
-pub struct SettingsHandle(pub(crate) Settings);
+pub struct SettingsHandle(pub(crate) Settings, pub(crate) Option<Cancel>);
 /// A question. One thread at a time changes it; once complete, many threads may use it.
 /// Free it with thinkthen_question_free.
 #[derive(Debug)]
@@ -331,13 +278,21 @@ pub(crate) unsafe fn error_size(out: *mut HostError) -> Option<u32> {
     }
 }
 
+macro_rules! size_of_val_type {
+    (HostRow, private_data) => {
+        size_of::<*mut crate::row::RowData>()
+    };
+    (HostError, message) => {
+        size_of::<Buffer>()
+    };
+}
 // The 0.2 fields end here even when a later engine appends fields. Neither the
 // minimum accepted size nor output writes follow the engine's full struct size.
 macro_rules! prefix_output {
-    ($output:ty, $last:ident) => {
+    ($output:ident, $last:ident) => {
         impl $output {
             pub(crate) const PREFIX_SIZE: u32 =
-                (offset_of!(Self, $last) + size_of::<Buffer>()) as u32;
+                (offset_of!(Self, $last) + size_of_val_type!($output, $last)) as u32;
             pub(crate) unsafe fn write(self, out: *mut Self) {
                 let value = ManuallyDrop::new(self);
                 /* SAFETY: callers validate a writable 0.2 prefix; ownership moves to out. */
@@ -352,5 +307,5 @@ macro_rules! prefix_output {
         }
     };
 }
-prefix_output!(HostRow, error);
+prefix_output!(HostRow, private_data);
 prefix_output!(HostError, message);

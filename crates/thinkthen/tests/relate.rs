@@ -98,7 +98,7 @@ fn rules_ask_only_allowed_unique_pairs_and_keep_cut_inclusive() {
         let (relation, kinds) = rule.split_once('=').unwrap();
         let (source, target) = kinds.split_once(':').unwrap();
         let question =
-            Relate::new(vec![RelationRule::new(relation, source, target).unwrap()]).unwrap();
+            Relate::new(vec![RelationRule::new(source, target, relation).unwrap()]).unwrap();
         let mut rows = Vec::new();
         engine(&server)
             .rows(&question, [Record::text(text)])
@@ -181,10 +181,10 @@ fn unordered_pairs_keep_text_order_and_rule_order() {
     })
     .unwrap();
     let question = Relate::new(vec![
-        RelationRule::new("works_for", "person", "company")
+        RelationRule::new("person", "company", "works_for")
             .unwrap()
             .either(true),
-        RelationRule::new("near", "company", "person")
+        RelationRule::new("company", "person", "near")
             .unwrap()
             .either(true)
             .reads("is near")
@@ -264,7 +264,7 @@ fn invalid_rules_toolbox_fields_and_thresholds_fail_before_calls() {
         ("near", "*", "company"),
     ] {
         assert_eq!(
-            RelationRule::new(relation, source, target)
+            RelationRule::new(source, target, relation)
                 .unwrap_err()
                 .code()
                 .as_str(),
@@ -272,7 +272,7 @@ fn invalid_rules_toolbox_fields_and_thresholds_fail_before_calls() {
         );
     }
     assert!(Relate::new(vec![]).is_err());
-    let rule = RelationRule::new("near", "person", "person").unwrap();
+    let rule = RelationRule::new("person", "person", "near").unwrap();
     assert!(Relate::new(vec![rule.clone(), rule.clone()]).is_err());
     assert!(Question::from_json(r#"{"function":"relate","rules":[{"relation":"near","source":"person","target":"person"}],"threshold":{"low":0.2,"high":0.8}}"#).is_err());
     for body in [
@@ -301,7 +301,7 @@ fn failed_relation_round_has_no_partial_answer() {
     })
     .unwrap();
     let question = Relate::new(vec![
-        RelationRule::new("works_for", "person", "company").unwrap(),
+        RelationRule::new("person", "company", "works_for").unwrap(),
     ])
     .unwrap();
     let mut rows = Vec::new();
@@ -343,11 +343,11 @@ fn annotation_rounds_keep_each_selected_text_and_failure_separate() {
     let relation = &entries["relations"]["answer"][0];
     assert_eq!(
         relation["source"],
-        json!({"text":"Áda", "start":3, "end":7, "kind":"person"})
+        json!({"text":"Áda", "start":2, "end":5, "kind":"person"})
     );
     assert_eq!(
         relation["target"],
-        json!({"text":"Acme", "start":15, "end":19, "kind":"company"})
+        json!({"text":"Acme", "start":13, "end":17, "kind":"company"})
     );
 }
 
@@ -379,7 +379,7 @@ fn membership_support_admits_names_before_relations_keep_their_own_probability()
         engine(&server)
             .rows(
                 &Relate::new(vec![
-                    RelationRule::new("works_for", "person", "company").unwrap(),
+                    RelationRule::new("person", "company", "works_for").unwrap(),
                 ])
                 .unwrap(),
                 [Record::text("Ada Vale joined Acme")],
@@ -413,7 +413,7 @@ fn punctuation_proposals_cannot_become_relation_endpoints() {
     let mut rows = Vec::new();
     engine(&server)
         .rows(
-            &Relate::new(vec![RelationRule::new("near", "thing", "thing").unwrap()]).unwrap(),
+            &Relate::new(vec![RelationRule::new("thing", "thing", "near").unwrap()]).unwrap(),
             [Record::text("! ★")],
         )
         .unwrap()

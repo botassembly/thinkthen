@@ -16,9 +16,8 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	kinds := tt.NewRecognize(
-		[]string{"person", "organization"})
-	message := tt.Text("Morgan works for Example Group.")
+	kinds := tt.RecognizeQuestion{Kinds: []string{"person", "organization"}}
+	message := "Morgan works for Example Group."
 	names, err := tt.Answer(
 		client.Recognize(ctx, kinds, message))
 	if err != nil {

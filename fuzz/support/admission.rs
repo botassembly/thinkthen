@@ -39,16 +39,15 @@ pub(crate) fn exercise(data: &[u8]) -> Admission {
             .unwrap()
     });
     let question = QUESTION.get_or_init(|| Decide::new("Is this evidence?").unwrap());
-    // UTF-8 conversion failure is itself an admitted failed record.
+    // Invalid evidence fails at the scalar call without crashing admission.
     let record = match std::str::from_utf8(data) {
         Ok(text) => Record::from_json(text),
         Err(_) => Record::from_utf8(data),
     };
-    let row = engine.run(question, record).unwrap();
-    let record = row.error().map(|error| {
+    let record = engine.run(question, record).err().map(|error| {
         assert_eq!(error.code().family(), Family::Record);
         assert!(error.code().is_record());
-        contract(error);
+        contract(&error);
         error.code()
     });
     let Ok(text) = std::str::from_utf8(data) else {

@@ -147,16 +147,6 @@ elif fn == 'decide':
     answers = [boolean(row['is_refund']) for row in rows]
 elif fn == 'choose':
     answers = [row['topic'] for row in rows]
-elif fn == 'tag':
-    answers = []
-    for row in rows:
-        value = decoded(row['topics'])
-        if value is None:
-            answers.append(None)
-            continue
-        if dialect == 'postgres':
-            value = next(csv.reader([value[1:-1]])) if value != '{}' else []
-        answers.append(sorted(value))
 elif fn in ('score', 'rank'):
     key = 'urgency' if fn == 'score' else 'urgency_rank'
     answers = [decoded(row[key]) for row in rows]
@@ -166,27 +156,25 @@ elif fn == 'annotate':
     answers = [None if row['status'] != 'answered' else
                {'refund': boolean(row['is_refund']), 'topic': row['topic'],
                 'urgency': decoded(row['urgency'])} for row in rows]
-elif fn in ('recognize', 'relate'):
-    if dialect == 'postgres':
-        if fn == 'recognize':
-            names = [{'text': row['name'], 'kind': row['kind']} for row in rows if row['name'] is not None]
+elif fn in ('tag', 'recognize', 'relate'):
+    # LEFT JOIN keeps an empty or failed list as one row with NULL members.
+    # Group by the original record before comparing canonical bare answers.
+    groups = {}
+    for row in rows:
+        groups.setdefault(row['msg_id'], []).append(row)
+    answers = []
+    for group in groups.values():
+        if any(row['status'] != 'answered' for row in group):
+            answers.append(None)
+        elif fn == 'tag':
+            answers.append(sorted(row['topic'] for row in group if row['topic'] is not None))
+        elif fn == 'recognize':
+            answers.append([{'text': row['name'], 'kind': row['kind']}
+                            for row in group if row['name'] is not None])
         else:
-            names = [{'source': row['person'], 'relation': row['relation'],
-                      'target': row['organization']} for row in rows if row['person'] is not None]
-        answers = [None if any(row['status'] != 'answered' for row in rows) else names]
-    else:
-        key = 'names' if fn == 'recognize' else 'works_for'
-        answers = []
-        for row in rows:
-            values = decoded(row[key])
-            if values is None:
-                answers.append(None)
-                continue
-            if fn == 'recognize':
-                answers.append([{'text': value['text'], 'kind': value['kind']} for value in values])
-            else:
-                answers.append([{'source': value['source']['text'], 'relation': value['relation'],
-                                 'target': value['target']['text']} for value in values])
+            answers.append([{'source': row['person'], 'relation': row['relation'],
+                             'target': row['organization']}
+                            for row in group if row['person'] is not None])
 else:
     raise ValueError(fn)
 Path(env['SITE_ANSWERS_FILE']).write_text(json.dumps(answers))

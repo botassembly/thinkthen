@@ -7,7 +7,7 @@ from typing import Any, Generic, TypeVar
 
 import polars as pl
 
-from ._columns import ColumnMethods, annotation_definitions
+from ._columns import ColumnMethods, annotation_definitions, answer_value, choice_domain
 from ._decode import plain
 from ._types import Backend, BoundaryTag, ErrorCode, Function, Status
 
@@ -66,6 +66,7 @@ def _shape(
     *,
     child: bool = False,
     item_dtype: Any = pl.Null,
+    domain: list[str] | None = None,
 ) -> dict[str, Any]:
     details = {
         "choose": pl.Struct({"labels": _LABELS}),
@@ -87,16 +88,14 @@ def _shape(
                         }
                     )
                 ),
-                "names": pl.List(
-                    pl.Struct({"start": pl.Int64, "end": pl.Int64, "kinds": _LABELS})
-                ),
+                "names": pl.List(pl.Struct({**_SPAN, "kinds": _LABELS})),
             }
         ),
     }
     answers: dict[str, Any] = {
         "decide": pl.Boolean,
         "filter": pl.Boolean,
-        "choose": pl.String,
+        "choose": pl.Enum(domain) if domain else pl.String,
         "tag": pl.List(pl.String),
         "score": pl.Float64,
         "rank": pl.Int64,
@@ -107,7 +106,9 @@ def _shape(
     if function == "annotate":
         answers[function] = pl.Struct(
             {
-                name: pl.Struct(_shape(value["function"], child=True))
+                name: pl.Struct(
+                    _shape(value["function"], child=True, domain=choice_domain(value))
+                )
                 for name, value in (questions or {}).items()
             }
         )
@@ -121,8 +122,7 @@ def _shape(
     }
     if not child:
         result = dict(position=pl.Int64, id=_ID, source=_SOURCE, **result)
-        if function == "filter":
-            result.update(item=item_dtype, kept=pl.Boolean)
+
     return result
 
 
@@ -144,21 +144,19 @@ def _identity(value: str | int | None) -> dict[str, Any] | None:
 def _project(value: dict[str, Any], *, child: bool = False) -> dict[str, Any]:
     function = value["function"]
     if not child:
-        value["id"] = _identity(value["id"])
-    detail = value["detail"]
+        value["id"] = _identity(value.get("id"))
+    detail = value.get("detail")
     if detail is not None:
         if function in {"tag", "choose"}:
             detail["labels"] = _labels(detail["labels"])
         elif function == "recognize":
             for name in detail["names"]:
                 name["kinds"] = _labels(name["kinds"])
-    if function == "annotate" and value["answer"] is not None:
+    if function == "annotate" and value.get("answer") is not None:
         value["answer"] = {
             key: _project(outcome, child=True)
             for key, outcome in value["answer"].items()
         }
-    if function == "filter":
-        value["kept"] = value["status"] == "answered" and value["answer"] is True
     return value
 
 
@@ -172,13 +170,11 @@ def series(
     questions = (
         annotation_definitions(question, rows) if function == "annotate" else None
     )
-    if item_dtype is None:
-        item_dtype = (
-            pl.Series([plain(row.item) for row in rows], strict=True).dtype
-            if function == "filter" and rows
-            else pl.Null
+    dtype = pl.Struct(
+        _shape(
+            function, questions, item_dtype=item_dtype, domain=choice_domain(question)
         )
-    dtype = pl.Struct(_shape(function, questions, item_dtype=item_dtype))
+    )
     return pl.Series(
         "result", [_project(plain(row)) for row in rows], dtype=dtype, strict=True
     )
@@ -206,78 +202,92 @@ class _PolarsNamespace(ColumnMethods[pl.Series, D, K, pl.DataFrame], Generic[D, 
         )
 
 
+class _ColumnResults(_PolarsNamespace[pl.DataFrame, K], Generic[K]):
+    def _answers(self, function: str, rows: list[Any], question: object) -> Any:
+        outcomes = series(rows, function, question)
+        positions = {row.position - 1: index for index, row in enumerate(rows)}
+        order = pl.Series(
+            [positions.get(index) for index in range(len(self._value))], dtype=pl.Int64
+        )
+        if function == "annotate":
+            answers = outcomes.struct.field("answer")
+            return pl.DataFrame(
+                [
+                    answers.struct.field(name)
+                    .struct.field("answer")
+                    .gather(order)
+                    .alias(name)
+                    for name in annotation_definitions(question, rows)
+                ]
+            )
+        name = self._value.name if isinstance(self._value, pl.Series) else "answer"
+        return outcomes.struct.field("answer").gather(order).rename(name)
+
+    def _frame(self, function: str, rows: list[Any], question: object) -> pl.DataFrame:
+        outcomes = series(rows, function, question)
+        result = outcomes.to_frame().unnest("result")
+        errors = outcomes.struct.field("error")
+        result = result.drop("error").with_columns(
+            [
+                errors.struct.field(field).alias("error_" + field)
+                for field in ("code", "message", "http_status")
+            ]
+        )
+        result = result.with_columns(
+            pl.Series("item", [row.item for row in rows], dtype=pl.Object)
+        )
+        if function == "annotate":
+            children = outcomes.struct.field("answer")
+            result = result.drop("answer")
+            columns = []
+            for name in annotation_definitions(question, rows):
+                child = children.struct.field(name)
+                for field in ("answer", "status", "probability", "detail"):
+                    value = child.struct.field(field)
+                    if field == "status":
+                        value = value.fill_null(outcomes.struct.field("status"))
+                    columns.append(
+                        value.alias(name if field == "answer" else name + "_" + field)
+                    )
+                error = child.struct.field("error")
+                for field in ("code", "message", "http_status"):
+                    columns.append(
+                        error.struct.field(field)
+                        .fill_null(errors.struct.field(field))
+                        .alias(name + "_error_" + field)
+                    )
+            result = result.hstack(columns)
+        return result
+
+
 @pl.api.register_series_namespace("thinkthen")
-class ThinkThenNamespace(_PolarsNamespace[pl.Series, pl.Series]):
+class ThinkThenNamespace(_ColumnResults[pl.Series]):
     _value: pl.Series
 
     def _records(self) -> Iterable[Any]:
         for value in self._value:
             yield value.to_list() if isinstance(value, pl.Series) else value
 
-    def _answers(self, function: str, rows: list[Any], question: object) -> pl.Series:
-        outcomes = series(rows, function, question)
-        answers = outcomes.struct.field("answer")
-        if function == "annotate":
-            answers = pl.DataFrame(
-                [
-                    answers.struct.field(name).struct.field("answer").alias(name)
-                    for name in annotation_definitions(question, rows)
-                ]
-            ).to_struct()
-            answers = pl.select(
-                pl.when(outcomes.struct.field("answer").is_not_null())
-                .then(answers)
-                .otherwise(None)
-            ).to_series()
-        # Rank/top and any reordered outcomes are aligned to the input positions.
-        positions = {row.position - 1: index for index, row in enumerate(rows)}
-        order = pl.Series(
-            [positions.get(index) for index in range(len(self._value))], dtype=pl.Int64
-        )
-        return answers.gather(order).rename(self._value.name)
-
     def _kept(self, rows: list[Any]) -> pl.Series:
-        return self._value.gather([row.position - 1 for row in rows if row.kept])
-
-    def _frame(self, function: str, rows: list[Any], question: object) -> pl.Series:
-        return series(rows, function, question, self._value.dtype)
+        return self._value.gather(
+            [row.position - 1 for row in rows if answer_value(row) is True]
+        )
 
 
 @pl.api.register_dataframe_namespace("thinkthen")
-class ThinkThenFrameNamespace(_PolarsNamespace[pl.DataFrame, pl.DataFrame]):
+class ThinkThenFrameNamespace(_ColumnResults[pl.DataFrame]):
     _value: pl.DataFrame
 
     def _records(self) -> Iterable[Any]:
         yield from self._value.iter_rows(named=True)
 
-    def _answers(self, function: str, rows: list[Any], question: object) -> pl.Series:
-        # The same answer projection applies to columns and whole records.
-        source = self._value.to_struct("answer")
-        return ThinkThenNamespace(source)._answers(function, rows, question)
-
     def _kept(self, rows: list[Any]) -> pl.DataFrame:
-        kept = {row.position - 1 for row in rows if row.kept}
+        kept = {row.position - 1 for row in rows if answer_value(row) is True}
         return self._value.filter(
             pl.Series(
                 [index in kept for index in range(len(self._value))], dtype=pl.Boolean
             )
         )
-
-    def _frame(self, function: str, rows: list[Any], question: object) -> pl.DataFrame:
-        source: pl.DataFrame = self._value
-        outcomes = series(rows, function, question, source.to_struct().dtype)
-        if function != "annotate":
-            return outcomes.to_frame()
-        columns = []
-        for name in annotation_definitions(question, rows):
-            child = outcomes.struct.field("answer").struct.field(name)
-            for field in ("answer", "status", "probability", "detail"):
-                column = name if field == "answer" else name + "_" + field
-                value = child.struct.field(field)
-                if field == "status":
-                    value = value.fill_null(outcomes.struct.field("status"))
-                columns.append(value.alias(column))
-        return source.hstack(columns)
 
 
 __all__ = ["ThinkThenFrameNamespace", "ThinkThenNamespace"]

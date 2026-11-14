@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
@@ -23,10 +24,9 @@ func main() {
 	defer client.Close()
 
 	// Every message, most urgent first. Its answer is its rank, starting at 1.
-	urgencyQuestion := tt.NewRank("How urgent is the request?",
-		[]string{"routine", "urgent"})
-	for ranked, err := range client.RankAll(
-		context.Background(), urgencyQuestion, tt.Texts(messages...)) {
+	urgencyQuestion := tt.RankQuestion[string]{Question: "How urgent is the request?", Levels: []string{"routine", "urgent"}}
+	for ranked, err := range client.Rank(
+		context.Background(), urgencyQuestion, slices.Values(messages)) {
 		if err != nil {
 			log.Fatal(err)
 		}

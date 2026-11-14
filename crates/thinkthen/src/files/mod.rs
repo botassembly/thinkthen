@@ -81,8 +81,6 @@ pub(crate) struct FileReceipt {
     /// The first failed rows in input order, by source row number, at most
     /// [`NAMED_FAILURES`]. A row's failure is its first, including annotations.
     pub(crate) failures: Vec<(usize, Error)>,
-    /// Rows with an answered or unsure outcome, including partial annotations.
-    pub(crate) answered: u64,
     /// Rows whose outcome is not sure.
     pub(crate) unsure: u64,
     /// Failed rows by error family, including nested annotation failures.

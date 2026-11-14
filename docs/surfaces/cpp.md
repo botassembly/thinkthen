@@ -1,0 +1,644 @@
+# C++ functions that answer questions about text
+
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
+
+Use a C++20 compiler, with GCC 13/libstdc++, Clang 20/libc++ 20, or the Windows compiler/library route in the archive README. Download the C and C++ archives for your platform from the release page and extract both into a folder named `thinkthen`. The C archive includes the engine. Compile with `c++ -std=c++20 -Wall -Wextra -Werror -Ithinkthen/include example.cpp -Lthinkthen/lib -lthinkthen -Wl,-rpath,"$PWD/thinkthen/lib" -o example`. The archive's README has the Windows and CMake steps. Set `THINKTHEN_API_KEY` in the environment first.
+
+A one-record call throws `tt::failed` at the call when its record could not be judged. A successful call returns an answered or unsure result, with `failed()` false and `error()` returning `nullptr`. Many-record calls retain failed results, so the shared result type has three states:
+
+- **answered**: there is an answer, and `result.answer()` gives it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the record could not be judged, or the service did not respond.
+
+Three rules hold for every function on this page.
+
+1. **Reading the answer throws when there is none.** On a returned one-record result, `result.answer()` can throw `tt::unsure`. On a bulk result, form entry or saved row, it can also throw `tt::failed`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never throws.** `result.status()`, `result.answered()`, `result.unsure()`, `result.failed()`, `result.probability()` and `result.error()` are always safe to call.
+3. **Printing never throws.** `std::cout << result` shows the answer, `unsure`, or `failed:` with the reason. `std::format("{}", result)` gives the same words.
+
+## decide
+
+### The simplest if
+
+A decide result goes straight into an `if`, and the `if` reads the answer.
+
+```cpp
+#include <thinkthen/thinkthen.hpp>
+#include <iostream>
+
+namespace tt = thinkthen;
+
+int main() try {
+    tt::client client;
+    const tt::decide asks_refund{"Does the customer request a refund?"};
+
+    if (client.decide(asks_refund, "Please refund my order.")) {
+        std::cout << "refund queue\n";
+    } else {
+        std::cout << "inbox\n";
+    }
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
+    return 1;
+}
+```
+
+If the message could not be judged, `client.decide` throws `tt::failed` at the call, and the `catch` at the bottom reports it. The `if` never receives a failed result and never falls through to `inbox` for a failure. With one bar, a returned decide result is yes or no; two bars can make its answer read throw `tt::unsure`.
+
+Existing usage, setup, authentication, cancellation and other engine call failures still throw `tt::error` with their own codes. A promoted failed judgement throws its subtype `tt::failed`. So each line runs only if the one before it worked. Every call is marked `[[nodiscard]]`, so the compiler warns when you ignore a result.
+
+A result is a `tt::row`, here a `tt::row<tt::decide>`. It owns what it holds and frees it when it goes out of scope, as the client does, so there is nothing to free by hand. The later examples are the body of a `main` like this one, with `client` already made and `tt` naming `thinkthen`.
+
+### Yes, no, or not sure
+
+Set two bars and decide can also be not sure. `is_refund.answered()` tells you whether there is a yes or no to read.
+
+```cpp
+const auto asks_refund = tt::decide{"Does the customer request a refund?"}
+    .threshold(tt::threshold::band(0.2, 0.8));
+const auto is_refund = client.decide(asks_refund, "Where is my parcel?");
+
+if (is_refund.answered()) {
+    std::cout << (is_refund ? "refund queue" : "inbox") << '\n';
+} else {
+    std::cout << "a person reads it\n";
+}
+```
+
+You can also let the read throw and catch `tt::unsure`. The call above succeeded, so this read cannot report a failed judgement.
+
+```cpp
+try {
+    std::cout << (is_refund ? "refund queue" : "inbox") << '\n';
+} catch (const tt::unsure&) {
+    std::cout << "a person reads it\n";
+}
+```
+
+### Did the call work
+
+```cpp
+const tt::decide asks_refund{"Does the customer request a refund?"};
+try {
+    const auto is_refund = client.decide(asks_refund, "Please refund my order.");
+    std::cout << is_refund << '\n';
+} catch (const tt::failed& failure) {
+    std::cout << "could not judge it: " << failure.what() << '\n';
+} catch (const tt::error& failure) {
+    std::cout << "the call did not complete: " << failure.what() << '\n';
+}
+```
+
+`tt::failed` reports a failed judgement promoted from its result. It remains a subtype of `tt::error`; it does not replace usage, setup, authentication, cancellation or other general call errors. The broader catch handles those unchanged classifications too, so the specific catch comes first. Some service refusals fail the whole call before a result is available and remain general call errors. Standard C++ exceptions keep their own classes.
+
+Not sure is a successful call: it returns an unsure row, and printing is safe. Reading that answer can throw `tt::unsure`, which is outside `tt::error` and is caught by neither handler above.
+
+### Both bars and the probability
+
+```cpp
+const auto asks_refund = tt::decide{"Does the customer request a refund?"}
+    .threshold(tt::threshold::band(0.2, 0.8));
+const auto is_refund = client.decide(asks_refund, "Where is my parcel?");
+
+if (const auto probability = is_refund.probability()) {
+    std::cout << *probability << '\n';
+}
+```
+
+- No `.threshold(...)`: one bar at 0.5. The answer is always yes or no.
+- `.threshold(0.7)`: one bar. Yes at 0.7 or above, otherwise no.
+- `.threshold(tt::threshold::band(0.2, 0.8))`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`probability()` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is a `std::optional<double>`, present even for an unsure decide result. A failed bulk result has an empty probability.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `client.decide_each`, save each `probability()`, and compare with your labels.
+
+## choose with your own choices
+
+Give your choices as an `enum class`, with an array that holds the word for each member. The answer comes back as a member of it.
+
+```cpp
+#include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <cstdlib>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
+
+enum class Topic { billing, shipping, other };
+
+template<>
+inline constexpr std::array<std::pair<Topic, std::string_view>, 3> thinkthen::words<Topic>{{
+    {Topic::billing, "billing"},
+    {Topic::shipping, "shipping"},
+    {Topic::other, "other"},
+}};
+
+std::string_view team_for(Topic topic) {
+    switch (topic) {
+    case Topic::billing:
+        return "billing team";
+    case Topic::shipping:
+        return "warehouse";
+    case Topic::other:
+        return "front desk";
+    }
+    std::abort();
+}
+
+int main() try {
+    tt::client client;
+    const tt::choose<Topic> asks_topic{"What is the message about?"};
+    const auto topic = client.choose(asks_topic, "I was charged twice for one invoice.");
+
+    if (topic.unsure()) {
+        std::cout << "a person reads it\n";
+    } else {
+        std::cout << team_for(topic.answer()) << '\n';
+    }
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
+    return 1;
+}
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.unsure()` before reading the answer. `.threshold(0.3)` on the question moves the bar.
+
+The words in the array (`"billing"`, `"shipping"`, `"other"`) are what the model reads, so make each a plain word or short phrase, not a code. The member names are for your code. C++ can't list an enum's members for itself, so `tt::words<Topic>` is where you list them, each beside its word, once for the whole program. `tt::word(Topic::billing)` gives a member's word. Give every member a word: one you leave out can never be the answer, and nothing warns you. A `tt::choose<Topic>` with no `tt::words<Topic>` does not compile. `std::cout << topic` prints the word, such as `billing`.
+
+Add a member to `Topic` and, with `-Wall -Werror`, the compiler refuses `team_for` until you handle it. C++ compilers only warn about a missing case, so keep those two flags on.
+
+A choose result does not go in an `if`, and is not equal to its answer. `if (topic)` and `topic == Topic::billing` do not compile. Read `topic.answer()`. One slip does compile: a pointer to a result in an `if`, or a `std::optional` holding one, tests only that there is a result, so it is true whatever the answer. GCC reports `if (&topic)` under `-Wall`, as `-Waddress`, and Clang reports it by default. Nothing reports a pointer you were passed.
+
+A list of words also works, `tt::choose{"What is the message about?", {"billing", "shipping", "other"}}`, and the answer is then a `std::string`.
+
+## Many records
+
+`client.decide_each` takes the same question as `client.decide` and many records, and gives one result per record, in order. Each result carries your own record as `item()`.
+
+```cpp
+const std::vector<std::string> messages{
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+};
+const auto asks_refund = tt::decide{"Does the customer request a refund?"}
+    .threshold(tt::threshold::band(0.2, 0.8));
+
+auto refund_checks = client.decide_each(asks_refund, messages);
+for (const auto& is_refund : refund_checks) {
+    if (is_refund.unsure()) {
+        std::cout << "a person reads it: " << is_refund.item() << '\n';
+    } else if (is_refund.failed()) {
+        std::cout << "try again later: " << is_refund.item() << '\n';
+    } else if (is_refund) {
+        std::cout << "refund queue: " << is_refund.item() << '\n';
+    } else {
+        std::cout << "inbox: " << is_refund.item() << '\n';
+    }
+}
+```
+
+One failed record does not stop the loop. An `_each` call stays many-record even with one input: a failed result is returned, not promoted according to collection size. Each result keeps its own state, with `position()` counted from 1 and the record's `id()` when it has one. An exception out of the loop is for the call itself failing, such as when it is cancelled, and the loop ends with it.
+
+Pass the whole collection to one call so ThinkThen can send the records in batches. Every one-record call has an `_each` form, and each takes any range of records. `item()` is a reference to your own record, the very `std::string` in `messages`, and not a copy. So keep `messages` alive for as long as you use the results. Two cases can't refer to an object of yours, so the result holds the record itself: a temporary collection, which `refund_checks` takes over, and a range that makes each record as it goes, such as a `std::views::transform`. A row moved out of the call, or retained in a filter error, keeps that record's storage alive after the call is destroyed.
+
+`refund_checks` can be read once. Each result is yours until the loop moves on. To keep every result, write the loop variable as `auto&` and move each into a `std::vector<tt::row<tt::decide, std::string>>` with `results.push_back(std::move(is_refund))`. Destroying `refund_checks` stops the call, so leaving the loop early is safe.
+
+To save every result, write `is_refund.to_json()` as a line of JSON. It includes the state, so nothing is lost.
+
+To stop on a failed row, use the shared result's explicit failure check:
+
+```cpp
+for (auto& is_refund : client.decide_each(asks_refund, messages)) {
+    std::cout << is_refund.throw_if_failed() << '\n';
+}
+```
+
+`throw_if_failed()` throws `tt::failed` for a failed result, otherwise returning the same result. Not sure does not fail this check and printing is safe. The helper takes a mutable row reference, so this loop uses `auto&`. It remains on the shared row type but is redundant after an ordinary successful scalar call.
+
+## Many-result not sure or failed
+
+```cpp
+for (const auto& is_refund : client.decide_each(asks_refund, messages)) {
+    if (is_refund.unsure()) {
+        std::cout << "a person reads it\n";
+    } else if (is_refund.failed()) {
+        std::cout << "try again later\n";
+    } else if (is_refund) {
+        std::cout << "refund queue\n";
+    } else {
+        std::cout << "inbox\n";
+    }
+}
+```
+
+Yes and no are the two answers. Not sure and failed are the two ways a bulk result can have none. To name every state and have the compiler confirm none is missed, `switch` on `status()` with no `default`. Each case can also read what belongs to its state: the probability, or the error code.
+
+```cpp
+template<class T>
+std::string where_it_goes(const tt::row<tt::decide, T>& is_refund) {
+    switch (is_refund.status()) {
+    case tt::status::answered:
+        return is_refund ? "refund queue" : "inbox";
+    case tt::status::unsure:
+        return std::format("a person reads it: {}", *is_refund.probability());
+    case tt::status::failed:
+        return std::format("try again later: {}", is_refund.error()->code().message());
+    }
+    std::abort();
+}
+```
+
+Leave out a case and GCC and Clang warn, and with `-Werror`, as in the compile line at the top, the code does not compile. `status()` gives exactly these three values: `tt::status::answered`, `tt::status::unsure` and `tt::status::failed`. It is a plain `enum class`, so you can also count or store it. `std::format` is from `<format>` and `std::abort` from `<cstdlib>`.
+
+The same row template and status enum serve scalar and bulk calls. A successful scalar result excludes failed at runtime, but its shared enum still requires that case in a complete switch. `where_it_goes` is generic over the caller's record type, so it accepts both scalar and item-bearing rows without inventing another result type. Put this function outside `main`, then call it on the actual results:
+
+```cpp
+for (const auto& is_refund : client.decide_each(asks_refund, messages)) {
+    std::cout << where_it_goes(is_refund) << ": " << is_refund.item() << '\n';
+}
+```
+
+`tt::no_answer` groups `tt::unsure` and `tt::failed` for shared bulk, entry and saved-row answer reads. Catch it when either means there is no answer to use; catch the two separately when they need different routes.
+
+## filter
+
+filter means "give me the yeses". It hands back your own records, in order.
+
+```cpp
+const std::vector<std::string> messages{
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+};
+const tt::filter asks_refund{"Does the customer request a refund?"};
+
+for (const auto& refund_request : client.filter_each(asks_refund, messages)) {
+    std::cout << "refund queue: " << refund_request << '\n';
+}
+```
+
+filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `.threshold(0.7)` moves the bar. Two bars are refused: `tt::filter::threshold` takes one number, so `tt::threshold::band` does not compile there, and a saved filter question that holds two bars throws `tt::error` with the code `tt::errc::usage_threshold`. When you want not sure, use `client.decide_each` with a `tt::decide` question, as in the section above.
+
+A `tt::filter` question goes to `client.filter_each` and nowhere else. No other call compiles with one.
+
+If a record fails, you still get every kept record first. Then the loop throws one `tt::filter_error`, and its `rows()` holds every failed result with its `item()`.
+
+```cpp
+try {
+    for (const auto& refund_request : client.filter_each(asks_refund, messages)) {
+        std::cout << "refund queue: " << refund_request << '\n';
+    }
+} catch (const tt::filter_error<std::string>& failure) {
+    for (const auto& failed : failure.rows()) {
+        std::cout << "try again later: " << failed.item() << " (" << failed << ")\n";
+    }
+}
+```
+
+`tt::filter_error` is named with the type of your records, here `std::string`. It is a `tt::failed`, so a `catch` for that takes it too.
+
+## tag
+
+Labels work as choices do. The answer is a `std::set` of the members that fit, and it can be empty.
+
+```cpp
+enum class Topic { billing, shipping };
+
+template<>
+inline constexpr std::array<std::pair<Topic, std::string_view>, 2> thinkthen::words<Topic>{{
+    {Topic::billing, "billing"},
+    {Topic::shipping, "shipping"},
+}};
+```
+
+```cpp
+const tt::tag<Topic> asks_topics{"Which topics appear?"};
+const auto topics = client.tag(asks_topics, "I was charged twice and my parcel is late again.");
+const auto& fits = topics.answer();
+
+if (fits.contains(Topic::billing)) {
+    std::cout << "billing team\n";
+}
+for (const Topic topic : fits) {
+    std::cout << tt::word(topic) << '\n';
+}
+```
+
+tag is never not sure. `.threshold(0.7)` sets how likely a label must be to count. `fits` refers to the set inside `topics`, so use it while `topics` is alive.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. The order of pairs in `tt::words<Urgency>` defines the scale, lowest first, even if the enum's underlying numbers are different. The same pair order is used for rank and score questions inside a form.
+
+```cpp
+enum class Urgency { routine, urgent };
+
+template<>
+inline constexpr std::array<std::pair<Urgency, std::string_view>, 2> thinkthen::words<Urgency>{{
+    {Urgency::routine, "routine"},
+    {Urgency::urgent, "urgent"},
+}};
+```
+
+```cpp
+const tt::score<Urgency> asks_urgency{"How urgent is the request?"};
+const auto urgency = client.score(asks_urgency, "Please refund my order.");
+const double score = urgency.answer();
+
+if (score > 0.5) {
+    std::cout << "answer today\n";
+}
+std::cout << std::format("{:.2f}\n", score);
+```
+
+The score is a position between your levels, not one of them, so it is a `double` and there is nothing to `switch` on. To get exactly one level back, ask with a `tt::choose` question. score is never not sure.
+
+## rank
+
+rank puts many records in order along your levels, highest first.
+
+```cpp
+const std::vector<std::string> messages{
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+};
+const tt::rank<Urgency> asks_urgency{"How urgent is the request?"};
+
+for (const auto& ranked : client.rank_each(asks_urgency, messages)) {
+    std::cout << ranked.answer() << ' ' << ranked.item() << '\n';
+}
+```
+
+`ranked.answer()` is the rank, starting at 1, and `ranked.item()` is your record. rank reads the whole collection before it gives anything back. `.top(5)` on the question returns the five highest-ranked records after judging the collection. A failed record comes back after the ranked ones, with `failed()` true.
+
+## find
+
+find points to the one line that answers.
+
+```cpp
+const std::string message = "Morgan works for Example Group.\nPlease refund my order.";
+const tt::find asks_action{"Which line states the requested action?"};
+const auto action = client.find(asks_action, message);
+
+if (action.unsure()) {
+    std::cout << "a person reads it\n";
+} else if (const auto& span = action.answer(); !span) {
+    std::cout << "no line answers\n";
+} else {
+    std::cout << span->text << '\n';
+}
+```
+
+The answer is a `std::optional` of a `tt::span` with `text`, `start` and `end`, and it is empty when no line answers. The offsets count bytes, as C++ strings do, so `message.substr(span->start, span->end - span->start)` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```cpp
+const tt::recognize finds_names{{"person", "organization"}};
+const auto names = client.recognize(finds_names, "Morgan works for Example Group.");
+
+for (const auto& name : names.answer()) {
+    std::cout << name.kind << ' ' << name.text << '\n';
+}
+```
+
+Each name also has `start`, `end` and `probability`. The answer is a `std::vector`, and it can be empty. recognize is never not sure.
+
+## relate
+
+```cpp
+const std::string message = "Morgan works for Example Group.\nPlease refund my order.";
+const tt::rule rule{.source = "person", .target = "organization", .relation = "works_for"};
+const tt::relate finds_relations{{rule}};
+const auto relations = client.relate(finds_relations, message);
+
+for (const auto& relation : relations.answer()) {
+    std::cout << relation.source.text << ' ' << relation.relation << ' '
+              << relation.target.text << '\n';
+}
+```
+
+A rule names the kind it starts from as `source`, the kind it points to as `target`, and the relation, written in that order. Each relation has `source`, `target`, `relation`, `probability` and `either`. `relations.detail()` holds every name found, in its `names`, including names in no relation. It is a `std::optional`, empty when the result has no detail.
+
+## annotate
+
+annotate asks several questions of each record and gives back one form per record.
+
+```cpp
+const std::vector<std::string> messages{
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+};
+const auto asks_refund = tt::decide{"Does the customer request a refund?"}
+    .threshold(tt::threshold::band(0.2, 0.8));
+const tt::choose<Topic> asks_topic{"What is the message about?"};
+const tt::score<Urgency> asks_urgency{"How urgent is the request?"};
+
+const tt::annotate questions{
+    {"refund", asks_refund},
+    {"topic", asks_topic},
+    {"urgency", asks_urgency},
+};
+
+auto forms = client.annotate_each(questions, messages);
+for (const auto& form : forms) {
+    if (form.failed()) {
+        std::cout << "try again later: " << form.item() << '\n';
+        continue;
+    }
+    const auto& entries = form.answer();
+    const auto& is_refund = tt::get<tt::decide>(entries, "refund");
+    const auto& topic = tt::get<tt::choose<Topic>>(entries, "topic");
+    const auto& urgency = tt::get<tt::score<Urgency>>(entries, "urgency");
+    if (is_refund.failed() || topic.failed() || urgency.failed()) {
+        std::cout << "try again later: " << form.item() << '\n';
+    } else if (is_refund.unsure() || topic.unsure() || urgency.unsure()) {
+        std::cout << "a person reads it: " << form.item() << '\n';
+    } else if (is_refund) {
+        std::cout << std::format("refund queue: {} {:.2f}\n", tt::word(topic.answer()),
+                                 urgency.answer());
+    }
+}
+```
+
+Each entry of a form is a result of its own function, with its own state. `form.answer()` is the form's answer read, and `tt::get` picks the named entry out of it, typed by the question you asked. The `"refund"` entry is a decide result, so it goes in an `if`. One entry can be not sure while the others answer. Asking for a name the form does not have is a mistake in the call and throws `tt::error` with the code `tt::errc::usage_name`. So is asking for an entry as another function's result, which throws with `tt::errc::usage_function`. Here `Topic` is the three-choice enum from the choose section.
+
+The entries belong to the form, so use them while `form` is alive. The annotate question copies each question you give it.
+
+A form can be answered while an entry failed. This example checks all three entries before reading their answers: failed entries go to retry, not-sure entries go to a person, and only answered entries reach the refund branch.
+
+For one record, `client.annotate(questions, message)` throws `tt::failed` only for a failed parent form. An answered parent is returned even if one, several or all its entries failed. The scalar boundary checks the parent's own error, not the recursive helper or a count of failed children. Existing call-level failures still throw with their original classifications.
+
+```cpp
+auto form = client.annotate(questions, "Please refund my order.");
+form.throw_if_failed();
+```
+
+The second line is optional and explicitly throws for any failed entry as well as a failed parent. Not-sure entries are not failures; otherwise the same form is returned unchanged. The helper also works on bulk forms. A successful parent alone never authorizes reading an unchecked entry's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```cpp
+const auto asks_refund = tt::decide{"Does the customer request a refund?"}
+    .yes_means("the customer wants money back, including for a duplicate charge")
+    .no_means("the customer wants anything else");
+
+const auto asks_topic = tt::choose<Topic>{"What is the message about?"}.descriptions({
+    {Topic::billing, "charges, invoices and refunds"},
+    {Topic::shipping, "parcels and delivery"},
+});
+```
+
+`tt::decide` and `tt::filter` questions take `yes_means` and `no_means`. `tt::choose`, `tt::tag`, `tt::score` and `tt::rank` questions take `descriptions`, keyed by your choices, labels or levels.
+
+## Records and fields
+
+A record is text, as a `std::string`, a `std::string_view` or a string literal, or one JSON value, as its text wrapped in `tt::json_text`. `.field("/text")` on the question picks one field of a JSON object. Without it, ThinkThen judges the whole record.
+
+Give JSON records an `id`. Each result carries it back as `id()`.
+
+To pass your own struct, write a function `tt::record to_record(const Ticket& ticket)` beside it that returns the text to judge. An `_each` call then takes a collection of your structs, and `item()` hands your struct back. With `<thinkthen/nlohmann.hpp>` included, a `nlohmann::json` value is a record too.
+
+A one-record call given a `std::vector` does not compile. Use the `_each` form. A JSON array inside one `tt::json_text` is still one record. A blank record (an empty string, only spaces, or `{}`) throws `tt::failed` at the scalar call with code `record.empty`, before any service request. The same input in an `_each` call stays a failed result even in a one-item collection.
+
+ThinkThen copies question text when you build the question. A one-record call copies its selected text before returning. A many-record call is lazy: it reads and copies each record before advancing its source. Keep the bytes behind `std::string_view` or `tt::json_text` valid until that record is read. The answer and text retained by ThinkThen then own their bytes. `item()` stays your object; if its fields borrow memory, keep that memory alive whenever you use those fields.
+
+## Saved questions
+
+A question is a value. Build it once with its options, and many calls can share one definition.
+
+```cpp
+const auto asks_refund = tt::decide{"Does the customer request a refund?"}
+    .threshold(tt::threshold::band(0.2, 0.8))
+    .field("/text");
+const auto is_refund = client.decide(
+    asks_refund, tt::json_text{R"({"id": "a1", "text": "Please refund my order."})"});
+```
+
+There is one type per function, such as `tt::choose` and `tt::score`. A question never changes: `.threshold(...)`, `.field(...)` and the other options each hand back a new question. A toolbox keeps named questions in a JSON file:
+
+```cpp
+std::ifstream file{"toolbox.json"};
+const std::string json{std::istreambuf_iterator<char>{file}, {}};
+
+const auto toolbox = tt::toolbox::from_json(json);
+const auto asks_topic = toolbox.select<tt::choose<Topic>>("topic");
+const auto topic = client.choose(
+    asks_topic, tt::json_text{R"({"id": "a1", "text": "Where is my parcel?"})"});
+```
+
+`toolbox.select` throws `tt::error` with the code `tt::errc::usage_name` when the toolbox has no entry of that name, or the entry asks another function. It throws with `tt::errc::usage_question` when the saved choices are not exactly `Topic`'s words, in the same order. The question you select is your own copy. `std::ifstream` is from `<fstream>` and `std::istreambuf_iterator` from `<iterator>`.
+
+## Settings
+
+A `tt::client` made with no settings reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, give the client a `tt::settings`, then make the same calls on it.
+
+```cpp
+using namespace std::chrono_literals;
+
+tt::client client{tt::settings{
+    .model = "...",
+    .batch = 16,
+    .retry = tt::retry_policy{.max_retries = 5, .initial_backoff = 500ms, .attempt_timeout = 120s},
+}};
+const auto is_refund = client.decide(asks_refund, "Please refund my order.");
+```
+
+The fields are `backend`, `url`, `model`, `api_key`, `batch`, `retry` and `stop`. Name the ones you set in that order, which C++ requires. `tt::retry_policy` takes the number of retries, the first wait and the time allowed for one attempt, both as `std::chrono` durations. The client copies the settings. A client made from settings still reads the key from the environment when you set none. Keep the key in the environment, not in your code.
+
+Every call waits for its answer. C++ has no standard async form for this, so a caller who must not wait runs the call on a thread of its own. One client is safe to share between threads.
+
+## Usage
+
+```cpp
+const auto is_refund = client.decide(asks_refund, "Please refund my order.");
+const auto usage = client.usage();
+
+std::cout << usage.attempts;
+if (usage.input_tokens.reported && usage.output_tokens.reported) {
+    std::cout << ' ' << *usage.input_tokens.reported << ' ' << *usage.output_tokens.reported;
+}
+std::cout << '\n';
+```
+
+`client.usage()` counts everything the client has sent so far: `attempts`, `responses`, retries, bytes sent, and tokens in and out as the service reported them. `usage` is a plain struct of numbers that you own. A token count's `reported` is a `std::optional`, empty only after overflow; a known zero remains zero. `unknown_attempts` counts completed attempts for which the service supplied no token count. A reported total may therefore be partial, and missing reporting is not the same as a zero total.
+
+## Cancel
+
+C++ has its own way to stop work, `std::stop_source` from `<stop_token>`, and ThinkThen follows it.
+
+```cpp
+std::stop_source stop;
+tt::client client{tt::settings{.stop = stop.get_token()}};
+
+const auto is_refund = client.decide(asks_refund, "Please refund my order.");
+```
+
+Calling `stop.request_stop()` from another thread stops every call on that client, and each throws `tt::error` with the code `tt::errc::local_cancelled`. The results of a many-record call also have `cancel_handle()`, whose `request_cancel()` stops that one call from any thread. The client holds only a token, so `stop` is yours and may be destroyed before or after the client.
+
+## Errors
+
+| What happened | When it throws | What is thrown |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold | When you build the question or make the call | `tt::error` with a `usage.` code, such as `tt::errc::usage_threshold`. A list given to a one-record call, two bars given to filter, and a filter or rank question given to any other call do not compile |
+| The client could not start, such as no API key | When the client is made | `tt::error` with `tt::errc::usage_key_missing` |
+| The call was cancelled | At the call | `tt::error` with `tt::errc::local_cancelled` |
+| A one-record judgement failed, including blank input or a service failure on its row | At the scalar call | `tt::failed`, with the unchanged error code and payload |
+| A bulk result or form entry failed | At its answer read, `if` shortcut or explicit `throw_if_failed()` | `tt::failed` |
+| An annotate parent failed | At the scalar call; retained as a failed form in bulk | `tt::failed` at the scalar call or later failed-form read/check |
+| An answered annotate parent contains failed entries | The call returns it; a failed entry read or explicit form check throws | `tt::failed` |
+| Not sure | When you read the answer | `tt::unsure` |
+| You print a result, store it, or ask about its state | Never | |
+
+Two catches let you catch by meaning:
+
+- `catch (const tt::no_answer&)` is "there was no answer to read". It catches `tt::unsure` and `tt::failed`.
+- `catch (const tt::error&)` is "something went wrong". It catches `tt::failed` and every mistake in a call. It never catches `tt::unsure`, because not sure is a result and not an error.
+
+All of them are also caught by `catch (const std::exception&)`, so put that one last. `tt::no_answer` is only a name to catch by, and is not itself a `std::exception`.
+
+A `tt::error` carries `code()` and `http_status()`, and `what()` gives the code's name and the message as one string. `code()` is a `std::error_code` that compares with the `tt::errc` values. `code().message()` gives the name alone, and `family()` groups the codes into `usage`, `record`, `backend`, `local` and `internal`. `tt::filter_error` carries `rows()`, the failed results. `tt::unsure` carries `probability()`.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 package/source](https://proxy.golang.org/github.com/botassembly/thinkthen/@v/v0.1.2.zip). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
+| --- | --- |
+| `thinkthen::create()` and free `decide(engine, q, text)` | Typed client calls: a failed scalar judgement throws `tt::failed` at the call; successful calls return answered or unsure rows |
+| `CallResult<Judgment>.value` and `.facts` | Move-only result, loud answer read and client usage |
+| Collected `many(...)` judgments | Streaming rows and owned/borrowed record lifetimes shown above |
+
+## Ownership and freeing
+
+Everything ThinkThen makes for you frees itself when it goes out of scope. There is no free function to call, and nothing on this page is deleted by hand.
+
+| Value | How you get it | Who frees it, and when |
+| --- | --- | --- |
+| `tt::client` | You declare it | Its destructor, at the end of its scope. It moves and does not copy. Many-record calls already open keep running |
+| `tt::settings`, `tt::retry_policy`, `tt::rule` | You declare it | Nobody. Plain values, copied by whatever you give them to |
+| A question, such as `tt::decide` or `tt::choose<Topic>` | You declare it, or `toolbox.select` | Its destructor. It copies freely, and a copy shares the same unchanging question. Calls, forms and toolboxes keep their own |
+| `tt::toolbox` | `tt::toolbox::from_json` | Its destructor |
+| The results of a many-record call, such as `refund_checks` and `forms` | The `_each` calls | Its destructor, which also stops the call. It moves and does not copy. Results you moved out stay valid |
+| A result, `tt::row` | A one-record call, or moved out of a many-record loop | Its destructor. It moves and does not copy |
+| A result in a many-record loop | The loop variable | The results it came from, when the loop moves on. Move it out to keep it |
+| Your record, from `item()` or a filter loop | A many-record result | You. It is a reference to the object in your collection, so it lasts as long as that does. For a temporary collection, or a range that makes records as it goes, retained rows and filter errors keep the record's storage alive after the call is destroyed |
+| The entries of a form, from `form.answer()` and `tt::get` | A form | The form. They end when the form is destroyed or moved from |
+| A reference from `answer()` or `detail()`, and the pointer from `error()` | A result | The result. They end when it is destroyed or moved from |
+| `bool`, `double`, rank and enum answers, a `probability()`, an `id()` you copied, and `client.usage()` | Returned by value | Nobody. They are plain values of yours |
+| The `std::string` from `to_json()`, and names, relations and spans you copied out of an answer | Returned or copied by value | Its destructor. They own their text and outlive the result |
+| `tt::error`, `tt::failed`, `tt::unsure`, `tt::filter_error` | A `throw` | The language, when the `catch` ends. Catch by `const` reference. A `tt::filter_error` keeps its failed results alive as long as it lasts |
+| `std::stop_source` | You declare it | You. The client holds a token only |
+| Text you pass in, and the words in `tt::words` | You | Question text is copied when the question is built. Record text is copied before a one-record call returns, or when a lazy many-record call reads that record. Keep borrowed bytes valid until that read; borrowed fields in `item()` need their own backing memory whenever you use them |
+
+A result owns memory, so it moves and does not copy: `auto kept = std::move(is_refund);` leaves `is_refund` empty, good only for destroying or assigning to. Results go in a `std::vector` or a `std::optional` like any other move-only value.
+
+A client may be shared by every thread. A question never changes, so every thread may use one. One thread at a time reads the results of a many-record call. `stop.request_stop()` and `request_cancel()` may run on any thread. A result, with everything read from it, belongs to whichever thread holds it.

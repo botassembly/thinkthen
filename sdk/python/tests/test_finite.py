@@ -53,7 +53,7 @@ def test_known_finite_inputs_keep_batches_bounded_and_invalid_neighbors_visible(
             "answered",
             "answered",
         ]
-        assert [row.answer for row in rows] == [
+        assert [row.answer if row.answered else None for row in rows] == [
             True,
             None,
             False,

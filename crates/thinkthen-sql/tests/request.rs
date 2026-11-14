@@ -132,3 +132,13 @@ fn unrestricted_databases_select_backends_without_postgresql_policy() {
     })
     .unwrap();
 }
+
+#[test]
+fn sql_filter_band_refusal_names_the_sql_decide_route() {
+    let mut question =
+        thinkthen::native::QuestionBuilder::new(thinkthen::FunctionName::Filter, "Keep?").unwrap();
+    let error =
+        thinkthen::native::sql_threshold(&mut question, None, Some(0.2), Some(0.8)).unwrap_err();
+    assert_eq!(error.code().as_str(), "usage.threshold");
+    assert!(error.to_string().contains("thinkthen_decide"));
+}

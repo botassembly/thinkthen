@@ -15,7 +15,7 @@ if (nzchar(case_file)) {
     tag = list(sort(as.character(shown$topics))),
     filter = as.list(shown$refund_requests),
     rank = as.list(shown$urgency_rank),
-    find = lapply(shown$action$text, function(text) if (is.na(text)) NULL else text),
+    find = lapply(shown$action$text, function(text) if (is.na(text) || !nzchar(text)) NULL else text),
     recognize = list(lapply(seq_len(length(shown$mentions)), function(i)
       list(text = shown$mentions$text[[i]], kind = as.character(shown$mentions$kind[[i]])))),
     relate = list(lapply(seq_len(length(shown$employers)), function(i)

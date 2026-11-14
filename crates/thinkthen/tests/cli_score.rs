@@ -56,8 +56,8 @@ fn level_arguments_print_the_number_or_backend_failure() {
                 assert!((answer - expected).abs() < 1e-12);
             }
             None => {
-                assert_eq!(output.status.code(), Some(4));
-                assert!(output.stdout.is_empty());
+                assert_eq!(output.status.code(), Some(6));
+                support::failed_stdout(&output);
                 assert_eq!(reported(&output), "backend.reply");
             }
         }

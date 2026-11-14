@@ -16,9 +16,9 @@ func main() {
 	}
 	defer client.Close()
 
-	refundQuestion := tt.NewDecide("Does the customer request a refund?")
+	refundQuestion := tt.DecideQuestion{Question: "Does the customer request a refund?"}
 	isRefund, err := tt.Answer(client.Decide(context.Background(),
-		refundQuestion, tt.Text("Please refund my order.")))
+		refundQuestion, "Please refund my order."))
 	switch {
 	case errors.Is(err, tt.ErrUnsure):
 		fmt.Println("not sure: send to a person")

@@ -29,7 +29,7 @@ const Source = struct {
 };
 const Work = struct {
     source: Source,
-    call: tt.Call(.decide),
+    call: tt.Call(tt.Decide, tt.Record),
     count: usize,
     probability: f64,
     code: []const u8,
@@ -53,9 +53,10 @@ fn drive(work: *Work) void {
         work.identifier_width_mask |= @as(u64, 1) << @intCast(row.id.?.string.len);
         const id = std.fmt.allocPrint(arena.allocator(), "record-{d}", .{work.offset + received - 1}) catch @panic("allocation failed");
         std.debug.assert(std.mem.eql(u8, row.id.?.string, id));
-        switch (row.outcome) {
-            .answered => |answer| std.debug.assert(answer.answer and answer.probability.? == work.probability),
-            .failed => |failure| {
+        switch (row.status) {
+            .answered => std.debug.assert((row.answer(null) catch @panic("answered row read failed")) and row.probability.? == work.probability),
+            .failed => {
+                const failure = row.failure.?;
                 work.failed += 1;
                 std.debug.assert(std.mem.eql(u8, failure.name(), work.code));
             },
@@ -84,7 +85,7 @@ pub fn run(a: std.mem.Allocator, args: []const [:0]const u8) !void {
         for (work, threads, 0..) |*item, *thread, worker| {
             const offset = try std.fmt.parseInt(usize, args[9], 10) + (round * workers + worker) * count;
             item.* = .{ .call = undefined, .source = .{ .offset = offset, .count = count }, .count = count, .probability = try std.fmt.parseFloat(f64, args[6]), .code = args[5], .cancel = cancel, .offset = offset };
-            item.call = try client.decideAll(std.heap.page_allocator, "Ready?", .{ .source = tt.RecordSource.from(&item.source) }, .{ .field = "/body" }, null);
+            item.call = try client.decideAll(std.heap.page_allocator, tt.Decide{ .question = "Ready?", .field = "/body" }, tt.Input{ .source = tt.RecordSource.from(&item.source) }, null);
             thread.* = try std.Thread.spawn(.{}, drive, .{item});
         }
         if (cancel) {

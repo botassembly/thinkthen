@@ -1,0 +1,41 @@
+{
+  "source": "a8728ca68cc3dd082fb3e4afe68f35a10a29db66",
+  "linux_execution_job": "j40125",
+  "linux_execution_artifact": "01b-command-completion",
+  "real_response_capture_job": "j40124",
+  "real_response_note": "Real entry retained from initial command capture, reused by the successful Linux branch; no new paid request for export.",
+  "cache_digest": "a81a08a893db04d9ea4c8ff5a341a53af76ed54671a8a34dc93e5cf059e354ce",
+  "cache_snapshot_sha256": "abad6eae8f20af61b5d1186655baecb5c10e5018d8d48195d8d0531cebd144e2",
+  "cache_entries_at_export": 34,
+  "binary_source": "a8728ca68cc3dd082fb3e4afe68f35a10a29db66",
+  "linux_binary_sha256": "37184f01865d3a48cd22910f1c4ee445e2f7ae4b01d36cb500693327ceb62c14",
+  "program_sha256": {
+    "linux/run.sh": "8f71c99693f6478e255569b480bfbb79470334e0bf23f7b4693f74b3efbf5b3b",
+    "windows-source-only/run.ps1": "0e3938e0914f58ecbd8c0a0a4908ffea53bb5cbf2253c016ecb1c352fff14ddd",
+    "windows-source-only/show.ps1": "53f4e57c39d49ed8bb0a5dd8d5dbaf88294c419d801b4fe0c3d93218d4e23c6f"
+  },
+  "windows_program_execution": "NOT EXECUTED; source-only leaf remains assigned to0085 native replay",
+  "entry_request": {
+    "state": "Each question quotes the text it asks about.",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "The text is \"Please refund my order.\". Does the customer request a refund?"
+      }
+    }
+  },
+  "files": {
+    "responses-snapshot.json": "abad6eae8f20af61b5d1186655baecb5c10e5018d8d48195d8d0531cebd144e2",
+    "response-entry.json": "ad1ba735e6e19a208f8baa052e220f0ea3aae3230e6d94eafb61ba27beb4a322",
+    "responses.json": "53168277f8b708b830ada62c73fa65ebeb98dabdcf221cddc64006aa0eee09a7",
+    "windows-source-only/run.ps1": "0e3938e0914f58ecbd8c0a0a4908ffea53bb5cbf2253c016ecb1c352fff14ddd",
+    "windows-source-only/show.ps1": "53f4e57c39d49ed8bb0a5dd8d5dbaf88294c419d801b4fe0c3d93218d4e23c6f",
+    "linux/run.sh": "8f71c99693f6478e255569b480bfbb79470334e0bf23f7b4693f74b3efbf5b3b",
+    "linux-branch/exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "linux-branch/stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "linux-branch/ran": "fb590e58de5d5aaf757629ec73f835d4517f7ca65adc291d7fe78608686063a7",
+    "linux-branch/capture.json": "3e7e735dd05189cd2393edb5e96843775196e91018c2065cdad431499841cc46",
+    "linux-branch/output.txt": "4f6ffd4f6e46891b7c2ded273a6f32661080f48b4b41bcdc7191db98ac32167e"
+  }
+}

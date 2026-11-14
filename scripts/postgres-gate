@@ -2,6 +2,10 @@
 # Load the archive in a fresh PostgreSQL installation inside an offline container.
 set -eu
 cd "$(dirname "$0")/.."
+if [ "${1:-}" = --development ]; then
+    shift
+    exec sh extensions/postgres/tests/development.sh "$@"
+fi
 case "${1:-all}" in all|native|ownership|conformance) ;; *) echo 'usage: scripts/postgres-gate [all|native|ownership|conformance]' >&2; exit 2 ;; esac
 if [ "$(uname -s)" != Linux ]; then
     echo 'Skipped PostgreSQL: package targets Linux; installed gate runs on the Linux builder'

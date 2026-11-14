@@ -9,11 +9,18 @@ if check_checksum:
     del sys.argv[1]
 cache = Path(sys.argv[1]) / "thinkthen" / "native"
 command = sys.argv[2:]
-subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
+
+
+def loaded():
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode:
+        raise SystemExit(result.stdout + result.stderr)
+
+loaded()
 assets = [path for path in cache.glob("*/*") if path.is_file()]
 assert assets, f"consumer loaded no cached native engine in {cache}"
 # A second process must load the already published cache before tampering.
-subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
+loaded()
 
 def rejected(diagnostic="cache owner or permissions"):
     result = subprocess.run(command, capture_output=True, text=True)
@@ -43,7 +50,7 @@ for asset in assets:
     finally:
         asset.unlink()
         saved.rename(asset)
-subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
+loaded()
 print("Installed consumer rejects writable and linked native cache entries")
 if check_checksum:
     print("Installed consumer loads cold/warm cache and rejects corrupt engine bytes")

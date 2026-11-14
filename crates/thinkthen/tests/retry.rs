@@ -269,7 +269,7 @@ fn splitting_preserves_all_labels_and_shared_questions_per_record() {
         }
     })
     .unwrap();
-    let question = thinkthen::Tag::new("What applies?", ["billing", "shipping"]).unwrap();
+    let question = thinkthen::Tag::with_strings("What applies?", ["billing", "shipping"]).unwrap();
     let mut rows = Vec::new();
     engine(&server)
         .rows(&question, ["one", "one", "two", "two"].map(Record::text))

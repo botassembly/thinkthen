@@ -35,14 +35,12 @@ fn a_scale_returns_its_probability_weighted_position_and_detail() {
             .api_key(Key::new(KEY).unwrap())
             .engine(|_| None)
             .unwrap();
-        let question = Score::new("How urgent?", levels.iter().copied()).unwrap();
-        let row = engine
-            .run(&question, Record::text("Say \"now\"\nplease"))
-            .unwrap();
-        assert_eq!(row.error().is_none(), expected.is_some());
-        let value = serde_json::to_value(&row).unwrap();
+        let question = Score::with_strings("How urgent?", levels.iter().copied()).unwrap();
+        let result = engine.run(&question, Record::text("Say \"now\"\nplease"));
         match expected {
             Some(expected) => {
+                let row = result.unwrap();
+                let value = serde_json::to_value(&row).unwrap();
                 assert_eq!(value["status"], "answered");
                 assert!((value["answer"].as_f64().unwrap() - expected).abs() < 1e-12);
                 let Outcome::Answered {
@@ -57,10 +55,7 @@ fn a_scale_returns_its_probability_weighted_position_and_detail() {
                     probabilities
                 );
             }
-            None => match row.outcome() {
-                Outcome::Failed { error } => assert_eq!(error.code().as_str(), "backend.reply"),
-                other => panic!("expected a failure, got {other:?}"),
-            },
+            None => assert_eq!(result.unwrap_err().code().as_str(), "backend.reply"),
         }
         assert_eq!(
             server.requests()[0].json().unwrap()["questions"]["q1"],
@@ -89,12 +84,9 @@ fn malformed_scale_answers_fail_without_exposing_backend_text() {
             .api_key(Key::new(KEY).unwrap())
             .engine(|_| None)
             .unwrap();
-        let question = Score::new("How urgent?", ["low", "high"]).unwrap();
-        let row = engine.run(&question, Record::text("text")).unwrap();
-        match row.outcome() {
-            Outcome::Failed { error } => assert_eq!(error.code().as_str(), "backend.reply"),
-            other => panic!("expected a failure, got {other:?}"),
-        }
+        let question = Score::with_strings("How urgent?", ["low", "high"]).unwrap();
+        let error = engine.run(&question, Record::text("text")).unwrap_err();
+        assert_eq!(error.code().as_str(), "backend.reply");
     }
 }
 
@@ -108,7 +100,10 @@ fn a_scale_requires_a_question_and_two_distinct_nonblank_levels() {
         ("How urgent?", vec!["low", "low"]),
     ] {
         assert_eq!(
-            Score::new(text, levels).unwrap_err().code().as_str(),
+            Score::with_strings(text, levels)
+                .unwrap_err()
+                .code()
+                .as_str(),
             "usage.question"
         );
     }

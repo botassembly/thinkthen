@@ -1,1 +1,1 @@
-[{"msg_id":1,"works_for":"[{\"probability\":0.97,\"relation\":\"works_for\",\"source\":{\"text\":\"Morgan\",\"kind\":\"person\",\"start_offset\":0,\"end_offset\":6},\"target\":{\"text\":\"Example Group\",\"kind\":\"organization\",\"start_offset\":17,\"end_offset\":30}}]","status":"answered"}]
+[{"position":1,"msg_id":1,"status":"answered","person":"Morgan","relation":"works_for","organization":"Example Group"}]

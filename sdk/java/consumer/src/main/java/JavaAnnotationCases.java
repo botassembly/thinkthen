@@ -18,21 +18,19 @@ public final class JavaAnnotationCases {
             JavaApiCases.equal(output.get(2).position(),3L,"annotation keeps input positions");
             var answers = output.getFirst().answer();
             answers.decide("refund").answer();
-            JavaApiCases.check(answers.choose("topic").detail().isPresent(),"named outcomes expose common detail");
+            JavaApiCases.check(answers.choose("topic").detail() instanceof LabelDetail,"named outcomes expose common detail");
             for (String name : java.util.List.of("absent","topic")) {
                 try { answers.decide(name); throw new AssertionError("unknown or wrong-function name must throw"); }
                 catch (ThinkThenException expected) { JavaApiCases.equal(expected.code().wireName(),"usage.argument","selector uses shared argument code"); }
             }
-            try { output.get(1).row().detail(); throw new AssertionError("failed detail must throw"); }
-            catch (ThinkThenException expected) { JavaApiCases.equal(expected.code().wireName(),"record.missing","detail preserves shared failure"); }
-            JavaApiCases.equal(new Span("text",4_000_000_000L,4_000_000_004L).start(),4_000_000_000L,"span positions retain signed 64-bit values");
+            JavaApiCases.check(output.get(1).detail() instanceof NoDetail, "failed detail is safe and absent");
+            JavaApiCases.equal(new Span("text",2_000_000_000,2_000_000_004).start(),2_000_000_000,"span positions fit Java string indexes");
         }
         try (var server = new BackendFixture("unavailable"); var client = JavaOwnershipCases.remote(Backend.SYSTEMONE,server)) {
             for (Object blank : java.util.List.of("", "  ", Map.of(), Map.of("id","empty"), Map.of("text",""), Map.of("text",java.util.List.of()), Map.of("text",Map.of()))) {
                 var options = DecideOptions.builder();
                 if (blank instanceof Map<?,?> map && map.containsKey("text")) options.field(Pointer.of("/text"));
-                try { client.decide("Ready?",blank,options.build()); throw new AssertionError("a blank single call must raise"); }
-                catch (ThinkThenException expected) { JavaApiCases.equal(expected.code().wireName(),"record.empty","blank error comes from the shared engine"); }
+                JavaApiCases.failedCall(() -> client.decide("Ready?",blank,options.build()), "record.empty");
             }
             JavaApiCases.equal(server.command("count"),"0","blank single calls make no backend request");
         }

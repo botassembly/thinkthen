@@ -24,7 +24,7 @@ async function consume(client, scenario, count, probability, call, basis, widths
 
 async function adapter(sample) {
   const c = sample.client;
-  const client = new sdk.ThinkThen({ backend: c.backend, url: c.url, apiKey: c.api_key, model: c.model,
+  const client = new sdk.Client({ backend: c.backend, url: c.url, apiKey: c.api_key, model: c.model,
     batch: c.batch, retry: { maxRetries: c.retry.max_retries,
       initialBackoffMs: c.retry.initial_backoff_ms, attemptTimeoutMs: c.retry.attempt_timeout_ms } });
   let calls = 0, rows = 0, failed = 0, pulled = 0;

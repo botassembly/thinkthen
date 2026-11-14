@@ -20,64 +20,14 @@ func checkPublicInterface() throws {
   let decodedCap = try JSONDecoder().decode(Settings.self, from: capBytes)
   precondition(decodedCap.maxRequests == UInt64.max)
   let retry =
-    try JSONSerialization.jsonObject(with: JSONEncoder().encode(Retry())) as? [String: Any]
+    try JSONSerialization.jsonObject(with: JSONEncoder().encode(RetryPolicy())) as? [String: Any]
   precondition(retry?.isEmpty == true)
   let noRetries =
-    try JSONSerialization.jsonObject(with: JSONEncoder().encode(Retry(maxRetries: 0)))
+    try JSONSerialization.jsonObject(with: JSONEncoder().encode(RetryPolicy(maxRetries: 0)))
     as? [String: Int]
   precondition(noRetries == ["max_retries": 0])
-  let source = #""source":{"question_identity":"test","backend":"future-backend","model":"test"}"#
-  func decision(_ outcome: String) throws -> Row<Decision> {
-    try JSONDecoder().decode(
-      Row<Decision>.self,
-      from: Data("{\"function\":\"decide\",\"position\":1,\(source),\(outcome)}".utf8))
-  }
-  let approved = try decision(#""status":"answered","answer":false,"probability":0.1"#)
-  let answer = try approved.get()
-  precondition(answer == false)
-  let resultAnswer = try approved.result().get()
-  precondition(resultAnswer == false)
-  precondition(approved.probability == 0.1 && !approved.isUnsure && !approved.isFailed)
-  precondition(approved.source.backend.rawValue == "future-backend")
-  let position: Int = approved.position
-  precondition(position == 1)
-  let uncertain = try decision(#""status":"unsure","probability":0.5"#)
-  do {
-    _ = try uncertain.get()
-    preconditionFailure("not sure became an answer")
-  } catch RowError.unsure(let probability) { precondition(probability == 0.5) }
-  let failed = try decision(
-    #""status":"failed","error":{"code":"future.failure","message":"future diagnostic","http_status":503}"#
-  )
-  do {
-    _ = try failed.result().get()
-    preconditionFailure("failure became an answer")
-  } catch RowError.failed(let error) {
-    precondition(error.code.rawValue == "future.failure")
-    precondition(error.localizedDescription == "future diagnostic")
-    let status: Int? = error.httpStatus
-    precondition(status == 503)
-  } catch RowError.unsure(let probability) {
-    throw RowError.unsure(probability: probability)
-  }
-  let annotations = try JSONDecoder().decode(
-    Annotations.self,
-    from: Data(
-      #"{"ready":{"function":"decide","status":"answered","answer":false},"review":{"function":"decide","status":"unsure","probability":0.5}}"#
-        .utf8))
-  let ready: Bool = try annotations.get("ready")
-  precondition(!ready)
-  do {
-    let _: Bool = try annotations.get("review")
-    preconditionFailure("annotation not sure became an answer")
-  } catch RowError.unsure(let probability) { precondition(probability == 0.5) }
-  let text = "a👩‍🔬e\u{301}z"
-  let span = try JSONDecoder().decode(
-    TextSpan.self, from: Data(#"{"text":"👩‍🔬","start":1,"end":4}"#.utf8))
-  precondition(span.range(in: text).map { String(text[$0]) } == "👩‍🔬")
-  let beyond = try JSONDecoder().decode(
-    TextSpan.self, from: Data(#"{"text":"bad","start":-1,"end":99}"#.utf8))
-  precondition(beyond.range(in: text) == nil)
+  let future = try JSONDecoder().decode(Backend.self, from: Data("\"future-backend\"".utf8))
+  precondition(future.rawValue == "future-backend")
   print("Swift public interface passed")
 }
 
@@ -87,16 +37,15 @@ func checkCallSignatures(_ client: Client) async throws {
   let kept: Rows<Record> = client.filter("Needs help?", records: inputs)
   let keptTexts: Rows<String> = client.filter("Needs help?", records: ["message"])
   _ = keptTexts
-  let full: FilterRows = client.filterResults("Needs help?", records: inputs)
-  let failureRows: FilterRows = client.filter("Needs help?", records: inputs, failures: .row)
-  let ranked: RankRows = client.rank("How urgent?", levels: ["low", "high"], records: inputs)
+  let ranked: RankRows<Record> = client.rank(
+    "How urgent?", records: inputs, levels: ["low", "high"])
   if let result = try await ranked.makeAsyncIterator().next() {
     let original: Record = result.item
-    _ = original
-    let rank: Int = try result.get()
-    _ = rank
+    let rank: Int = try result.answer
+    _ = (original, rank)
   }
-  _ = (kept, full, failureRows)
+  _ = kept
+
 }
 
 // A generated text source must remain untouched until its result is read.
@@ -121,20 +70,19 @@ private struct CountedTexts: Sequence, Sendable {
 func checkTextSequenceLaziness(_ client: Client) {
   let reads = TextReads()
   let texts = CountedTexts(reads: reads)
-  let questions = AnnotationQuestions(["refund": .decide(DecideQuestion("Refund?"))])
+  let questions = AnnotationQuestions(["refund": DecideQuestion("Refund?")])
   let calls: [any Sendable] = [
     client.decide("Refund?", records: texts),
-    client.choose("Queue?", choices: ["billing", "shipping"], records: texts),
-    client.tag("Topics?", labels: ["billing"], records: texts),
-    client.score("Urgent?", levels: ["low", "high"], records: texts),
+    client.choose("Queue?", records: texts, choices: ["billing", "shipping"]),
+    client.tag("Topics?", records: texts, labels: ["billing"]),
+    client.score("Urgent?", records: texts, levels: ["low", "high"]),
     client.filter("Refund?", records: texts),
-    client.filterResults("Refund?", records: texts),
-    client.rank("Urgent?", levels: ["low", "high"], records: texts),
+    client.rank("Urgent?", records: texts, levels: ["low", "high"]),
     client.find("Refund request", records: texts),
-    client.recognize(kinds: ["person"], records: texts),
+    client.recognize(records: texts, kinds: ["person"]),
     client.relate(
-      rules: [.init(source: "person", target: "organization", relation: "works_for")],
-      records: texts),
+      records: texts,
+      rules: [.init(source: "person", target: "organization", relation: "works_for")]),
     client.annotate(questions, records: texts),
   ]
   withExtendedLifetime(calls) {
@@ -145,12 +93,12 @@ func checkTextSequenceLaziness(_ client: Client) {
 func checkRankOriginalKinds(_ client: Client) async throws {
   let usage: Usage = try {
     let temporary = try Client(backend: .stub)
-    return try temporary.usage()
+    return temporary.usage
   }()
   precondition(usage.attempts == 0 && usage.activeCalls == 0)
   precondition(usage.inputTokens.reported == 0 && usage.outputTokens.unknownAttempts == 0)
   let records: [Record] = [.json(.null), .missing]
-  let results = try await client.rank("Urgent?", levels: ["low", "high"], records: records)
+  let results = try await client.rank("Urgent?", records: records, levels: ["low", "high"])
     .collect()
   precondition(results.count == records.count)
   for result in results {

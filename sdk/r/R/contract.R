@@ -1,18 +1,18 @@
 # Generated native requirement. Do not edit.
-.tt_abi_version <- 131076L
+.tt_abi_version <- 327681L
 .tt_abi_version_export <- "wrap__r_abi_version"
 .tt_abi_code <- "usage.abi"
 .tt_abi_message <- "the native ABI is incompatible"
-.tt_abi_exports <- c("wrap__r_abi_version", "wrap__r_admit", "wrap__r_cancel_release", "wrap__r_client", "wrap__r_client_close", "wrap__r_client_usage", "wrap__r_close", "wrap__r_id_integer", "wrap__r_id_string", "wrap__r_open_finite", "wrap__r_poll", "wrap__r_prepare_record", "wrap__r_question", "wrap__r_question_conversion_error", "wrap__r_settings_conversion_error")
+.tt_abi_exports <- c("wrap__r_abi_version", "wrap__r_admit", "wrap__r_cancel_release", "wrap__r_client", "wrap__r_client_close", "wrap__r_client_usage", "wrap__r_close", "wrap__r_id_integer", "wrap__r_id_string", "wrap__r_open_finite", "wrap__r_poll", "wrap__r_prepare_record", "wrap__r_prepare_request", "wrap__r_question", "wrap__r_question_conversion_error", "wrap__r_saved_row", "wrap__r_settings_conversion_error")
 .tt_function_names <- c(
     "1" = "decide",
     "2" = "choose",
     "3" = "tag",
     "4" = "score",
-    "5" = "filter",
     "7" = "find",
     "8" = "recognize",
     "9" = "relate",
+    "5" = "filter",
     "6" = "rank",
     "10" = "annotate"
 )

@@ -1,5 +1,5 @@
 {
-  "anchor": "\tfor refund, err := range client.FilterAll(",
-  "before": 0,
-  "after": 2
+  "anchor": "\tfor refund, err := range client.Filter(",
+  "before": 1,
+  "after": 1
 }

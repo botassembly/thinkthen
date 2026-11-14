@@ -28,12 +28,6 @@ private typealias OpenCall =
     OpaquePointer?, OpaquePointer?, UnsafePointer<thinkthen_text>?, UInt32,
     UnsafeMutablePointer<OpaquePointer?>?, UnsafeMutablePointer<thinkthen_error>?
   ) -> Int32
-private typealias OpenRecords =
-  @convention(c) (
-    OpaquePointer?, OpaquePointer?, UnsafePointer<thinkthen_text>?,
-    UnsafePointer<thinkthen_record_input>?, Int, Int, UInt32, UnsafeMutablePointer<OpaquePointer?>?,
-    UnsafeMutablePointer<thinkthen_error>?
-  ) -> Int32
 private typealias Send =
   @convention(c) (
     OpaquePointer?, UnsafePointer<UInt8>?, Int, UnsafeMutablePointer<thinkthen_error>?
@@ -52,10 +46,19 @@ private typealias ConversionErrorCall =
   @convention(c) (OpaquePointer?, UnsafeMutablePointer<thinkthen_error>?) -> Int32
 private typealias FreeError = @convention(c) (UnsafeMutablePointer<thinkthen_error>?) -> Void
 private typealias FreeRow = @convention(c) (UnsafeMutablePointer<thinkthen_row>?) -> Void
-private typealias OriginalRecord =
+private typealias UsageValues =
   @convention(c) (
-    UnsafePointer<thinkthen_row>?, UnsafeMutablePointer<thinkthen_record_view>?,
+    OpaquePointer?, UnsafeMutablePointer<thinkthen_usage>?, UnsafeMutablePointer<thinkthen_error>?
+  ) -> Int32
+private typealias SaveRow =
+  @convention(c) (
+    UnsafePointer<thinkthen_row>?, UnsafeMutablePointer<thinkthen_buffer>?,
     UnsafeMutablePointer<thinkthen_error>?
+  ) -> Int32
+private typealias SelectedText =
+  @convention(c) (
+    UnsafePointer<thinkthen_row>?, UnsafePointer<CChar>?, Int,
+    UnsafeMutablePointer<thinkthen_text>?, UnsafeMutablePointer<thinkthen_error>?
   ) -> Int32
 
 // Immutable process-owned function table. Workers may outlive a cancelled call.
@@ -63,15 +66,15 @@ final class Native: Sendable {
   static let loaded = Result { try Native() }
   private let clientOpen: OpenClient, callOpen: OpenCall, sendText: Send, sendJSON: Send
   private let nextRow: Next, errorFree: FreeError, rowFree: FreeRow, codeName: CodeName
-  private let recordsOpen: OpenRecords
-  private let originalRecord: OriginalRecord
+  private let selectedText: SelectedText
+  private let saveRow: SaveRow
   private let admitSettings: Admit, admitQuestion: Admit
   private let settingsFree: PointerAction, questionFree: PointerAction
   private let admitToolbox: Admit, admitDefinitions: Admit
-  private let exportToolbox: ExportJSON, exportDefinitions: ExportJSON
-  private let clientUsage: ExportJSON
+  private let exportToolbox: ExportJSON, exportDefinitions: ExportJSON, exportNames: ExportJSON
+  private let clientUsage: UsageValues
   private let toolboxFree: PointerAction, bufferFree: FreeBuffer
-  private let sendMissing: ConversionErrorCall
+  private let sendMissing: ConversionErrorCall, sendInvalid: ConversionErrorCall
   let events: RetainEvents, eventVersion: EventVersion, eventWait: EventWait
   let eventWake: PointerAction, eventFree: PointerAction
   let clientFree: PointerAction, cancel: PointerAction, free: PointerAction, end: PointerAction
@@ -137,7 +140,7 @@ final class Native: Sendable {
     let version = try symbol("thinkthen_abi_version", Version.self)()
     let required = UInt32(THINKTHEN_ABI_VERSION)
     guard version >> 16 == required >> 16, version & 0xffff >= required & 0xffff else {
-      throw ThinkThenError.engineVersion(
+      throw CallError.engineVersion(
         required: ABIVersion(major: required >> 16, minor: required & 0xffff),
         found: ABIVersion(major: version >> 16, minor: version & 0xffff))
     }
@@ -145,6 +148,7 @@ final class Native: Sendable {
     admitDefinitions = try symbol("thinkthen_toolbox_from_definitions_json", Admit.self)
     exportToolbox = try symbol("thinkthen_toolbox_to_json", ExportJSON.self)
     exportDefinitions = try symbol("thinkthen_toolbox_definitions_json", ExportJSON.self)
+    exportNames = try symbol("thinkthen_toolbox_names_json", ExportJSON.self)
     toolboxFree = try symbol("thinkthen_toolbox_free", PointerAction.self)
     bufferFree = try symbol("thinkthen_buffer_free", FreeBuffer.self)
     admitSettings = try symbol("thinkthen_settings_from_json", Admit.self)
@@ -152,10 +156,11 @@ final class Native: Sendable {
     settingsFree = try symbol("thinkthen_settings_free", PointerAction.self)
     questionFree = try symbol("thinkthen_question_free", PointerAction.self)
     sendMissing = try symbol("thinkthen_call_send_missing", ConversionErrorCall.self)
+    sendInvalid = try symbol("thinkthen_call_send_invalid", ConversionErrorCall.self)
     clientOpen = try symbol("thinkthen_client_open", OpenClient.self)
     callOpen = try symbol("thinkthen_call_open_question", OpenCall.self)
-    recordsOpen = try symbol("thinkthen_call_open_records_question", OpenRecords.self)
-    originalRecord = try symbol("thinkthen_row_original", OriginalRecord.self)
+    saveRow = try symbol("thinkthen_row_to_json", SaveRow.self)
+    selectedText = try symbol("thinkthen_row_selected_text", SelectedText.self)
     sendText = try symbol("thinkthen_call_send_text", Send.self)
     sendJSON = try symbol("thinkthen_call_send_json", Send.self)
     events = try symbol("thinkthen_call_events", RetainEvents.self)
@@ -164,7 +169,7 @@ final class Native: Sendable {
     eventWake = try symbol("thinkthen_events_wake", PointerAction.self)
     eventFree = try symbol("thinkthen_events_free", PointerAction.self)
     nextRow = try symbol("thinkthen_call_next", Next.self)
-    clientUsage = try symbol("thinkthen_client_usage", ExportJSON.self)
+    clientUsage = try symbol("thinkthen_client_usage_values", UsageValues.self)
     clientFree = try symbol("thinkthen_client_free", PointerAction.self)
     cancel = try symbol("thinkthen_call_cancel", PointerAction.self)
     free = try symbol("thinkthen_call_free", PointerAction.self)
@@ -175,7 +180,7 @@ final class Native: Sendable {
     for code in ErrorCode.allCases {
       guard let value = code.nativeValue else { continue }
       guard let name = codeName(value), String(cString: name) == code.rawValue else {
-        throw ThinkThenError.contract(message: "Native error registry does not match this package")
+        throw CallError.contract(message: "Native error registry does not match this package")
       }
     }
   }
@@ -194,7 +199,7 @@ final class Native: Sendable {
       let message = String(decoding: copy(error.message), as: UTF8.self)
       let name = codeName(error.code).map { String(cString: $0) }
       if name == "local.cancelled" { throw CancellationError() }
-      throw ThinkThenError.engine(
+      throw CallError.engine(
         RowFailure(
           code: ErrorCode(rawValue: name ?? "native.\(error.code)"), message: message,
           httpStatus: error.http_status == 0 ? nil : Int(error.http_status)))
@@ -208,7 +213,7 @@ final class Native: Sendable {
     }
     try check(status, &error)
     guard let pointer else {
-      throw ThinkThenError.contract(message: "Native admission returned no owner")
+      throw CallError.contract(message: "Native admission returned no owner")
     }
     return pointer
   }
@@ -223,90 +228,72 @@ final class Native: Sendable {
     let status = clientOpen(admitted, &pointer, &error)
     try check(status, &error)
     guard let pointer else {
-      throw ThinkThenError.contract(message: "Native client returned no owner")
+      throw CallError.contract(message: "Native client returned no owner")
     }
     return pointer
   }
-  func usage(_ client: OpaquePointer) throws -> Usage {
-    var output = thinkthen_buffer()
-    defer { bufferFree(&output) }
-    var error = emptyError()
-    try check(clientUsage(client, &output, &error), &error)
-    return try JSONDecoder().decode(Usage.self, from: copy(output))
+  func usage(_ client: OpaquePointer) -> Usage {
+    var value = thinkthen_usage()
+    value.struct_size = UInt32(MemoryLayout<thinkthen_usage>.size)
+    // The typed ABI only refuses a NULL live owner or an invalid output size.
+    // Both are construction invariants here, independent of any caller input.
+    let status = clientUsage(client, &value, nil)
+    precondition(status == THINKTHEN_OK, "Native usage violated the negotiated ABI")
+    return Usage(
+      attempts: value.attempts, responses: value.responses,
+      statusRetries: value.status_retries, connectionRetries: value.connection_retries,
+      requestBodyBytes: value.request_body_bytes, activeAttempts: value.active_attempts,
+      activeCalls: value.active_calls,
+      inputTokens: TokenUsage(
+        reported: value.input_tokens.reported_known ? value.input_tokens.reported : nil,
+        unknownAttempts: value.input_tokens.unknown_attempts),
+      outputTokens: TokenUsage(
+        reported: value.output_tokens.reported_known ? value.output_tokens.reported : nil,
+        unknownAttempts: value.output_tokens.unknown_attempts))
   }
-  func toolboxJSON(_ bytes: Data, loading: Bool) throws -> Data {
-    let toolbox = try admit(bytes, using: loading ? admitToolbox : admitDefinitions)
+  private func toolboxValue(_ bytes: Data, admission: Admit, export: ExportJSON) throws -> Data {
+    let toolbox = try admit(bytes, using: admission)
     defer { toolboxFree(toolbox) }
     var output = thinkthen_buffer()
     defer { bufferFree(&output) }
     var error = emptyError()
-    let operation = loading ? exportDefinitions : exportToolbox
-    let status = operation(toolbox, &output, &error)
-    try check(status, &error)
+    // The same admitted native owner supplies names as values before a host
+    // decoder can merge canonically equivalent dictionary keys on Linux or Mac.
+    try check(exportNames(toolbox, &output, &error), &error)
+    let names = try JSONDecoder().decode([String].self, from: copy(output))
+    try checkSavedNames(names)
+    bufferFree(&output)
+    try check(export(toolbox, &output, &error), &error)
     return copy(output)
   }
-  func openCall(_ client: OpaquePointer, _ bytes: Data, name: String?, records: [Record]?) throws
-    -> OpaquePointer
-  {
-    let offsetUnit = UInt32(THINKTHEN_OFFSET_CODE_POINTS.rawValue)
+  func toolboxJSON(_ bytes: Data, loading: Bool) throws -> Data {
+    try toolboxValue(
+      bytes, admission: loading ? admitToolbox : admitDefinitions,
+      export: loading ? exportDefinitions : exportToolbox)
+  }
+  func annotationJSON(_ bytes: Data) throws -> Data {
+    try toolboxValue(bytes, admission: admitDefinitions, export: exportDefinitions)
+  }
+  func openCall(_ client: OpaquePointer, _ bytes: Data, name: String?) throws -> OpaquePointer {
     let question = try admit(bytes, using: admitQuestion)
     defer { questionFree(question) }
     var pointer: OpaquePointer?
     var error = emptyError()
-    let nameBytes = name.map { Data($0.utf8) }
-    let status = try (nameBytes ?? Data()).withUnsafeBytes { buffer -> Int32 in
+    let nameBytes = name.map { Data($0.utf8) } ?? Data()
+    let status = nameBytes.withUnsafeBytes { buffer in
       var view = thinkthen_text(
         data: buffer.bindMemory(to: CChar.self).baseAddress, len: buffer.count)
-      return try withUnsafePointer(to: &view) { nameView in
-        let named = name == nil ? nil : nameView
-        guard let records else {
-          return callOpen(
-            client, question, named, offsetUnit, &pointer, &error)
-        }
-        var payload = Data()
-        var inputs: [thinkthen_record_input] = []
-        var offsets: [Int] = []
-        for record in records {
-          var input = thinkthen_record_input()
-          input.struct_size = UInt32(MemoryLayout<thinkthen_record_input>.size)
-          let value: Data
-          switch record {
-          case .text(let text):
-            input.kind = THINKTHEN_RECORD_TEXT
-            value = Data(text.utf8)
-          case .missing:
-            input.kind = THINKTHEN_RECORD_MISSING
-            value = Data()
-          case .json(let json):
-            input.kind = THINKTHEN_RECORD_JSON
-            value = try JSONEncoder().encode(json)
-          }
-          offsets.append(payload.count)
-          input.len = value.count
-          payload.append(value)
-          inputs.append(input)
-        }
-        return payload.withUnsafeBytes { payloadBuffer in
-          for index in inputs.indices {
-            inputs[index].data = payloadBuffer.bindMemory(to: CChar.self).baseAddress?.advanced(
-              by: offsets[index])
-          }
-          return inputs.withUnsafeBufferPointer {
-            recordsOpen(
-              client, question, named, $0.baseAddress, inputs.count,
-              MemoryLayout<thinkthen_record_input>.stride, offsetUnit,
-              &pointer, &error)
-          }
-        }
+      return withUnsafePointer(to: &view) { nameView in
+        callOpen(
+          client, question, name == nil ? nil : nameView,
+          UInt32(THINKTHEN_OFFSET_CODE_POINTS.rawValue), &pointer, &error)
       }
     }
     try check(status, &error)
-    guard let pointer else {
-      throw ThinkThenError.contract(message: "Native call returned no owner")
-    }
+    guard let pointer else { throw CallError.contract(message: "Native call returned no owner") }
     return pointer
   }
-  func send(_ call: OpaquePointer, _ record: Record) throws {
+  func send(_ call: OpaquePointer, _ record: InputPayload) throws {
     let bytes: Data
     let operation: Send
     switch record {
@@ -318,8 +305,12 @@ final class Native: Sendable {
       let status = sendMissing(call, &error)
       try check(status, &error)
       return
+    case .invalid:
+      var error = emptyError()
+      try check(sendInvalid(call, &error), &error)
+      return
     case .json(let value):
-      bytes = try JSONEncoder().encode(value)
+      bytes = value
       operation = sendJSON
     }
     var error = emptyError()
@@ -327,6 +318,29 @@ final class Native: Sendable {
       operation(call, $0.bindMemory(to: UInt8.self).baseAddress, bytes.count, &error)
     }
     try check(status, &error)
+  }
+  private func canonicalJSON(_ row: inout thinkthen_row) throws -> Data {
+    var buffer = thinkthen_buffer()
+    var error = emptyError()
+    defer { bufferFree(&buffer) }
+    try check(saveRow(&row, &buffer, &error), &error)
+    return copy(buffer)
+  }
+  private func selectedSource(_ row: inout thinkthen_row, entry: String?) throws -> String? {
+    var text = thinkthen_text()
+    var error = emptyError()
+    let status: Int32
+    if let entry {
+      let bytes = Array(entry.utf8)
+      status = bytes.withUnsafeBytes {
+        selectedText(&row, $0.bindMemory(to: CChar.self).baseAddress, bytes.count, &text, &error)
+      }
+    } else {
+      status = selectedText(&row, nil, 0, &text, &error)
+    }
+    try check(status, &error)
+    guard let data = text.data else { return nil }
+    return String(decoding: UnsafeRawBufferPointer(start: data, count: text.len), as: UTF8.self)
   }
   enum Event: Sendable {
     case input, end
@@ -344,11 +358,8 @@ final class Native: Sendable {
     guard status == THINKTHEN_OK else {
       throw rowABIFailure("Unknown native operation status")
     }
-    let rowStatus: Status
     switch row.status {
-    case THINKTHEN_STATUS_ANSWERED: rowStatus = .answered
-    case THINKTHEN_STATUS_UNSURE: rowStatus = .unsure
-    case THINKTHEN_STATUS_FAILED: rowStatus = .failed
+    case THINKTHEN_STATUS_ANSWERED, THINKTHEN_STATUS_UNSURE, THINKTHEN_STATUS_FAILED: break
     default: throw rowABIFailure("Unknown native row status")
     }
     let function: String
@@ -365,56 +376,45 @@ final class Native: Sendable {
     case THINKTHEN_FUNCTION_ANNOTATE: function = "annotate"
     default: throw rowABIFailure("Unknown native function")
     }
-    let original: Record?
-    if row.function == THINKTHEN_FUNCTION_RANK {
-      var view = thinkthen_record_view()
-      var error = emptyError()
-      try check(originalRecord(&row, &view, &error), &error)
-      let data = view.data.map { Data(bytes: $0, count: view.len) } ?? Data()
-      switch view.kind {
-      case THINKTHEN_RECORD_TEXT: original = .text(String(decoding: data, as: UTF8.self))
-      case THINKTHEN_RECORD_JSON:
-        original = .json(try JSONDecoder().decode(JSONValue.self, from: data))
-      case THINKTHEN_RECORD_MISSING: original = .missing
-      default: throw rowABIFailure("Rank row has an unknown original record kind")
+    let canonical = try canonicalJSON(&row)
+    var texts: [String: String] = [:]
+    if ["find", "recognize", "relate"].contains(function) {
+      texts[""] = try selectedSource(&row, entry: nil)
+    } else if function == "annotate" {
+      let saved = try JSONDecoder().decode(JSONValue.self, from: canonical)
+      for (name, entry) in saved.object["answer"]?.object ?? [:] {
+        if ["find", "recognize", "relate"].contains(entry.object["function"]?.string ?? "") {
+          texts[name] = try selectedSource(&row, entry: name)
+        }
       }
-    } else {
-      original = nil
     }
-    let failure = row.error.data == nil ? nil : copy(row.error)
-    return .row(
-      WireRow(
-        function: function, original: original, id: row.id.data == nil ? nil : copy(row.id),
-        status: rowStatus,
-        answer: row.answer.data == nil ? nil : copy(row.answer),
-        probability: row.probability.isNaN ? nil : row.probability,
-        error: failure,
-        detail: row.detail.data == nil ? nil : copy(row.detail), source: copy(row.source),
-        position: row.position,
-        kept: row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0))
+    return .row(WireRow(canonical: canonical, selectedTexts: texts, position: row.position))
+
   }
 }
 struct WireRow: Sendable {
-  let function: String
-  let original: Record?
-  let id: Data?, status: Status, answer: Data?, probability: Double?, error: Data?
-  let detail: Data?, source: Data, position: UInt64, kept: Bool
-  func decode<F: FunctionShape>(_ type: F.Type) throws -> Row<F> {
-    var fields: [String: Any] = [
-      "function": function, "position": position, "status": status.rawValue,
-    ]
-    fields["source"] = try JSONSerialization.jsonObject(with: source)
-    for (key, data) in [("id", id), ("answer", answer), ("detail", detail), ("error", error)] {
-      if let data {
-        fields[key] = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-      }
-    }
-    fields["probability"] = probability
-    do {
-      return try JSONDecoder().decode(
-        Row<F>.self, from: JSONSerialization.data(withJSONObject: fields))
-    } catch { throw rowABIFailure(String(describing: error)) }
+  let canonical: Data
+  let selectedTexts: [String: String]
+  let position: UInt64
+  func decode<F: FunctionShape, T: Sendable>(_ type: F.Type, item: T, questions: JSONValue = .null)
+    throws -> Row<F, T>
+  {
+    let value = try JSONDecoder().decode(JSONValue.self, from: canonical)
+    let decoder = JSONDecoder()
+    decoder.userInfo[.originalItem] = item
+    decoder.userInfo[.parentRow] = value
+    decoder.userInfo[.sourceText] = selectedTexts[""] ?? ""
+    decoder.userInfo[.selectedTexts] = selectedTexts
+    decoder.userInfo[.questionDefinitions] = questions.object["questions"] ?? .null
+    return try Row(saved: value, item: item, decoder: decoder)
   }
+}
+extension CodingUserInfoKey {
+  static let originalItem = Self(rawValue: "ThinkThen.originalItem")!
+  static let parentRow = Self(rawValue: "ThinkThen.parentRow")!
+  static let questionDefinitions = Self(rawValue: "ThinkThen.questionDefinitions")!
+  static let selectedTexts = Self(rawValue: "ThinkThen.selectedTexts")!
+  static let sourceText = Self(rawValue: "ThinkThen.sourceText")!
 }
 
 /// True for a path the system loader opens without searching.
@@ -429,10 +429,11 @@ private func isFullPath(_ path: String) -> Bool {
   #endif
 }
 
-func engineLoadFailure(_ message: String) -> ThinkThenError {
+func engineLoadFailure(_ message: String) -> CallError {
   .engine(RowFailure(code: .localIO, message: message, httpStatus: nil))
 }
 
-func rowABIFailure(_ message: String) -> ThinkThenError {
-  .engine(RowFailure(code: .usageABI, message: message, httpStatus: nil))
+func rowABIFailure(_ message: String) -> CallError {
+  CallError(
+    kind: .contract, message: message, failure: RowFailure(code: .usageABI, message: message))
 }

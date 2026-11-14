@@ -6,7 +6,7 @@
 #else
 #include <dlfcn.h>
 #endif
-#define SYMBOLS(X) X(row_original) X(settings_from_json) X(question_to_json) X(question_from_json) X(toolbox_new) X(toolbox_insert) X(toolbox_from_json) X(toolbox_to_json) X(toolbox_definitions_json) X(toolbox_free) X(buffer_free) X(code_name) X(code_family) X(settings_conversion_error) X(question_conversion_error) X(client_open) X(client_free) X(client_usage) X(call_open_question) X(call_open_records_question) X(call_send_text) X(call_send_json) X(call_send_missing) X(call_end_input) X(call_next) X(call_cancel) X(call_free) X(error_free) X(row_free) X(question_new) X(question_add_choice) X(question_add_label) X(question_add_level) X(question_add_kind) X(question_add_rule) X(question_set_cut) X(question_set_band) X(question_set_field) X(question_set_top) X(question_add_entry) X(question_free) X(settings_new) X(settings_set_backend) X(settings_set_api_key) X(settings_set_model) X(settings_set_url) X(settings_set_max_requests) X(settings_set_batch) X(settings_set_retry) X(settings_free)
+#define SYMBOLS(X) X(row_host_json) X(row_to_json) X(settings_from_json) X(question_to_json) X(question_from_json) X(toolbox_new) X(toolbox_insert) X(toolbox_from_json) X(toolbox_to_json) X(toolbox_definitions_json) X(toolbox_free) X(buffer_free) X(code_name) X(code_family) X(settings_conversion_error) X(question_conversion_error) X(client_open) X(client_free) X(client_usage) X(call_open_question) X(call_send_text) X(call_send_json) X(call_send_missing) X(call_send_invalid) X(call_end_input) X(call_next) X(call_cancel) X(call_free) X(error_free) X(row_free) X(question_new) X(question_add_choice) X(question_add_label) X(question_add_level) X(question_add_kind) X(question_add_rule) X(question_set_cut) X(question_set_band) X(question_set_field) X(question_set_top) X(question_add_entry) X(question_free) X(settings_new) X(settings_set_backend) X(settings_set_api_key) X(settings_set_model) X(settings_set_url) X(settings_set_max_requests) X(settings_set_batch) X(settings_free)
 #define DECLARE(name) static __typeof__(&thinkthen_##name) p_##name;
 SYMBOLS(DECLARE)
 static int32_t load_code = THINKTHEN_CODE_USAGE_ABI;
@@ -91,10 +91,8 @@ int32_t tt_settings_set_model(struct thinkthen_settings *settings, const char *d
 int32_t tt_settings_set_url(struct thinkthen_settings *settings, const char *data, size_t len, struct thinkthen_error *error) { return p_settings_set_url(settings,data,len,error); }
 int32_t tt_settings_set_max_requests(struct thinkthen_settings *settings, uint64_t limit, struct thinkthen_error *error) { return p_settings_set_max_requests(settings,limit,error); }
 int32_t tt_settings_set_batch(struct thinkthen_settings *settings, uint64_t batch, struct thinkthen_error *error) { return p_settings_set_batch(settings,batch,error); }
-int32_t tt_settings_set_retry(struct thinkthen_settings *settings, uint32_t max_retries, uint64_t initial_backoff_ms, uint64_t attempt_timeout_ms, struct thinkthen_error *error) { return p_settings_set_retry(settings,max_retries,initial_backoff_ms,attempt_timeout_ms,error); }
 void tt_settings_free(struct thinkthen_settings *settings) { p_settings_free(settings); }
 
-int32_t tt_call_open_records_question(const thinkthen_client *c, const thinkthen_question *q, const thinkthen_text *name, const thinkthen_record_input *r, size_t count, size_t stride, uint32_t offsets, thinkthen_call **out, thinkthen_error *e) { return p_call_open_records_question(c,q,name,r,count,stride,offsets,out,e); }
 
 int32_t tt_toolbox_new(thinkthen_toolbox **out, thinkthen_error *e) { return p_toolbox_new(out,e); }
 int32_t tt_toolbox_insert(thinkthen_toolbox *t, const char *n, size_t l, const thinkthen_question *q, thinkthen_error *e) { return p_toolbox_insert(t,n,l,q,e); }
@@ -109,4 +107,8 @@ int32_t tt_question_from_json(const char *d, size_t l, thinkthen_question **out,
 
 int32_t tt_settings_from_json(const char *d, size_t l, thinkthen_settings **out, thinkthen_error *e) { return p_settings_from_json(d,l,out,e); }
 
-int32_t tt_row_original(const thinkthen_row *row,thinkthen_record_view *out,thinkthen_error *e) {return p_row_original(row,out,e);}
+int32_t tt_row_to_json(const thinkthen_row *row,thinkthen_buffer *out,thinkthen_error *e) {return p_row_to_json(row,out,e);}
+
+int32_t tt_call_send_invalid(struct thinkthen_call *c,struct thinkthen_error *e) {return p_call_send_invalid(c,e);}
+
+int32_t tt_row_host_json(const thinkthen_row *row,thinkthen_buffer *out,thinkthen_error *error){return p_row_host_json(row,out,error);}

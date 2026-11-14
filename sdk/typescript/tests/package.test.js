@@ -17,7 +17,7 @@ const require = createRequire(join(root, "package.json"));
 test("installed exports share constructors across ESM and CommonJS", async () => {
   const required = require("thinkthen");
   const imported = await import(pathToFileURL(require.resolve("thinkthen")).href);
-  assert.equal(required.ThinkThen, imported.ThinkThen);
+  assert.equal(required.Client, imported.Client);
   assert.equal(required.UsageError, imported.UsageError);
   assert.equal(required.CancelledError, imported.CancelledError);
   const error = new required.UsageError({ code: "usage.question", message: "Invalid" });
@@ -39,7 +39,7 @@ test("import works without an engine and first loads preserve the loader error",
     await rm(join(copy, "thinkthen.node"), { recursive: true, force: true });
     const sdk = await import(pathToFileURL(join(copy, "runtime.js")).href);
     assert.equal(typeof sdk.decide, "function");
-    for (const load of [() => new sdk.ThinkThen({backend:"stub"}),
+    for (const load of [() => new sdk.Client({backend:"stub"}),
       () => sdk.parseToolbox("{}"), () => sdk.serializeToolbox({})]) {
       assert.throws(load, error => error instanceof sdk.ThinkThenError
         && error.code === "local.io" && /native engine/.test(error.message));
@@ -51,9 +51,9 @@ test("import works without an engine and first loads preserve the loader error",
 test("worker_threads loads the installed package and returns a typed row", async () => {
   const entry = pathToFileURL(require.resolve("thinkthen")).href;
   const code = `import { parentPort } from 'node:worker_threads';
-    import { ThinkThen } from ${JSON.stringify(entry)};
-    const client = new ThinkThen({backend:'stub'});
-    try { parentPort.postMessage(await client.decide('Ready?', 'evidence').row()); }
+    import { Client } from ${JSON.stringify(entry)};
+    const client = new Client({backend:'stub'});
+    try { parentPort.postMessage(JSON.parse(JSON.stringify(await client.decide('Ready?', 'evidence')))); }
     finally { await client.close(); }`;
   const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(code)}`), { type: "module" });
   const exited = once(worker, "exit");
@@ -72,8 +72,8 @@ test("worker_threads loads the installed package and returns a typed row", async
 for (const state of ["completed", "after-row", "pending-input", "pending-after-row"]) {
   test(`a ${state} stream releases the process event loop`, {timeout:10000}, async t => {
     const entry = pathToFileURL(require.resolve("thinkthen")).href;
-    const code = `import {ThinkThen} from ${JSON.stringify(entry)};
-      const client = new ThinkThen({backend:"stub",batch:1});
+    const code = `import {Client} from ${JSON.stringify(entry)};
+      const client = new Client({backend:"stub",batch:1});
       const state = ${JSON.stringify(state)};
       const records = state === "pending-input"
         ? {[Symbol.asyncIterator](){return this;},next(){return new Promise(()=>{});}}
@@ -103,15 +103,15 @@ for (const state of ["completed", "after-row", "pending-input", "pending-after-r
 for (const name of ["decide", "rank"]) {
   test(`${name} releases an idle input after a submitted record`, { timeout: 10000 }, async t => {
     const entry = pathToFileURL(require.resolve("thinkthen")).href;
-    const program = `import {ThinkThen} from ${JSON.stringify(entry)};
-      const client = new ThinkThen({backend:"stub",batch:1});
+    const program = `import {Client} from ${JSON.stringify(entry)};
+      const client = new Client({backend:"stub",batch:1});
       let pulled = 0;
       const input = {[Symbol.asyncIterator](){return this;},next(){
         if (++pulled === 1) return Promise.resolve({done:false,value:"record"});
         console.log("pending input"); return new Promise(()=>{});
       }};
       const name = ${JSON.stringify(name)};
-      const stream = name === "rank" ? client.rankStream("Priority?",input,{levels:["low","high"]})
+      const stream = name === "rank" ? client.rank("Priority?",input,{levels:["low","high"]})
         : client.decideStream("Ready?",input);
       stream.next().then(() => stream.next());
       globalThis.retained = {client,stream};`;
@@ -131,10 +131,10 @@ for (const name of ["decide", "rank"]) {
 // Feature: closing lazy rank input retains Node through all ranked output.
 test("rank input completion delivers every row before idle exit", { timeout: 10000 }, async t => {
   const entry = pathToFileURL(require.resolve("thinkthen")).href;
-  const program = `import {ThinkThen} from ${JSON.stringify(entry)};
-    const client = new ThinkThen({backend:"stub",batch:1});
+  const program = `import {Client} from ${JSON.stringify(entry)};
+    const client = new Client({backend:"stub",batch:1});
     async function* input(){yield "one";yield "two";yield "three";}
-    const rows = await client.rankStream("Priority?",input(),{levels:["low","high"]}).toArray();
+    const rows = await client.rank("Priority?",input(),{levels:["low","high"]}).toArray();
     console.log(JSON.stringify(rows.map(row=>({position:row.position,status:row.status,answer:row.answer}))));
     await client.close();`;
   const child = spawn(process.execPath, ["--input-type=module", "-e", program], { env: osEnvironment(), stdio: ["ignore", "pipe", "pipe"] });
@@ -171,8 +171,8 @@ function withGlibc(version, ...command) {
   return spawnSync(process.execPath, ["--require", glibcReport, ...command],
     {cwd: root, encoding: "utf8", env: {...osEnvironment(), THINKTHEN_TEST_GLIBC: version}});
 }
-const firstLoad = `import { ThinkThen, ThinkThenError } from "./runtime.js";
-  try { await new ThinkThen({backend: "stub"}).close(); console.log("loaded"); }
+const firstLoad = `import { Client, ThinkThenError } from "./runtime.js";
+  try { await new Client({backend: "stub"}).close(); console.log("loaded"); }
   catch (error) { console.log(JSON.stringify([error instanceof ThinkThenError, error.code, error.message])); }`;
 
 // Feature: Linux below the glibc floor stops at install and at first load with one line of ours.
@@ -200,10 +200,10 @@ test("installation and first load accept Linux at the glibc floor and above", {s
   }
 });
 
-// Feature: top-N rank never retains all caller objects in the JavaScript adapter.
-test("top one ranks a large lazy input within a bounded JavaScript heap", async () => {
+// Feature: rank reads all input and hands back the caller's original object, even with top set.
+test("top one waits for lazy input and retains the caller original", async () => {
   const script = fileURLToPath(new URL("./rank-memory.mjs", import.meta.url));
-  const child = spawn(process.execPath, ["--expose-gc", "--max-old-space-size=64", script, process.env.THINKTHEN_NODE_PACKAGE],
+  const child = spawn(process.execPath, [script, process.env.THINKTHEN_NODE_PACKAGE],
     {env:osEnvironment(),stdio:["ignore","pipe","pipe"]});
   const output = [], errors = [];
   child.stdout.on("data", data => output.push(data));
@@ -214,4 +214,28 @@ test("top one ranks a large lazy input within a bounded JavaScript heap", async 
     assert.equal(code, 0, Buffer.concat(errors).toString());
     console.log(Buffer.concat(output).toString().trim());
   } finally {child.kill();}
+});
+
+test("module streams snapshot options at creation and the default client permits idle exit", () => {
+  const entry = pathToFileURL(require.resolve("thinkthen")).href;
+  const program = `import * as tt from ${JSON.stringify(entry)};
+    import assert from "node:assert/strict";
+    const choices = ["billing","shipping"];
+    const pending = tt.chooseStream("Team?",["body"],{choices});
+    choices[0] = "changed";
+    const rows = await pending.toArray();
+    const expected = await tt.choose("Team?","body",{choices:["billing","shipping"]});
+    assert.equal(rows[0].source.questionIdentity,expected.source.questionIdentity);
+    assert.equal(rows[0].answer,expected.answer);`;
+  const result = spawnSync(process.execPath,["--input-type=module","-e",program],
+    {env:{...osEnvironment(),THINKTHEN_BACKEND:"stub"},encoding:"utf8",timeout:10000});
+  assert.equal(result.status,0,result.stderr);
+  const missingKey = `import * as tt from ${JSON.stringify(entry)};
+    import assert from "node:assert/strict";
+    const stream = tt.decideStream("Ready?",["body"]);
+    await assert.rejects(stream.next(),tt.SetupError);
+    assert.equal((await stream.next()).done,true);`;
+  const refused = spawnSync(process.execPath,["--input-type=module","-e",missingKey],
+    {env:{...osEnvironment(),THINKTHEN_BACKEND:"systemone"},encoding:"utf8",timeout:10000});
+  assert.equal(refused.status,0,refused.stderr);
 });

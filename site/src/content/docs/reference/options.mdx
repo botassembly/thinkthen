@@ -1,18 +1,19 @@
 ---
 title: Options
-description: The options every ThinkThen function takes, each with the environment variable that sets it, from choosing the service and model to reading CSV files and printing JSON.
+description: Shared function options and the complete current help for audit, diff and recover, with their arguments, flags, defaults and environment variables.
 goal: Someone writing a command or a script finds the option they need, what it does, and the environment variable that sets it.
 reader: A ThinkThen user or agent setting an option on the command line or in a script's environment
 kind: reference
 verified: 2026-11-03
 head:
   - tag: title
-    content: "Options: every shared ThinkThen option and its variable"
+    content: "Options: shared function settings and offline command help"
 ---
 
 import SharedOptions from '../../../components/SharedOptions.astro';
+import FunctionOptions from '../../../components/FunctionOptions.astro';
 
-Every function takes these options. Most can also come from an environment variable, and an option on the command line wins over its variable.
+Question functions take the shared options below. Most of those options can also come from an environment variable, and an option on the command line wins over its variable. The offline commands have their own current help tables and execution rules later on this page.
 
 Each function's own options, such as `--threshold` for decide or `--choice` for choose, are on that function's page. `thinkthen FUNCTION --help` lists them all.
 
@@ -29,6 +30,28 @@ Each function's own options, such as `--threshold` for decide or `--choice` for 
 ## How ThinkThen picks the input format
 
 Without `--from`, a file ending in `.jsonl`, `.csv`, `.tsv` or `.xlsx` is read as that format. Anything else, standard input included, is read as one text for most functions, and as one text per line for filter, rank and annotate. [File types](/command-line/file-types/) shows each format.
+
+## Offline command help
+
+These tables reproduce the current help, including inherited global flags, and label where each argument or flag comes from. Audit and diff accept their own arguments and options, plus inherited `--quiet` and `--color`; they reject other explicitly supplied inherited execution settings. Recover accepts only its recovery artifact during execution. Use `thinkthen COMMAND --help` to read command help and `thinkthen --version` to read the version; neither executes the operation.
+
+### audit
+
+[Grade saved answers against labels](/command-line/guide/#check-saved-answers-against-labels), without a key or a model call.
+
+<FunctionOptions name="audit" scope="command" />
+
+### diff
+
+[Compare saved answers](/command-line/guide/#compare-saved-answers), either from two runs or with a changed bar.
+
+<FunctionOptions name="diff" scope="command" />
+
+### recover
+
+Give the saved recovery artifact's path to [export completed answers](/reference/troubleshooting/#an-interrupted-file-operation-left-completed-answers).
+
+<FunctionOptions name="recover" scope="command" />
 
 ## Next
 

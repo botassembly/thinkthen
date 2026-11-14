@@ -45,6 +45,12 @@ class PythonExamples(unittest.TestCase):
         result = self.run_check(source, section='Clients elsewhere', settings=True)
         self.assertEqual(result.returncode, 1, result.stderr)
 
+    def test_approved_client_sections(self):
+        for section in ('Settings', 'Usage', 'Async'):
+            with self.subTest(section=section):
+                self.assertEqual(self.run_check('import thinkthen as tt\ntt.Client()',
+                                 section=section, settings=True).returncode, 0)
+
     def test_readme_requires_module_calls_outside_settings(self):
         readme = '```python\nimport thinkthen as tt\ntt.Client()\n```'
         result = self.run_check('print("ok")', readme=readme)

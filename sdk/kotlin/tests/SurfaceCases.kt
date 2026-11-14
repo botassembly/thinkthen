@@ -5,6 +5,7 @@ package consumer
 import dev.thinkthen.kotlin.*
 import java.nio.file.Path
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Contextual
@@ -44,22 +45,22 @@ private suspend fun serialization() {
     ThinkThen { backend = Backend.STUB; json = format }.use { client ->
         val expected = client.decide("Ready?", buildJsonObject { put("body", "refund") }, field = Pointer("/body"))
         check(client.decide("Ready?", Ticket("refund"), field = Pointer("/body")) == expected)
-        check(client.decide("Ready?", Ticket("refund"), serializer = TicketSerializer, field = Pointer("/body")) == expected)
+        val writeOnly = Ticket("refund")
+        val ranked = client.rank("Priority?", listOf(writeOnly), listOf("low", "high"), field = Pointer("/body")).toList().single()
+        check(ranked.item === writeOnly) { "Rank must not invoke the one-way serializer's deserialize" }
         val contextualRecord = ContextRecord(Ticket("refund"))
         val contextual = client.decide("Ready?", contextualRecord, field = Pointer("/ticket/body"))
         check(contextual == client.decide("Ready?", format.encodeToJsonElement(ContextRecord.serializer(), contextualRecord), field = Pointer("/ticket/body")))
         val polymorphic = PolyRecord(RoutedMessage("refund"))
         check(client.decide("Ready?", polymorphic, field = Pointer("/message/body")) ==
             client.decide("Ready?", format.encodeToJsonElement(PolyRecord.serializer(), polymorphic), field = Pointer("/message/body")))
-        val raw: Row<Boolean, Nothing> = client.decide("Ready?", "{\"id\":true,\"body\":\"refund\"}")
-        val structured: Row<Boolean, Nothing> = client.decide("Ready?", Json.parseToJsonElement("{\"id\":true,\"body\":\"refund\"}"))
+        val raw: Row<Boolean, *> = client.decide("Ready?", "{\"id\":true,\"body\":\"refund\"}")
+        failedCall("record.invalid") { client.decide("Ready?", Json.parseToJsonElement("{\"id\":true,\"body\":\"refund\"}")) }
         check(raw !is Row.Failed)
-        check(structured is Row.Failed && codeName(structured.error.code) == "record.invalid")
         val array = client.decide("Ready?", buildJsonArray { add("alpha"); add("beta") })
         check(array.position == 1L && array !is Row.Failed)
-        @Suppress("UNCHECKED_CAST") val anything = String.serializer() as KSerializer<Any>
         val many: Any = listOf("alpha", "beta")
-        try { client.decide("Ready?", many, anything); error("Accepted a list as one record") }
+        try { client.decide("Ready?", many); error("Accepted a list as one record") }
         catch (failure: IllegalArgumentException) { check("decideStream" in failure.message.orEmpty()) }
     }
 }
@@ -69,7 +70,7 @@ private suspend fun identifiers() {
     ThinkThen { backend = Backend.STUB }.use { client ->
         val ids = listOf("\"001\"", "-9223372036854775808", "9223372036854775807", "9223372036854775808", "18446744073709551615")
         val records = ids.map { Json.parseToJsonElement("{\"id\":$it,\"body\":\"refund\"}") }
-        val rows: List<Row<Boolean, Nothing>> = client.decideStream("Ready?", records).toList()
+        val rows: List<Row<Boolean, *>> = client.decideStream("Ready?", records).toList()
         check(rows.size == ids.size)
         rows.forEachIndexed { index, row ->
             val position: Long = row.position
@@ -87,10 +88,8 @@ private suspend fun identifiers() {
                 check(row.position == index.toLong() + 1L)
                 check(row is Row.Failed && codeName(row.error.code) == "record.invalid")
             }
-            val missing: Row<Boolean, Nothing> = client.decide<String>("Ready?", null)
-            check(missing is Row.Failed && codeName(missing.error.code) == "record.missing")
-            val jsonMissing = client.decide("Ready?", JsonNull)
-            check(jsonMissing is Row.Failed && codeName(jsonMissing.error.code) == "record.missing")
+            failedCall("record.missing") { client.decide("Ready?", null) }
+            failedCall("record.missing") { client.decide("Ready?", JsonNull) }
             check(monitor.command("count") == "0")
         }
     }
@@ -99,71 +98,73 @@ private suspend fun identifiers() {
 // Feature: Toolbox questions retain copied required lists and return typed annotation outcomes.
 private suspend fun toolboxes() {
     val choices = mutableListOf("billing", "support")
-    val question = Choose("Which team?", choices = choices)
-    val tools = Toolbox(mapOf("route" to question, "ready" to Decide("Ready?")))
+    val question = ChooseQuestion("Which team?", choices = choices)
+    val tools = Toolbox(mapOf("route" to question, "ready" to DecideQuestion("Ready?")))
     choices.clear()
-    check(tools.chooseOrNull("absent") == null && tools.chooseOrNull("ready") == null)
     for (name in listOf("absent", "ready")) {
         try { tools.choose(name); error("Selected a missing choose question") }
         catch (failure: ThinkThenException) { check(codeName(failure.code) == "usage.argument" && name in failure.message.orEmpty()) }
     }
-    val selected: Choose = tools.choose("route")
+    val selected: ChooseQuestion<String> = tools.choose("route")
     ThinkThen { backend = Backend.STUB }.use { client ->
-        val direct: Row<String, LabelDetail> = client.choose("Which team?", "refund", listOf("billing", "support"))
-        val typed: Row<String, LabelDetail> = client.ask(selected, "refund")
+        val direct: Row<String, *> = client.choose("Which team?", "refund", listOf("billing", "support"))
+        val typed: Row<String, *> = client.choose(selected, "refund")
         check(typed == direct)
         val named = client.choose("Which team?","refund",listOf("billing","support"),name = "triage")
         check(named.source?.name == "triage")
         check(typed.source?.name == null)
-        val ranking = Toolbox(mapOf("priority" to Rank("Priority?",listOf("low","high"))))
-        check(ranking.rankOrNull("priority") != null && ranking.chooseOrNull("priority") == null)
+        val ranking = Toolbox(mapOf("priority" to RankQuestion("Priority?",listOf("low","high"))))
+        check(ranking.rank("priority").levels == listOf("low", "high"))
         check(client.rank(ranking.rank("priority"),listOf("alpha","beta")).toList().size == 2)
-        val row: Row<Annotations, Nothing> = client.annotate(AnnotationQuestions(mapOf("route" to selected, "ready" to Decide("Ready?"))), "refund")
-        val route: EntryOutcome<String, LabelDetail> = row.answer().choose("route")
-        check(route is EntryOutcome.Answered)
+        val row: Row<Annotations, *> = client.annotate(AnnotationQuestions(mapOf("route" to selected, "ready" to DecideQuestion("Ready?"))), "refund")
+        val route: Row<String, *> = row.answer().choose("route")
+        check(route is Row.Answered)
         check(route.answer() == direct.answer())
-        check(row.answer().chooseOrNull("ready") == null && row.answer().decide("ready").answer() == row.answer().decideOrNull("ready")?.answer())
+        check(row.answer().decide("ready").isAnswered && row.answer().decide("ready").item === row.item)
         try { row.answer().choose("ready"); error("Selected a decide answer as choose") }
         catch (failure: ThinkThenException) { check(codeName(failure.code) == "usage.argument") }
-        val fromToolbox = Toolbox(mapOf("route" to selected, "ready" to Decide("Ready?"))).forAnnotation()
+        val fromToolbox = Toolbox(mapOf("route" to selected, "ready" to DecideQuestion("Ready?"))).forAnnotation()
         check(client.annotate(fromToolbox, "refund") == row)
         try { ranking.forAnnotation(); error("Accepted rank for annotation") } catch (failure: IllegalArgumentException) { check("priority" in failure.message.orEmpty()) }
     }
 }
 
-// Feature: Filter preserves original objects, rank gives equal copies, and both retain failures under top.
+// Feature: FilterQuestion preserves original objects, rank retains originals, and both retain failures under top.
 private suspend fun originals() {
     val first = buildJsonObject { put("id", "first"); put("body", "alpha") }
     val last = buildJsonObject { put("id", "last"); put("body", "beta") }
     val records = listOf(first, null, last)
-    ThinkThen { backend = Backend.STUB; batch = 1 }.use { client ->
-        val filtered = client.filterRows("Ready?", records.asFlow()).toList()
-        check(filtered.size == records.size)
-        filtered.forEachIndexed { index, result ->
-            check(result.item === records[index])
-            check(result.row.position == index.toLong() + 1L)
-            check(result.kept == ((result.row as? Row.Answered)?.answer == true))
+    Fixture.guide("yes").use { fixture ->
+        ThinkThen { backend = Backend.OPENAI; url = fixture.url; apiKey = ApiKey("loopback-only"); batch = 1 }.use { client ->
+            val filtered = client.decideStream("Ready?", records.asFlow()).toList()
+            check(filtered.size == records.size)
+            filtered.forEachIndexed { index, result ->
+                check(result.item === records[index])
+                check(result.position == index.toLong() + 1L)
+                check(result.isAnswered || result.isFailed)
+            }
+            check(filtered[1] is Row.Failed && filtered[1].position == 2L)
+            val kept = mutableListOf<JsonObject?>()
+            val failure = try { client.filter("Ready?", records.asFlow()).toList(kept); error("Expected the failed record to throw") }
+                catch (failure: FailedException) { failure }
+            // A named yes scenario makes ownership expectations independent of arbitrary stub answers.
+            check(kept.size == 2 && kept[0] === first && kept[1] === last)
+            val filterFailure = failure.rows.single()
+            check(codeName(failure.code) == "record.missing" && filterFailure.function == FunctionName.FILTER && filterFailure.position == 2L && filterFailure.item == null)
+            val cleanKept = client.filter("Ready?", listOf(first, last)).toList()
+            check(cleanKept.size == 2 && cleanKept[0] === first && cleanKept[1] === last)
+            val ranked = client.rank("Priority?", records.asFlow(), levels = listOf("low", "high"), top = 1).toList()
+            check(ranked.size == 2)
+            val successful = ranked.single { it is Row.Answered }
+            val rank: Long = successful.answer()
+            check(rank == 1L)
+            ranked.forEach { check(it.item === records[(it.position - 1L).toInt()]) }
+            val failed = ranked.single { it is Row.Failed }
+            check(failed.position == 2L && failed.item == null)
+            val text: List<Row<Long, String>> = client.rank("Priority?", listOf("alpha", "beta"), listOf("low", "high")).toList()
+            check(text.associate { it.position to it.item } == mapOf(1L to "alpha", 2L to "beta"))
+
         }
-        check(filtered[1].row is Row.Failed && !filtered[1].kept && filtered[1].position == 2L)
-        val kept = mutableListOf<JsonObject?>()
-        val failure = try { client.filter("Ready?", records.asFlow()).toList(kept); error("Expected the failed record to throw") }
-            catch (failure: ThinkThenException) { failure }
-        check(kept == filtered.filter { it.kept }.map { it.item } && kept.all { item -> records.any { it === item } })
-        check(codeName(failure.code) == "record.missing" && failure.failures.single() == filtered[1].row)
-        check(client.filter("Ready?", listOf(first, last)).toList() == filtered.filter { it.kept }.map { it.item })
-        val ranked = client.rank("Priority?", records.asFlow(), levels = listOf("low", "high"), top = 1).toList()
-        check(ranked.size == 2)
-        val successful = ranked.single { it.row is Row.Answered }
-        val rank: Long = successful.answer()
-        check(rank == 1L)
-        ranked.forEach { check(it.item == records[(it.row.position - 1L).toInt()]) }
-        val failed = ranked.single { it.row is Row.Failed }
-        check(failed.row.position == 2L && failed.item == null)
-        val text: List<Ranked<String>> = client.rank("Priority?", listOf("alpha", "beta"), listOf("low", "high")).toList()
-        check(text.associate { it.position to it.item } == mapOf(1L to "alpha", 2L to "beta"))
-        val refused = try { client.rank("Priority?", listOf(Ticket("refund")), listOf("low", "high"), TicketSerializer).toList(); error("Accepted a one-way serializer") }
-            catch (failure: kotlinx.serialization.SerializationException) { failure }
-        check("Ticket" in refused.message.orEmpty() && refused.cause?.message == "Consumer only writes records")
     }
 }
 
@@ -177,7 +178,7 @@ private suspend fun findAnswers(cases: Path) {
         val expected = sample.required("expected").jsonArray.single().jsonObject.required("answer")
         Fixture.case(cases.resolve(file)).use { fixture ->
             ThinkThen { backend = Backend.SYSTEMONE; url = fixture.url; apiKey = ApiKey("loopback-only") }.use { client ->
-                val result: Row<Span?, Nothing> = client.find((question["question"] ?: question.required("value")).jsonPrimitive.content, record)
+                val result: Row<Span?, *> = client.find((question["question"] ?: question.required("value")).jsonPrimitive.content, record)
                 check(result is Row.Answered)
                 val span: Span? = result.answer()
                 if (span == null) check(expected == JsonNull)
@@ -246,14 +247,14 @@ private suspend fun savedToolboxes(directory: Path) {
     val fixture = java.nio.file.Files.readString(directory.resolve("questions.json"))
     val loaded = Toolbox.fromJson(fixture)
     check(Json.parseToJsonElement(loaded.toJson()) == Json.parseToJsonElement(fixture))
-    check(loaded["ready"] is Filter && loaded["missing"] == null && loaded.relateOrNull("names") != null)
+    check(loaded.filter("ready").question.isNotEmpty() && loaded.relate("names").rules.isNotEmpty())
     ThinkThen { backend = Backend.STUB }.use { client ->
         val record = buildJsonObject { put("body","Bill") }
-        val original = Choose("Which topic?",listOf("billing","shipping"),Threshold.cut(0.7),Pointer("/body"))
-        check(client.ask(loaded.choose("topic"),record) == client.ask(original,record))
-        val named = Choose("Which topic?",original.choices,original.threshold,original.field,name = "triage")
+        val original = ChooseQuestion("Which topic?",listOf("billing","shipping"),Threshold.cut(0.7),Pointer("/body"))
+        check(client.choose(loaded.choose("topic"),record) == client.choose(original,record))
+        val named = ChooseQuestion("Which topic?",original.choices,original.threshold,original.field,name = "triage")
         val constructed = Toolbox(mapOf("topic" to named))
-        check(client.ask(constructed.choose("topic"),record) == client.ask(named,record))
+        check(client.choose(constructed.choose("topic"),record) == client.choose(named,record))
         val saved = Toolbox(mapOf("topic" to original)).toJson()
         check(Toolbox.fromJson(saved).choose("topic").choices == original.choices)
     }
@@ -263,24 +264,32 @@ private suspend fun savedToolboxes(directory: Path) {
     }
 }
 
-// Feature: answer() and getOrThrow() read an answer and throw on not sure or failure.
+private suspend fun failedCall(code: String, call: suspend () -> Any?): Row.Failed<*> {
+    val failure = try { call(); error("Scalar failure must throw at the call") }
+        catch (failure: FailedException) { failure }
+    check(codeName(failure.code) == code)
+    val row = failure.rows.single()
+    check(codeName(row.error.code) == code)
+    return row
+}
+
+// Feature: the single answer read throws through the common no-answer parent.
 private suspend fun answers() {
     ThinkThen { backend = Backend.STUB }.use { client ->
         val answered = client.decide("Ready?", "alpha")
-        check(answered.isAnswered && answered.answer() == answered.getOrThrow())
+        check(answered.isAnswered && answered.answer() == answered.answer())
         val unsure = client.decide("Ready?", "alpha", threshold = Threshold.band(0.000001, 1.0))
         check(unsure is Row.Unsure && unsure.isUnsure)
         val notSure = try { unsure.answer(); error("Unsure answered") } catch (failure: UnsureException) { failure }
-        val noSuchElement: NoSuchElementException = notSure
-        check(noSuchElement.message.orEmpty().isNotEmpty() && notSure.probability == unsure.probability)
-        try { unsure.getOrThrow(); error("Unsure answered") } catch (_: UnsureException) {}
-        val missing = client.decide("Ready?", null)
+        val noAnswer: NoAnswerException = notSure
+        check(noAnswer.message.orEmpty().isNotEmpty() && notSure.probability == unsure.probability)
+        val missing = client.decideStream("Ready?", listOf<String?>(null)).single()
         check(missing.isFailed && missing.probability == null)
-        val failed = try { missing.answer(); error("Failed answered") } catch (failure: ThinkThenException) { failure }
+        val failed = try { missing.answer(); error("Failed answered") } catch (failure: FailedException) { failure }
         check(codeName(failed.code) == "record.missing")
-        try { client.decide("Ready?", "   "); error("Accepted a blank record") }
-        catch (failure: ThinkThenException) { check(codeName(failure.code) == "record.empty") }
-        check(answered.toString().startsWith("Answered(") && "position=1" in answered.toString())
+        failedCall("record.empty") { client.decide("Ready?", "   ") }
+        check(answered.toString() == answered.answer().toString())
+
     }
 }
 
@@ -288,7 +297,7 @@ private suspend fun answers() {
 private fun plainValues() {
     for (type in listOf(Span::class.java, Mention::class.java, Entity::class.java, Relation::class.java, RelationRule::class.java,
         RowError::class.java, Source::class.java, Row.Answered::class.java, Row.Unsure::class.java, Row.Failed::class.java,
-        Filtered::class.java, Ranked::class.java, LabelDetail::class.java, LevelDetail::class.java, RetryPolicy::class.java, Decide::class.java))
+         LabelDetail::class.java, LevelDetail::class.java, RetryPolicy::class.java, DecideQuestion::class.java))
         check(type.methods.none { it.name == "copy" || it.name.startsWith("component") }) { "${type.simpleName} is a data class" }
     val rule = RelationRule("person", "company", "works_for")
     check(rule.source == "person" && rule.target == "company" && rule.relation == "works_for")
@@ -305,7 +314,7 @@ private fun plainValues() {
         check(negative != positive || negative.hashCode() == positive.hashCode()) { "Equal thresholds need equal hashes: $negative and $positive" }
         check(setOf(negative, positive).size == if (negative == positive) 1 else 2)
     }
-    check(Decide("Ready?") == Decide("Ready?") && Decide("Ready?") != Decide("Ready?", yesMeans = "ready"))
+    check(DecideQuestion("Ready?") == DecideQuestion("Ready?") && DecideQuestion("Ready?") != DecideQuestion("Ready?", yesMeans = "ready"))
 }
 
 // Feature: a closed client refuses later calls with usage.closed.
@@ -331,15 +340,15 @@ private suspend fun descriptions() {
             }
             error("The engine accepted an unknown description name")
         } catch (failure: dev.thinkthen.internal.DriverException) { failure.error() }
-        val unknown = Tag("Which?", listOf("billing"), descriptions = mapOf("billing" to "", "shipping" to "Parcels"))
+        val unknown = TagQuestion("Which?", listOf("billing"), descriptions = mapOf("billing" to "", "shipping" to "Parcels"))
         check(unknown.descriptions == mapOf("billing" to "", "shipping" to "Parcels"))
-        val refused = try { client.ask(unknown, "alpha"); error("Accepted an unknown description name") }
+        val refused = try { client.tag(unknown, "alpha"); error("Accepted an unknown description name") }
             catch (failure: ThinkThenException) { failure }
         check(refused.code.wireName == engine.name() && refused.message == engine.message()) { "Kotlin: ${refused.code.wireName} ${refused.message}; engine: ${engine.name()} ${engine.message()}" }
         check("which is not one of" !in refused.message.orEmpty())
         try { Toolbox(mapOf("tags" to unknown)); error("A toolbox accepted an unknown description name") }
         catch (failure: ThinkThenException) { check(failure.code.wireName == engine.name()) }
-        val saved = Toolbox(mapOf("route" to Choose("Which team?", listOf("billing", "support"), descriptions = mapOf("billing" to "Money questions"))))
+        val saved = Toolbox(mapOf("route" to ChooseQuestion("Which team?", listOf("billing", "support"), descriptions = mapOf("billing" to "Money questions"))))
         check(Toolbox.fromJson(saved.toJson()) == saved) { "${Toolbox.fromJson(saved.toJson())} != $saved from ${saved.toJson()}" }
         val definitions = JsonObject(Json.parseToJsonElement(saved.toJson()).jsonObject.required("entries").jsonObject.mapValues { it.value.jsonObject.required("question") })
         check(Toolbox.fromDefinitions(definitions.toString()) == saved) { "${Toolbox.fromDefinitions(definitions.toString())} != $saved" }
@@ -349,7 +358,7 @@ private suspend fun descriptions() {
     }
 }
 
-// Feature: Kotlin's public names match Java's.
+// Feature: shared registries and portable names agree; host-specific shapes are checked separately.
 private fun javaParity() {
     fun constants(name: String, kotlin: Class<*>) =
         check(Class.forName("dev.thinkthen.$name").enumConstants.map { (it as Enum<*>).name } == kotlin.enumConstants.map { (it as Enum<*>).name }) { "$name constants or their order differ" }
@@ -359,23 +368,28 @@ private fun javaParity() {
     constants("BoundaryTag", BoundaryTag::class.java)
     constants("ErrorCode", ErrorCode::class.java)
     constants("ErrorCode\$Family", ErrorFamily::class.java)
-    for (name in listOf("Row", "Filtered", "Ranked", "Span", "Mention", "Entity", "Relation", "RelationRule", "Source", "RowError",
+    for (name in listOf("Row", "Span", "Mention", "Entity", "Relation", "RelationRule", "Source", "RowError",
         "ThinkThen", "ThinkThenException", "UnsureException", "LabelDetail", "LevelDetail", "RecognizeDetail", "RelationDetail",
         "KindDetail", "PieceDetail", "Toolbox", "Threshold", "Pointer", "RetryPolicy", "AnnotationQuestions", "Annotations")) {
         Class.forName("dev.thinkthen.$name")
         Class.forName("dev.thinkthen.kotlin.$name")
     }
     check(Class.forName("dev.thinkthen.Row").getMethod("position").returnType == Row::class.java.getMethod("getPosition").returnType)
-    check(Class.forName("dev.thinkthen.Span").getMethod("start").returnType == Span::class.java.getMethod("getStart").returnType)
+    check(Class.forName("dev.thinkthen.Span").getMethod("start").returnType == Int::class.javaPrimitiveType)
+    check(Span::class.java.getMethod("getStart").returnType == Int::class.javaPrimitiveType)
     for (method in listOf("answer", "isAnswered", "isUnsure", "isFailed")) {
         Class.forName("dev.thinkthen.Row").getMethod(method)
         Row::class.java.getMethod(method)
     }
-    Class.forName("dev.thinkthen.Filtered").getMethod("kept")
-    Filtered::class.java.getMethod("getKept")
+    for (name in listOf("Filtered", "Ranked", "Annotated")) {
+        check(runCatching { Class.forName("dev.thinkthen.$name") }.exceptionOrNull() is ClassNotFoundException)
+    }
+    for (name in listOf("Filtered", "Ranked", "EntryOutcome", "EntryResult")) check(runCatching { Class.forName("dev.thinkthen.kotlin.$name") }.exceptionOrNull() is ClassNotFoundException)
     for (loader in listOf("fromJson", "fromDefinitions", "load")) {
         check(Class.forName("dev.thinkthen.Toolbox").methods.any { it.name == loader })
         check(Toolbox.Companion::class.java.methods.any { it.name == loader })
     }
-    check(Class.forName("dev.thinkthen.ThinkThen").methods.map { it.name }.containsAll(listOf("filter", "filterRows", "annotate")))
+    val javaMethods = Class.forName("dev.thinkthen.ThinkThen").methods.map { it.name }
+    check(javaMethods.containsAll(FunctionName.entries.map { it.name.lowercase() }))
+    check("filterRows" !in javaMethods)
 }

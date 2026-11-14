@@ -32,25 +32,28 @@ module ThinkThen
   class UsageError < ArgumentError
     include Error
   end
-  # The selected backend could not complete the call.
-  class BackendError < LibraryError; end
+  # The engine could not start or a remote call was refused.
+  class SetupError < LibraryError; end
   # A cancelled native call, including a Ruby interrupt during native work.
   class CancelledError < LibraryError; end
-  # A local runtime or IO failure.
-  class LocalError < LibraryError; end
   # An unexpected native engine failure.
   class InternalError < LibraryError; end
 
+  # Rescue either missing-answer outcome without treating uncertainty as failure.
+  module NoAnswerError; end
+
   # A probability band did not select a definite answer.
   class UnsureError < StandardError
-    attr_reader :probability
-    def initialize(probability)
-      @probability = probability
+    include NoAnswerError
+    attr_reader :probability, :row
+    def initialize(row)
+      @row, @probability = row, row.probability
       super("the answer is not sure")
     end
   end
   # Failed input rows, retained in input order after the kept records.
-  class RecordError < LibraryError
+  class FailedError < LibraryError
+    include NoAnswerError
     attr_reader :rows
     def initialize(message = nil, code:, http_status: nil, rows: [])
       @rows = rows.freeze
@@ -70,7 +73,7 @@ module ThinkThen
   private_class_method :native
 
   # Cancel any attached calls without closing their client.
-  class CancelToken
+  class Cancel
     def initialize
       @mutex, @cancelled, @calls = Mutex.new, false, []
     end

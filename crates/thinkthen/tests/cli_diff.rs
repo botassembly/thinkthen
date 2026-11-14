@@ -6,22 +6,16 @@ pub mod loopback;
 mod support;
 use serde_json::{Value, json};
 fn inputs(directory: &std::path::Path) -> [std::path::PathBuf; 3] {
-    let guide = include_str!("../../../docs/surfaces/bash.md")
-        .split("## Audit saved answers offline")
-        .nth(1)
-        .unwrap();
-    let documents: Vec<_> = guide
-        .split("```json\n")
-        .skip(1)
-        .map(|block| block.split("```").next().unwrap())
-        .collect();
+    let documents: Vec<Value> =
+        serde_json::from_str(include_str!("../../../construction/audit-example.json")).unwrap();
+    assert_eq!(documents.len(), 3);
     let paths = [
         directory.join("run.json"),
         directory.join("rows.jsonl"),
         directory.join("gold.jsonl"),
     ];
     for (path, body) in paths.iter().zip(documents) {
-        std::fs::write(path, body).unwrap();
+        std::fs::write(path, serde_json::to_vec(&body).unwrap()).unwrap();
     }
     paths
 }
@@ -110,7 +104,7 @@ fn unsure_choose_find_threshold_replay_refuses_without_network() {
         .unwrap();
     for function in ["choose", "find"] {
         let (question, sample): (thinkthen::Question, thinkthen::AnyRow) = if function == "choose" {
-            let question = thinkthen::Choose::new("Which?", ["a", "b"]).unwrap();
+            let question = thinkthen::Choose::with_strings("Which?", ["a", "b"]).unwrap();
             let row = engine.run(&question, "a").unwrap();
             (question.into(), thinkthen::AnyRow::Choose(row))
         } else {

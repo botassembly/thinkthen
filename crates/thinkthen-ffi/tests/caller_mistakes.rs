@@ -55,6 +55,7 @@ fn a_null_handle_is_an_abi_error_at_every_export_that_can_report_one() {
     }
     let (request, len) = (REQUEST.as_ptr(), REQUEST.len());
     refused! {
+        thinkthen_question_validate_table_columns(none(), none(), 0, none(), 0);
         thinkthen_client_usage(none(), &mut Buffer::default());
         thinkthen_client_usage_settled(none(), &mut Buffer::default());
         thinkthen_client_usage_values(none(), &mut HostUsage::default());
@@ -126,7 +127,7 @@ fn a_null_handle_is_an_abi_error_at_every_export_that_can_report_one() {
         thinkthen_value_rank(none(), empty());
         thinkthen_value_tag_count(none(), empty());
         thinkthen_value_tag_at(none(), 0, empty());
-        thinkthen_value_found(none(), empty());
+        thinkthen_value_span(none(), empty());
         thinkthen_value_name_count(none(), empty());
         thinkthen_value_name_at(none(), 0, empty());
         thinkthen_value_relation_count(none(), empty());
@@ -224,7 +225,9 @@ fn a_buffer_frees_its_real_allocation_after_the_caller_changes_len() {
         WATCHED.store(buffer.data as usize, Ordering::Relaxed);
         buffer.len = 0;
         thinkthen_buffer_free(&mut buffer);
-        assert_eq!(FREED_PAST_WATCHED.load(Ordering::Relaxed), len);
+        // The owned allocation includes the trailing C-string sentinel, even
+        // when the caller changes the public counted length before freeing it.
+        assert_eq!(FREED_PAST_WATCHED.load(Ordering::Relaxed), len + 1);
         assert!(buffer.data.is_null());
         thinkthen_question_free(question);
     }

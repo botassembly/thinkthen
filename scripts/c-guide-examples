@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Run the complete ideal C guide against this tree's prepared native library."""
+import os
+import subprocess
+from pathlib import Path
+from c_guide_examples import run_c
+root=Path(__file__).resolve().parent.parent
+subprocess.run([root/'scripts/c-gate'],cwd=root,check=True)
+subprocess.run(['cargo','build','-p','loopback','--bin','loopback','--locked'],cwd=root,check=True)
+target=Path(os.environ.get('CARGO_TARGET_DIR',root/'target')).resolve()
+os.environ.setdefault('THINKTHEN_LOOPBACK',str(target/'debug/loopback'))
+run_c()

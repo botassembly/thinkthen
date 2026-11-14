@@ -39,10 +39,9 @@
       "const": "annotate"
     },
     "AnnotationEntry": {
-      "description": "A named annotation result without an enclosing position, id or source.",
       "oneOf": [
         {
-          "description": "Decide",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -56,7 +55,7 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The function's typed answer.",
                   "type": "boolean"
                 },
                 "detail": {
@@ -74,7 +73,8 @@
               },
               "required": [
                 "status",
-                "answer"
+                "answer",
+                "probability"
               ]
             },
             {
@@ -121,10 +121,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -152,10 +149,11 @@
           ],
           "required": [
             "function"
-          ]
+          ],
+          "unevaluatedProperties": false
         },
         {
-          "description": "Choose",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -169,7 +167,7 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The function's typed answer.",
                   "type": "string"
                 },
                 "detail": {
@@ -187,7 +185,8 @@
               },
               "required": [
                 "status",
-                "answer"
+                "answer",
+                "probability"
               ]
             },
             {
@@ -234,10 +233,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -265,10 +261,11 @@
           ],
           "required": [
             "function"
-          ]
+          ],
+          "unevaluatedProperties": false
         },
         {
-          "description": "Tag",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -282,7 +279,7 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The function's typed answer.",
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -292,10 +289,7 @@
                   "description": "The function's complete detail.",
                   "$ref": "#/$defs/LabelDetail"
                 },
-                "probability": {
-                  "description": "A defined aggregate probability, when the function has one.",
-                  "$ref": "#/$defs/Probability"
-                },
+                "probability": false,
                 "status": {
                   "type": "string",
                   "const": "answered"
@@ -304,28 +298,6 @@
               "required": [
                 "status",
                 "answer"
-              ]
-            },
-            {
-              "description": "A result inside a threshold band, without an answer key.",
-              "type": "object",
-              "properties": {
-                "detail": {
-                  "description": "The function's complete detail.",
-                  "$ref": "#/$defs/LabelDetail"
-                },
-                "probability": {
-                  "description": "The probability behind the result.",
-                  "$ref": "#/$defs/Probability"
-                },
-                "status": {
-                  "type": "string",
-                  "const": "unsure"
-                }
-              },
-              "required": [
-                "status",
-                "probability"
               ]
             },
             {
@@ -350,10 +322,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -381,10 +350,11 @@
           ],
           "required": [
             "function"
-          ]
+          ],
+          "unevaluatedProperties": false
         },
         {
-          "description": "Score",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -398,7 +368,7 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The function's typed answer.",
                   "type": "number",
                   "format": "double"
                 },
@@ -406,10 +376,7 @@
                   "description": "The function's complete detail.",
                   "$ref": "#/$defs/LevelDetail"
                 },
-                "probability": {
-                  "description": "A defined aggregate probability, when the function has one.",
-                  "$ref": "#/$defs/Probability"
-                },
+                "probability": false,
                 "status": {
                   "type": "string",
                   "const": "answered"
@@ -418,28 +385,6 @@
               "required": [
                 "status",
                 "answer"
-              ]
-            },
-            {
-              "description": "A result inside a threshold band, without an answer key.",
-              "type": "object",
-              "properties": {
-                "detail": {
-                  "description": "The function's complete detail.",
-                  "$ref": "#/$defs/LevelDetail"
-                },
-                "probability": {
-                  "description": "The probability behind the result.",
-                  "$ref": "#/$defs/Probability"
-                },
-                "status": {
-                  "type": "string",
-                  "const": "unsure"
-                }
-              },
-              "required": [
-                "status",
-                "probability"
               ]
             },
             {
@@ -464,10 +409,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -495,123 +437,11 @@
           ],
           "required": [
             "function"
-          ]
-        },
-        {
-          "description": "Filter",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "filter"
-            }
-          },
-          "oneOf": [
-            {
-              "description": "An accepted typed answer.",
-              "type": "object",
-              "properties": {
-                "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
-                  "type": "boolean"
-                },
-                "detail": {
-                  "description": "The function's complete detail.",
-                  "$ref": "#/$defs/NoDetail"
-                },
-                "probability": {
-                  "description": "A defined aggregate probability, when the function has one.",
-                  "$ref": "#/$defs/Probability"
-                },
-                "status": {
-                  "type": "string",
-                  "const": "answered"
-                }
-              },
-              "required": [
-                "status",
-                "answer"
-              ]
-            },
-            {
-              "description": "A result inside a threshold band, without an answer key.",
-              "type": "object",
-              "properties": {
-                "detail": {
-                  "description": "The function's complete detail.",
-                  "$ref": "#/$defs/NoDetail"
-                },
-                "probability": {
-                  "description": "The probability behind the result.",
-                  "$ref": "#/$defs/Probability"
-                },
-                "status": {
-                  "type": "string",
-                  "const": "unsure"
-                }
-              },
-              "required": [
-                "status",
-                "probability"
-              ]
-            },
-            {
-              "description": "A failure belonging to this record.",
-              "type": "object",
-              "properties": {
-                "error": {
-                  "description": "The typed failure.",
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "enum": [
-                        "record.json",
-                        "record.missing",
-                        "record.too-large",
-                        "record.invalid",
-                        "record.empty",
-                        "backend.transport",
-                        "backend.status",
-                        "backend.reply"
-                      ]
-                    },
-                    "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
-                      "format": "uint16",
-                      "maximum": 65535,
-                      "minimum": 0
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "required": [
-                    "code",
-                    "message"
-                  ]
-                },
-                "status": {
-                  "type": "string",
-                  "const": "failed"
-                }
-              },
-              "required": [
-                "status",
-                "error"
-              ]
-            }
           ],
-          "required": [
-            "function"
-          ]
+          "unevaluatedProperties": false
         },
         {
-          "description": "Find",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -625,10 +455,10 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The selected span, or explicit null when no line answers.",
                   "anyOf": [
                     {
-                      "$ref": "#/$defs/Found"
+                      "$ref": "#/$defs/Span"
                     },
                     {
                       "type": "null"
@@ -650,7 +480,8 @@
               },
               "required": [
                 "status",
-                "answer"
+                "answer",
+                "probability"
               ]
             },
             {
@@ -697,10 +528,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -728,10 +556,11 @@
           ],
           "required": [
             "function"
-          ]
+          ],
+          "unevaluatedProperties": false
         },
         {
-          "description": "Recognize",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -745,7 +574,7 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The function's typed answer.",
                   "type": "array",
                   "items": {
                     "$ref": "#/$defs/Name"
@@ -755,10 +584,7 @@
                   "description": "The function's complete detail.",
                   "$ref": "#/$defs/RecognizeDetail"
                 },
-                "probability": {
-                  "description": "A defined aggregate probability, when the function has one.",
-                  "$ref": "#/$defs/Probability"
-                },
+                "probability": false,
                 "status": {
                   "type": "string",
                   "const": "answered"
@@ -767,28 +593,6 @@
               "required": [
                 "status",
                 "answer"
-              ]
-            },
-            {
-              "description": "A result inside a threshold band, without an answer key.",
-              "type": "object",
-              "properties": {
-                "detail": {
-                  "description": "The function's complete detail.",
-                  "$ref": "#/$defs/RecognizeDetail"
-                },
-                "probability": {
-                  "description": "The probability behind the result.",
-                  "$ref": "#/$defs/Probability"
-                },
-                "status": {
-                  "type": "string",
-                  "const": "unsure"
-                }
-              },
-              "required": [
-                "status",
-                "probability"
               ]
             },
             {
@@ -813,10 +617,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -844,10 +645,11 @@
           ],
           "required": [
             "function"
-          ]
+          ],
+          "unevaluatedProperties": false
         },
         {
-          "description": "Relate",
+          "description": "A status-specific answer with no untyped payload.\n\nThe set is closed: an exhaustive `match` needs no catch-all arm.",
           "type": "object",
           "properties": {
             "function": {
@@ -861,7 +663,7 @@
               "type": "object",
               "properties": {
                 "answer": {
-                  "description": "The answer, including explicit null when find returns no match.",
+                  "description": "The function's typed answer.",
                   "type": "array",
                   "items": {
                     "$ref": "#/$defs/Relation"
@@ -871,10 +673,7 @@
                   "description": "The function's complete detail.",
                   "$ref": "#/$defs/PairDetail"
                 },
-                "probability": {
-                  "description": "A defined aggregate probability, when the function has one.",
-                  "$ref": "#/$defs/Probability"
-                },
+                "probability": false,
                 "status": {
                   "type": "string",
                   "const": "answered"
@@ -883,28 +682,6 @@
               "required": [
                 "status",
                 "answer"
-              ]
-            },
-            {
-              "description": "A result inside a threshold band, without an answer key.",
-              "type": "object",
-              "properties": {
-                "detail": {
-                  "description": "The function's complete detail.",
-                  "$ref": "#/$defs/PairDetail"
-                },
-                "probability": {
-                  "description": "The probability behind the result.",
-                  "$ref": "#/$defs/Probability"
-                },
-                "status": {
-                  "type": "string",
-                  "const": "unsure"
-                }
-              },
-              "required": [
-                "status",
-                "probability"
               ]
             },
             {
@@ -929,10 +706,7 @@
                       ]
                     },
                     "http_status": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ],
+                      "type": "integer",
                       "format": "uint16",
                       "maximum": 65535,
                       "minimum": 0
@@ -960,10 +734,10 @@
           ],
           "required": [
             "function"
-          ]
+          ],
+          "unevaluatedProperties": false
         }
-      ],
-      "unevaluatedProperties": false
+      ]
     },
     "BackendName": {
       "description": "The backend selected by a caller, independent of its wire representation.",
@@ -1186,31 +960,6 @@
       "type": "string",
       "const": "find"
     },
-    "Found": {
-      "description": "A selected span of the original field.",
-      "type": "object",
-      "properties": {
-        "end": {
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0
-        },
-        "start": {
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "text",
-        "start",
-        "end"
-      ]
-    },
     "KindDetail": {
       "description": "Kind probabilities for one proposed name.",
       "type": "object",
@@ -1301,10 +1050,10 @@
       },
       "additionalProperties": false,
       "required": [
+        "kind",
         "text",
         "start",
         "end",
-        "kind",
         "probability"
       ]
     },
@@ -1477,10 +1226,10 @@
       },
       "additionalProperties": false,
       "required": [
+        "kind",
         "text",
         "start",
-        "end",
-        "kind"
+        "end"
       ]
     },
     "Row": {
@@ -1491,15 +1240,9 @@
           "$ref": "#/$defs/DecideFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -1515,7 +1258,7 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "boolean"
             },
             "detail": {
@@ -1533,7 +1276,8 @@
           },
           "required": [
             "status",
-            "answer"
+            "answer",
+            "probability"
           ]
         },
         {
@@ -1580,10 +1324,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -1624,15 +1365,9 @@
           "$ref": "#/$defs/AnnotateFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -1648,7 +1383,7 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "object",
               "additionalProperties": {
                 "$ref": "#/$defs/AnnotationEntry"
@@ -1658,10 +1393,7 @@
               "description": "The function's complete detail.",
               "$ref": "#/$defs/NoDetail"
             },
-            "probability": {
-              "description": "A defined aggregate probability, when the function has one.",
-              "$ref": "#/$defs/Probability"
-            },
+            "probability": false,
             "status": {
               "type": "string",
               "const": "answered"
@@ -1670,28 +1402,6 @@
           "required": [
             "status",
             "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/NoDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
-            "probability"
           ]
         },
         {
@@ -1716,10 +1426,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -1760,15 +1467,9 @@
           "$ref": "#/$defs/ChooseFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -1784,7 +1485,7 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "string"
             },
             "detail": {
@@ -1802,7 +1503,8 @@
           },
           "required": [
             "status",
-            "answer"
+            "answer",
+            "probability"
           ]
         },
         {
@@ -1849,10 +1551,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -1893,15 +1592,9 @@
           "$ref": "#/$defs/TagFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -1917,7 +1610,7 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "array",
               "items": {
                 "type": "string"
@@ -1927,10 +1620,7 @@
               "description": "The function's complete detail.",
               "$ref": "#/$defs/LabelDetail"
             },
-            "probability": {
-              "description": "A defined aggregate probability, when the function has one.",
-              "$ref": "#/$defs/Probability"
-            },
+            "probability": false,
             "status": {
               "type": "string",
               "const": "answered"
@@ -1939,28 +1629,6 @@
           "required": [
             "status",
             "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/LabelDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
-            "probability"
           ]
         },
         {
@@ -1985,10 +1653,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2029,15 +1694,9 @@
           "$ref": "#/$defs/ScoreFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -2053,7 +1712,7 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "number",
               "format": "double"
             },
@@ -2061,10 +1720,7 @@
               "description": "The function's complete detail.",
               "$ref": "#/$defs/LevelDetail"
             },
-            "probability": {
-              "description": "A defined aggregate probability, when the function has one.",
-              "$ref": "#/$defs/Probability"
-            },
+            "probability": false,
             "status": {
               "type": "string",
               "const": "answered"
@@ -2073,28 +1729,6 @@
           "required": [
             "status",
             "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/LevelDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
-            "probability"
           ]
         },
         {
@@ -2119,10 +1753,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2160,18 +1791,12 @@
       "type": "object",
       "properties": {
         "function": {
-          "$ref": "#/$defs/FilterFunction"
+          "$ref": "#/$defs/FindFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -2187,8 +1812,15 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
-              "type": "boolean"
+              "description": "The selected span, or explicit null when no line answers.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Span"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "detail": {
               "description": "The function's complete detail.",
@@ -2205,7 +1837,8 @@
           },
           "required": [
             "status",
-            "answer"
+            "answer",
+            "probability"
           ]
         },
         {
@@ -2252,10 +1885,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2293,18 +1923,12 @@
       "type": "object",
       "properties": {
         "function": {
-          "$ref": "#/$defs/FindFunction"
+          "$ref": "#/$defs/RecognizeFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -2320,24 +1944,17 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/Found"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "description": "The function's typed answer.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Name"
+              }
             },
             "detail": {
               "description": "The function's complete detail.",
-              "$ref": "#/$defs/NoDetail"
+              "$ref": "#/$defs/RecognizeDetail"
             },
-            "probability": {
-              "description": "A defined aggregate probability, when the function has one.",
-              "$ref": "#/$defs/Probability"
-            },
+            "probability": false,
             "status": {
               "type": "string",
               "const": "answered"
@@ -2346,28 +1963,6 @@
           "required": [
             "status",
             "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/NoDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
-            "probability"
           ]
         },
         {
@@ -2392,10 +1987,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2433,18 +2025,12 @@
       "type": "object",
       "properties": {
         "function": {
-          "$ref": "#/$defs/RecognizeFunction"
+          "$ref": "#/$defs/RelateFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -2460,20 +2046,17 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "array",
               "items": {
-                "$ref": "#/$defs/Name"
+                "$ref": "#/$defs/Relation"
               }
             },
             "detail": {
               "description": "The function's complete detail.",
-              "$ref": "#/$defs/RecognizeDetail"
+              "$ref": "#/$defs/PairDetail"
             },
-            "probability": {
-              "description": "A defined aggregate probability, when the function has one.",
-              "$ref": "#/$defs/Probability"
-            },
+            "probability": false,
             "status": {
               "type": "string",
               "const": "answered"
@@ -2482,28 +2065,6 @@
           "required": [
             "status",
             "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/RecognizeDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
-            "probability"
           ]
         },
         {
@@ -2528,10 +2089,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2569,18 +2127,12 @@
       "type": "object",
       "properties": {
         "function": {
-          "$ref": "#/$defs/RelateFunction"
+          "$ref": "#/$defs/FilterFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -2596,15 +2148,12 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Relation"
-              }
+              "description": "The function's typed answer.",
+              "type": "boolean"
             },
             "detail": {
               "description": "The function's complete detail.",
-              "$ref": "#/$defs/PairDetail"
+              "$ref": "#/$defs/NoDetail"
             },
             "probability": {
               "description": "A defined aggregate probability, when the function has one.",
@@ -2617,28 +2166,7 @@
           },
           "required": [
             "status",
-            "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/PairDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
+            "answer",
             "probability"
           ]
         },
@@ -2664,10 +2192,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2708,15 +2233,9 @@
           "$ref": "#/$defs/RankFunction"
         },
         "id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecordId"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/RecordId"
         },
+        "item": true,
         "position": {
           "type": "integer",
           "format": "uint64",
@@ -2732,7 +2251,7 @@
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer, including explicit null when find returns no match.",
+              "description": "The function's typed answer.",
               "type": "integer",
               "format": "uint",
               "minimum": 1
@@ -2741,10 +2260,7 @@
               "description": "The function's complete detail.",
               "$ref": "#/$defs/LevelDetail"
             },
-            "probability": {
-              "description": "A defined aggregate probability, when the function has one.",
-              "$ref": "#/$defs/Probability"
-            },
+            "probability": false,
             "status": {
               "type": "string",
               "const": "answered"
@@ -2753,28 +2269,6 @@
           "required": [
             "status",
             "answer"
-          ]
-        },
-        {
-          "description": "A result inside a threshold band, without an answer key.",
-          "type": "object",
-          "properties": {
-            "detail": {
-              "description": "The function's complete detail.",
-              "$ref": "#/$defs/LevelDetail"
-            },
-            "probability": {
-              "description": "The probability behind the result.",
-              "$ref": "#/$defs/Probability"
-            },
-            "status": {
-              "type": "string",
-              "const": "unsure"
-            }
-          },
-          "required": [
-            "status",
-            "probability"
           ]
         },
         {
@@ -2799,10 +2293,7 @@
                   ]
                 },
                 "http_status": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": "integer",
                   "format": "uint16",
                   "maximum": 65535,
                   "minimum": 0
@@ -2850,10 +2341,7 @@
           "type": "string"
         },
         "name": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "question_identity": {
           "type": "string"
@@ -2864,6 +2352,31 @@
         "question_identity",
         "backend",
         "model"
+      ]
+    },
+    "Span": {
+      "description": "A selected span of the original field.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "start": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "start",
+        "end"
       ]
     },
     "TagFunction": {

@@ -1,3 +1,4 @@
+// Expected: error CS1503|error CS1501
 using ThinkThen;
 
 public static class InvalidInput

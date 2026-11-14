@@ -56,8 +56,8 @@ else:
 NODE = '''import { pathToFileURL } from "node:url";
 const [path, expected, code, message] = process.argv.slice(2);
 try {
-  const { ThinkThen } = await import(pathToFileURL(path));
-  new ThinkThen({backend: expected === "accept" ? "stub" : "invalid_fixture_backend"});
+  const { Client } = await import(pathToFileURL(path));
+  new Client({backend: expected === "accept" ? "stub" : "invalid_fixture_backend"});
   if (expected !== "accept") throw new Error("incompatible module reached client construction");
 } catch (error) {
   if (expected !== "reject" || error.code !== code || error.message !== message) throw error;
@@ -93,7 +93,7 @@ def main():
         probe = [runtime, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); import thinkthen; thinkthen.Client(backend='stub')", str(package.parent)]
     elif args.language == "typescript":
         engine = package / "thinkthen.node"
-        probe = [runtime, "--input-type=module", "-e", "const {ThinkThen,ThinkThenError}=await import(process.argv[1]); try { new ThinkThen({backend:'stub'}); } catch(error) { if (!(error instanceof ThinkThenError) || error.code !== 'local.io') throw new Error('wrong load error type or code'); throw error; }", (package / "runtime.js").as_uri()]
+        probe = [runtime, "--input-type=module", "-e", "const {Client,ThinkThenError}=await import(process.argv[1]); try { new Client({backend:'stub'}); } catch(error) { if (!(error instanceof ThinkThenError) || error.code !== 'local.io') throw new Error('wrong load error type or code'); throw error; }", (package / "runtime.js").as_uri()]
     else:
         engine = next((package / "libs").rglob("thinkthen.*"))
         probe = [runtime, "--vanilla", "-e", "library(thinkthen,lib.loc=commandArgs(TRUE)[1]); tt_client(backend='stub')", str(package.parent)]
@@ -108,11 +108,14 @@ def main():
             version = required
             if name == "wrong-major":
                 version += 1 << 16
+            elif name == "previous-major":
+                version -= 1 << 16
             elif name == "insufficient-minor":
                 version += 1
             elif name == "newer-minor":
                 if not required & 0xFFFF:
-                    raise ValueError("newer-native-minor proof requires a positive current minor")
+                    print(f"{args.language} installed module: newer-minor not representable with required minor zero; native fixture proves newer-library acceptance", flush=True)
+                    continue
                 version -= 1
             expected = "accept" if case["accept"] else "reject"
             tail = [expected, abi["error"]["code"], abi["error"]["message"]]

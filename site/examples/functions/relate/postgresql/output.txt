@@ -1,2 +1,2 @@
-msg_id,person,relation,organization,status
-1,Morgan,works_for,Example Group,answered
+position,msg_id,status,person,relation,organization
+1,1,answered,Morgan,works_for,Example Group

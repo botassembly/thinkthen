@@ -61,7 +61,7 @@ print.tt_question <- function(x, ...) { cat("<", class(x)[[1]], ">\n", sep = "")
 #' @export
 tt_decide_question <- function(question, ..., threshold = NULL, yes_means = NULL, no_means = NULL, field = NULL) {
   dots <- .tt_dots(...)
-  .tt_admit_question("decide", question, .tt_options(threshold = threshold, `true` = yes_means, `false` = no_means, field = field, .dots = dots))
+  .tt_admit_question("decide", question, .tt_options(threshold = threshold, yes_means = yes_means, no_means = no_means, field = field, .dots = dots))
 }
 #' Admit an immutable question and its domain through the shared engine.
 #'
@@ -96,7 +96,7 @@ tt_score_question <- function(question, levels, ..., descriptions = NULL, field 
 #' @export
 tt_filter_question <- function(question, ..., threshold = NULL, yes_means = NULL, no_means = NULL, field = NULL) {
   dots <- .tt_dots(...)
-  .tt_admit_question("filter", question, .tt_options(threshold = threshold, `true` = yes_means, `false` = no_means, field = field, .dots = dots))
+  .tt_filter_context(.tt_admit_question("filter", question, .tt_options(threshold = threshold, yes_means = yes_means, no_means = no_means, field = field, .dots = dots)))
 }
 #' Admit an immutable question and its domain through the shared engine.
 #'
@@ -246,7 +246,7 @@ tt_annotation_questions <- function(questions) {
 #'
 #' @rdname tt_toolbox
 #' @export
-tt_toolbox_read <- function(path) tt_toolbox_from_json(paste(readLines(path, warn = FALSE), collapse = "\n"))
+tt_toolbox_read <- function(path) tt_toolbox_from_json(paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n"))
 #' Write a toolbox to a JSON file and return the toolbox invisibly.
 #'
 #' @rdname tt_toolbox

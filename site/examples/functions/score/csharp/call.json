@@ -1,5 +1,5 @@
 {
-  "anchor": "double urgency = await client.ScoreAsync(",
+  "anchor": "var urgency = await client.ScoreAsync(",
   "before": 0,
   "after": 2
 }

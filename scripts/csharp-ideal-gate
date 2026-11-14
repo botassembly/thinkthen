@@ -1,0 +1,66 @@
+#!/bin/sh
+# Build the installed C# package once and run its literal ideal guide.
+set -eu
+cd "$(dirname "$0")/.."
+case "${1:-}" in ''|--compile-only|--sdk|--sdk-tail|--projection) ;; *) echo 'usage: scripts/csharp-ideal-gate [--compile-only|--sdk|--sdk-tail|--projection]' >&2; exit 2 ;; esac
+if command -v ruff >/dev/null 2>&1; then
+    ruff --version
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/guide_csharp.py scripts/csharp-example-check scripts/csharp_consumers.py
+else
+    echo 'Ruff unavailable; C# compiler and package checks still run.'
+fi
+csharp_scratch=$(mktemp -d)
+export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
+export PATH="$DOTNET_ROOT:$PATH" DOTNET_CLI_HOME="$csharp_scratch/home" NUGET_PACKAGES="$csharp_scratch/packages"
+export DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_GENERATE_ASPNET_CERTIFICATE=false
+printf '<configuration><packageSources><clear /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "$DOTNET_ROOT" > "$csharp_scratch/NuGet.Config"
+if [ "${1:-}" = --compile-only ]; then
+    exec dotnet build sdk/csharp/ThinkThen.csproj --configfile "$csharp_scratch/NuGet.Config" --artifacts-path "$csharp_scratch/artifacts" --nologo
+fi
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BACKEND THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
+cargo build --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+csharp_target=${CARGO_TARGET_DIR:-target}
+case "$csharp_target" in /*) ;; *) csharp_target="$PWD/$csharp_target" ;; esac
+csharp_linux= csharp_mac=
+case $(uname -s) in
+    Darwin) csharp_mac="$csharp_target/debug/libthinkthen_ffi.dylib" ;;
+    Linux) csharp_linux="$csharp_target/debug/libthinkthen_ffi.so" ;;
+    *) echo 'unsupported C# source host' >&2; exit 2 ;;
+esac
+dotnet pack sdk/csharp/ThinkThen.csproj --configfile "$csharp_scratch/NuGet.Config" --artifacts-path "$csharp_scratch/artifacts" -o "$csharp_scratch/feed" -p:LinuxNative="$csharp_linux" -p:MacNative="$csharp_mac" --nologo
+export THINKTHEN_LOOPBACK="$csharp_target/debug/loopback"
+if [ "${1:-}" = --projection ]; then
+    exec python3 scripts/csharp_consumers.py projection "$csharp_scratch"
+fi
+if [ "${1:-}" = --sdk-tail ]; then
+    python3 scripts/csharp-example-check "$csharp_scratch" --host-only
+else
+    python3 scripts/csharp-example-check "$csharp_scratch"
+fi
+csharp_result=0
+if [ "${1:-}" = --sdk ] || [ "${1:-}" = --sdk-tail ]; then
+    python3 scripts/csharp_consumers.py consumer "$csharp_scratch" || csharp_result=$?
+    python3 scripts/csharp_consumers.py interface "$csharp_scratch" || csharp_result=$?
+fi
+# The shared dispatcher must reach the real installed C# runner and reject wrong output.
+python3 - "$csharp_scratch" <<'PYDISPATCH'
+import subprocess
+import sys
+inventory = subprocess.run(['scripts/guide-examples', '--inventory'], capture_output=True, text=True)
+if inventory.returncode or 'ENABLED csharp: 31 fenced blocks' not in inventory.stdout:
+    raise AssertionError('C# global inventory registration failed: ' + inventory.stdout + inventory.stderr)
+for control, expected in (
+    ('output', "FAIL csharp/0/yes: output: expected 'deliberately wrong output\\n', got 'refund queue\\n'"),
+    ('branch', "branch: expected 'deliberately wrong branch'"),
+    ('exit', 'exit: expected 99, got 0'),
+    ('refusal', 'FAIL csharp/compiler/choose-if: exit: expected 1, got 0'),
+):
+    negative = subprocess.run(['scripts/guide-examples', '--surface', 'csharp', '--csharp-stage', sys.argv[1], '--negative-control', control], capture_output=True, text=True)
+    combined = negative.stdout + negative.stderr
+    witnessed = control == 'refusal' or 'CSHARP DISPATCH csharp/0/yes requests=1 branch=refund queue' in combined
+    if negative.returncode != 1 or not witnessed or expected not in combined:
+        raise AssertionError('C# selected dispatch did not reject '+control+': '+combined)
+    print('C# negative control rejected: '+control, flush=True)
+print('C# global inventory and selected real-fixture rejection controls passed', flush=True)
+PYDISPATCH
+exit "$csharp_result"

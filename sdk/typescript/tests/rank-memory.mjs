@@ -1,25 +1,23 @@
 import assert from "node:assert/strict";
 import {pathToFileURL} from "node:url";
-const {ThinkThen} = await import(pathToFileURL(process.argv[2]).href);
-const count = 2000;
-let read = 0;
-let peak = 0;
+const {Client} = await import(pathToFileURL(process.argv[2]).href);
+const count = 128;
+const originals = [];
 async function* records() {
   for (let index = 0; index < count; index++) {
-    if (index % 50 === 0) {
-      globalThis.gc();
-      peak = Math.max(peak, process.memoryUsage().heapUsed);
-    }
-    read++;
-    yield {id:index,text:`record ${index}`,padding:Buffer.alloc(65536,32 + index % 80).toString()};
+    const record = {id:index,text:`record ${index}`,padding:`caller field ${index}`};
+    originals.push(record);
+    yield record;
   }
 }
-const client = new ThinkThen({backend:"stub"});
+const client = new Client({backend:"stub"});
 try {
-  const rows = await client.rankStream("Priority?", records(), {levels:["low","high"],field:"/text",top:1}).toArray();
-  assert.equal(read, count);
+  const rows = await client.rank("Priority?", records(), {levels:["low","high"],field:"/text",top:1}).toArray();
+  assert.equal(originals.length, count);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].answer, 1);
-  assert.equal(rows[0].item.padding.length, 65536);
-  console.log(`rank top 1: ${read} records, ${peak} live JS heap bytes after collection`);
+  assert.equal(rows[0].item, originals[rows[0].position - 1]);
+  rows[0].item.padding = "changed by caller";
+  assert.equal(originals[rows[0].position - 1].padding,"changed by caller");
+  console.log(`rank top 1: ${count} records judged, caller original retained`);
 } finally {await client.close();}

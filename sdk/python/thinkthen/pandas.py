@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from enum import Enum
 from typing import Any, Generic, TypeVar, cast
 
 import pandas as pd
 
-from ._columns import ColumnMethods, annotation_definitions
+from ._columns import (
+    ANNOTATION_COLUMNS,
+    ColumnMethods,
+    annotation_definitions,
+    answer_value,
+    choice_domain,
+)
 from ._types import ErrorCode, Status
 
 _FAILURES = "thinkthen_failures"
@@ -15,7 +22,10 @@ _ERROR_CODE = pd.CategoricalDtype([item.value for item in ErrorCode])
 _STATUS = pd.CategoricalDtype([item.value for item in Status])
 
 
-def _answer_dtype(function: str) -> str:
+def _answer_dtype(function: str, question: object = None) -> Any:
+    domain = choice_domain(question)
+    if function == "choose" and domain:
+        return pd.CategoricalDtype(domain, ordered=True)
     return {
         "decide": "boolean",
         "filter": "boolean",
@@ -25,26 +35,36 @@ def _answer_dtype(function: str) -> str:
     }.get(function, "object")
 
 
+def _answer(row: Any) -> Any:
+    value = answer_value(row) if row is not None else None
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, tuple):
+        return [item.value if isinstance(item, Enum) else item for item in value]
+    return value
+
+
 def frame(
-    rows: list[Any], index: Any = None, function: str | None = None
+    rows: list[Any],
+    index: Any = None,
+    function: str | None = None,
+    question: object = None,
 ) -> pd.DataFrame:
-    if function is None:
-        function = rows[0].function.value if rows else "decide"
-    answer = _answer_dtype(function)
-    values: dict[str, list[Any]] = {
+    function = function or (rows[0].function.value if rows else "decide")
+    values = {
         name: [getattr(row, name) for row in rows]
         for name in (
             "position",
             "id",
             "function",
             "status",
-            "answer",
             "probability",
             "source",
             "detail",
+            "item",
         )
     }
-    values["answer"] = [pd.NA if value is None else value for value in values["answer"]]
+    values["answer"] = [_answer(row) for row in rows]
     for name in ("code", "message", "http_status"):
         values["error_" + name] = [
             getattr(row.error, name) if row.error is not None else None for row in rows
@@ -54,27 +74,23 @@ def frame(
         "id": "object",
         "function": "string",
         "status": _STATUS,
-        "answer": answer,
+        "answer": _answer_dtype(function, question),
         "probability": "Float64",
         "source": "object",
         "detail": "object",
+        "item": "object",
         "error_code": _ERROR_CODE,
         "error_message": "string",
         "error_http_status": "Int64",
     }
-    if function == "filter":
-        values.update(
-            item=[row.item for row in rows],
-            kept=[row.kept for row in rows],
-        )
-        dtypes.update(item="object", kept="boolean")
-    return pd.DataFrame(
+    result = pd.DataFrame(
         {
             key: pd.Series(value, index=index, dtype=dtypes[key])
             for key, value in values.items()
         },
         index=index,
     )
+    return result
 
 
 def _missing(value: object) -> bool:
@@ -87,40 +103,54 @@ P = TypeVar("P", "pd.Series[Any]", pd.DataFrame)
 class _PandasAccessor(
     ColumnMethods["pd.Series[Any]", pd.DataFrame, P, pd.DataFrame], Generic[P]
 ):
+    def __init__(self, value: P) -> None:
+        super().__init__(value)
+
     def _missing(self, value: object) -> bool:
         return _missing(value)
 
     def _records(self) -> Iterable[Any]:
         yield from self._value
 
-    def _answers(
-        self, function: str, rows: list[Any], question: object
-    ) -> pd.Series[Any]:
-        values: list[Any] = [None] * len(self._value)
+    def _columns(self) -> list[str]:
+        return list(ANNOTATION_COLUMNS)
+
+    def _answers(self, function: str, rows: list[Any], question: object) -> Any:
+        if function == "annotate":
+            columns = {}
+            for name, definition in annotation_definitions(question, rows).items():
+                values: list[Any] = [None] * len(self._value)
+                for row in rows:
+                    child = (answer_value(row) or {}).get(name)
+                    values[row.position - 1] = _answer(child)
+                columns[name] = pd.Series(
+                    values,
+                    index=self._value.index,
+                    dtype=_answer_dtype(definition["function"], definition),
+                )
+            return pd.DataFrame(columns, index=self._value.index)
+        values = [None] * len(self._value)
         for row in rows:
-            answer = row.answer
-            if function == "annotate" and answer is not None:
-                answer = {name: child.answer for name, child in answer.items()}
-            values[row.position - 1] = pd.NA if answer is None else answer
+            values[row.position - 1] = _answer(row)
         return pd.Series(
             values,
             index=self._value.index,
             name=self._value.name if isinstance(self._value, pd.Series) else "answer",
-            dtype=_answer_dtype(function),
+            dtype=_answer_dtype(function, question),
         )
 
     def _kept(self, rows: list[Any]) -> P:
         return cast(
-            P, self._value.iloc[[row.position - 1 for row in rows if row.kept]].copy()
+            P,
+            self._value.iloc[
+                [row.position - 1 for row in rows if answer_value(row) is True]
+            ].copy(),
         )
 
     def _read_failures(self) -> list[dict[str, Any]]:
         return list(self._value.attrs.get(_FAILURES, []))
 
     def _write_failures(self, value: Any, entries: list[dict[str, Any]]) -> None:
-        # A kept subset copies its source's attrs, which may hold an earlier list.
-        # The list stays plain JSON: pandas compares attrs in concat and writes
-        # them to Parquet, and a frame here would break both.
         value.attrs.pop(_FAILURES, None)
         if entries:
             value.attrs[_FAILURES] = entries
@@ -143,7 +173,50 @@ class _PandasAccessor(
 
     def _frame(self, function: str, rows: list[Any], question: object) -> pd.DataFrame:
         index = self._value.index.take([row.position - 1 for row in rows])
-        return frame(rows, index, function)
+        result = frame(rows, index, function, question)
+        if function == "annotate":
+            result = result.drop(columns="answer")
+            for name, definition in annotation_definitions(question, rows).items():
+                children = [(answer_value(row) or {}).get(name) for row in rows]
+                result[name] = pd.Series(
+                    [_answer(child) for child in children],
+                    index=index,
+                    dtype=_answer_dtype(definition["function"], definition),
+                )
+                for field, dtype in (
+                    ("status", _STATUS),
+                    ("probability", "Float64"),
+                    ("detail", "object"),
+                ):
+                    cells = [
+                        getattr(child, field)
+                        if child is not None
+                        else row.status
+                        if field == "status"
+                        else None
+                        for child, row in zip(children, rows)
+                    ]
+                    result[name + "_" + field] = pd.Series(
+                        cells, index=index, dtype=dtype
+                    )
+                for field, dtype in (
+                    ("code", _ERROR_CODE),
+                    ("message", "string"),
+                    ("http_status", "Int64"),
+                ):
+                    errors = [
+                        child.error if child is not None else row.error
+                        for child, row in zip(children, rows)
+                    ]
+                    result[name + "_error_" + field] = pd.Series(
+                        [
+                            getattr(error, field) if error is not None else None
+                            for error in errors
+                        ],
+                        index=index,
+                        dtype=dtype,
+                    )
+        return result
 
 
 @pd.api.extensions.register_series_accessor("thinkthen")
@@ -155,36 +228,6 @@ class ThinkThenAccessor(_PandasAccessor["pd.Series[Any]"]):
 class ThinkThenFrameAccessor(_PandasAccessor[pd.DataFrame]):
     def _records(self) -> Iterable[Any]:
         yield from self._value.to_dict(orient="records")
-
-    def _frame(self, function: str, rows: list[Any], question: object) -> pd.DataFrame:
-        if function != "annotate":
-            return super()._frame(function, rows, question)
-        source: pd.DataFrame = self._value
-        result = source.iloc[[row.position - 1 for row in rows]].copy()
-        for name, definition in annotation_definitions(question, rows).items():
-            children = [
-                row.answer.get(name) if row.answer is not None else None for row in rows
-            ]
-            for field, dtype in (
-                ("answer", _answer_dtype(definition["function"])),
-                ("status", _STATUS),
-                ("probability", "Float64"),
-                ("detail", "object"),
-            ):
-                values = [
-                    getattr(child, field)
-                    if child is not None
-                    else row.status
-                    if field == "status"
-                    else None
-                    for child, row in zip(children, rows)
-                ]
-                result.insert(
-                    len(result.columns),
-                    name if field == "answer" else name + "_" + field,
-                    pd.Series(values, index=result.index, dtype=dtype),
-                )
-        return result
 
 
 __all__ = ["ThinkThenAccessor", "ThinkThenFrameAccessor"]

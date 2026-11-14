@@ -27,7 +27,7 @@ def contract_row(row, function):
     if function == 'find' and row['answer'] is not None:
         assert list(row['answer']) == ['text', 'start_offset', 'end_offset'], row
     if function == 'recognize' and row['answer'] is not None:
-        assert all(list(name) == ['text', 'kind', 'start_offset', 'end_offset', 'probability'] for name in row['answer']), row
+        assert all(list(name) == ['kind', 'text', 'start_offset', 'end_offset', 'probability'] for name in row['answer']), row
     if function == 'filter':
         assert row['status'] == 'failed' or (row['status'] == 'answered' and row['answer'] is True), row
     if function == 'annotate' and row['answer'] is not None:
@@ -132,10 +132,8 @@ def admission(options):
         ):
             envelope = json.loads(host.failure(statement))
             assert envelope['exception_message'].startswith('usage.question: '), envelope
-        failed = host.ok("SELECT to_json(t) AS result FROM thinkthen_filter((SELECT NULL::VARCHAR AS record), 'Ready?', failures := 'row') t")
-        row = json.loads(failed[0]['result'])
-        contract_row(row, 'filter')
-        assert row['status'] == 'failed' and row['error_code'] == 'record.missing', row
+        error = host.failure("SELECT * FROM thinkthen_filter((SELECT NULL::VARCHAR AS record), 'Ready?')")
+        assert 'record.missing' in error and '1 of 1 records failed' in error, error
         for case, request, expected in admission_cases(ROOT, 'duckdb'):
             result = host.query('SELECT * FROM ' + invocation(request))
             assert 'error' in result, (case['name'], result)

@@ -1,59 +1,33 @@
 ---
 title: rank
 description: rank sorts the lines of its input from highest to lowest on a scale of levels you name, and can keep only the top few.
-goal: A newcomer with a file of messages leaves able to sort the lines on a scale, keep only the top few, see each line's rank and the chance of each level, and rank every row of a CSV file.
+goal: A newcomer with a file of messages leaves able to sort the lines on a scale, keep only the top few, see each line's rank and the chance of each level, and rank every result of a CSV file.
 reader: Someone at the command line who needs to put a file of messages in order, such as most urgent first
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "rank: sort lines from highest to lowest"
 ---
 import Example from '../../../components/Example.astro';
-import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
 
-rank places every line of its input on a scale of levels you name, from lowest to highest, and prints the lines from highest to lowest. `--top` keeps only the first few.
+rank returns results in rank order, retaining each original message.
 
 <Example id="functions/rank/command" />
 
 <ExampleFile id="functions/rank/command" file="messages.txt" />
 
-Most urgent first: the double charge, then the parcel question, then the refund request.
+rank puts many messages in order along your levels, highest first.
 
-## Keep the top few
+```bash
+thinkthen rank 'How urgent is the request?' messages.txt \
+  --level routine --level urgent --json |
+  jq -r 'select(.status == "answered") | "\(.answer) \(.item)"'
+```
 
-<Example id="rank-top" />
-
-`--top 2` keeps the two most urgent lines and drops the rest.
-
-## See why
-
-<details class="example-disclosure">
-<summary>See why</summary>
-
-`--json` prints the details. This `jq` keeps three of them for each line.
-
-<Example id="rank-why" />
-
-`position` is the line's place in the input, `answer` is its rank, and `levels` holds the chance of each level, lowest first. Lines with equal scores keep their input order. [JSON output](/reference/json-output/) lists every field.
-
-rank asks about each line as it reads. With `--top`, it holds only the best lines so far, plus any line that failed, in memory. Without `--top`, it holds every result until the input ends, because the last line can still change the order. Either way nothing prints before the input ends, and the plain output keeps each input line in a temporary file until then.
-
-</details>
-
-## Rank every row of a CSV file
-
-<details class="example-disclosure">
-<summary>Rank every row of a CSV file</summary>
-
-<ExampleFile id="rank-into" file="messages.csv" />
-
-<Example id="rank-into" />
-
-`--column` names the column to read, and `--into` names the new rank column. The rows stay in their order, each with its rank. With `--top`, a row outside the top gets an empty cell. [File types](/command-line/file-types/) covers TSV, Excel and other files.
-
-</details>
+`answer` is the rank, starting at 1, and `item` is your message. rank reads the whole file before it prints anything. `--top 5` ranks only the first five. A failed message comes after the ranked ones, with `status` set to `failed`. Without `--json`, rank prints your messages in rank order.
 
 ## Options
 
@@ -63,9 +37,3 @@ rank asks about each line as it reads. With `--top`, it holds only the best line
 <FunctionOptions name="rank" />
 
 </details>
-
-If rank can't answer a line, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#rank) · [TypeScript](/sdks/typescript/#rank) · [Go](/sdks/go/#rank) · [Java](/sdks/java/#rank) · [Kotlin](/sdks/kotlin/#rank) · [C#](/sdks/csharp/#rank) · [R](/sdks/r/#rank) · [Ruby](/sdks/ruby/#rank) · [Rust](/sdks/rust/#rank) · [Swift](/sdks/swift/#rank) · [Zig](/sdks/zig/#rank) · [C](/sdks/c/#rank) · [C++](/sdks/cpp/#rank) · [DuckDB](/sdks/duckdb/#rank) · [SQLite](/sdks/sqlite/#rank) · [PostgreSQL](/sdks/postgresql/#rank)
-
-Next: [find](/functions/find/) points to the line in a text that answers a question.

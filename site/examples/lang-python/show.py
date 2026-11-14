@@ -5,4 +5,4 @@ refund = thinkthen.decide(
     "Please refund my order.",
     threshold=(0.2, 0.8),
 )
-print(refund.status, refund.answer)
+print(refund)

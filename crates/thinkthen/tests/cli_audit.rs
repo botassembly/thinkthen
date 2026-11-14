@@ -104,17 +104,10 @@ fn audit_grades_without_credentials_or_network_and_keeps_missing_results() {
 }
 
 #[test]
-fn documented_manifest_key_and_rows_form_a_complete_offline_example() {
+fn saved_manifest_key_and_rows_form_a_complete_offline_example() {
     let directory = tempfile::tempdir().unwrap();
-    let guide = include_str!("../../../docs/surfaces/bash.md")
-        .split("## Audit saved answers offline")
-        .nth(1)
-        .unwrap();
-    let documents: Vec<_> = guide
-        .split("```json\n")
-        .skip(1)
-        .map(|block| block.split("```").next().unwrap())
-        .collect();
+    let documents: Vec<Value> =
+        serde_json::from_str(include_str!("../../../construction/audit-example.json")).unwrap();
     assert_eq!(documents.len(), 3);
     let paths = [
         directory.path().join("run.json"),
@@ -122,7 +115,7 @@ fn documented_manifest_key_and_rows_form_a_complete_offline_example() {
         directory.path().join("gold.jsonl"),
     ];
     for (path, body) in paths.iter().zip(documents) {
-        std::fs::write(path, body).unwrap();
+        std::fs::write(path, serde_json::to_vec(&body).unwrap()).unwrap();
     }
     let output = support::command()
         .arg("audit")

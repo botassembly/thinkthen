@@ -223,7 +223,15 @@ impl Input {
             let record = if format == Format::Jsonl
                 || (format == Format::Text && !self.selection.is_empty())
             {
-                std::str::from_utf8(body).map_or_else(|_| Record::invalid(), Record::from_json)
+                {
+                    let record = std::str::from_utf8(body)
+                        .map_or_else(|_| Record::invalid(), Record::from_json);
+                    if record.original().0 == crate::records::RecordKind::Invalid {
+                        record.with_original_encoding(crate::records::RecordKind::Json, body)
+                    } else {
+                        record
+                    }
+                }
             } else {
                 std::str::from_utf8(body).map_or_else(
                     |_| Record::invalid(),
@@ -274,7 +282,7 @@ pub(super) struct StreamInput {
 }
 type FramedRecord = (Record, Vec<u8>, String, Format, bool);
 pub(super) enum InputEvent {
-    Record(Record, Vec<u8>, bool),
+    Record(Record, Vec<u8>),
     Pending,
     Finished,
 }
@@ -305,7 +313,7 @@ impl StreamInput {
         if self.cancel.is_cancelled() {
             return Err(crate::retry::cancelled());
         }
-        let (record, bytes, path, format, start) = match self
+        let (record, bytes, path, format, _) = match self
             .receiver
             .recv_timeout(std::time::Duration::from_millis(20))
         {
@@ -316,7 +324,7 @@ impl StreamInput {
         self.read += 1;
         self.format = format;
         self.origins.record(self.read, path);
-        Ok(InputEvent::Record(record, bytes, start))
+        Ok(InputEvent::Record(record, bytes))
     }
     pub(super) fn origin(&self, position: u64) -> &str {
         self.origins.at(position)

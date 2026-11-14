@@ -37,7 +37,7 @@ public enum Function
     Annotate,
 }
 /// <summary>Distinguishes an answer, uncertainty, and a failed record.</summary>
-public enum RowStatus
+public enum Status
 {
     /// <summary>Answered rowstatus value.</summary>
     Answered = 1,
@@ -105,7 +105,7 @@ public sealed class ThinkThenOptions
     /// <summary>Limits client send attempts; null is unlimited, zero forbids sends.</summary>
     public ulong? MaxRequests { get; set; }
     /// <summary>Sets retry options; null uses engine defaults.</summary>
-    public RetryOptions? Retry { get; set; }
+    public RetryPolicy? Retry { get; set; }
     /// <summary>Gets the json value.</summary>
     [JsonIgnore]
     public JsonSerializerOptions Json { get; set; } = new();
@@ -113,7 +113,7 @@ public sealed class ThinkThenOptions
     public override string ToString() => nameof(ThinkThenOptions);
 }
 /// <summary>Configures retry count, backoff and attempt timeout.</summary>
-public sealed record RetryOptions
+public sealed record RetryPolicy
 {
     /// <summary>Sets the number of retries after the initial attempt.</summary>
     public int? MaxRetries { get; init; }
@@ -134,7 +134,7 @@ public abstract record Threshold
         else writer.WriteStringValue(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
     /// <summary>Creates a single probability cutoff.</summary>
-    public static Threshold Cut(double value) => global::ThinkThen.Cut.From(value);
+    public static Cut Cut(double value) => new(value);
     /// <summary>Creates an uncertainty band between the low and high probabilities.</summary>
     public static Threshold Band(double low, double high)
     {
@@ -152,9 +152,7 @@ public sealed record Cut : Threshold
 {
     /// <summary>Gets the underlying value.</summary>
     public double Value { get; }
-    private Cut(double value) => Value = value;
-    /// <summary>Creates a typed value from the supplied input.</summary>
-    public static Cut From(double value) => new(value);
+    internal Cut(double value) => Value = value;
     private protected override void Closed() { }
     internal override void Write(Utf8JsonWriter writer) => Number(writer, Value);
 }
@@ -176,22 +174,48 @@ public sealed record RelationRule
     public required string Target { get; init; }
     /// <summary>Gets or sets the relation.</summary>
     [JsonPropertyName("relation")]
-    public required string Name { get; init; }
+    public required string Relation { get; init; }
     /// <summary>Gets or sets the reads.</summary>
     public string? Reads { get; init; }
     /// <summary>Gets or sets the either.</summary>
     public bool Either { get; init; }
 }
 /// <summary>Matched text and its UTF-16 start and end offsets.</summary>
-public sealed record TextSpan(string Text, int Start, int End);
+public sealed record TextSpan(string Text, int Start, int End)
+{
+    internal int SavedStart { get; init; } = Start;
+    internal int SavedEnd { get; init; } = End;
+    /// <summary>Compares the public matched text and host string indexes.</summary>
+    public bool Equals(TextSpan? other) => other is not null && Text==other.Text && Start==other.Start && End==other.End;
+    /// <inheritdoc/>
+    public override int GetHashCode()=>HashCode.Combine(Text,Start,End);
+}
 /// <summary>A matched span and its recognized kind.</summary>
-public sealed record Mention(TextSpan Span, string Kind);
+public sealed record Mention(TextSpan Span, string Kind)
+{
+    /// <summary>The matched text.</summary>
+    public string Text => Span.Text;
+    /// <summary>The UTF-16 start index.</summary>
+    public int Start => Span.Start;
+    /// <summary>The UTF-16 end index.</summary>
+    public int End => Span.End;
+}
 /// <summary>A recognized mention and its probability.</summary>
-public sealed record Entity(Mention Mention, double Probability);
+public sealed record Entity(Mention Mention, double Probability)
+{
+    /// <summary>The recognized kind.</summary>
+    public string Kind => Mention.Kind;
+    /// <summary>The matched text.</summary>
+    public string Text => Mention.Text;
+    /// <summary>The UTF-16 start index.</summary>
+    public int Start => Mention.Start;
+    /// <summary>The UTF-16 end index.</summary>
+    public int End => Mention.End;
+}
 /// <summary>A relation between two mentions and its probability.</summary>
-public sealed record Relation(Mention Source, Mention Target, string Name, double Probability, bool Either);
+public sealed record FoundRelation(Mention Source, Mention Target, string Relation, double Probability, bool Either);
 /// <summary>Probabilities keyed by label.</summary>
-public sealed record LabelsDetail(ValueMap<string, double> Labels)
+public sealed record LabelsDetail(ValueMap<string, double> Labels) : Detail
 {
     /// <inheritdoc/>
     public bool Equals(LabelsDetail? other) => ValueEquality.Equal(this, other);
@@ -199,7 +223,7 @@ public sealed record LabelsDetail(ValueMap<string, double> Labels)
     public override int GetHashCode() => ValueEquality.Hash(this);
 }
 /// <summary>Probabilities in the question's level order.</summary>
-public sealed record LevelsDetail(ValueList<double> Levels)
+public sealed record LevelsDetail(ValueList<double> Levels) : Detail
 {
     /// <inheritdoc/>
     public bool Equals(LevelsDetail? other) => ValueEquality.Equal(this, other);
@@ -223,7 +247,7 @@ public sealed record KindDetail(string Text, int Start, int End, ValueMap<string
     public override int GetHashCode() => ValueEquality.Hash(this);
 }
 /// <summary>Token boundary and kind probabilities for recognition.</summary>
-public sealed record RecognizeDetail(ValueList<PieceDetail> Pieces, ValueList<KindDetail> Names)
+public sealed record RecognizeDetail(ValueList<PieceDetail> Pieces, ValueList<KindDetail> Names) : Detail
 {
     /// <inheritdoc/>
     public bool Equals(RecognizeDetail? other) => ValueEquality.Equal(this, other);
@@ -231,15 +255,17 @@ public sealed record RecognizeDetail(ValueList<PieceDetail> Pieces, ValueList<Ki
     public override int GetHashCode() => ValueEquality.Hash(this);
 }
 /// <summary>Recognized names and scored relations.</summary>
-public sealed record RelateDetail(ValueList<Entity> Names, ValueList<Relation> Pairs)
+public sealed record RelationDetail(ValueList<Entity> Names, ValueList<FoundRelation> Pairs) : Detail
 {
     /// <inheritdoc/>
-    public bool Equals(RelateDetail? other) => ValueEquality.Equal(this, other);
+    public bool Equals(RelationDetail? other) => ValueEquality.Equal(this, other);
     /// <inheritdoc/>
     public override int GetHashCode() => ValueEquality.Hash(this);
 }
 /// <summary>Marks functions that do not return additional detail.</summary>
 public sealed class NoDetail { private NoDetail() { } }
+/// <summary>Function-specific immutable result details.</summary>
+public abstract record Detail;
 /// <summary>Identifies the question, backend and model that produced a row.</summary>
 public sealed record Source(string QuestionIdentity, Backend Backend, string Model, string? Name = null);
 /// <summary>An engine error with its stable code, message and optional HTTP status.</summary>
@@ -253,19 +279,23 @@ public sealed record RowError(ErrorCode ErrorCode, string Message, int? HttpStat
     public Exception? Cause { get; init; }
 }
 /// <summary>Signals a shared engine or record failure.</summary>
-public sealed class ThinkThenException : Exception
+public class ThinkThenException : Exception
 {
-    /// <summary>Gets the stable shared error code.</summary>
+    /// <summary>Provides ErrorCode.</summary>
     public ErrorCode ErrorCode { get; }
-    /// <summary>Gets the canonical string error code from the shared engine registry.</summary>
+    /// <summary>Provides Code.</summary>
     public string Code => Contract.CodeName((int)ErrorCode) ?? throw Json.Abi();
-    /// <summary>Gets the HTTP status when the backend supplied one.</summary>
+    /// <summary>Provides HttpStatus.</summary>
     public int? HttpStatus { get; }
-    /// <summary>Gets every failed filter row when kept-only filtering raises after its kept records; otherwise empty.</summary>
-    public ValueList<Row<bool, NoDetail>> FailedRows { get; }
-    internal ThinkThenException(RowError error, Exception? cause = null, ValueList<Row<bool, NoDetail>>? failedRows = null) : base(error.Message, cause)
-    { ErrorCode = error.ErrorCode; HttpStatus = error.HttpStatus; FailedRows = failedRows ?? ValueList<Row<bool, NoDetail>>.Empty; }
+    internal ThinkThenException(RowError error, Exception? cause = null) : base(error.Message,cause)
+    { ErrorCode=error.ErrorCode; HttpStatus=error.HttpStatus; }
 }
+/// <summary>A mistake in a call.</summary>
+public sealed class UsageException : ThinkThenException { internal UsageException(RowError error, Exception? cause=null) : base(error,cause) {} }
+/// <summary>The client could not start.</summary>
+public sealed class SetupException : ThinkThenException { internal SetupException(RowError error, Exception? cause=null) : base(error,cause) {} }
+/// <summary>An internal execution failure.</summary>
+public sealed class InternalException : ThinkThenException { internal InternalException(RowError error, Exception? cause=null) : base(error,cause) {} }
 /// <summary>An optional string or exact integer record identifier.</summary>
 public abstract record RecordId
 {

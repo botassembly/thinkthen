@@ -16,13 +16,13 @@ module ThinkThen
               end
     chosen = ENV.fetch(NativeContract::LIBRARY_VARIABLE, "")
     unless chosen.empty? || File.absolute_path?(chosen)
-      raise LocalError.new(NativeContract::LIBRARY_PATH_MESSAGE, code: :"local.io")
+      raise SetupError.new(NativeContract::LIBRARY_PATH_MESSAGE, code: :"local.io")
     end
     path = chosen.empty? ? File.expand_path(library, __dir__ || ".") : chosen
     begin
       ffi_lib path
     rescue LoadError => error
-      raise LocalError.new("cannot load native engine #{path}: #{error.message}", code: :"local.io")
+      raise SetupError.new("cannot load native engine #{path}: #{error.message}", code: :"local.io")
     end
     begin
       attach_function :thinkthen_abi_version, [], :uint32
@@ -46,10 +46,6 @@ module ThinkThen
       layout :struct_size, :uint32, :kind, :uint32, :data, :pointer, :len, :size_t
     end
 
-    class RecordView < FFI::Struct
-      layout :kind, :uint32, :data, :pointer, :len, :size_t
-    end
-
     class NativeError < FFI::Struct
       layout :struct_size, :uint32, :code, :int32, :http_status, :uint16, :message, Buffer
       def initialize
@@ -61,8 +57,7 @@ module ThinkThen
     class Row < FFI::Struct
       layout :struct_size, :uint32, :function, :uint32, :status, :uint32,
              :position, :uint64, :probability, :double, :error_code, :int32,
-             :answer_bool, :uint8, :rank, :uint64, :number, :double,
-             :id, Buffer, :answer, Buffer, :detail, Buffer, :source, Buffer, :error, Buffer
+             :private_data, :pointer
       def initialize
         super
         self[:struct_size] = self.class.size
@@ -74,6 +69,7 @@ module ThinkThen
       attach_function :thinkthen_toolbox_from_definitions_json, [:pointer, :size_t, :pointer, :pointer], :int32
       attach_function :thinkthen_toolbox_to_json, [:pointer, :pointer, :pointer], :int32
       attach_function :thinkthen_toolbox_definitions_json, [:pointer, :pointer, :pointer], :int32
+      attach_function :thinkthen_toolbox_select_as, [:pointer, :pointer, :size_t, :int32, :pointer, :pointer], :int32
       attach_function :thinkthen_toolbox_free, [:pointer], :void
       attach_function :thinkthen_buffer_free, [:pointer], :void
       attach_function :thinkthen_question_from_json, [:pointer, :size_t, :pointer, :pointer], :int32
@@ -108,7 +104,7 @@ module ThinkThen
       attach_function :thinkthen_call_free, [:pointer], :void
       attach_function :thinkthen_error_free, [:pointer], :void
       attach_function :thinkthen_row_free, [:pointer], :void
-      attach_function :thinkthen_row_original, [:pointer, :pointer, :pointer], :int32
+      attach_function :thinkthen_row_to_json, [:pointer, :pointer, :pointer], :int32
     rescue FFI::NotFoundError
       raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
     end
@@ -158,9 +154,10 @@ module ThinkThen
       thinkthen_question_free(question.read_pointer) if question && !question.read_pointer.null?
     end
 
-    def self.toolbox_json(json, saved: false, definitions: false)
+    def self.toolbox_json(json, saved: false, definitions: false, select: nil)
       output = FFI::MemoryPointer.new(:pointer)
       result = Buffer.new
+      selected = FFI::MemoryPointer.new(:pointer) if select
       bytes(json) do |data, length|
         checked do |error|
           if saved
@@ -168,6 +165,12 @@ module ThinkThen
           else
             thinkthen_toolbox_from_definitions_json(data, length, output, error)
           end
+        end
+      end
+      if select
+        name, function = select
+        bytes(name) do |data, length|
+          checked { |error| thinkthen_toolbox_select_as(output.read_pointer, data, length, NativeContract::FUNCTION_NAMES.key(function), selected, error) }
         end
       end
       checked do |error|
@@ -180,6 +183,7 @@ module ThinkThen
       copy(result)
     ensure
       thinkthen_buffer_free(result) if result
+      thinkthen_question_free(selected.read_pointer) if selected && !selected.read_pointer.null?
       thinkthen_toolbox_free(output.read_pointer) if output && !output.read_pointer.null?
     end
 
@@ -212,7 +216,17 @@ module ThinkThen
         ensure
           seen.delete(value.object_id)
         end
-      else raise TypeError, "expected a JSON value"
+      else
+        raise TypeError, "expected a JSON value or an object with to_h" unless value.respond_to?(:to_h)
+        raise ArgumentError, "cyclic JSON value" if seen[value.object_id]
+        seen[value.object_id] = true
+        begin
+          converted = value.to_h
+          raise TypeError, "to_h must return a Hash" unless converted.is_a?(Hash)
+          snapshot(converted, seen, symbols)
+        ensure
+          seen.delete(value.object_id)
+        end
       end
     end
 
@@ -223,7 +237,7 @@ module ThinkThen
     end
 
     # Fill invalid with each unconvertible record's one-based position and reason.
-    def self.records(values, invalid = {})
+    def self.records(values)
       values = Array.new(values)
       memory = FFI::MemoryPointer.new(RecordInput.size, [values.length, 1].max)
       # @type var buffers: Array[untyped]
@@ -231,8 +245,7 @@ module ThinkThen
       values.each_with_index do |value, index|
         record = RecordInput.new(memory + index * RecordInput.size)
         record[:struct_size] = RecordInput.size
-        kind, bytes, reason = record_value(value)
-        invalid[index + 1] = reason if reason
+        kind, bytes = record_value(value)
         record[:kind] = NativeContract::RECORD_NAMES.key(kind)
         buffer = bytes && FFI::MemoryPointer.from_string(bytes)
         record[:data] = buffer || FFI::Pointer::NULL
@@ -247,30 +260,24 @@ module ThinkThen
 
     # Return the record kind and bytes, or "invalid" with the class and reason it has no JSON form.
     def self.record_value(value)
-      return ["missing", nil, nil] if value.nil?
+      return ["missing", nil] if value.nil?
       bytes = value.is_a?(String) ? value.encode(Encoding::UTF_8) : dump(value, symbols: true).encode(Encoding::UTF_8)
-      [value.is_a?(String) ? "text" : "json", bytes, nil]
-    rescue StandardError, SystemStackError => error
-      ["invalid", nil, "#{value.class} cannot be written as JSON: #{error.message}"]
+      [value.is_a?(String) ? "text" : "json", bytes]
+    rescue StandardError, SystemStackError
+      ["invalid", nil]
     end
 
     def self.parse(value)
       JSON.parse(value, max_nesting: false)
     end
 
-    # Marks a rank row whose record never had a JSON form, so it has no copy.
-    NO_COPY = Object.new.freeze
-
-    # Decode the engine's snapshot of a rank row's record as a new Ruby value.
-    def self.original(row)
-      view = RecordView.new
-      checked { |error| thinkthen_row_original(row, view, error) }
-      kind = discriminator(NativeContract::RECORD_NAMES, view[:kind])
-      return NO_COPY if kind == "invalid"
-      return nil unless %w[text json].include?(kind)
-      bytes = view[:len].zero? ? +"" : view[:data].read_string_length(view[:len])
-      bytes.force_encoding(Encoding::UTF_8)
-      kind == "text" ? bytes : parse(bytes)
+    # Copy the engine's canonical saved-row form before the native row is freed.
+    def self.row_json(row)
+      output = Buffer.new
+      checked { |error| thinkthen_row_to_json(row, output, error) }
+      copy(output)
+    ensure
+      thinkthen_buffer_free(output) if output
     end
 
     def self.usage(pointer, settled: false)
@@ -305,17 +312,14 @@ module ThinkThen
       result
     end
 
-    def self.discriminator(mapping, value)
-      mapping.fetch(value) { raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE) }
-    end
-
     def self.error_class(value, code)
       family = thinkthen_code_family(value)
-      klass = {"usage" => UsageError, "backend" => BackendError, "internal" => InternalError,
-               "record" => RecordError, "local" => LocalError}.fetch(family) do
+      klass = {"usage" => UsageError, "backend" => SetupError, "internal" => InternalError,
+               "record" => FailedError, "local" => SetupError}.fetch(family) do
         raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
       end
-      code == "local.cancelled" ? CancelledError : klass
+      return CancelledError if code == "local.cancelled"
+      code == "usage.key-missing" ? SetupError : klass
     end
     private_class_method :error_class
 

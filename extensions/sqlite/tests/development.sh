@@ -2,6 +2,15 @@
 # Build only the SQLite adapter against an explicitly selected engine archive.
 set -eu
 . scripts/native-tools-env
+if [ "${1:-}" = --databases ]; then
+    uv tool run --from ruff==0.13.2 ruff check --select F401,F841,ERA,BLE,E722,S110 \
+        extensions/rules.py extensions/sqlite/tests/docs.py extensions/sqlite/tests/ideal.py extensions/sqlite/tests/run.py \
+        scripts/duckdb_ideal_guide.py scripts/sqlite_guide_examples.py databases/duckdb/generate-types.py \
+        databases/duckdb/tests/admission_cases.py databases/duckdb/tests/cases.py databases/duckdb/tests/documented_sql.py \
+        databases/duckdb/tests/ideal_guides.py databases/duckdb/tests/interface_cases.py databases/duckdb/tests/migration_cases.py \
+        databases/duckdb/tests/run.py databases/duckdb/tests/typed_api.py
+    scripts/guide-examples --inventory --surface sqlite --surface duckdb --surface sql
+fi
 if [ "${1:-}" = --examples-only ]; then
     : "${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the already built fixture engine archive}"
     : "${THINKTHEN_LOOPBACK:?Provide the matching fixture loopback}"
@@ -17,6 +26,10 @@ if [ -z "${THINKTHEN_SQL_TEST_ARCHIVE:-}" ]; then
     THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
 fi
 : "${THINKTHEN_LOOPBACK:?Provide the matching fixture loopback}"
+export THINKTHEN_LOOPBACK THINKTHEN_SQL_TEST_ARCHIVE
+if [ "${1:-}" = --databases ]; then
+    THINKTHEN_SQL_ARCHIVE="$THINKTHEN_SQL_TEST_ARCHIVE" scripts/duckdb-gate --development --ideal-guides
+fi
 . scripts/native-build-env
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
@@ -38,14 +51,21 @@ case $(uname -s) in
 esac
 cc $link "$scratch"/*.o "$THINKTHEN_SQL_TEST_ARCHIVE" "$jansson/lib/libjansson.a" \
     -lpthread -ldl -lm -o "$scratch/thinkthen_sqlite.$suffix"
-cc -std=c11 -Wall -Wextra -Werror -pthread -I "$sqlite" -I "$jansson/include" \
-    extensions/sqlite/tests/consumer.c "$sqlite/libsqlite3.a" "$jansson/lib/libjansson.a" \
-    -ldl -lm -o "$scratch/consumer"
-if [ "${1:-}" = --unknown-only ]; then
-    python3 databases/unknown-code-check.py sqlite "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix"
-elif [ "${1:-}" = --examples-only ]; then
-    python3 extensions/sqlite/tests/live.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix" extensions/sqlite/examples/all-ten.sql --stub
-else
-    python3 extensions/sqlite/tests/docs.py "$scratch/thinkthen_sqlite.$suffix"
-    python3 extensions/sqlite/tests/run.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix" "$THINKTHEN_LOOPBACK" "$PWD"
-fi
+status=0
+for version in 3.41.0 3.54.1; do
+    sqlite="$THINKTHEN_SQLITE_ROOT/sqlite-$version"
+    cc -std=c11 -Wall -Wextra -Werror -pthread -I "$sqlite" -I "$jansson/include" \
+        extensions/sqlite/tests/consumer.c "$sqlite/libsqlite3.a" "$jansson/lib/libjansson.a" \
+        -ldl -lm -o "$scratch/consumer"
+    if [ "${1:-}" = --ideal-only ]; then
+        THINKTHEN_SQLITE_CONSUMER="$scratch/consumer" THINKTHEN_SQLITE_EXTENSION="$scratch/thinkthen_sqlite.$suffix" scripts/guide-examples --surface sqlite || status=1
+    elif [ "${1:-}" = --unknown-only ]; then
+        python3 databases/unknown-code-check.py sqlite "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix"
+    elif [ "${1:-}" = --examples-only ]; then
+        python3 extensions/sqlite/tests/live.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix" extensions/sqlite/examples/all-ten.sql --stub
+    else
+        python3 extensions/sqlite/tests/run.py "$scratch/consumer" "$scratch/thinkthen_sqlite.$suffix" "$THINKTHEN_LOOPBACK" "$PWD" || status=1
+        THINKTHEN_SQLITE_CONSUMER="$scratch/consumer" THINKTHEN_SQLITE_EXTENSION="$scratch/thinkthen_sqlite.$suffix" scripts/guide-examples --surface sqlite || status=1
+    fi
+done
+exit "$status"

@@ -1,5 +1,5 @@
 {
-  "anchor": "        client.score(how_urgent, \"Please refund my order.\").value();",
+  "anchor": "    const auto urgency = client.score(asks_urgency, \"Please refund my order.\");",
   "before": 0,
   "after": 2
 }

@@ -47,7 +47,6 @@ private final class CallWorker: Sendable {
     Thread { [self] in run() }.start()
   }
   func wake() { state.withLock { if let events = $0.events { native.eventWake(events.pointer) } } }
-  func cancel() { state.withLock { if let handle = $0.handle { native.cancel(handle.pointer) } } }
   func stop() {
     state.withLock {
       $0.stopped = true
@@ -98,12 +97,12 @@ private final class CallWorker: Sendable {
 }
 final class NativeCall: Sendable {
   private let worker: CallWorker
-  init(client: Client, request: Data, name: String?, records: [Record]?) throws {
+  init(client: Client, request: Data, name: String?) throws {
     let native = try Native.loaded.get()
     worker = CallWorker(
-      native: native, handle: try client.open(request, name: name, records: records))
+      native: native, handle: try client.open(request, name: name))
   }
-  func cancel() { worker.cancel() }
+  func cancel() { worker.stop() }
   func wake() { worker.wake() }
   func perform<T: Sendable>(
     _ operation: @escaping @Sendable (OpaquePointer, OpaquePointer, Native) throws -> T
@@ -133,7 +132,7 @@ final class InputPump: Sendable {
   private struct State: Sendable {
     var demand: CheckedContinuation<Bool, Never>?
     var requested = false, stopped = false
-    var result: Result<Record?, any Error>?
+    var result: Result<InputRecord?, any Error>?
   }
   private let state = Mutex(State())
   private let task = Mutex<Task<Void, Never>?>(nil)
@@ -152,12 +151,9 @@ final class InputPump: Sendable {
           }
           if let ready { continuation.resume(returning: ready) }
         }) {
-          let result: Result<Record?, any Error>
+          let result: Result<InputRecord?, any Error>
           do { result = .success(try await source.next()) } catch {
-            result = .failure(
-              error is CancellationError
-                ? CancellationError()
-                : ThinkThenError.recordSource(message: String(describing: error)))
+            result = .failure(typedError(error))
           }
           state.withLock { if !$0.stopped { $0.result = result } }
           wake()
@@ -174,7 +170,7 @@ final class InputPump: Sendable {
     }
     demand?.resume(returning: true)
   }
-  func take() -> Result<Record?, any Error>? {
+  func take() -> Result<InputRecord?, any Error>? {
     state.withLock {
       let result = $0.result
       $0.result = nil
@@ -189,9 +185,11 @@ final class InputPump: Sendable {
       return state.demand
     }
     demand?.resume(returning: false)
-    task.withLock {
-      $0?.cancel()
+    let running = task.withLock {
+      let running = $0
       $0 = nil
+      return running
     }
+    running?.cancel()
   }
 }

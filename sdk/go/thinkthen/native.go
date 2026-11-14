@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"unsafe"
 )
@@ -72,7 +73,11 @@ func takeError(value *C.thinkthen_error) error {
 	if !known || code != Code(value.code) {
 		return abiError()
 	}
-	return &Error{code: code, message: string(copyBuffer(value.message)), httpStatus: int(value.http_status)}
+	message := string(copyBuffer(value.message))
+	if code == CodeUsageThreshold && strings.Contains(message, "filter") {
+		message += "; use client.DecideAll"
+	}
+	return &Error{code: code, message: message, httpStatus: int(value.http_status)}
 }
 
 type nativeClient struct{ ptr *C.thinkthen_client }
@@ -95,7 +100,9 @@ func (c nativeClient) free() { C.tt_client_free(c.ptr) }
 func (c nativeCall) send(record wireRecord) error {
 	e := C.thinkthen_error{struct_size: C.uint32_t(C.sizeof_thinkthen_error)}
 	var status C.int32_t
-	if record.missing {
+	if record.invalid {
+		status = C.tt_call_send_invalid(c.ptr, &e)
+	} else if record.missing {
 		status = C.tt_call_send_missing(c.ptr, &e)
 	} else if record.text {
 		status = C.tt_call_send_text(c.ptr, bytesPointer(record.data), C.size_t(len(record.data)), &e)
@@ -143,46 +150,45 @@ func (c nativeCall) next() (wireRow, bool, bool, error) {
 		if uint64(row.position) > uint64(^uint(0)>>1) {
 			return wireRow{}, false, false, abiError()
 		}
-		result := wireRow{id: copyBuffer(row.id), answer: copyBuffer(row.answer), detail: copyBuffer(row.detail), source: copyBuffer(row.source), status: status, position: uint64(row.position), function: uint32(row.function), kept: row.function == C.THINKTHEN_FUNCTION_FILTER && row.status == C.THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0}
-		if row.function == C.THINKTHEN_FUNCTION_RANK {
-			var original C.thinkthen_record_view
-			if err := nativeResult(C.tt_row_original(&row, &original, &e), &e); err != nil {
-				return wireRow{}, false, false, err
-			}
-			data := string(unsafe.Slice((*byte)(unsafe.Pointer(original.data)), int(original.len)))
-			switch original.kind {
-			case C.THINKTHEN_RECORD_TEXT:
-				result.original = Text(data)
-			case C.THINKTHEN_RECORD_JSON:
-				result.original = Record{kind: 2, data: data}
-			case C.THINKTHEN_RECORD_MISSING:
-				result.original = Missing()
-			default:
-				return wireRow{}, false, false, abiError()
-			}
+		var projection C.thinkthen_buffer
+		if err := nativeResult(C.tt_row_host_json(&row, &projection, &e), &e); err != nil {
+			return wireRow{}, false, false, err
 		}
+		var fields map[string]json.RawMessage
+		decodeError := json.Unmarshal(copyBuffer(projection), &fields)
+		C.tt_buffer_free(&projection)
+		if decodeError != nil {
+			return wireRow{}, false, false, abiError()
+		}
+		result := wireRow{id: fields["id"], answer: fields["answer"], detail: fields["detail"], source: fields["source"], status: status, position: uint64(row.position), function: uint32(row.function)}
+		var canonical C.thinkthen_buffer
+		if err := nativeResult(C.tt_row_to_json(&row, &canonical, &e), &e); err != nil {
+			return wireRow{}, false, false, err
+		}
+		result.canonical = copyBuffer(canonical)
+		C.tt_buffer_free(&canonical)
 		if !math.IsNaN(float64(row.probability)) {
 			p := float64(row.probability)
 			result.probability = &p
 		}
 		if row.error_code != 0 {
-			var fields struct {
+			var failureFields struct {
 				Code       string `json:"code"`
 				Message    string `json:"message"`
 				HTTPStatus int    `json:"http_status"`
 			}
-			if err := json.Unmarshal(copyBuffer(row.error), &fields); err != nil {
+			if err := json.Unmarshal(fields["error"], &failureFields); err != nil {
 				return wireRow{}, false, false, abiError()
 			}
 			name := C.tt_code_name(row.error_code)
-			if name == nil || C.GoString(name) != fields.Code {
+			if name == nil || C.GoString(name) != failureFields.Code {
 				return wireRow{}, false, false, &Error{code: CodeUsageABI, message: C.THINKTHEN_ABI_ERROR_MESSAGE}
 			}
-			code, known := codeForName(fields.Code)
+			code, known := codeForName(failureFields.Code)
 			if !known || code != Code(row.error_code) {
 				return wireRow{}, false, false, abiError()
 			}
-			result.failure = &Error{code: code, message: fields.Message, httpStatus: fields.HTTPStatus}
+			result.failure = &Error{code: code, message: failureFields.Message, httpStatus: failureFields.HTTPStatus, noAnswer: true}
 		}
 		return result, true, false, nil
 	default:

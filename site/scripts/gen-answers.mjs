@@ -1,5 +1,6 @@
-// Writes one answers page per question-list entry marked `answers_page: true`,
-// and the answers index that lists them. Pages are rebuilt, never edited.
+// Writes eligible question-list answer pages and their index. The sitemap and
+// redirects keep canonical ownership; their retired candidates are not read.
+// Only eligible generated files are written; authored files are never deleted.
 //
 // An entry names its examples in `examples`, a list of {id, says}: one command per box, each
 // with the line above it that says what it does. `example` (one id) still works. `explain`
@@ -10,6 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
 import site from '../src/data/site.json' with { type: 'json' };
+import redirects from '../src/data/redirects.json' with { type: 'json' };
+import { menuPages } from '../src/lib/sitemap.mjs';
 import { ranOn } from '../src/lib/verified.mjs';
 import { inputFiles, readExample, EXAMPLES, capturedStreams, inlineCode } from '../src/lib/examples.mjs';
 import { jsonValues } from '../src/lib/json-values.mjs';
@@ -27,7 +30,9 @@ for (const q of questions) {
   if (seen.has(q.id)) throw new Error(`questions: duplicate id ${q.id}`);
   seen.add(q.id);
 }
-const answered = questions.filter((q) => q.answers_page).sort((a, b) => a.rank - b.rank);
+const owned = new Set([...Object.keys(redirects), ...menuPages.map((page) => page.route)]);
+const eligible = (route) => !owned.has(route);
+const answered = questions.filter((q) => q.answers_page && eligible(`/answers/${q.id}/`)).sort((a, b) => a.rank - b.rank);
 for (const q of answered) {
   q.examples = q.examples ?? (q.example ? [{ id: q.example }] : []);
   q.example = q.examples[0]?.id;
@@ -98,7 +103,6 @@ for (const q of answered.filter((q) => q.captured)) {
   }
 }
 if (missingFields.length) throw new Error(missingFields.join('\n'));
-fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 
 const code = (s) => inlineCode(s).replace(/\|/g, '\\|');
@@ -181,8 +185,8 @@ const index = [
     '',
   ]),
 ].join('\n');
-fs.writeFileSync(
+if (eligible('/answers/')) fs.writeFileSync(
   path.join(out, 'index.mdx'),
   fm({ title: 'Answers', description: `Short answers to common ${site.product} questions, each with a command and its real output.`, goal: 'List every answers page so a reader or agent can find one question.', reader: 'Anyone with one specific question', kind: 'index', verified: lastRun }) + '\n' + index,
 );
-console.log(`answers: ${answered.length} pages from ${questions.length} questions`);
+console.log(`answers: ${answered.length} eligible pages from ${questions.length} questions; canonical sitemap and redirects retained`);

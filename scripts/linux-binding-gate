@@ -110,6 +110,19 @@ def swift_command(arguments, mounts=(), environment=None):
         command += ['-v', f'{path}:{path}']
     for name, value in (environment or {}).items():
         command += ['-e', name + '=' + str(value)]
+    tool_arguments = [str(toolchain), str(rust), str(git_tools)]
+    path_selection = 'export PATH="$1/usr/bin:$2:$3:/usr/bin:/bin"; shift 3; exec "$@"'
+    if any(Path(argument).name == 'swift-gate' for argument in arguments):
+        # Reuse the exact cached checker environment prepared by the Python gate.
+        text = (ROOT / 'scripts/python-gate').read_text().replace('\\\n', '')
+        options = shlex.split(text.split('exec uv run ', 1)[1].split("<<'CHECKS'", 1)[0])
+        options = options[:options.index('--')]
+        ruff = subprocess.check_output(['uv', 'run', *options, '--', 'python', '-c',
+            'import shutil; print(shutil.which("ruff") or "")'], text=True).strip()
+        if not ruff or not Path(ruff).is_file():
+            raise ValueError('prepare the Python gate checker before the Swift source gate')
+        tool_arguments.append(str(Path(ruff).parent))
+        path_selection = 'export PATH="$1/usr/bin:$2:$3:$4:/usr/bin:/bin"; shift 4; exec "$@"'
     command += ['-e', 'HOME=' + str(Path.home()), '-e', 'RUSTUP_TOOLCHAIN=' + channel,
                 '-e', 'CARGO_HOME=' + str(cargo),
                 '-e', 'CARGO_NET_OFFLINE=true', '-e', 'RUSTC_WRAPPER=', '-e', 'RUSTC_WORKSPACE_WRAPPER=',
@@ -117,8 +130,7 @@ def swift_command(arguments, mounts=(), environment=None):
                 '-e', 'CXX=' + str(toolchain / 'usr/bin/clang++'),
                 '-e', 'CARGO_TARGET_' + host.upper().replace('-', '_') + '_LINKER=' + str(linker),
                 image('swift'), 'sh', '-eu', '-c',
-                'export PATH="$1/usr/bin:$2:$3:/usr/bin:/bin"; shift 3; exec "$@"',
-                'swift-gate', str(toolchain), str(rust), str(git_tools), *arguments]
+                path_selection, 'swift-gate', *tool_arguments, *arguments]
     run(*command)
 
 

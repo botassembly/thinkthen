@@ -56,6 +56,10 @@ impl FromStr for Pointer {
 }
 
 impl Pointer {
+    #[cfg(feature = "native")]
+    pub(crate) fn is_root(&self) -> bool {
+        self.tokens.is_empty()
+    }
     pub(crate) fn leaf(&self) -> Option<&str> {
         self.tokens.last().map(String::as_str)
     }

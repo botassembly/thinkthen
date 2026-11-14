@@ -63,108 +63,50 @@ func (Key) MarshalJSON() ([]byte, error) { return []byte(`"[redacted]"`), nil }
 // MarshalText encodes the redacted key.
 func (Key) MarshalText() ([]byte, error) { return []byte("[redacted]"), nil }
 
-// Record is one text, JSON, or missing input record.
-type Record struct {
+// recordValue is one text, JSON, or missing input record.
+type recordValue struct {
 	kind uint8
 	data string
 }
 
-// String displays the original text or JSON; a missing record displays <missing>.
-func (r Record) String() string {
-	if r.kind == 0 {
-		return "<missing>"
-	}
-	return r.data
-}
-
-// GoString displays the record without internal fields.
-func (r Record) GoString() string { return r.String() }
-
-// Text returns the original text and whether this is a text record.
-// JSON records retain their exact bytes through String.
-func (r Record) Text() (string, bool) { return r.data, r.kind == 1 }
-
 // Text creates a text record.
-func Text(value string) Record { return Record{1, value} }
+func textRecord(value string) recordValue { return recordValue{1, value} }
 
-// RawJSON copies encoded JSON for admission by the engine.
-func RawJSON(value []byte) Record { return Record{2, string(value)} }
+// rawJSONRecord copies encoded JSON for admission by the engine.
+func rawJSONRecord(value []byte) recordValue { return recordValue{2, string(value)} }
 
 // JSON encodes a Go value as a record without rounding integer identifiers.
-func JSON(value any) (Record, error) {
+func jsonRecord(value any) (recordValue, error) {
 	data, err := json.Marshal(value)
 	if err != nil {
-		return Record{}, &Error{code: CodeRecordJSON, message: "cannot encode record as JSON", cause: err}
+		return recordValue{}, err
 	}
-	return RawJSON(data), nil
+	return rawJSONRecord(data), nil
 }
 
-// Missing creates a missing record.
-func Missing() Record { return Record{} }
+// missingRecord creates a missing record.
+func missingRecord() recordValue { return recordValue{} }
 
-// Input owns a finite collection or a caller-supplied pull sequence.
-// Its zero value has no source and fails call admission.
-type Input struct {
-	records  []Record
-	finite   bool
-	sequence iter.Seq2[Record, error]
-}
+// inputValue is the private fallible encoding stream sent to the engine.
+type inputValue struct{ sequence iter.Seq[recordValue] }
 
-// Records copies a finite collection of records.
-func Records(records ...Record) Input {
-	return Input{records: append([]Record(nil), records...), finite: true}
-}
-
-// FromSeq adapts a pull sequence of records and errors without collecting it.
-func FromSeq(sequence iter.Seq2[Record, error]) Input { return Input{sequence: sequence} }
-
-// Seq returns the record sequence owned by this input.
-func (input Input) Seq() iter.Seq2[Record, error] {
-	if !input.finite {
-		return input.sequence
-	}
-	return func(yield func(Record, error) bool) {
-		for _, record := range input.records {
-			if !yield(record, nil) {
-				return
-			}
-		}
-	}
-}
-
-// Texts copies a finite collection of text records.
-func Texts(texts ...string) Input {
-	records := make([]Record, len(texts))
-	for i, text := range texts {
-		records[i] = Text(text)
-	}
-	return Records(records...)
+func fromSeqInput(sequence iter.Seq[recordValue]) inputValue {
+	return inputValue{sequence: sequence}
 }
 
 type wireRecord struct {
-	missing, text bool
-	data          []byte
+	missing, text, invalid bool
+	data                   []byte
 }
 
-func serialize(record Record) wireRecord {
+func serialize(record recordValue) wireRecord {
+	if record.kind == 3 {
+		return wireRecord{invalid: true}
+	}
 	if record.kind == 0 {
 		return wireRecord{missing: true}
 	}
 	return wireRecord{text: record.kind == 1, data: []byte(record.data)}
-}
-
-// TextSeq adapts a sequence of strings without collecting it into memory.
-func TextSeq(sequence iter.Seq[string]) Input {
-	return FromSeq(func(yield func(Record, error) bool) {
-		if sequence == nil {
-			return
-		}
-		for text := range sequence {
-			if !yield(Text(text), nil) {
-				return
-			}
-		}
-	})
 }
 
 // Collect consumes a sequence until its first error, retaining preceding rows.

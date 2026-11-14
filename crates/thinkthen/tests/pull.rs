@@ -5,7 +5,10 @@ pub mod loopback;
 
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{Decide, Engine, Filter, Key, OffsetUnit, Question, Record, Request, Settings};
+use thinkthen::{
+    AnnotationEntry, AnyRow, Decide, Engine, Key, OffsetUnit, Outcome, Question, Record, Request,
+    Settings,
+};
 
 fn engine(server: &Loopback) -> Engine {
     Settings::default()
@@ -78,6 +81,28 @@ fn every_offset_unit_applies_to_answers_and_details_including_annotation_pointer
             call.sender().close();
             let actual = call.rows().collect::<Result<Vec<_>, _>>().unwrap();
             assert_eq!(actual.len(), 1);
+            let (names, detail) = match &actual[0] {
+                AnyRow::Recognize(row) => match row.outcome() {
+                    Outcome::Answered {
+                        answer,
+                        detail: Some(detail),
+                        ..
+                    } => (answer, detail),
+                    other => panic!("expected recognized names: {other:?}"),
+                },
+                AnyRow::Annotate(row) => match &row.answer().unwrap()["names"] {
+                    AnnotationEntry::Recognize(Outcome::Answered {
+                        answer,
+                        detail: Some(detail),
+                        ..
+                    }) => (answer, detail),
+                    other => panic!("expected recognized form entry: {other:?}"),
+                },
+                other => panic!("unexpected function: {other:?}"),
+            };
+            assert_eq!(names[0].start(), start);
+            assert_eq!(names[0].end(), end);
+            assert_eq!(detail.pieces()[0].end(), emoji_end);
             let value = serde_json::to_value(&actual[0]).unwrap();
             let row = if annotate {
                 &value["answer"]["names"]
@@ -86,9 +111,9 @@ fn every_offset_unit_applies_to_answers_and_details_including_annotation_pointer
             };
             assert_eq!(row["answer"].as_array().unwrap().len(), 1);
             assert_eq!(row["answer"][0]["text"], "Ada");
-            assert_eq!(row["answer"][0]["start"], start);
-            assert_eq!(row["answer"][0]["end"], end);
-            assert_eq!(row["detail"]["pieces"][0]["end"], emoji_end);
+            assert_eq!(row["answer"][0]["start"], 2);
+            assert_eq!(row["answer"][0]["end"], 5);
+            assert_eq!(row["detail"]["pieces"][0]["end"], 1);
         }
     }
     assert_eq!(server.count(), 12);
@@ -98,7 +123,7 @@ fn every_offset_unit_applies_to_answers_and_details_including_annotation_pointer
 fn filters_keep_rows_after_record_failure_and_cancel_wakes_pending_input() {
     let server = Loopback::noul(0.9).unwrap();
     let engine = engine(&server);
-    let question = Filter::new("Ready?")
+    let question = Decide::new("Ready?")
         .unwrap()
         .field("/body".parse().unwrap());
     let call = engine.open(&question).unwrap();
@@ -115,7 +140,7 @@ fn filters_keep_rows_after_record_failure_and_cancel_wakes_pending_input() {
     assert_eq!(
         actual
             .iter()
-            .filter(|row| row.kept())
+            .filter(|row| row.answer().is_ok_and(|answer| answer))
             .map(|row| row.position())
             .collect::<Vec<_>>(),
         [1, 3]
@@ -161,9 +186,7 @@ fn host_utf16_admission_preserves_unicode_and_refuses_unpaired_surrogates() {
         assert_eq!(
             engine
                 .run(&question, Record::from_utf16(invalid))
-                .unwrap()
-                .error()
-                .unwrap()
+                .unwrap_err()
                 .code()
                 .as_str(),
             "record.invalid"
@@ -178,13 +201,12 @@ fn object_field_on_array_reports_the_stream_form_without_rejecting_array_records
     let engine = engine(&server);
     let array = r#"[{"text":"first"},{"text":"second"}]"#;
     let question = Decide::new("Ready?").unwrap();
-    let row = engine
+    let error = engine
         .run(
             &question.clone().field("/text".parse().unwrap()),
             Record::from_json(array),
         )
-        .unwrap();
-    let error = row.error().unwrap();
+        .unwrap_err();
     assert_eq!(error.code().as_str(), "record.missing");
     assert_eq!(
         error.message(),
@@ -200,15 +222,12 @@ fn object_field_on_array_reports_the_stream_form_without_rejecting_array_records
             .unwrap();
         assert!(row.error().is_none());
     }
-    let row = engine
+    let error = engine
         .run(
             &question.field("/2".parse().unwrap()),
             Record::from_json(array),
         )
-        .unwrap();
-    assert_eq!(
-        row.error().unwrap().message(),
-        "the record holds nothing at /2"
-    );
+        .unwrap_err();
+    assert_eq!(error.message(), "the record holds nothing at /2");
     assert_eq!(server.count(), 2);
 }

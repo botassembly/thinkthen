@@ -22,7 +22,7 @@ mod output {
 
     /// A chosen line and its Unicode scalar offsets in the record.
     #[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
-    pub(crate) struct Found {
+    pub(crate) struct Span {
         /// The line without its line ending.
         pub(crate) text: String,
         /// Inclusive start, counted in Unicode scalar values.
@@ -31,7 +31,7 @@ mod output {
         pub(crate) end: usize,
     }
 }
-pub(crate) use output::Found;
+pub(crate) use output::Span;
 
 impl Find {
     /// Create a nonblank question.
@@ -53,7 +53,7 @@ impl Find {
     }
 }
 
-pub(crate) fn units(text: &str) -> Vec<Found> {
+pub(crate) fn units(text: &str) -> Vec<Span> {
     let mut start = 0;
     text.split_inclusive('\n')
         .filter_map(|part| {
@@ -63,7 +63,7 @@ pub(crate) fn units(text: &str) -> Vec<Found> {
             } else {
                 line
             };
-            let unit = Found {
+            let unit = Span {
                 text: line.to_owned(),
                 start,
                 end: start + line.chars().count(),
@@ -129,13 +129,6 @@ impl super::Function for Find {
         let answers = context.answers();
         let field = record.field();
         let units = units(field);
-        if units.is_empty() {
-            return Outcome::Answered {
-                answer: Answer::Found(None),
-                p: None,
-                detail: None,
-            };
-        }
         let answer = match super::single(answers) {
             Ok(answer) => answer,
             Err(error) => return Outcome::Failed { error },
@@ -166,13 +159,13 @@ impl super::Function for Find {
         }
         if probabilities.last().is_some_and(|none| *none == p) {
             return Outcome::Answered {
-                answer: Answer::Found(None),
+                answer: Answer::Span(None),
                 p: Some(p),
                 detail: Some(detail),
             };
         }
         Outcome::Answered {
-            answer: Answer::Found(units.into_iter().nth(winner)),
+            answer: Answer::Span(units.into_iter().nth(winner)),
             p: Some(p),
             detail: Some(detail),
         }

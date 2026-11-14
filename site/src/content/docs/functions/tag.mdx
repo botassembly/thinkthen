@@ -1,10 +1,10 @@
 ---
 title: tag
 description: tag gives a piece of text every label from your list that fits it, which may be several labels, one or none.
-goal: A newcomer who needs to label a text leaves able to get every label that fits, read one label and no label, see the chance of each label, move the bar, and label every row of a CSV file.
+goal: A newcomer who needs to label a text leaves able to get every label that fits, read one label and no label, see the chance of each label, move the bar, and label every result of a CSV file.
 reader: Someone at the command line who needs to mark a text with every label that applies
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "tag: every label that fits a text"
@@ -13,60 +13,37 @@ import Example from '../../../components/Example.astro';
 import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
 
-tag checks each label in your list against a piece of text and prints every label that fits, separated by tabs. A text may get several labels, one, or none.
+tag asks a bounded question about text and returns an answered, not-sure or failed result.
 
-<Example id="tag-both" />
+<Example id="functions/tag/command" />
 
-Both labels: the message is about a double charge and a late parcel.
+Labels work as choices do. The answer is the list of labels that fit, and it can be empty.
 
-## One label
+```bash
+topics=$(thinkthen tag 'Which topics appear?' \
+  --text 'I was charged twice and my parcel is late again.' \
+  --label billing --label shipping --json)
 
-<Example id="tag-one" />
+if jq -e '.answer | index("billing")' <<< "$topics" > /dev/null; then
+  echo "billing team"
+fi
+jq -r '.answer[]' <<< "$topics"
+```
 
-billing only: the message asks for money back and says nothing about a delivery.
+tag is never not sure. `--threshold` sets how likely a label must be to count. Without `--json`, tag prints the labels on one line with tabs between them, and an empty line when none fit.
 
-## No label
+<span id="label-every-row-of-a-csv-file"></span>
 
-<Example id="tag-none" />
-
-No label fits, so the answer is empty.
-
-## See why
-
-<details class="example-disclosure">
-<summary>See why</summary>
-
-`--json` prints the details. This `jq` keeps the chance of each label.
-
-<Example id="tag-why" />
-
-tag keeps each label whose chance reaches the bar, 0.5 by default. Both 0.9 and 0.8 reach it. [JSON output](/reference/json-output/) lists every field.
-
-</details>
-
-## Move the bar
+## Label every CSV row
 
 <details class="example-disclosure">
-<summary>Move the bar</summary>
+<summary>Read the CSV file and save its answers</summary>
 
-Raise the bar to 0.85 and only billing is kept, because shipping has 0.8.
+`--column` selects the CSV column to judge; `--into` names the answer column. Check the exit status before using the saved file.
 
-<Example id="tag-bar" />
+<ExampleFile id="functions/tag/files" file="messages.csv" />
 
-Lower the bar to give more labels. Raise it to give only the clear ones.
-
-</details>
-
-## Label every row of a CSV file
-
-<details class="example-disclosure">
-<summary>Label every row of a CSV file</summary>
-
-<ExampleFile id="tag-csv" file="messages.csv" />
-
-<Example id="tag-csv" />
-
-`--column` names the column to read, and `--into` names the new answer column. When a row gets several labels, the cell holds them joined by `; `. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+<Example id="functions/tag/files" />
 
 </details>
 
@@ -78,9 +55,3 @@ Lower the bar to give more labels. Raise it to give only the clear ones.
 <FunctionOptions name="tag" />
 
 </details>
-
-If tag can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#tag) · [TypeScript](/sdks/typescript/#tag) · [Go](/sdks/go/#tag) · [Java](/sdks/java/#tag) · [Kotlin](/sdks/kotlin/#tag) · [C#](/sdks/csharp/#tag) · [R](/sdks/r/#tag) · [Ruby](/sdks/ruby/#tag) · [Rust](/sdks/rust/#tag) · [Swift](/sdks/swift/#tag) · [Zig](/sdks/zig/#tag) · [C](/sdks/c/#tag) · [C++](/sdks/cpp/#tag) · [DuckDB](/sdks/duckdb/#tag) · [SQLite](/sdks/sqlite/#tag) · [PostgreSQL](/sdks/postgresql/#tag)
-
-Next: [score](/functions/score/) places a text on a scale from 0 to 1.

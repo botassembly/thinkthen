@@ -37,9 +37,14 @@ def test_rows_export_all_functions_as_independent_json_values(failed: bool) -> N
             tt.Client(
                 url=server.url, api_key="synthetic-export-key", batch=1
             ) as client,
-            request_stream(client, request) as stream,
         ):
-            rows = list(stream)
+            if function == "filter":
+                with pytest.raises(tt.Failed) as error:
+                    list(client.filter("Ready?", request["records"], threshold=0.8))
+                rows = list(error.value.rows)
+            else:
+                with request_stream(client, request) as stream:
+                    rows = list(stream)
         assert rows
         for row in rows:
             exported = row.to_dict()
@@ -47,22 +52,24 @@ def test_rows_export_all_functions_as_independent_json_values(failed: bool) -> N
             assert exported["function"] == function
             assert exported["status"] == ("failed" if failed else row.status.value)
             assert json.loads(json.dumps(exported)) == exported
-            assert exported["probability"] == row.probability
+            assert exported.get("probability") == row.probability
             if failed:
-                assert exported["answer"] is None
+                assert "answer" not in exported
             assert "synthetic-export-key" not in json.dumps(exported)
             assert not {"raw", "backend_response", "api_key"} & exported.keys()
             if failed:
                 assert exported["error"]["code"] == "record.missing"
                 if function == "filter":
-                    assert exported["item"] is None
+                    assert "item" not in exported
             assert_independent(row, exported)
         functions.add(function)
     assert functions == {function.value for function in tt.Function}
 
 
 def assert_independent(row: Any, exported: dict[str, Any]) -> None:
-    if row.function is not tt.Function.ANNOTATE:
+    if not row.answered:
+        assert "answer" not in exported
+    elif row.function is not tt.Function.ANNOTATE:
         # The independent conformance projection omits optional false relation flags.
         expected = plain(row.answer)
         if row.function is tt.Function.RELATE and expected is not None:
@@ -77,7 +84,7 @@ def assert_independent(row: Any, exported: dict[str, Any]) -> None:
             assert row.detail.labels
         elif hasattr(row.detail, "levels"):
             assert exported["detail"]["levels"] == list(row.detail.levels)
-    if row.function is tt.Function.ANNOTATE and row.answer is not None:
+    if row.function is tt.Function.ANNOTATE and row.answered:
         assert type(exported["answer"]) is dict
         for name, outcome in row.answer.items():
             assert exported["answer"][name] == outcome.to_dict()
@@ -85,15 +92,16 @@ def assert_independent(row: Any, exported: dict[str, Any]) -> None:
         assert all(type(key) is str for key in exported["detail"]["pieces"][0]["tags"])
 
 
-def test_export_keeps_integer_ids_and_copies_filter_items() -> None:
-    record = {"id": 2**64 - 1, "text": "body"}
+def test_export_keeps_integer_ids_and_excludes_caller_items() -> None:
+    record: dict[str, Any] = {"id": 2**64 - 1, "text": "body"}
     with (
         tt.Client(backend="stub") as client,
-        client.filter_rows("Ready?", [record]) as stream,
+        client.decide_stream("Ready?", [record]) as stream,
     ):
         row = next(stream)
     exported = row.to_dict()
     assert json.loads(json.dumps(exported))["id"] == 2**64 - 1
-    assert exported["item"] == record
-    exported["item"]["text"] = "changed"
-    assert row.item["text"] == "body"
+    assert "item" not in exported
+    record["text"] = "changed"
+    assert row.item is record
+    assert row.item["text"] == "changed"

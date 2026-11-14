@@ -17,7 +17,10 @@ import thinkthen as tt
 pytestmark = pytest.mark.usefixtures("isolated_environment")
 
 
-@pytest.mark.parametrize("function", [value.value for value in tt.Function])
+@pytest.mark.parametrize(
+    "function",
+    [value.value for value in tt.Function if value is not tt.Function.FILTER],
+)
 def test_rows_name_the_matching_stream_when_used_as_context_managers(
     tmp_path: Path, function: str
 ) -> None:
@@ -34,23 +37,21 @@ def test_rows_name_the_matching_stream_when_used_as_context_managers(
         backend(tmp_path, yes()) as server,
         tt.Client(backend="stub", url=server.url) as selected,
     ):
-        call = getattr(selected, "filter_rows" if function == "filter" else function)
+        call = getattr(selected, function)
         if function == "annotate":
             row = call(
                 tt.AnnotationQuestions({"ready": tt.DecideQuestion("Ready?")}), "body"
             )
             assert row.answer is not None
             assert not hasattr(row.answer["ready"], "__enter__")
-        elif function in {"filter", "rank"}:
+        elif function == "rank":
             with call("Ready?", ["body"], **options) as stream:
                 row = next(stream)
         elif function in {"recognize", "relate"}:
             row = call("body", **options)
         else:
             row = call("Ready?", "body", **options)
-        stream_name = {"filter": "filter_rows", "rank": "rank"}.get(
-            function, function + "_stream"
-        )
+        stream_name = {"rank": "rank"}.get(function, function + "_stream")
         with pytest.raises(TypeError) as failure, cast(Any, row):
             raise AssertionError("a row must not enter a with block")
         assert str(failure.value) == (

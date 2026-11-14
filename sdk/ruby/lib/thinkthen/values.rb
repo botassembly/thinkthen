@@ -39,11 +39,11 @@ module ThinkThen
   class Source
     include WireValue
     def initialize(question_identity:, backend:, model:, name: nil)
-      super
+      super(question_identity: question_identity, backend: backend.to_sym, model: model, name: name)
     end
   end
   # A record failure can be inspected as a value or raised as an exception.
-  class RowError < RecordError
+  class RowError < FailedError
     attr_reader :raw_code, :raw_name
     def initialize(code:, message:, http_status: nil, raw_code: nil, raw_name: nil)
       @raw_code, @raw_name = raw_code, Values.freeze_copy(raw_name)
@@ -56,21 +56,21 @@ module ThinkThen
     def to_json(*_args) = JSON.generate(to_h)
   end
   # A named source/target relationship and its optional phrase.
-  RelationRule = Data.define(:source, :target, :relation, :phrase, :symmetric)
+  RelationRule = Data.define(:source, :target, :relation, :reads, :either)
   class RelationRule
     include WireValue
-    def initialize(source:, target:, relation:, phrase: nil, symmetric: false)
+    def initialize(source:, target:, relation:, reads: nil, either: false)
       super(source: Values.freeze_copy(source), target: Values.freeze_copy(target), relation: Values.freeze_copy(relation),
-            phrase: Values.freeze_copy(phrase), symmetric: symmetric)
+            reads: Values.freeze_copy(reads), either: either)
     end
     private
     def definition
-      {"source" => source, "target" => target, "relation" => relation, "reads" => phrase, "either" => symmetric}.reject { |_, value| value.nil? }
+      {"source" => source, "target" => target, "relation" => relation, "reads" => reads, "either" => either}.reject { |_, value| value.nil? }
     end
   end
   # Retry delays and attempt timeouts are expressed in seconds.
-  Retry = Data.define(:max_retries, :initial_backoff, :attempt_timeout)
-  class Retry
+  RetryPolicy = Data.define(:max_retries, :initial_backoff, :attempt_timeout)
+  class RetryPolicy
     include WireValue
     def initialize(max_retries: nil, initial_backoff: nil, attempt_timeout: nil)
       super
@@ -85,19 +85,18 @@ module ThinkThen
   # Per-level probabilities for score and rank answers.
   LevelDetail = Data.define(:levels) { include WireValue }
   # Matched text and zero-based character offsets.
-  Found = Data.define(:text, :start, :end) { include WireValue }
+  Span = Data.define(:text, :start, :end) { include WireValue }
   # Recognized text, character offsets, kind and probability.
-  Name = Data.define(:text, :start, :end, :kind, :probability) { include WireValue }
+  Name = Data.define(:kind, :text, :start, :end, :probability) { include WireValue }
   # An endpoint name, its character offsets and its kind.
-  RelationName = Data.define(:text, :start, :end, :kind) { include WireValue }
+  RelationName = Data.define(:kind, :text, :start, :end) { include WireValue }
   # The source and target names, relation probability and symmetry.
-  Relation = Data.define(:source, :target, :relation, :probability, :symmetric)
+  Relation = Data.define(:source, :target, :relation, :probability, :either)
   class Relation
     include WireValue
     def to_h
       result = super
-      result.delete("symmetric")
-      result["either"] = true if symmetric
+      result.delete("either") unless self.either
       result
     end
   end

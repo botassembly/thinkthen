@@ -16,6 +16,13 @@ impl schemars::JsonSchema for NoDetail {
 }
 
 macro_rules! getter {
+    (offset $field:ident:$ty:ty => $field_doc:literal) => {
+        #[doc=$field_doc]
+        #[must_use]
+        pub const fn $field(&self) -> usize {
+            self.$field.host()
+        }
+    };
     (copy $field:ident:$ty:ty => $field_doc:literal) => {
         #[doc=$field_doc]
         #[must_use]
@@ -42,23 +49,23 @@ macro_rules! value {
         impl $name {$(getter!($($copy)? $field:$ty => $field_doc);)+}
     };
 }
-value!(Found,"A selected span of the original field.",{[text:String]=>"The original selected text.",copy [start:usize]=>"The span start in the selected offset unit.",copy [end:usize]=>"The span end in the selected offset unit."});
-value!(Name,"A recognized name and its typed support probability.",{[text:String]=>"The original name text.",copy [start:usize]=>"The span start.",copy [end:usize]=>"The span end.",[kind:String]=>"The selected kind.",copy [probability:Probability]=>"The name support probability."});
-value!(RelationName,"One relation endpoint.",{[text:String]=>"The endpoint text.",copy [start:usize]=>"The span start.",copy [end:usize]=>"The span end.",[kind:String]=>"The endpoint kind."});
+value!(Span,"A selected span of the original field.",{[text:String]=>"The original selected text.",offset [start:super::offsets::Offset]=>"The span start in the selected offset unit.",offset [end:super::offsets::Offset]=>"The span end in the selected offset unit."});
+value!(Name,"A recognized name and its typed support probability.",{[kind:String]=>"The selected kind.",[text:String]=>"The original name text.",offset [start:super::offsets::Offset]=>"The span start.",offset [end:super::offsets::Offset]=>"The span end.",copy [probability:Probability]=>"The name support probability."});
+value!(RelationName,"One relation endpoint.",{[kind:String]=>"The endpoint kind.",[text:String]=>"The endpoint text.",offset [start:super::offsets::Offset]=>"The span start.",offset [end:super::offsets::Offset]=>"The span end."});
 value!(Relation,"One allowed relation and its probability.",{[source:RelationName]=>"The source endpoint.",[target:RelationName]=>"The target endpoint.",[relation:String]=>"The rule name.",copy [probability:Probability]=>"The probability that the relation is stated.",#[serde(default,skip_serializing_if="std::ops::Not::not")]copy [either:bool]=>"Whether the rule is unordered."});
-value!(PieceDetail,"Boundary probabilities for one original piece.",{[text:String]=>"The original piece.",copy [start:usize]=>"The span start.",copy [end:usize]=>"The span end.",[tags:BTreeMap<String,Probability>]=>"The boundary tag probabilities."});
-value!(KindDetail,"Kind probabilities for one proposed name.",{[text:String]=>"The original proposed name text.",copy [start:usize]=>"The span start.",copy [end:usize]=>"The span end.",[kinds:BTreeMap<String,Probability>]=>"The kind probabilities."});
+value!(PieceDetail,"Boundary probabilities for one original piece.",{[text:String]=>"The original piece.",offset [start:super::offsets::Offset]=>"The span start.",offset [end:super::offsets::Offset]=>"The span end.",[tags:BTreeMap<String,Probability>]=>"The boundary tag probabilities."});
+value!(KindDetail,"Kind probabilities for one proposed name.",{[text:String]=>"The original proposed name text.",offset [start:super::offsets::Offset]=>"The span start.",offset [end:super::offsets::Offset]=>"The span end.",[kinds:BTreeMap<String,Probability>]=>"The kind probabilities."});
 value!(RecognizeDetail,"Complete typed name-recognition detail.",{[pieces:Vec<PieceDetail>]=>"The original pieces and boundary probabilities.",[names:Vec<KindDetail>]=>"The proposed names and kind probabilities."});
 value!(LabelDetail,"Probability for every named label.",{[labels:BTreeMap<String,Probability>]=>"The probability for each label."});
 value!(LevelDetail,"Probabilities in the question's level order.",{[levels:Vec<Probability>]=>"The ordered level probabilities."});
 value!(PairDetail,"Recognized names and complete probabilities for allowed relation pairs.",{[names:Vec<Name>]=>"Every recognized name, including names without accepted relations.",[pairs:Vec<Relation>]=>"The evaluated relation pairs."});
 
-impl From<crate::core::Found> for Found {
-    fn from(v: crate::core::Found) -> Self {
+impl From<crate::core::Span> for Span {
+    fn from(v: crate::core::Span) -> Self {
         Self {
             text: v.text,
-            start: v.start,
-            end: v.end,
+            start: v.start.into(),
+            end: v.end.into(),
         }
     }
 }
@@ -66,8 +73,8 @@ impl From<crate::core::Name> for Name {
     fn from(v: crate::core::Name) -> Self {
         Self {
             text: v.text,
-            start: v.start,
-            end: v.end,
+            start: v.start.into(),
+            end: v.end.into(),
             kind: v.kind,
             probability: v.p,
         }
@@ -77,8 +84,8 @@ impl From<crate::core::RelationName> for RelationName {
     fn from(v: crate::core::RelationName) -> Self {
         Self {
             text: v.text,
-            start: v.start,
-            end: v.end,
+            start: v.start.into(),
+            end: v.end.into(),
             kind: v.kind,
         }
     }
@@ -102,8 +109,8 @@ impl From<crate::core::RecognizeDetail> for RecognizeDetail {
                 .into_iter()
                 .map(|p| PieceDetail {
                     text: p.text,
-                    start: p.start,
-                    end: p.end,
+                    start: p.start.into(),
+                    end: p.end.into(),
                     tags: p.tags,
                 })
                 .collect(),
@@ -112,8 +119,8 @@ impl From<crate::core::RecognizeDetail> for RecognizeDetail {
                 .into_iter()
                 .map(|p| KindDetail {
                     text: p.text,
-                    start: p.start,
-                    end: p.end,
+                    start: p.start.into(),
+                    end: p.end.into(),
                     kinds: p.kinds,
                 })
                 .collect(),

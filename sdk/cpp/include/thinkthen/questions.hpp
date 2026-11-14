@@ -4,6 +4,10 @@
 #include <map>
 #include <variant>
 #include <vector>
+#include <array>
+#include <concepts>
+#include <set>
+#include <utility>
 namespace thinkthen { inline namespace v0_2 {
 /// The ten judgment functions.
 enum class function : std::uint32_t {
@@ -50,14 +54,12 @@ public:
 };
 /// A relation label, source kind and target kind, with optional description and symmetry.
 struct rule {
-    /** Relation label. */ std::string label;
     /** Required source name kind. */ std::string source;
     /** Required target name kind. */ std::string target;
-    /** Optional wording describing the relation. */ std::optional<std::string> reads;
+    /** Relation label. */ std::string relation;
+    /** Optional wording describing the relation. */ std::optional<std::string> reads{};
     /** Permit both endpoint directions. */ bool either = false;
-    /// Construct a relation rule, with optional description and symmetry.
-    rule(std::string relation, std::string from, std::string to, std::optional<std::string> description = {}, bool symmetric = false)
-        : label(std::move(relation)), source(std::move(from)), target(std::move(to)), reads(std::move(description)), either(symmetric) {}
+
 };
 namespace detail {
 template<class Q> class question {
@@ -112,73 +114,92 @@ class [[nodiscard]] filter : public detail::question<filter> {
     THINKTHEN_QUESTION_COMMON(filter, filter)
     /// Admit this question text through the engine.
     explicit filter(std::string_view text) : question(THINKTHEN_FUNCTION_FILTER, text) { complete(); }
-    /// Return a question with this cutoff or not-sure band.
-    [[nodiscard]] filter threshold(thinkthen::threshold value) const { return changed([&](auto* q) { value.apply(q); }); }
-    /// Return a question with this cutoff or not-sure band.
-    [[nodiscard]] filter threshold(double value) const { return threshold(thinkthen::threshold::cutoff(value)); }
+    /// Return a question with one cutoff; a band is deliberately not an overload.
+    [[nodiscard]] filter threshold(double value) const {
+        return changed([&](auto* q) { detail::invoke(thinkthen_question_set_cut, q, value); });
+    }
     /// Return a question that describes the meaning of a yes answer.
     filter yes_means(std::string_view text) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_yes_means, q, text.data(), text.size()); }); }
     /// Return a question that describes the meaning of a no answer.
     filter no_means(std::string_view text) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_no_means, q, text.data(), text.size()); }); }
 };
-/// An immutable choose question admitted and validated by the engine.
-class [[nodiscard]] choose : public detail::question<choose> {
-    THINKTHEN_QUESTION_COMMON(choose, choose)
-    /// Return a question with descriptions for its named choices, labels or levels.
-    choose descriptions(const std::map<std::string, std::string>& meanings) const {
-        return changed([&](auto* q) { for (const auto& entry : meanings)
-            detail::invoke(thinkthen_question_set_description, q, entry.first.data(), entry.first.size(), entry.second.data(), entry.second.size()); });
+/// An enum's words in supplied scale order. Specialize once beside the enum.
+template<class E> inline constexpr auto words = std::array<std::pair<E, std::string_view>, 0>{};
+namespace detail {
+struct domain_init {};
+template<class E> concept word_domain = std::same_as<E, std::string> ||
+    (std::is_enum_v<E> && words<E>.size() != 0);
+template<class E> std::vector<std::string> domain_words() {
+    std::vector<std::string> result;
+    if constexpr (!std::same_as<E, std::string>)
+        for (const auto& entry : words<E>) result.emplace_back(entry.second);
+    return result;
+}
+template<class E> void expect_words(const thinkthen_question* question) {
+    if constexpr (!std::same_as<E, std::string>) {
+        const auto values = domain_words<E>();
+        std::vector<const char*> pointers;
+        for (const auto& value : values) pointers.push_back(value.c_str());
+        invoke(thinkthen_question_expect_choices, question, pointers.data(), pointers.size());
     }
-    /// Admit the question and its ordered choices.
-    choose(std::string_view text, const std::vector<std::string>& choices) : question(THINKTHEN_FUNCTION_CHOOSE, text) {
-        add(choices, thinkthen_question_add_choice); complete();
+}
+}
+/// Read the model word paired with an enum member.
+template<class E> requires std::is_enum_v<E>
+[[nodiscard]] std::string_view word(E member) {
+    for (const auto& entry : words<E>) if (entry.first == member) return entry.second;
+    throw error(errc::usage_question, "the enum member has no supplied word");
+}
+namespace detail {
+template<class E> E member(std::string_view text) {
+    if constexpr (std::same_as<E, std::string>) return std::string(text);
+    else {
+        for (const auto& entry : words<E>) if (entry.second == text) return entry.first;
+        throw error(errc::usage_question, "the answer word is not in the requested enum");
     }
-    /// Return a question with this cutoff.
-    [[nodiscard]] choose threshold(double value) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_cut, q, value); }); }
-};
-/// An immutable tag question admitted and validated by the engine.
-class [[nodiscard]] tag : public detail::question<tag> {
-    THINKTHEN_QUESTION_COMMON(tag, tag)
-    /// Return a question with descriptions for its named choices, labels or levels.
-    tag descriptions(const std::map<std::string, std::string>& meanings) const {
-        return changed([&](auto* q) { for (const auto& entry : meanings)
-            detail::invoke(thinkthen_question_set_description, q, entry.first.data(), entry.first.size(), entry.second.data(), entry.second.size()); });
-    }
-    /// Admit the question and its ordered labels.
-    tag(std::string_view text, const std::vector<std::string>& labels) : question(THINKTHEN_FUNCTION_TAG, text) {
-        add(labels, thinkthen_question_add_label); complete();
-    }
-    /// Return a question with this cutoff or not-sure band.
-    [[nodiscard]] tag threshold(double value) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_cut, q, value); }); }
-};
-/// An immutable score question admitted and validated by the engine.
-class [[nodiscard]] score : public detail::question<score> {
-    THINKTHEN_QUESTION_COMMON(score, score)
-    /// Return a question with descriptions for its named choices, labels or levels.
-    score descriptions(const std::map<std::string, std::string>& meanings) const {
-        return changed([&](auto* q) { for (const auto& entry : meanings)
-            detail::invoke(thinkthen_question_set_description, q, entry.first.data(), entry.first.size(), entry.second.data(), entry.second.size()); });
-    }
-    /// Admit the question and its ordered levels.
-    score(std::string_view text, const std::vector<std::string>& levels) : question(THINKTHEN_FUNCTION_SCORE, text) {
-        add(levels, thinkthen_question_add_level); complete();
-    }
-};
-/// An immutable rank question admitted and validated by the engine.
-class [[nodiscard]] rank : public detail::question<rank> {
-    THINKTHEN_QUESTION_COMMON(rank, rank)
-    /// Return a question with descriptions for its named choices, labels or levels.
-    rank descriptions(const std::map<std::string, std::string>& meanings) const {
-        return changed([&](auto* q) { for (const auto& entry : meanings)
-            detail::invoke(thinkthen_question_set_description, q, entry.first.data(), entry.first.size(), entry.second.data(), entry.second.size()); });
-    }
-    /// Admit the question and its ordered levels.
-    rank(std::string_view text, const std::vector<std::string>& levels) : question(THINKTHEN_FUNCTION_RANK, text) {
-        add(levels, thinkthen_question_add_level); complete();
-    }
-    /// Return a question that keeps only this many highest-ranked answered inputs.
-    [[nodiscard]] rank top(std::size_t value) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_top, q, value); }); }
-};
+}
+template<class E> std::string member_word(const E& value) {
+    if constexpr (std::same_as<E, std::string>) return value;
+    else return std::string(word(value));
+}
+}
+#define THINKTHEN_DOMAIN_QUESTION(Q, CODE, SETTER, ADD) \
+    template<class E = std::string> requires detail::word_domain<E> \
+    class [[nodiscard]] Q : public detail::question<Q<E>> { \
+        friend class detail::question<Q<E>>; friend class toolbox; \
+        explicit Q(detail::question_owner value) : detail::question<Q<E>>(std::move(value)) {} \
+        Q(std::string_view text, const std::vector<std::string>& values, detail::domain_init) \
+            : detail::question<Q<E>>(THINKTHEN_FUNCTION_##SETTER, text) { \
+            this->add(values, thinkthen_question_add_##ADD); this->complete(); } \
+    public: \
+        using member_type = E; \
+        static constexpr function kind = function::CODE; \
+        explicit Q(std::string_view text) requires (!std::same_as<E, std::string>) \
+            : Q(text, detail::domain_words<E>(), detail::domain_init{}) {} \
+        Q(std::string_view text, const std::vector<std::string>& values) requires std::same_as<E, std::string> \
+            : Q(text, values, detail::domain_init{}) {} \
+        Q(std::string_view text, std::initializer_list<std::string> values) requires std::same_as<E, std::string> \
+            : Q(text, std::vector<std::string>(values)) {} \
+        [[nodiscard]] Q descriptions(const std::map<E, std::string>& meanings) const { \
+            return this->changed([&](auto* q) { for (const auto& entry : meanings) { \
+                const auto label = detail::member_word(entry.first); \
+                detail::invoke(thinkthen_question_set_description, q, label.data(), label.size(), entry.second.data(), entry.second.size()); } }); } \
+        [[nodiscard]] Q threshold(double value) const requires (kind == function::choose || kind == function::tag) { \
+            return this->changed([&](auto* q) { detail::invoke(thinkthen_question_set_cut, q, value); }); } \
+        [[nodiscard]] Q top(std::size_t value) const requires (kind == function::rank) { \
+            return this->changed([&](auto* q) { detail::invoke(thinkthen_question_set_top, q, value); }); } \
+        static void expect_domain(const thinkthen_question* q) { detail::expect_words<E>(q); } \
+    };
+THINKTHEN_DOMAIN_QUESTION(choose, choose, CHOOSE, choice)
+THINKTHEN_DOMAIN_QUESTION(tag, tag, TAG, label)
+THINKTHEN_DOMAIN_QUESTION(score, score, SCORE, level)
+THINKTHEN_DOMAIN_QUESTION(rank, rank, RANK, level)
+#undef THINKTHEN_DOMAIN_QUESTION
+choose(std::string_view, std::initializer_list<std::string>) -> choose<std::string>;
+tag(std::string_view, std::initializer_list<std::string>) -> tag<std::string>;
+score(std::string_view, std::initializer_list<std::string>) -> score<std::string>;
+rank(std::string_view, std::initializer_list<std::string>) -> rank<std::string>;
+
 /// An immutable find question admitted and validated by the engine.
 class [[nodiscard]] find : public detail::question<find> {
     THINKTHEN_QUESTION_COMMON(find, find)
@@ -203,7 +224,7 @@ class [[nodiscard]] relate : public detail::question<relate> {
     /// Admit the relation rules to apply.
     explicit relate(const std::vector<rule>& rules) : question(THINKTHEN_FUNCTION_RELATE, {}) {
         for (const auto& value : rules) {
-            thinkthen_rule input{detail::view(value.label), detail::view(value.source), detail::view(value.target),
+            thinkthen_rule input{detail::view(value.source), detail::view(value.target), detail::view(value.relation),
                 value.reads ? detail::view(*value.reads) : thinkthen_text{}, static_cast<std::uint8_t>(value.either)};
             detail::invoke(thinkthen_question_add_rule, building(), &input);
         }
@@ -213,18 +234,34 @@ class [[nodiscard]] relate : public detail::question<relate> {
     [[nodiscard]] relate threshold(double value) const { return changed([&](auto* q) { detail::invoke(thinkthen_question_set_cut, q, value); }); }
 };
 /// The functions that may be annotation children.
-using annotation_question = std::variant<decide, choose, tag, score, filter, find, recognize, relate>;
+using annotation_question = std::variant<decide, choose<>, tag<>, score<>, find, recognize, relate>;
+/// A named annotation question, erased only after its native definition is retained.
+struct annotation_entry {
+    std::string name;
+    std::shared_ptr<const thinkthen_question> question;
+    template<class Q> requires (Q::kind != function::filter && Q::kind != function::rank && Q::kind != function::annotate)
+    annotation_entry(std::string key, const Q& value) : name(std::move(key)) {
+        auto owned = detail::clone(value.native_handle());
+        question = {owned.release(), thinkthen_question_free};
+    }
+};
 /// Annotation questions keyed by child name.
 using annotation_questions = std::map<std::string, annotation_question>;
 /// A question that a saved toolbox can hold.
-using toolbox_question = std::variant<decide, choose, tag, score, filter, rank, find, recognize, relate>;
+using toolbox_question = std::variant<decide, choose<>, tag<>, score<>, filter, rank<>, find, recognize, relate>;
 /// An immutable annotate question admitted and validated by the engine.
 class [[nodiscard]] annotate : public detail::question<annotate> {
     THINKTHEN_QUESTION_COMMON(annotate, annotate)
-    /// Admit named child questions; rank and nested annotate are excluded by type.
+    /// Admit named child questions; filter, rank and nested annotate are excluded by type.
+    annotate(std::initializer_list<annotation_entry> entries) : question(THINKTHEN_FUNCTION_ANNOTATE, {}) {
+        for (const auto& entry : entries)
+            detail::invoke(thinkthen_question_add_entry, building(), entry.name.data(), entry.name.size(), entry.question.get());
+        complete();
+    }
+    /// Admit the retained map form used by existing reference callers.
     explicit annotate(const annotation_questions& entries) : question(THINKTHEN_FUNCTION_ANNOTATE, {}) {
         for (const auto& entry : entries) std::visit([&](const auto& q) {
-            detail::invoke(thinkthen_question_add_entry, building(), detail::bytes(entry.first), entry.first.size(), q.native_handle());
+            detail::invoke(thinkthen_question_add_entry, building(), entry.first.data(), entry.first.size(), q.native_handle());
         }, entry.second);
         complete();
     }
@@ -274,6 +311,7 @@ public:
     template<class Q> [[nodiscard]] Q select(std::string_view name) const {
         detail::question_owner selected(detail::get<thinkthen_question*>(thinkthen_toolbox_select_as,
             native_.get(), detail::bytes(name), name.size(), static_cast<thinkthen_function>(Q::kind)), thinkthen_question_free);
+        if constexpr (requires { Q::expect_domain(selected.get()); }) Q::expect_domain(selected.get());
         return Q(std::move(selected));
     }
 };

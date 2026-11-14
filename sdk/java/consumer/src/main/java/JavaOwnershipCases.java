@@ -24,10 +24,10 @@ public final class JavaOwnershipCases {
     static void noCallForRejectedRecords() throws Exception {
         for (var backend : List.of(Backend.SYSTEMONE, Backend.OPENAI)) {
             try (var server = new BackendFixture("unavailable"); var client = remote(backend, server)) {
-                JavaApiCases.failed(client.decide("Ready?", null), "record.missing");
-                JavaApiCases.failed(client.decide("Ready?", JsonValue.parse("{\"id\":false,\"body\":\"alpha\"}")), "record.invalid");
+                JavaApiCases.failedCall(() -> client.decide("Ready?", null), "record.missing");
+                JavaApiCases.failedCall(() -> client.decide("Ready?", JsonValue.parse("{\"id\":false,\"body\":\"alpha\"}")), "record.invalid");
                 for (String invalid : List.of("\ud800", "\udc00")) {
-                    JavaApiCases.failed(client.decide("Ready?", invalid), "record.invalid");
+                    JavaApiCases.failedCall(() -> client.decide("Ready?", invalid), "record.invalid");
                     try (var rows = client.decideStream("Ready?", List.of(invalid))) {
                         var output = rows.toList();
                         JavaApiCases.equal(output.size(), 1, "invalid UTF-16 keeps one failed row");
@@ -35,8 +35,8 @@ public final class JavaOwnershipCases {
                     }
                 }
                 for (Number value : List.<Number>of(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY)) {
-                    JavaApiCases.failed(client.decide("Ready?", value), "record.invalid");
-                    JavaApiCases.failed(client.decide("Ready?", java.util.Map.of("body", List.of(value))), "record.invalid");
+                    JavaApiCases.failedCall(() -> client.decide("Ready?", value), "record.invalid");
+                    JavaApiCases.failedCall(() -> client.decide("Ready?", java.util.Map.of("body", List.of(value))), "record.invalid");
                 }
                 JavaApiCases.equal(server.command("count"), "0", "rejected records send no request for " + backend);
                 JavaApiCases.check(!client.toString().contains(KEY), "client representation redacts direct key");
@@ -57,7 +57,7 @@ public final class JavaOwnershipCases {
     static void unavailableServer() throws Exception {
         for (var backend : List.of(Backend.SYSTEMONE, Backend.OPENAI)) {
             try (var server = new BackendFixture("unavailable"); var client = remote(backend, server)) {
-                JavaApiCases.failed(client.decide("Ready?", "alpha"), "backend.transport");
+                JavaApiCases.failedCall(() -> client.decide("Ready?", "alpha"), "backend.transport");
                 JavaApiCases.equal(server.command("count"), "0", "unavailable reservation accepts no request");
             }
         }
@@ -70,7 +70,7 @@ public final class JavaOwnershipCases {
             public boolean hasNext() { return reads.get() < 10000; }
             public String next() { reads.incrementAndGet(); return "alpha"; }
         };
-        Row<String, LabelDetail> retained;
+        Row<String, String> retained;
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
             try (var stream = client.decideStream("Ready?", input)) {
                 JavaApiCases.check(stream.spliterator().trySplit() == null, "stream cannot split");
@@ -93,7 +93,7 @@ public final class JavaOwnershipCases {
             }
             retained = client.choose("Which?", "alpha", List.of("a", "b"));
         }
-        JavaApiCases.check(JavaApiCases.answered(retained).detail().orElseThrow().labels().size() == 2, "typed detail survives native call and client close");
+        JavaApiCases.check(((LabelDetail) JavaApiCases.answered(retained).detail()).labels().size() == 2, "typed detail survives native call and client close");
         retained.throwIfFailed();
         var codecFailure = new IllegalStateException("caller codec failure");
         try (var client = ThinkThen.builder().backend(Backend.STUB).recordCodec(value -> { throw codecFailure; }).build()) {
@@ -105,7 +105,7 @@ public final class JavaOwnershipCases {
             }
         }
         try (var client = ThinkThen.builder().backend(Backend.STUB).recordCodec(value -> "{").build()) {
-            JavaApiCases.failed(client.decide("Ready?", new Object()), "record.json");
+            JavaApiCases.failedCall(() -> client.decide("Ready?", new Object()), "record.json");
         }
     }
 
@@ -114,7 +114,7 @@ public final class JavaOwnershipCases {
         var logger = java.util.logging.Logger.getLogger("dev.thinkthen");
         var level = logger.getLevel();
         boolean parents = logger.getUseParentHandlers();
-        var current = new java.util.concurrent.atomic.AtomicReference<Stream<Row<Boolean, NoDetail>>>();
+        var current = new java.util.concurrent.atomic.AtomicReference<Stream<Row<Boolean, String>>>();
         var handler = new java.util.logging.Handler() {
             public void publish(java.util.logging.LogRecord record) {
                 if (record.getMessage().equals("Call opened")) current.get().close();
@@ -146,7 +146,7 @@ public final class JavaOwnershipCases {
         for (var backend : List.of(Backend.SYSTEMONE, Backend.OPENAI)) {
             for (boolean interrupt : List.of(false, true)) {
                 try (var held = new BackendFixture("headers"); var client = remote(backend, held)) {
-                    CompletableFuture<Row<Boolean, NoDetail>> future = client.async().decide("Ready?", "alpha");
+                    CompletableFuture<Row<Boolean, String>> future = client.async().decide("Ready?", "alpha");
                     JavaApiCases.equal(held.command("arrived"), "arrived", "future attached to held request");
                     long cancelledAt = System.nanoTime();
                     JavaApiCases.check(future.cancel(interrupt), "cancellation wins incomplete future");
@@ -228,7 +228,7 @@ public final class JavaOwnershipCases {
         for (boolean closeClient : List.of(false, true)) {
             try (var held = new BackendFixture("body"); var client = remote(Backend.SYSTEMONE, held);
                  var workers = Executors.newVirtualThreadPerTaskExecutor();
-                 Stream<Row<Boolean, NoDetail>> rows = client.decideStream("Ready?", List.of("alpha"))) {
+                 Stream<Row<Boolean, String>> rows = client.decideStream("Ready?", List.of("alpha"))) {
                 var pull = workers.submit(() -> {
                     try {
                         rows.toList();
@@ -257,20 +257,20 @@ public final class JavaOwnershipCases {
             JavaApiCases.equal(server.command("count"), "1", "one decide request");
         }
         try (var server = new BackendFixture(conformance.resolve("choose-threshold-unsure.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
-            Row<String, LabelDetail> row = client.choose("Which?", "evidence", List.of("z", "a"), ChooseOptions.builder().threshold(Threshold.cut(0.8)).build());
+            Row<String, String> row = client.choose("Which?", "evidence", List.of("z", "a"), ChooseOptions.builder().threshold(Threshold.cut(0.8)).build());
             switch (row) {
-                case Unsure<String, LabelDetail> unsure -> JavaApiCases.equal(unsure.probability().orElseThrow(), ConsumerCases.JSON.readTree(conformance.resolve("choose-threshold-unsure.json").toFile()).get("expected").get(0).get("probability").doubleValue(), "unsure retains probability without an answer accessor");
+                case Unsure<String, String> unsure -> JavaApiCases.equal(unsure.probability().orElseThrow(), ConsumerCases.JSON.readTree(conformance.resolve("choose-threshold-unsure.json").toFile()).get("expected").get(0).get("probability").doubleValue(), "unsure retains probability without an answer accessor");
                 default -> throw new AssertionError("expected unsure choose row");
             }
             row.throwIfFailed();
         }
         try (var server = new BackendFixture(conformance.resolve("score-weighted.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
             var row = JavaApiCases.answered(client.score("How much?", "evidence", List.of("low", "high")));
-            LevelDetail detail = row.detail().orElseThrow();
+            LevelDetail detail = (LevelDetail) row.detail();
             JavaApiCases.equal(detail.levels(), List.of(0.2, 0.8), "typed score detail preserves level order");
         }
         try (var server = new BackendFixture(conformance.resolve("tag-backend-reply.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
-            JavaApiCases.failed(client.tag("What applies?", "evidence", List.of("billing","refund","shipping"), TagOptions.builder().threshold(0.7).build()), "backend.reply");
+            JavaApiCases.failedCall(() -> client.tag("What applies?", "evidence", List.of("billing","refund","shipping"), TagOptions.builder().threshold(Threshold.cut(0.7)).build()), "backend.reply");
         }
         try (var server = new BackendFixture(conformance.resolve("find-unicode.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
             String text = "é🦀\r\n \n 答🙂 \r\n";

@@ -1,91 +1,51 @@
 ---
 title: filter
-description: filter asks a yes-or-no question about every line and keeps only the lines that answer yes, dropping the no and the not sure.
-goal: A newcomer with a file of messages leaves able to keep the lines that answer yes, see which lines were not sure, see the chance of yes for each line, move the bar, branch a script on whether any line was kept, and keep the yes rows of a CSV file.
+description: filter asks a yes-or-no question about every line and keeps only the lines that answer yes, dropping the no.
+goal: A newcomer with a file of messages leaves able to keep the lines that answer yes, see which lines were not sure, see the chance of yes for each line, move the bar, branch a script on whether any line was kept, and keep the yes results of a CSV file.
 reader: Someone at the command line who wants to keep only the lines of a file that match a meaning
 kind: how-to
-verified: 2026-11-03
+verified: 2026-11-13
 head:
   - tag: title
     content: "filter: keep the lines that answer yes"
 ---
 import Example from '../../../components/Example.astro';
-import ExampleFile from '../../../components/ExampleFile.astro';
 import FunctionOptions from '../../../components/FunctionOptions.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
 
-filter asks one yes-or-no question about every line of its input and prints the lines that answer yes, exactly as they came in. It drops the lines that answer no, and, when you set a low and a high bar, the lines it is not sure about.
+filter keeps original messages that answer yes, using one bar.
 
 <Example id="functions/filter/command" />
 
 <ExampleFile id="functions/filter/command" file="messages.txt" />
 
-The refund request and the double charge answer yes, so filter prints them. The parcel question answers no, so filter drops it.
+filter means "give me the yeses". It prints your own messages, in order.
 
-## Not sure
+```bash
+thinkthen filter 'Does the customer request a refund?' messages.txt |
+  while IFS= read -r refund_request; do
+    echo "refund queue: $refund_request"
+  done
+```
 
-Set a low bar and a high bar. filter keeps a line at or above the high bar, and drops it below the low bar or in between, where it is not sure.
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `--threshold 0.7` moves the bar. `--low` and `--high` are refused with exit code 2 and a message that names `thinkthen decide`: when you want not sure, use decide over the same file, as in the section above.
 
-<Example id="filter-unsure" />
+If a message fails, you still get every kept message. filter names each failed message on standard error, with its position and `id`, and exits 6 after the last message.
 
-Only the refund request is kept. The double charge falls between the bars, so filter is not sure and drops it. Send not sure to a person. Never treat it as a no.
+```bash
+status=0
+thinkthen filter \
+  'Does the customer request a refund?' \
+  messages.txt > refunds.txt || status=$?
 
-## See why
+if [ "$status" -eq 6 ]; then
+  echo "try again later: some messages could not be judged"
+fi
+```
 
-<details class="example-disclosure">
-<summary>See why</summary>
+filter prints your messages and nothing else, so it has no `--json`. To get each failed message back with its error code, run `thinkthen decide --json` over the same file.
 
-`--json` prints one line of details for every input line, kept or not. This `jq` keeps three of them.
-
-<Example id="filter-why" />
-
-`status` says whether filter answered or was not sure, and `kept` says whether it printed the line. [JSON output](/reference/json-output/) lists every field, including `probability`, the chance of yes.
-
-</details>
-
-## Move the bar
-
-<details class="example-disclosure">
-<summary>Move the bar</summary>
-
-With one bar, `--threshold`, filter keeps a line at or above it and drops the rest. Raise the bar to 0.8 and the double charge, at 0.7, is dropped.
-
-<Example id="filter-bar" />
-
-The default bar is 0.5. Lower it to keep more lines. Raise it to keep only the clear ones.
-
-</details>
-
-## Use the answer in a script
-
-<details class="example-disclosure">
-<summary>Use the answer in a script</summary>
-
-`--check` turns the answer into the exit code: 0 when filter keeps at least one line.
-
-<Example id="filter-script" />
-
-| Answer | Exit code with `--check` |
-|---|---|
-| at least one line kept | 0 |
-| none kept, none not sure | 1 |
-| none kept, at least one not sure | 3 |
-
-Without `--check`, filter exits 0 whenever it answers. [Exit codes](/command-line/exit-codes/) lists every code.
-
-</details>
-
-## Keep the yes rows of a CSV file
-
-<details class="example-disclosure">
-<summary>Keep the yes rows of a CSV file</summary>
-
-<ExampleFile id="filter-into" file="messages.csv" />
-
-<Example id="filter-into" />
-
-`--column` names the column to read, and `--into` names the new answer column. filter writes only the rows it keeps. With `--in-place`, a row that fails leaves your file as it was: filter exits 6 and says how many rows failed, so no row is lost. [File types](/command-line/file-types/) covers TSV, Excel and other files.
-
-</details>
+With `--check`, filter answers "did any message say yes", as `grep -q` does: 0 when one did, 1 when none did, 6 when a message failed.
 
 ## Options
 
@@ -95,9 +55,3 @@ Without `--check`, filter exits 0 whenever it answers. [Exit codes](/command-lin
 <FunctionOptions name="filter" />
 
 </details>
-
-If filter can't answer a line, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
-
-**In code:** [Python](/sdks/python/#filter) · [TypeScript](/sdks/typescript/#filter) · [Go](/sdks/go/#filter) · [Java](/sdks/java/#filter) · [Kotlin](/sdks/kotlin/#filter) · [C#](/sdks/csharp/#filter) · [R](/sdks/r/#filter) · [Ruby](/sdks/ruby/#filter) · [Rust](/sdks/rust/#filter) · [Swift](/sdks/swift/#filter) · [Zig](/sdks/zig/#filter) · [C](/sdks/c/#filter) · [C++](/sdks/cpp/#filter) · [DuckDB](/sdks/duckdb/#filter) · [SQLite](/sdks/sqlite/#filter) · [PostgreSQL](/sdks/postgresql/#filter)
-
-Next: [tag](/functions/tag/) gives a text every label that fits.

@@ -25,7 +25,10 @@ pub(super) struct RowWire<F: Function> {
     #[serde(default)]
     function: Option<FunctionName>,
     position: NonZeroU64,
+    #[serde(default, deserialize_with = "optional_value")]
     id: Option<RecordId>,
+    #[serde(default, rename = "item")]
+    _item: Option<serde::de::IgnoredAny>,
     source: Source,
     status: Status,
     #[serde(default)]
@@ -77,6 +80,7 @@ impl<F: Function> RowWire<F> {
             ) if error.code().is_record() => Outcome::Failed { error },
             _ => return Err("the row fields do not match its status"),
         };
+        shape::validate::<F>(&outcome)?;
         Ok(Row::new(self.position, self.id, self.source, outcome))
     }
 }

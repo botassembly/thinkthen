@@ -9,8 +9,8 @@ use thinkthen::{BackendName, Key, OffsetUnit, Question, Request, Settings};
 #[test]
 fn answer_meanings_roundtrip_and_reach_each_backend_without_renaming_answers() {
     for definition in [
-        json!({"function":"decide","question":"Ready?","true":"safe to proceed","false":"needs work","threshold":0.5}),
-        json!({"function":"filter","question":"Ready?","true":"safe to proceed","false":"needs work","threshold":0.5}),
+        json!({"function":"decide","question":"Ready?","yes_means":"safe to proceed","no_means":"needs work","threshold":0.5}),
+        json!({"function":"filter","question":"Ready?","yes_means":"safe to proceed","no_means":"needs work","threshold":0.5}),
         json!({"function":"choose","question":"Route?","choices":[{"name":"now","description":"safe to proceed"},"later"],"threshold":0.5}),
         json!({"function":"tag","question":"Flags?","labels":[{"name":"now","description":"safe to proceed"},"later"],"threshold":0.5}),
         json!({"function":"score","question":"Readiness?","levels":["low",{"name":"high","description":"safe to proceed"}]}),
@@ -260,7 +260,7 @@ fn rank_level_descriptions_roundtrip_and_reach_both_backends() {
 #[test]
 fn native_question_snapshots_keep_filter_meanings_and_rank_descriptions() {
     for definition in [
-        json!({"function":"filter","question":"Ready?","true":"Keep refund requests","false":"Omit other messages","threshold":0.5}),
+        json!({"function":"filter","question":"Ready?","yes_means":"Keep refund requests","no_means":"Omit other messages","threshold":0.5}),
         json!({"function":"rank","question":"Priority?","levels":["low",{"name":"high","description":"Urgent"}],"top":2}),
     ] {
         let question = Question::from_json(&definition.to_string()).unwrap();

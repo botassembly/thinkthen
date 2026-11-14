@@ -19,6 +19,9 @@ temporary = tempfile.TemporaryDirectory(prefix='csharp-row-fixtures-')
 selected = os.environ.get('THINKTHEN_DECODER_CASE')
 companions = {} if selected else {kind: fixtures / kind / name for kind in ('invalid-json', 'unanswered-answer', 'unknown-function')}
 companions.update(producer['decoder_fixtures'](engine, Path(temporary.name), selected))
+if not selected:
+    for kind in ('source-missing', 'source-null', 'source-name-null'):
+        companions[kind] = producer['malformed_fixture'](Path(temporary.name) / 'original' / engine.name, Path(temporary.name) / kind, kind)
 engine.rename(saved)
 failures = []
 try:

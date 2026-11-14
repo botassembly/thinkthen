@@ -79,7 +79,7 @@ fn an_unknown_reply_option_exits_with_backend_error() {
     )
     .unwrap();
     let output = run(&server, &[]);
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.status.code(), Some(6));
+    support::failed_stdout(&output);
     assert_eq!(reported(&output), "backend.reply");
 }

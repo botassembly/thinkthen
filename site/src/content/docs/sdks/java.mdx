@@ -1,165 +1,659 @@
 ---
 title: Java SDK
-description: "Java SDK: the ten functions as methods on a client, with not sure thrown as UnsureException."
-goal: A Java developer installs the SDK, gets a first answer from decide, learns how not sure and failure arrive, and finds the Java call for each function.
+description: "java functions with answered, not-sure and failed results."
+goal: Learn the tested calls and result handling for this language.
 reader: A Java developer who wants answers about text inside a program
 kind: reference
-verified: 2026-11-03
+verified: 2026-11-13
 ---
 import Example from '../../../components/Example.astro';
-import InstallLine from '../../../components/InstallLine.astro';
 
-The Java SDK gives your code the ten functions as methods on a client; each returns a result whose `answer()` you can use directly, such as `true` or `false` from decide.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-<Example id="lang-java" title="Example.java" />
+<Example id="functions/decide/java" />
 
-Add it to Maven or Gradle (Java 22 or later). It includes the native engine:
+Use Java 22 or later. Add `io.github.botassembly:thinkthen-java` to Maven or Gradle. The SDK includes the engine. Run with `--enable-native-access=ALL-UNNAMED`. Set `THINKTHEN_API_KEY` in the environment first.
 
-<InstallLine k="languages.java.install" lang="text" />
+A one-message call throws `FailedException` at the call if its message could not be judged. A successful call returns an answered or unsure result, with `isFailed()` false. Many-message calls retain failed results, so the shared result type still has three states:
 
-With the JAR and its dependencies in a `lib` folder, Java runs the file directly:
+- **answered**: there is an answer, and `result.answer()` is it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the message could not be judged, or the service did not respond.
 
-```sh
-java --enable-native-access=ALL-UNNAMED \
-  -cp 'lib/*' Example.java
+Three rules hold for every function on this page.
+
+1. **Reading the answer throws when there is none.** On a successfully returned one-message result, `result.answer()` can throw `UnsureException`. On a many-message result, form entry or saved result, it can also throw `FailedException`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never throws.** `result.isAnswered()`, `result.isUnsure()`, `result.isFailed()` and `result.probability()` are always safe to call.
+3. **Printing never throws.** `System.out.println(result)` shows the answer, `unsure`, or `failed:` with the reason. A yes prints as `true` and a no as `false`, the same words the `thinkthen` command prints.
+
+<span id="the-ten-functions"></span>
+
+## decide
+
+### The simplest if
+
+Java has no truthiness, so the `if` reads the answer. On a decide result, `answer()` is `true` or `false`.
+
+```java
+import dev.thinkthen.*;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+public class Example {
+    public static void main(String[] args) throws java.io.IOException {
+        try (var client = ThinkThen.builder().build()) {
+            if (client.decide("Does the customer request a refund?", "Please refund my order.").answer()) {
+                System.out.println("refund queue");
+            } else {
+                System.out.println("inbox");
+            }
+        }
+    }
+}
 ```
 
-On the module path, use `--enable-native-access=dev.thinkthen`. The client uses the key you set in the [Quickstart](/quickstart/).
+If the message could not be judged, `client.decide` throws `FailedException` at the call. The `if` never receives a failed result and never falls through to `inbox` for a failure. With one bar, a returned decide result is yes or no; two bars can make its answer read throw `UnsureException`.
 
-## When decide is not sure
+Later statement snippets run inside this `try` block. The `throws java.io.IOException` declaration allows the saved-question example's file read; handle that checked exception in your application when needed. Put their enum declarations and static helper methods in `Example`, outside `main`. The choose and tag sections show separate `Topic` definitions; annotate uses the three-choice definition from choose.
 
-Give decide a low and a high bar, and a text that falls between them is not sure. Reading a not-sure answer with `answer()` throws `UnsureException`, so it can't pass for a no. This message lands between the bars:
+<span id="yes-no-or-something-else"></span>
 
-<Example id="sdk-java-unsure" title="Unsure.java" />
+### Yes, no, or not sure
 
-Send not sure to a person. To branch without the exception, check `isUnsure()` first. `UnsureException` is a `NoSuchElementException`, and its `probability()` gives the chance of yes.
+Set two bars and decide can also be not sure. `isAnswered()` tells you whether there is a yes or no to read.
 
-## When a call fails
+```java
+var isRefund = client.decide(
+    "Does the customer request a refund?",
+    "Where is my parcel?",
+    DecideOptions.builder().threshold(Threshold.band(0.2, 0.8)).build());
+
+if (isRefund.isAnswered()) {
+    System.out.println(isRefund.answer() ? "refund queue" : "inbox");
+} else {
+    System.out.println("a person reads it");
+}
+```
 
-Blank text throws `ThinkThenException` at once, and nothing is sent:
+You can also let the read throw and catch `UnsureException`. The scalar call has already succeeded, so this read cannot report a failed result.
 
-<Example id="sdk-java-failure" title="Failure.java" />
+```java
+try {
+    System.out.println(isRefund.answer() ? "refund queue" : "inbox");
+} catch (UnsureException unsure) {
+    System.out.println("a person reads it");
+}
+```
 
-Any other failure, such as the service being down, comes back as a result whose `isFailed()` is `true`. Its `answer()` throws `ThinkThenException`, whose `code()` names the problem. `throwIfFailed()` throws it sooner. A list passed to a one-message call throws `IllegalArgumentException`; use the `…Stream` call instead. [Troubleshooting](/reference/troubleshooting/) lists each code and its fix.
+<span id="did-it-work"></span>
 
-## The ten functions
+### Did the call work
 
-Each example asks about the same support-inbox messages as the function pages.
+```java
+try {
+    var isRefund = client.decide("Does the customer request a refund?", "Please refund my order.");
+    System.out.println(isRefund);
+} catch (FailedException failure) {
+    System.out.println("could not judge it: " + failure.getMessage());
+} catch (ThinkThenException failure) {
+    System.out.println("the call did not complete: " + failure.getMessage());
+}
+```
 
-### decide
+`FailedException` reports a failed judgement, including a service failure returned for that message. `ThinkThenException` retains the other engine call errors, such as usage, setup and internal errors; it is not the parent of `FailedException`. Java argument mistakes and cancellation keep their standard exceptions. Printing the successfully returned result does not read its answer.
 
-<details class="example-disclosure">
-<summary>decide: yes, no or not sure</summary>
+Not sure counts as a successful call: ThinkThen did its job and returned an unsure result. Its answer read can throw `UnsureException`, which neither catch above handles.
 
-<Example id="lang-java" title="Example.java" />
+### Both bars and the probability
 
-The message asks for a refund, so decide says `true`. `DecideOptions.builder().threshold(Threshold.cut(0.8))` moves the bar, and `Threshold.band(0.2, 0.8)` sets a low and a high bar, as above. `field(Pointer.of("/text"))` picks the field to judge when a message is a `Map` or JSON. `client.decideStream(question, messages)` judges a whole list and returns a `Stream` of results; close it with try-with-resources. [decide](/functions/decide/) shows every answer.
+```java
+var isRefund = client.decide(
+    "Does the customer request a refund?",
+    "Where is my parcel?",
+    DecideOptions.builder().threshold(Threshold.band(0.2, 0.8)).build());
+isRefund.probability().ifPresent(System.out::println);
+```
 
-</details>
+- No threshold: one bar at 0.5. The answer is always yes or no.
+- `Threshold.cut(0.7)`: one bar. Yes at 0.7 or above, otherwise no.
+- `Threshold.band(0.2, 0.8)`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
 
-### choose
+`probability()` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is an `OptionalDouble`, present even for an unsure decide result. A failed many-message result has an empty probability.
 
-<details class="example-disclosure">
-<summary>choose: one answer from your list</summary>
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `client.decideStream`, save each `probability()`, and compare with your labels.
 
-<Example id="sdk-java-choose" title="Choose.java" />
+<span id="choose"></span>
 
-A refund request is about billing. With `ChooseOptions.builder().threshold(...)`, choose is not sure when no choice reaches the bar, and `answer()` then throws `UnsureException`. [choose](/functions/choose/) shows every answer.
+## choose with your own choices
 
-</details>
+Give your choices as an `enum`. The answer comes back as a constant of it.
 
-### filter
+```java
+enum Topic {
+    BILLING("billing"),
+    SHIPPING("shipping"),
+    OTHER("other");
 
-<details class="example-disclosure">
-<summary>filter: keep the messages that answer yes</summary>
+    private final String text;
 
-<Example id="sdk-java-filter" title="Filter.java" />
+    Topic(String text) {
+        this.text = text;
+    }
 
-filter gives a `Stream` of your own messages that answer yes: the refund request and the double charge. Not-sure messages are left out. If a message fails, the stream first gives every kept message, then throws one `ThinkThenException` whose `failures()` lists each failed result. `client.filterRows(...)` gives a `Filtered` for every message instead, with `item()`, `kept()` and `isUnsure()`:
+    @Override
+    public String toString() {
+        return text;
+    }
+}
 
-<Example id="use-filter-java" title="Example.java" />
+static String teamFor(Topic topic) {
+    return switch (topic) {
+        case BILLING -> "billing team";
+        case SHIPPING -> "warehouse";
+        case OTHER -> "front desk";
+    };
+}
+```
+
+```java
+var topic = client.choose(
+    "What is the message about?",
+    "I was charged twice for one invoice.",
+    Topic.class);
 
-[filter](/functions/filter/) shows every answer.
+if (topic.isUnsure()) {
+    System.out.println("a person reads it");
+} else {
+    System.out.println(teamFor(topic.answer()));
+}
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.isUnsure()` before reading the answer. `ChooseOptions.builder().threshold(Threshold.cut(0.3)).build()`, passed as a last argument, moves the bar.
+
+What each constant prints (`billing`, `shipping`, `other`) is the word the model reads, so make `toString()` give plain words or short phrases, not codes. The constant names are for your code. An enum with no `toString()` of its own sends its constant names as written, such as `BILLING`.
 
-</details>
+Add a constant to `Topic` and the compiler points at `teamFor` until you handle it.
+
+A choose result does not go in an `if`, and is not equal to its answer. `if (topic)` and `topic == Topic.BILLING` do not compile. `topic.equals(Topic.BILLING)` is always `false`, because a result equals only another result. Compare `topic.answer()`.
+
+Value equality and hashing cover only `function`, `status`, `answer`, `probability`, `error`, `position`, `id`, `source` and `detail`, using this language's names. They never include `item`, including on entries inside a form. Changing the caller's message cannot change a result's equality or hash.
+
+A list of strings also works, `List.of("billing", "shipping", "other")`, and the answer is then a `String`.
+
+<span id="many-records"></span>
+
+## Many messages
 
-### tag
+Each one-message function has a `Stream` form, such as `decideStream`, that takes many messages and gives one result per message, in order. Each result carries your own message as `item()`.
 
-<details class="example-disclosure">
-<summary>tag: every label that fits</summary>
+```java
+List<String> messages = List.of(
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.");
 
-<Example id="sdk-java-tag" title="Tag.java" />
+try (var refundChecks = client.decideStream(
+        "Does the customer request a refund?", messages,
+        DecideOptions.builder().threshold(Threshold.band(0.2, 0.8)).build())) {
+    refundChecks.forEach(isRefund -> {
+        if (isRefund.isUnsure()) {
+            System.out.println("a person reads it: " + isRefund.item());
+        } else if (isRefund.isFailed()) {
+            System.out.println("try again later: " + isRefund.item());
+        } else if (isRefund.answer()) {
+            System.out.println("refund queue: " + isRefund.item());
+        } else {
+            System.out.println("inbox: " + isRefund.item());
+        }
+    });
+}
+```
+
+One failed message does not stop the stream. Each result keeps its own state, with `position()` counted from 1 and the message's `id()` when it has one. A `decideStream` call remains many-message even with a one-item collection: its failed result is returned.
+
+To stop on an encountered failed result, use the shared result's explicit check:
 
-The message names a double charge and a late parcel, so both labels fit. The list is empty when none fits. [tag](/functions/tag/) shows every answer.
+```java
+try (var refundChecks = client.decideStream(
+        "Does the customer request a refund?", messages,
+        DecideOptions.builder().threshold(Threshold.band(0.2, 0.8)).build())) {
+    refundChecks.forEach(isRefund -> System.out.println(isRefund.throwIfFailed()));
+}
+```
 
-</details>
+`throwIfFailed()` throws `FailedException` for a failed result and otherwise returns that same result. Not sure does not throw here, and printing is safe. The method remains on the shared result type; it is redundant for a successfully returned scalar result.
 
-### score
+Pass the whole collection to one stream so ThinkThen can send the messages in batches. The stream is a `java.util.stream.Stream`. Use try-with-resources so it is closed even when you stop early. `.toList()` collects every result.
 
-<details class="example-disclosure">
-<summary>score: a number from 0 to 1</summary>
+To save every result, write `result.toJson()` as a line of JSON. It includes the state, so nothing is lost.
 
-<Example id="sdk-java-score" title="Score.java" />
+<span id="not-sure-or-failed"></span>
 
-A refund request is routine, so it scores near 0. Levels run lowest first. [score](/functions/score/) shows every answer.
+<span id="raise-if-it-failed"></span>
+
+## Many-result not sure or failed
 
-</details>
+Here `isRefund` is a result from the stream, where all three states remain possible.
+
+```java
+try (var refundChecks = client.decideStream(
+        "Does the customer request a refund?", messages,
+        DecideOptions.builder().threshold(Threshold.band(0.2, 0.8)).build())) {
+    refundChecks.forEach(isRefund -> {
+        if (isRefund.isUnsure()) {
+            System.out.println("a person reads it " + isRefund.probability().getAsDouble());
+        } else if (isRefund instanceof Failed<?, ?> failed) {
+            System.out.println("try again later " + failed.error().code());
+        } else if (isRefund.answer()) {
+            System.out.println("refund queue");
+        } else {
+            System.out.println("inbox");
+        }
+    });
+}
+```
 
-### rank
+Yes and no are the two answers. Not sure and failed are the two ways of having none. A failed result is a `Failed`, and only a `Failed` has an `error()`, so there is never an empty error to check for.
+
+A result is one of three types: `Answered`, `Unsure` or `Failed`. To name every state and have the compiler confirm none is missed, use a `switch` that returns a value:
+
+```java
+static String whereItGoes(Row<Boolean, String> isRefund) {
+    return switch (isRefund) {
+        case Answered<Boolean, String> answered -> answered.answer() ? "refund queue" : "inbox";
+        case Unsure<Boolean, String> unsure -> "a person reads it";
+        case Failed<Boolean, String> failed -> "try again later";
+    };
+}
+```
+
+`Row<Boolean, String>` is a yes-or-no result about a `String` message. The same sealed type serves scalar calls and streams. A compiler-checked switch still needs its `Failed` arm even for a result from a successful scalar call; that arm is unreachable for that scalar result at runtime.
+
+Call the routing function on the actual stream results:
+
+```java
+try (var refundChecks = client.decideStream(
+        "Does the customer request a refund?", messages,
+        DecideOptions.builder().threshold(Threshold.band(0.2, 0.8)).build())) {
+    refundChecks.forEach(isRefund -> System.out.println(whereItGoes(isRefund) + ": " + isRefund.item()));
+}
+```
+
+`NoAnswerException` groups `UnsureException` and `FailedException` for answer reads on many-message results, form entries and saved results. Catch it when either state means there is no answer to use; catch them separately when their routes differ.
+
+## filter
+
+filter means "give me the yeses". It hands back your own messages, in order.
+
+```java
+List<String> messages = List.of(
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.");
+
+try (var refundRequests = client.filter("Does the customer request a refund?", messages)) {
+    refundRequests.forEach(refundRequest -> System.out.println("refund queue: " + refundRequest));
+}
+```
+
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `FilterOptions.builder().threshold(Threshold.cut(0.7)).build()` moves the bar. Two bars are refused: `Threshold.band` does not compile there, and a saved filter question that holds two bars throws `UsageException`. When you want not sure, use `client.decideStream`, as in the section above.
+
+If a message fails, you still get every kept message first. Then filter throws one `FailedException`, and its `rows()` holds every failed result with its `item()`.
+
+```java
+try (var refundRequests = client.filter("Does the customer request a refund?", messages)) {
+    refundRequests.forEach(refundRequest -> System.out.println("refund queue: " + refundRequest));
+} catch (FailedException failure) {
+    for (var failed : failure.rows()) {
+        System.out.println("try again later: " + failed.item() + " " + failed.error().code());
+    }
+}
+```
 
-<details class="example-disclosure">
-<summary>rank: put messages in order</summary>
+## tag
 
-<Example id="sdk-java-rank" title="Rank.java" />
+Labels work as choices do. The answer is a `List` of the constants that fit, and it can be empty.
+
+```java
+enum Topic {
+    BILLING("billing"),
+    SHIPPING("shipping");
+
+    private final String text;
 
-The double charge is the most urgent, so it ranks 1. `answer()` is the rank, a `Long`. `item()` is a `JsonValue` copy of the message, so text comes back as a `JsonString`. `position()` is the message's place in your list, counted from 1. `RankOptions.builder().top(2)` ranks only the first two. [rank](/functions/rank/) shows every answer.
+    Topic(String text) {
+        this.text = text;
+    }
 
-</details>
+    @Override
+    public String toString() {
+        return text;
+    }
+}
+```
+
+```java
+var topics = client.tag(
+    "Which topics appear?",
+    "I was charged twice and my parcel is late again.",
+    Topic.class);
 
-### find
+if (topics.answer().contains(Topic.BILLING)) {
+    System.out.println("billing team");
+}
+for (Topic topic : topics.answer()) {
+    System.out.println(topic);
+}
+```
 
-<details class="example-disclosure">
-<summary>find: the line that answers</summary>
+tag is never not sure. `TagOptions.builder().threshold(Threshold.cut(0.7)).build()` sets how likely a label must be to count.
 
-<Example id="sdk-java-find" title="Find.java" />
+## score
 
-The second line holds the request. The answer is an `Optional<Span>`, empty when no line answers; a `Span` has `text()`, `start()` and `end()`, counted in characters. [find](/functions/find/) shows every answer.
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. With an enum type, ThinkThen uses the declaration order, the order returned by Java's `values()`; write `ROUTINE` before `URGENT`.
 
-</details>
+```java
+enum Urgency {
+    ROUTINE("routine"),
+    URGENT("urgent");
 
-### recognize
+    private final String text;
 
-<details class="example-disclosure">
-<summary>recognize: names and their kinds</summary>
+    Urgency(String text) {
+        this.text = text;
+    }
 
-<Example id="sdk-java-recognize" title="Recognize.java" />
+    @Override
+    public String toString() {
+        return text;
+    }
+}
+```
 
-Morgan is a person and Example Group an organization. Each `Entity` has a `mention()`, with its `kind()` and `span()`, and a `probability()`. [recognize](/functions/recognize/) shows every answer.
+```java
+var urgency = client.score(
+    "How urgent is the request?",
+    "Please refund my order.",
+    Urgency.class);
+
+if (urgency.answer() > 0.5) {
+    System.out.println("answer today");
+}
+System.out.printf("%.2f%n", urgency.answer());
+```
+
+The score is a position between your levels, not one of them, so it is a `Double` and there is nothing to `switch` over. To get exactly one level back, ask with `client.choose`. score is never not sure.
+
+## rank
+
+rank puts many messages in order along your levels, highest first.
+
+```java
+List<String> messages = List.of(
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.");
+
+try (var byUrgency = client.rank("How urgent is the request?", messages, Urgency.class)) {
+    byUrgency.forEach(ranked -> System.out.println(ranked.answer() + " " + ranked.item()));
+}
+```
+
+`ranked.answer()` is the rank, starting at 1, and `ranked.item()` is your message. rank reads the whole collection before it gives anything back. `RankOptions.builder().top(5).build()` selects the five highest-ranked messages after judging the collection. A failed message comes back after the ranked ones, with `isFailed()` true.
+
+## find
+
+find points to the one line that answers.
+
+```java
+String message = "Morgan works for Example Group.\nPlease refund my order.";
+var action = client.find("Which line states the requested action?", message);
+
+if (action.isUnsure()) {
+    System.out.println("a person reads it");
+} else if (action.answer().isEmpty()) {
+    System.out.println("no line answers");
+} else {
+    System.out.println(action.answer().get().text());
+}
+```
+
+The answer is an `Optional<Span>`. A `Span` has `text()`, `start()` and `end()`, and the `Optional` is empty when no line answers. `message.substring(span.start(), span.end())` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```java
+var names = client.recognize(
+    "Morgan works for Example Group.",
+    List.of("person", "organization"));
+
+for (var name : names.answer()) {
+    System.out.println(name.kind() + " " + name.text());
+}
+```
+
+Each name also has `start()`, `end()` and `probability()`. The answer can be empty. recognize is never not sure.
+
+## relate
+
+```java
+String message = "Morgan works for Example Group.\nPlease refund my order.";
+var rules = List.of(RelationRule.of("person", "organization", "works_for"));
 
-</details>
+var relations = client.relate(message, rules);
 
-### relate
+for (var relation : relations.answer()) {
+    System.out.println(relation.source().text() + " " + relation.relation() + " " + relation.target().text());
+}
+```
+
+Each relation has `source()`, `target()`, `relation()`, `probability()` and `either()`. `relations.detail()` is a `RelationDetail`, and its `names()` holds every name found, including names in no relation. Reach it with `if (relations.detail() instanceof RelationDetail detail)`.
+
+## annotate
+
+annotate asks several questions of each message and gives back one form per message.
+
+```java
+List<String> messages = List.of(
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.");
+
+var questions = AnnotationQuestions.builder()
+    .put("refund", DecideQuestion.of("Does the customer request a refund?"))
+    .put("topic", ChooseQuestion.of("What is the message about?", Topic.class))
+    .put("urgency", ScoreQuestion.of("How urgent is the request?", Urgency.class))
+    .build();
 
-<details class="example-disclosure">
-<summary>relate: how names connect</summary>
+try (var forms = client.annotateStream(questions, messages)) {
+    forms.forEach(form -> {
+        if (form.isFailed()) {
+            System.out.println("try again later: " + form.item());
+            return;
+        }
+        var entries = form.answer();
+        var isRefund = entries.decide("refund");
+        var topic = entries.choose("topic", Topic.class);
+        var urgency = entries.score("urgency");
+        if (isRefund.isFailed() || topic.isFailed() || urgency.isFailed()) {
+            System.out.println("try again later: " + form.item());
+        } else if (isRefund.isUnsure() || topic.isUnsure()) {
+            System.out.println("a person reads it: " + form.item());
+        } else if (isRefund.isAnswered() && topic.isAnswered() && urgency.isAnswered()
+                && isRefund.answer()) {
+            System.out.printf("refund queue: %s %.2f%n", topic.answer(), urgency.answer());
+        }
+    });
+}
+```
 
-<Example id="sdk-java-relate" title="Relate.java" />
+`form.answer()` holds one entry per question, under the name you gave it. Each entry is a result of its own function, with its own state. `entries.decide("refund")` is a decide result, so its `answer()` goes in an `if`. One entry can be not sure or failed while the others answer. Check every entry used by a branch before reading its answer; an answered form alone does not mean its entries all answered. Here `Topic` is the three-choice enum from the choose section.
 
-Morgan works for Example Group, so relate links the two by the rule. relate finds the names itself, so it needs no recognize call first. `RelationRule.builder(source, target, relation)` adds `reads(...)` to word the relation and `either(true)` to make it work both ways. [relate](/functions/relate/) shows every answer.
+For one message, `client.annotate(questions, message)` throws `FailedException` only when the parent form itself failed. An answered parent is returned even when one, several or all of its entries failed. The scalar boundary does not run the recursive form check to decide whether to return it.
 
-</details>
+```java
+var form = client.annotate(questions, "Please refund my order.");
+form.throwIfFailed();
+```
+
+The optional second line explicitly throws for a failed entry as well as a failed parent. An unsure entry does not fail this check; otherwise it returns the same form unchanged. It also works on stream forms. Checking only the parent never authorizes reading an unchecked entry's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```java
+var isRefund = client.decide(
+    "Does the customer request a refund?",
+    "I was charged twice for one invoice.",
+    DecideOptions.builder()
+        .yesMeans("the customer wants money back, including for a duplicate charge")
+        .noMeans("the customer wants anything else")
+        .build());
+
+var topic = client.choose(
+    "What is the message about?",
+    "I was charged twice for one invoice.",
+    Topic.class,
+    ChooseOptions.builder()
+        .descriptions(Map.of(
+            Topic.BILLING, "charges, invoices and refunds",
+            Topic.SHIPPING, "parcels and delivery"))
+        .build());
+```
 
-### annotate
+decide and filter take `yesMeans` and `noMeans`. choose, tag, score and rank take `descriptions`, keyed by your choices, labels or levels.
 
-<details class="example-disclosure">
-<summary>annotate: several questions at once</summary>
+<span id="records-and-fields"></span>
 
-<Example id="sdk-java-annotate" title="Annotate.java" />
+## Messages and fields
 
-Each message gets all three answers: refund or not, the topic, and its urgency. Each question's `answer()` throws on not sure or failure, as decide's does. `form.decide("refund")` throws `ThinkThenException` with the code `usage.argument` for a name you never added or a question of another function. [annotate](/functions/annotate/) shows every answer.
+A message is a `String`, or a `Map`, a `List` or other JSON-like value. `.field(Pointer.of("/text"))` on the options picks one field of a `Map`. Without it, ThinkThen judges the whole message. A message of your own class needs a `RecordCodec`, set once on the client builder with `recordCodec(...)`.
 
-</details>
+Give `Map` messages an `id`. Each result carries it back as `id()`.
 
-## The full API
+A one-message call given a `List` or other collection throws `IllegalArgumentException` and names the `Stream` form. A blank message (an empty string, only spaces, or an empty `Map`) throws `FailedException` at the scalar call with code `record.empty`; a `null` message does so with `record.missing`. Neither sends that input to the service. The same inputs remain failed results in the `Stream` forms, even with one input. Collection length never chooses the scalar rule.
 
-`client.async()` gives every one-message call as a `CompletableFuture`. The [Java API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/java/API.md) lists every name, and its Javadoc ships in the sources JAR.
+## Async
+
+`client.async()` has the same one-message functions. Each gives a `CompletableFuture` of the same result.
+
+```java
+import dev.thinkthen.*;
+
+public class AsyncExample {
+    public static void main(String[] args) {
+        try (var client = ThinkThen.builder().build()) {
+            client.async()
+                .decide("Does the customer request a refund?", "Please refund my order.")
+                .thenAccept(isRefund -> System.out.println(isRefund.answer() ? "refund queue" : "inbox"))
+                .join();
+        }
+    }
+}
+```
+
+A failed scalar judgement completes the future exceptionally with `FailedException`; its `thenAccept` callback does not run. `join()` exposes an exceptional completion through `java.util.concurrent.CompletionException`, whose cause is the original exception. An unsure judgement completes successfully; reading its answer inside a callback can instead make that dependent stage fail with `UnsureException`. The shared static `Row` type still contains its failed case.
+
+Cancelling the future stops the call.
+
+The many-message forms are the same `Stream`s in every program. Reading one waits for each result, so read it on a virtual thread when the calling thread must stay free.
+
+## Saved questions
+
+A question object holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
+
+```java
+var asksRefund = DecideQuestion.of(
+    "Does the customer request a refund?",
+    DecideOptions.builder()
+        .threshold(Threshold.band(0.2, 0.8))
+        .field(Pointer.of("/text"))
+        .build());
+var isRefund = client.decide(asksRefund, Map.of("id", "a1", "text", "Please refund my order."));
+```
+
+There is one class per function, such as `ChooseQuestion` and `ScoreQuestion`. A `Toolbox` keeps named questions in a JSON file:
+
+```java
+var toolbox = Toolbox.load(Path.of("toolbox.json"));
+var topic = client.choose(
+    toolbox.choose("topic"),
+    Map.of("id", "a1", "text", "Where is my parcel?"));
+```
+
+`Toolbox.load` throws `IOException` when the file can't be read. `toolbox.choose(name)` throws `UsageException` when the toolbox has no choose question of that name.
+
+## Settings
+
+A client built with no settings reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, set them on the builder and call the same functions.
+
+```java
+try (var client = ThinkThen.builder()
+        .model("...")
+        .batch(16)
+        .retry(RetryPolicy.builder().maxRetries(5).build())
+        .build()) {
+    var isRefund = client.decide("Does the customer request a refund?", "Please refund my order.");
+}
+```
+
+The options are `backend`, `url`, `model`, `apiKey`, `batch`, `retry` and `recordCodec`. Times in `RetryPolicy` are `java.time.Duration` values. Keep the key in the environment, not in your code.
+
+One client is safe to share between threads. Closing it stops its running calls.
+
+## Usage
+
+```java
+try (var client = ThinkThen.builder().build()) {
+    client.decide("Does the customer request a refund?", "Please refund my order.");
+    var usage = client.usage();
+    System.out.println(usage.attempts() + " " + usage.inputTokens().reported() + " " + usage.outputTokens().reported());
+}
+```
+
+`client.usage()` counts everything the client has sent so far: `attempts()`, `responses()`, retries, bytes sent, and tokens in and out as the service reported them.
+
+## Cancel
+
+Java already has the ways to stop work, and ThinkThen follows each of them:
+
+- Interrupt the thread that is waiting on a call.
+- Cancel the `CompletableFuture` from `client.async()`.
+- Close the `Stream` of a many-message call.
+
+The stopped call throws `java.util.concurrent.CancellationException`. An interrupted thread keeps its interrupt flag.
+
+## Errors
+
+| What happened | When it throws | What is thrown |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold or a list given to a one-message call | At the call | `UsageException`, `IllegalArgumentException` |
+| The client could not start, such as no API key | When the client is built | `SetupException` |
+| The call was cancelled | At the call | `CancellationException` |
+| A one-message judgement failed, including blank/null input or a service failure on its result | At the scalar call | `FailedException` |
+| A many-message result or form entry failed | At its answer read or `throwIfFailed()` | `FailedException` |
+| An annotate parent failed | At the scalar call; retained as a failed form in a stream | `FailedException` at the scalar call or a later failed-form read/check |
+| An answered annotate parent contains failed entries | The call returns it; reading a failed entry or explicitly checking the form throws | `FailedException` |
+| Not sure | When you read the answer | `UnsureException` |
+| You print a result, store it, or ask about its state | Never | |
+
+Every one of these is unchecked, so no method needs a `throws` clause for it.
+
+Two catches let you catch by meaning:
+
+- `catch (NoAnswerException e)` catches `UnsureException` and `FailedException`: there was no answer to read.
+- `catch (FailedException | ThinkThenException e)` catches failed judgements and engine call errors. `ThinkThenException` is the parent of `UsageException`, `SetupException` and `InternalException`. A Java class has one parent, and `FailedException` has `NoAnswerException`, so this catch names both. It does not catch `UnsureException`, because not sure is a result and not an error. It also does not catch the standard `IllegalArgumentException` or `CancellationException`; handle those separately when needed.
+
+`FailedException` retains the former `RecordException` payload: `code()`, `httpStatus()` and `rows()`, the failed results. Only the concrete host exception name changes; the sealed result case remains `Failed`, and wire codes such as `record.empty` and existing engine error families do not change. `UnsureException` carries `probability()` and `row()`.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 SDK/source](https://repo.maven.apache.org/maven2/io/github/botassembly/thinkthen-jvm/0.1.2/thinkthen-jvm-0.1.2-sources.jar). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
+| --- | --- |
+| Maven `io.github.botassembly:thinkthen-jvm`; `new Door()` | The current SDK and typed client |
+| `door.decide(q, bytes).value().outcome()` | Scalar judgement failures throw `FailedException` at the call; a returned result is answered or unsure, with loud `answer()` for unsure |
+| Per-call facts | Client usage |

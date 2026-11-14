@@ -108,16 +108,22 @@ fn names_keep_offsets_kinds_and_cuts() {
             .rows(&question, [Record::text(text)])
             .unwrap()
             .map(|row| row.unwrap())
-            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+            .for_each(|row| {
+                for (name, (_, start, end, _)) in row.answer().unwrap().iter().zip(&expected) {
+                    assert_eq!(name.start(), *start);
+                    assert_eq!(name.end(), *end);
+                }
+                rows.push(serde_json::to_value(row).unwrap());
+            });
         let row = &rows[0];
         assert_eq!(row["status"], "answered");
         assert!(row.get("probability").is_none());
         let names = row["answer"].as_array().unwrap();
         assert_eq!(names.len(), expected.len(), "{row}");
-        for (name, (text, start, end, kind)) in names.iter().zip(expected) {
-            assert_eq!(name["text"], text);
-            assert_eq!(name["start"], start);
-            assert_eq!(name["end"], end);
+        for (name, (name_text, start, end, kind)) in names.iter().zip(expected) {
+            assert_eq!(name["text"], name_text);
+            assert_eq!(name["start"], text[..start].chars().count());
+            assert_eq!(name["end"], text[..end].chars().count());
             assert_eq!(name["kind"], kind);
             assert!(name["probability"].as_f64().unwrap() >= 0.5);
         }
@@ -514,12 +520,17 @@ fn unicode_pieces_preserve_names_and_original_byte_offsets() {
             .rows(&question, [Record::text(text)])
             .unwrap()
             .map(|row| row.unwrap())
-            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+            .for_each(|row| {
+                let names = row.answer().unwrap();
+                assert_eq!(names[0].start(), start);
+                assert_eq!(names[0].end(), end);
+                rows.push(serde_json::to_value(row).unwrap());
+            });
         let names = rows[0]["answer"].as_array().unwrap();
         assert_eq!(names.len(), 1);
         assert_eq!(names[0]["text"], expected);
-        assert_eq!(names[0]["start"], start);
-        assert_eq!(names[0]["end"], end);
+        assert_eq!(names[0]["start"], text[..start].chars().count());
+        assert_eq!(names[0]["end"], text[..end].chars().count());
     }
     for (text, expected) in [
         ("a_b+$", vec!["a", "_", "b", "+", "$"]),
@@ -642,7 +653,7 @@ fn names_require_a_unicode_letter_or_decimal_digit() {
             if kept {
                 assert_eq!(names[0]["text"], text);
                 assert_eq!(names[0]["start"], 0);
-                assert_eq!(names[0]["end"], text.len());
+                assert_eq!(names[0]["end"], text.chars().count());
                 assert_eq!(names[0]["probability"], 1.);
             }
         }

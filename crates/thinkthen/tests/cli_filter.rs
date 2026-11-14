@@ -36,7 +36,16 @@ fn run(args: &[&str], input: &[u8]) -> Output {
 fn command(server: &Loopback, args: &[&str]) -> Command {
     let mut command = support::command();
     command
-        .args(["filter", "Keep?", "--threshold", "0.8"])
+        .args([
+            if args.contains(&"--json") {
+                "decide"
+            } else {
+                "filter"
+            },
+            "Keep?",
+            "--threshold",
+            "0.8",
+        ])
         .args(args)
         .env("THINKTHEN_API_KEY", KEY)
         .env("THINKTHEN_BASE_URL", server.base())
@@ -80,7 +89,7 @@ fn passing_records_keep_their_exact_input_bytes() {
 }
 
 #[test]
-fn details_print_every_row_including_no_and_failure() {
+fn decide_json_replaces_filter_details_and_keeps_no_and_failure() {
     let output = run(
         &["--from", "lines", "--json"],
         b"refund\nparcel\nmaybe\nbroken\nrefund last\n",
@@ -115,18 +124,6 @@ fn details_print_every_row_including_no_and_failure() {
     assert_eq!(rows[2]["answer"], false);
     assert_eq!(rows[3]["status"], "failed");
     assert_eq!(rows[3]["error"]["code"], "backend.reply");
-    assert_eq!(
-        rows.iter()
-            .map(|row| row["kept"].clone())
-            .collect::<Vec<_>>(),
-        vec![
-            json!(true),
-            json!(false),
-            json!(false),
-            json!(false),
-            json!(true)
-        ]
-    );
     assert_eq!(output.status.code(), Some(6));
 }
 
@@ -172,7 +169,7 @@ fn closed_output_reports_local_failure_for_originals_and_details() {
 }
 
 #[test]
-fn jsonl_filter_output_keeps_all_rows_and_their_original_identifiers() {
+fn decide_jsonl_keeps_all_rows_and_their_original_identifiers() {
     let output=run(&["--from", "jsonl","--json","--field","/body"], b" { \"id\": 1, \"body\": \"refund\" }\r\n{\"body\":\"parcel\"}\ninvalid\n{\"body\":\"refund last\"}");
     let rows: Vec<Value> = String::from_utf8(output.stdout)
         .unwrap()
@@ -200,17 +197,16 @@ fn jsonl_filter_output_keeps_all_rows_and_their_original_identifiers() {
 
 #[test]
 fn invalid_utf8_has_a_null_item_and_keeps_the_failed_row() {
-    let output = run(&["--json"], b"invalid\xff\n");
+    let output = run(&["--from", "lines", "--json"], b"invalid\xff\n");
     assert_eq!(output.status.code(), Some(6));
     let row: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert!(row.as_object().unwrap().contains_key("item"));
     assert_eq!(row["item"], Value::Null);
-    assert_eq!(row["kept"], false);
     assert_eq!(row["error"]["code"], "record.invalid");
 }
 
 #[test]
-fn json_filter_retains_the_exact_original_json_value() {
+fn decide_json_retains_the_exact_original_json_value() {
     let original = r#"{ "id": 18446744073709551615, "body": "refund", "number": 1.2300e+2 }"#;
     let output = run(
         &["--from", "jsonl", "--json", "--field", "/body"],
@@ -222,4 +218,23 @@ fn json_filter_retains_the_exact_original_json_value() {
         serde_json::from_str(&output).unwrap();
     assert_eq!(fields["item"].get(), original);
     assert_eq!(fields["id"].get(), "18446744073709551615");
+}
+
+#[test]
+fn filter_refuses_json_and_names_the_decide_replacement_before_requests() {
+    let server = Loopback::noul(0.9).unwrap();
+    let output = support::command()
+        .args(["filter", "Keep?", "--json", "--text", "evidence"])
+        .env("THINKTHEN_API_KEY", KEY)
+        .env("THINKTHEN_BASE_URL", server.base())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("thinkthen decide --json")
+    );
+    assert!(output.stdout.is_empty());
+    assert_eq!(server.count(), 0);
 }

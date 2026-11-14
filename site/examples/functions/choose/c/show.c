@@ -1,31 +1,40 @@
 #include <thinkthen.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 static void report(const thinkthen_error *error) {
-    fprintf(stderr, "%s: ", thinkthen_code_name(error->code));
-    fwrite(error->message.data, 1, error->message.len, stderr);
-    fputc('\n', stderr);
+    fprintf(stderr, "%s\n", thinkthen_error_string(error));
 }
 
 int main(void) {
-    const char *const topics[] = {"billing", "shipping", "other"};
+    enum topic { BILLING, SHIPPING, OTHER };
+    const char *const words[] = {[BILLING] = "billing", [SHIPPING] = "shipping", [OTHER] = "other"};
+    int choice = 0;
     thinkthen_client *client = NULL;
+    thinkthen_question *question = NULL;
+    thinkthen_row topic = THINKTHEN_ROW_INIT;
     thinkthen_error error = THINKTHEN_ERROR_INIT;
-    size_t topic = 0;
     int rc = thinkthen_client_open(NULL, &client, &error);
-    // topic is the index of the chosen string in topics.
     if (rc == THINKTHEN_OK)
-        rc = thinkthen_choose(client, "What is the message about?", topics,
-                              3, "Please refund my order.",
-                              THINKTHEN_NUL_TERMINATED, &topic, &error);
+        rc = thinkthen_question_new(THINKTHEN_FUNCTION_CHOOSE, "What is the message about?",
+                                    THINKTHEN_NUL_TERMINATED, &question, &error);
     if (rc == THINKTHEN_OK)
-        puts(topics[topic]);
-    else if (rc == THINKTHEN_UNSURE)
-        puts("not sure");
-    else
+        rc = thinkthen_question_set_choices(question, words, 3, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_run_one(client, question, "Please refund my order.",
+                               THINKTHEN_NUL_TERMINATED, THINKTHEN_RECORD_TEXT,
+                               &topic, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_row_answer_choice(&topic, &choice, &error);
+    if (rc == THINKTHEN_OK) {
+        puts(words[choice]);
+    } else {
         report(&error);
+    }
+    thinkthen_row_free(&topic);
+    thinkthen_question_free(question);
     thinkthen_error_free(&error);
     thinkthen_client_free(client);
-    return rc < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+    return rc == THINKTHEN_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }

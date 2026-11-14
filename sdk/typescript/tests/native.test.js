@@ -22,7 +22,7 @@ for (const action of ["abort", "return", "dispose", "close"]) {
       next() { entered.resolve(); return inputReply.promise; },
       return() { returned++; returnEntered.resolve(); return returnReply.promise; },
     };
-    const client = new sdk.ThinkThen({ backend: "stub" });
+    const client = new sdk.Client({ backend: "stub" });
     const stream = client.decideStream("Ready?", input, { signal: controller.signal });
     const pending = stream.next();
     const outcome = pending.then(value => ({ value }), error => ({ error }));
@@ -74,7 +74,7 @@ test("abort rejects while an async generator is stalled and handles its late fai
       yield "late input must not publish";
     } finally { finished.resolve(); throw lateFailure; }
   }
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   const stream = client.decideStream("Ready?", source(), { signal: controller.signal });
   const outcome = stream.next().then(value => ({ value }), error => ({ error }));
   let timer;
@@ -104,7 +104,7 @@ test("abort rejects while an async generator is stalled and handles its late fai
 
 // Feature: AbortSignal cancellation has one typed error regardless of reason.
 test("already aborted signals never acquire the source and always use CancelledError", async () => {
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   let pulled = 0;
   const source = { [Symbol.iterator]() { return { next() { pulled++; return { done: false, value: "evidence" }; } }; } };
   try {
@@ -123,7 +123,7 @@ test("already aborted signals never acquire the source and always use CancelledE
 
 // Feature: breaking iteration closes its source while retained rows remain usable.
 test("break and repeated disposal release one iterator and preserve other client calls", async () => {
-  const client = new sdk.ThinkThen({ backend: "stub", batch: 1 });
+  const client = new sdk.Client({ backend: "stub", batch: 1 });
   let returned = 0;
   async function* source() {
     try { yield "first"; yield "second"; }
@@ -137,7 +137,7 @@ test("break and repeated disposal release one iterator and preserve other client
     await stream.return();
     await stream[Symbol.asyncDispose]();
     assert.equal(returned, 1);
-    const independent = await client.decide("Ready?", "still open").row();
+    const independent = await client.decide("Ready?", "still open");
     assert.equal(independent.function, "decide");
     await client.close();
     await client.close();
@@ -151,7 +151,7 @@ test("break and repeated disposal release one iterator and preserve other client
 
 // Feature: source exceptions keep their identity after owned resources close.
 test("source failure is not parsed as an engine error and closes once", async () => {
-  const client = new sdk.ThinkThen({ backend: "stub" });
+  const client = new sdk.Client({ backend: "stub" });
   const failure = new Error('{"code":"usage.question","message":"source error"}');
   let returned = 0;
   const input = {
@@ -172,7 +172,7 @@ test("abort after request arrival closes native I/O", { timeout: 10000 }, async 
   const { backend } = await import("./support.js");
   const held = await backend(["--held", "body"]);
   const controller = new AbortController();
-  const client = new sdk.ThinkThen({ backend: "systemone", url: held.url, apiKey: "test-only", batch: 1 });
+  const client = new sdk.Client({ backend: "systemone", url: held.url, apiKey: "test-only", batch: 1 });
   const stream = client.decideStream("Ready?", ["evidence"], { signal: controller.signal });
   const outcome = stream.next().then(value => ({ value }), error => ({ error }));
   try {
@@ -188,7 +188,7 @@ test("abort after request arrival closes native I/O", { timeout: 10000 }, async 
 
 // Feature: concurrent next calls serialize and each call owns its cancellation.
 test("aborting one call leaves another call's queued reads in order", async () => {
-  const client = new sdk.ThinkThen({backend:"stub",batch:1});
+  const client = new sdk.Client({backend:"stub",batch:1});
   const entered = deferred();
   const pendingInput = deferred();
   const controller = new AbortController();

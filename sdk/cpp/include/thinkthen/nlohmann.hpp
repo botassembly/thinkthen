@@ -25,8 +25,8 @@ inline void to_json(nlohmann::json& j, const name& v) { j = {{"text", v.text}, {
 inline void to_json(nlohmann::json& j, const endpoint& v) { j = {{"text", v.text}, {"start", v.start}, {"end", v.end}, {"kind", v.kind}}; }
 /// Serialize the relation fields using the shared contract.
 inline void to_json(nlohmann::json& j, const relation& v) {
-    j = {{"source", v.source}, {"target", v.target}, {"relation", v.label}, {"probability", v.probability}};
-    if (v.either) j["either"] = *v.either;
+    j = {{"source", v.source}, {"target", v.target}, {"relation", v.relation}, {"probability", v.probability}};
+    if (v.either) j["either"] = v.either;
 }
 /// Serialize the label_detail fields using the shared contract.
 inline void to_json(nlohmann::json& j, const label_detail& v) { j = {{"labels", v.labels}}; }
@@ -46,7 +46,9 @@ inline void to_json(nlohmann::json& j, const recognition_detail& v) { j = {{"pie
 inline void to_json(nlohmann::json& j, const relation_detail& v) { j = {{"names", v.names}, {"pairs", v.pairs}}; }
 /// Serialize the error fields using the shared contract.
 inline void to_json(nlohmann::json& j, const error& v) {
-    j = {{"code", thinkthen_code_name(v.code().value())}, {"message", v.what()}};
+    const std::string_view message=v.what();
+    const auto separator=message.find(": ");
+    j = {{"code", detail::code_name(v.raw_code())}, {"message", message.substr(separator+2)}};
     if (v.http_status()) j["http_status"] = *v.http_status();
 }
 /// Serialize the source fields using the shared contract.
@@ -69,29 +71,13 @@ namespace detail {
     incompatible();
 }
 }
-/// Serialize a typed outcome without raising its not-sure or failure state.
-template<class Q> void to_json(nlohmann::json& j, const outcome<Q>& v) {
-    j = {{"function", detail::function_name(Q::kind)}, {"status", v.status() == status::answered ? "answered" : v.status() == status::unsure ? "unsure" : "failed"}};
-    if (v.status() == status::answered) {
-        j["answer"] = nullptr;
-        if (auto* answer = v.answer()) {
-            if constexpr (std::is_same_v<Q, find>) { if (*answer) j["answer"] = **answer; }
-            else if constexpr (std::is_same_v<Q, annotate>) {
-                j["answer"] = nlohmann::json::object();
-                for (const auto& e : *answer) std::visit([&](const auto& item) { j["answer"][e.first] = item; }, e.second);
-            } else j["answer"] = *answer;
-        }
-    }
-    if constexpr (!std::is_same_v<typename result_traits<Q>::detail, std::monostate>) if (v.detail()) j["detail"] = *v.detail();
-    if (v.probability()) j["probability"] = *v.probability();
-    if (v.failure()) j["error"] = *v.failure();
-}
-/// Serialize a typed row, its position, id and source.
-template<class Q> void to_json(nlohmann::json& j, const row<Q>& v) {
-    to_json(j, static_cast<const outcome<Q>&>(v));
-    j["position"] = v.position();
-    if (!v.id_json().empty()) j["id"] = nlohmann::json::parse(v.id_json());
-    j["source"] = v.source();
+/// Serialize a result through the engine's canonical saved-row projection.
+template<class Q, class T> void to_json(nlohmann::json& json, const row<Q, T>& value) {
+    json = nlohmann::json::parse(value.to_json());
 }
 }}
+namespace nlohmann {
+/// The standard JSON conversion hook makes one JSON value a ThinkThen record.
+inline thinkthen::record to_record(const json& value) { return thinkthen::json_record(value); }
+}
 #endif

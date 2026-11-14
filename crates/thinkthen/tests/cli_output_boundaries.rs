@@ -98,12 +98,14 @@ fn refused_connection_before_any_row_is_a_call_error() {
             .write_all(if table { b"body\none\n" } else { b"one" })
             .unwrap();
         let output = child.wait_with_output().unwrap();
-        assert_eq!(output.status.code(), Some(4), "table={table}: {output:?}");
-        assert!(output.stdout.is_empty());
-        assert!(
-            String::from_utf8_lossy(&output.stderr).starts_with("thinkthen: backend.transport: ")
-        );
-        assert!(!destination.exists());
+        assert_eq!(output.status.code(), Some(6), "table={table}: {output:?}");
+        if table {
+            assert!(!destination.exists());
+            assert!(output.stdout.is_empty());
+        } else {
+            support::failed_stdout(&output);
+        }
+        assert!(String::from_utf8_lossy(&output.stderr).contains("backend.transport:"));
     }
 }
 
@@ -132,13 +134,22 @@ fn filter_then_decide_judges_only_original_kept_items() {
             .stderr(Stdio::piped())
             .spawn()
             .unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(b"drop me\nkeep me\n")
-            .unwrap();
+        let sent = child.stdin.take().unwrap().write_all(b"drop me\nkeep me\n");
+        if second == "filter" {
+            if let Err(error) = sent {
+                assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+            }
+        } else {
+            sent.unwrap();
+        }
         let output = child.wait_with_output().unwrap();
+        if second == "filter" {
+            assert_eq!(output.status.code(), Some(2), "{output:?}");
+            assert!(output.stdout.is_empty());
+            assert!(String::from_utf8_lossy(&output.stderr).contains("thinkthen decide --json"));
+            assert_eq!(server.count(), 0);
+            continue;
+        }
         assert_eq!(output.status.code(), Some(0), "{output:?}");
         let rows: Vec<serde_json::Value> = String::from_utf8(output.stdout)
             .unwrap()
@@ -150,7 +161,7 @@ fn filter_then_decide_judges_only_original_kept_items() {
         assert_eq!(server.count(), 3);
         if second == "filter" {
             assert_eq!(rows[0]["item"], "keep me");
-            assert_eq!(rows[0]["kept"], true);
+            assert!(rows[0].get("kept").is_none());
         } else {
             assert!(rows[0].get("kept").is_none());
         }
@@ -219,4 +230,39 @@ fn annotations_render_named_answers_in_text_mode() {
     assert_eq!(text, "ready=true\n");
     assert!(text.contains("true"), "{text}");
     assert!(!text.contains(['{', '}', '"']), "{text}");
+}
+
+#[test]
+fn mixed_terminal_filter_prints_kept_records_in_plain_output() {
+    let folder = tempfile::tempdir().unwrap();
+    let path = folder.path().join("run.json");
+    std::fs::write(
+        &path,
+        serde_json::json!({"run":[{"question":{"function":"filter","question":"Keep?"}},
+        {"question":{"function":"filter","question":"Ready?"}}]})
+        .to_string(),
+    )
+    .unwrap();
+    let server = Loopback::answering(|q| serde_json::json!({"type":"noul","noul":if q.to_string().contains("keep me") {0.9} else {0.1}})).unwrap();
+    let mut child = support::command()
+        .arg("run")
+        .arg(path)
+        .args(["--from", "lines", "--batch", "1", "--url", server.base()])
+        .env("THINKTHEN_API_KEY", KEY)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"drop me\nkeep me\n")
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(output.stdout, b"keep me\n");
+    assert!(output.stderr.is_empty());
+    assert_eq!(server.count(), 3);
 }

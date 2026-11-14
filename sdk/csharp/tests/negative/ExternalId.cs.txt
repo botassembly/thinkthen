@@ -1,3 +1,4 @@
+// Expected: error CS0534
 using ThinkThen;
 
 public sealed record ForeignId : RecordId

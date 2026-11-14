@@ -20,9 +20,11 @@ questions = {
 }
 ThinkThen::Client.open do |client|
   client.annotate_each(questions, messages) do |form|
-    is_refund = form[:refund].answer
-    topic = form[:topic].answer
-    urgency = form[:urgency].answer
+    # A failed child fails the form; each consumed child has its own loud read.
+    entries = form.raise_if_failed.answer
+    is_refund = entries[:refund].answer
+    topic = entries[:topic].answer
+    urgency = entries[:urgency].answer
     puts "#{is_refund} #{topic} #{urgency}"
   end
 end

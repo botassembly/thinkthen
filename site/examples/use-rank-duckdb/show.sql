@@ -10,4 +10,4 @@ SELECT answer AS urgency_rank, msg_id, body, status
 FROM thinkthen_rank((SELECT msg_id, body FROM messages),
                     'How urgent is the request?',
                     levels := ['routine', 'urgent'], record := 'body', top := 2)
-ORDER BY urgency_rank;
+ORDER BY urgency_rank NULLS LAST;

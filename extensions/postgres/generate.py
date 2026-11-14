@@ -18,13 +18,13 @@ values = [row['value'] for row in registry['codes']]
 assert len(values) == len(set(values)) and all(0 < value < 36**3 for value in values)
 # Host transport arguments stay local; question arguments come from the schema.
 TYPES = {'question': 'text', 'choices': 'text[]', 'labels': 'text[]', 'levels': 'text[]',
-         'kinds': 'text[]', 'rules': 'thinkthen.rule[]', 'toolbox': 'jsonb',
+         'kinds': 'text[]', 'rules': 'thinkthen.rule[]', 'questions': 'jsonb',
          'threshold': 'float8', 'low': 'float8', 'high': 'float8', 'top': 'bigint', 'field': 'text'}
-ORDER = ['question', 'choices', 'labels', 'levels', 'kinds', 'rules', 'toolbox', 'threshold', 'low', 'high', 'top', 'field']
-# Filter alone raises on failed records unless the caller asks for failed rows.
+ORDER = ['question', 'choices', 'labels', 'levels', 'kinds', 'rules', 'questions', 'threshold', 'low', 'high', 'top', 'field']
+# The shared SQL call always raises filter failures; other functions opt in.
 LOCAL = {function: [('yes_means', 'text', 'NULL'), ('no_means', 'text', 'NULL')]
          for function in ('decide', 'filter')}
-LOCAL['filter'].append(('failures', 'text', "'raise'"))
+
 LOCAL.update({function: [('descriptions', 'jsonb', 'NULL')]
               for function in ('choose', 'tag', 'score', 'rank')})
 TAIL = [('name', 'text', 'NULL'), ('params', 'jsonb', "'[]'::jsonb"),
@@ -32,9 +32,9 @@ TAIL = [('name', 'text', 'NULL'), ('params', 'jsonb', "'[]'::jsonb"),
 for function, row in FUNCTIONS.items():
     names = arguments(function)
     required = set(row['required']) - {'function'}
-    required = {'toolbox' if name == 'questions' else name for name in required}
     own = [(name, TYPES[name], None if name in required else 'NULL') for name in ORDER if name in names]
-    parameters = [('source_sql', 'text', None)] + own + LOCAL.get(function, []) + TAIL
+    raising = [] if function == 'filter' else [('raise_if_failed', 'boolean', 'false')]
+    parameters = [('source_sql', 'text', None)] + own + LOCAL.get(function, []) + raising + TAIL
     declared = ', '.join(name + ' ' + kind + ('' if default is None else ' DEFAULT ' + default)
                          for name, kind, default in parameters)
     signature = ', '.join(kind for _, kind, _ in parameters)

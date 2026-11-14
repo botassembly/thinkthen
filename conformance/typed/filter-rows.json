@@ -4,10 +4,7 @@
     "question": {
       "function": "filter",
       "question": "Ready?",
-      "threshold": {
-        "low": 0.2,
-        "high": 0.8
-      }
+      "threshold": 0.8
     },
     "records": [
       "refund",
@@ -47,8 +44,9 @@
     {
       "function": "filter",
       "position": 3,
-      "status": "unsure",
-      "probability": 0.6
+      "status": "answered",
+      "probability": 0.6,
+      "answer": false
     },
     {
       "function": "filter",

@@ -44,17 +44,8 @@ def typed_rows(client: tt.Client, text: str) -> None:
 
 def typed_iterators(client: tt.Client, records: list[str]) -> None:
     assert_type(client.decide_stream("Ready?", records), tt.RowStream[tt.DecideRow])
-    with client.filter_rows("Ready?", records) as rows:
-        row = next(rows)
-        assert_type(row, tt.FilterRow[str])
-        assert_type(row.item, str)
-        assert_type(row.kept, bool)
     assert_type(client.filter("Ready?", records), tt.KeptStream[str])
     assert_type(client.filter("Ready?", records).to_list(), list[str])
-    assert_type(
-        client.filter("Ready?", records, errors="coerce"),
-        tt.KeptStream[str | tt.FilterRow[str]],
-    )
     ranked = client.rank("How much?", records, levels=["low", "high"])
     assert_type(ranked, tt.RowStream[tt.RankRow[str]])
     assert_type(next(ranked).item, str)
@@ -72,7 +63,7 @@ async def typed_async(client: tt.AsyncClient, records: AsyncIterator[str]) -> No
     async with client.choose_stream("Which?", records, choices=["a", "b"]) as rows:
         async for row in rows:
             assert_type(row, tt.ChooseRow)
-            assert_type(row.answer, str | None)
+            assert_type(row.answer, str)
 
 
 def typed_optional_frames(
@@ -101,6 +92,31 @@ def typed_optional_frames(
     assert_type(ThinkThenNamespace(polars_series).failures(), pl.DataFrame)
 
 
+def typed_table_enum_domains(
+    pandas_series: pd.Series[str], polars_series: pl.Series
+) -> None:
+    from enum import Enum
+
+    class Topic(Enum):
+        BILLING = "billing"
+        SHIPPING = "shipping"
+
+    class Urgency(Enum):
+        ROUTINE = "routine"
+        URGENT = "urgent"
+
+    pandas_accessor = ThinkThenAccessor(pandas_series)
+    polars_accessor = ThinkThenNamespace(polars_series)
+    assert_type(pandas_accessor.choose("Which?", choices=Topic), pd.Series[Any])
+    assert_type(polars_accessor.choose("Which?", choices=Topic), pl.Series)
+    assert_type(pandas_accessor.tag("Which?", labels=Topic), pd.Series[Any])
+    assert_type(polars_accessor.tag("Which?", labels=Topic), pl.Series)
+    assert_type(pandas_accessor.score("How urgent?", levels=Urgency), pd.Series[Any])
+    assert_type(polars_accessor.score("How urgent?", levels=Urgency), pl.Series)
+    assert_type(pandas_accessor.rank("How urgent?", levels=Urgency), pd.Series[Any])
+    assert_type(polars_accessor.rank("How urgent?", levels=Urgency), pl.Series)
+
+
 def typed_choice_sets(client: tt.Client, text: str) -> None:
     from enum import Enum
     from typing import Literal
@@ -111,12 +127,12 @@ def typed_choice_sets(client: tt.Client, text: str) -> None:
 
     team = client.choose("Which team?", text, choices=Team)
     assert_type(team, tt.ChooseRow[Team])
-    assert_type(team.answer, Team | None)
+    assert_type(team.answer, Team)
     question = tt.ChooseQuestion("Which team?", choices=Team)
     assert_type(client.choose(question, text), tt.ChooseRow[Team])
     fitting = client.tag("Which team?", text, labels=Team)
     assert_type(fitting, tt.TagRow[Team])
-    assert_type(fitting[0], Team)
+    assert_type(fitting.answer[0], Team)
     category = client.choose(
         "Which team?", text, choices=Literal["billing", "shipping"]
     )

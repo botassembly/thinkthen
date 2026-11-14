@@ -1,12 +1,9 @@
 import dev.thinkthen.kotlin.*
 import kotlinx.coroutines.runBlocking
 
-fun main() = runBlocking<Unit> {
+fun main() = runBlocking {
     ThinkThen().use { client ->
-        try {
-            client.decide("Does the customer request a refund?", "")
-        } catch (failure: ThinkThenException) {
-            println(failure.code.wireName)
-        }
+        val refundCheck = client.decide("Does the customer request a refund?", "")
+        println(refundCheck)
     }
 }

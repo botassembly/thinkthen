@@ -72,7 +72,7 @@ final class Native {
             for (String name : new String[]{"code_name", "code_family", "code_count", "code_at", "client_open_json", "settings_conversion_error", "question_conversion_error", "question_from_json", "question_free",
                     "toolbox_from_json", "toolbox_from_definitions_json", "toolbox_to_json", "toolbox_definitions_json", "toolbox_free",
                     "cancelled_error", "client_free", "client_usage", "client_usage_settled", "call_open_json", "call_open_records_json", "call_send_utf16", "call_send_json", "call_send_missing", "call_send_invalid",
-                    "call_end_input", "call_next", "call_events", "events_version", "events_wait", "events_wake", "events_free", "call_cancel", "call_free", "buffer_free", "row_free", "row_original", "error_free"}) {
+                    "call_end_input", "call_next", "call_events", "events_version", "events_wait", "events_wake", "events_free", "call_cancel", "call_free", "buffer_free", "row_free", "row_original", "row_to_json", "row_host_json", "error_free"}) {
                 bind(functions, symbols, linker, name);
             }
             return Map.copyOf(functions);
@@ -118,7 +118,17 @@ final class Native {
         byte[] bytes = length == 0 ? new byte[0] : view.get(ValueLayout.ADDRESS, NativeLayouts.RECORD_VIEW.byteOffset(MemoryLayout.PathElement.groupElement("data"))).reinterpret(length).toArray(ValueLayout.JAVA_BYTE);
         return new DriverRecord(kind, bytes);
     }
-    static byte[] rowBytes(MemorySegment row, String field) { return copy(row.asSlice(offset(field), NativeLayouts.BUFFER.byteSize())); }
+    static byte[] canonical(MemorySegment row,Arena arena,MemorySegment error) {
+        var buffer = arena.allocate(NativeLayouts.BUFFER);
+        check((int) call("row_to_json",row,buffer,error),error);
+        try { return copy(buffer); }
+        finally { call("buffer_free",buffer); }
+    }
+    static byte[] host(MemorySegment row,Arena arena,MemorySegment error) {
+        var buffer=arena.allocate(NativeLayouts.BUFFER);
+        check((int)call("row_host_json",row,buffer,error),error);
+        try{return copy(buffer);}finally{call("buffer_free",buffer);}
+    }
     static void check(int status, MemorySegment error) {
         if (status >= 0) return;
         try {

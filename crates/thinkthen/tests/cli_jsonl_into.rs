@@ -44,6 +44,9 @@ fn typed_answers_append_without_changing_original_members() {
         ],
     ] {
         let mut baseline = args.clone();
+        if baseline[0] == "filter" {
+            baseline[0] = "decide";
+        }
         baseline.extend(["--from", "jsonl", "--field", "/text", "--json"]);
         let expected = run(&baseline, input);
         assert_eq!(expected.status.code(), Some(0), "{expected:?}");
@@ -197,13 +200,16 @@ fn rank_and_filter_follow_table_output_selection_and_input_order() {
         vec!["filter", "Refund?"],
     ] {
         let mut baseline = args.clone();
+        if baseline[0] == "filter" {
+            baseline[0] = "decide";
+        }
         baseline.extend(["--from", "jsonl", "--field", "/text", "--json"]);
         let expected = run(&baseline, input);
         assert_eq!(expected.status.code(), Some(0), "{expected:?}");
         let mut expected = rows(&expected);
         let filter = args[0] == "filter";
         if filter {
-            expected.retain(|row| row["kept"] == true);
+            expected.retain(|row| row["answer"] == true);
         }
         expected.sort_by_key(|row| row["position"].as_u64().unwrap());
         args.extend(["--from", "jsonl", "--field", "/text", "--into", "result"]);

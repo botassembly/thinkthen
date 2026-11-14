@@ -9,9 +9,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let refund = Filter::new("Does the customer request a refund?")?;
     // Only the messages that answer yes.
-    // A failed message arrives as an Err in its place.
-    for refund_request in engine.filter(&refund, messages, |message| *message)?
-    {
+    // Every kept message arrives before one error holding any failed results.
+    for refund_request in engine.filter(&refund, messages)? {
         println!("{}", refund_request?);
     }
     Ok(())

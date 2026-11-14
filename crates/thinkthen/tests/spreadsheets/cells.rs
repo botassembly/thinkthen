@@ -27,9 +27,14 @@ fn server() -> Loopback {
 }
 
 fn judge(server: &Loopback, function: &str, input: &Path, extra: &[&str]) -> Output {
+    let threshold = if function == "filter" {
+        vec!["--threshold", "0.8"]
+    } else {
+        vec!["--low", "0.2", "--high", "0.8"]
+    };
     support::command()
         .args([function, "Refund?", "--url", server.base(), "--batch", "1"])
-        .args(["--low", "0.2", "--high", "0.8"])
+        .args(threshold)
         .arg(input)
         .args(["--column", "Body", "--into", "refund"])
         .args(extra)
@@ -192,7 +197,7 @@ fn details_name_a_failed_rows_code_and_message() {
     let csv = directory.path().join("messages.csv");
     fs::write(&csv, "Body\nboom\n").unwrap();
     let output = judge(&server(), "decide", &csv, &["--details"]);
-    assert_eq!(output.status.code(), Some(4), "{output:?}");
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
     let rows = table(&directory.path().join("messages.thinkthen.csv"), b',');
     assert_eq!(rows[1][1..3], ["", "failed"]);
     assert!(rows[1][4].starts_with("backend.reply: "), "{:?}", rows[1]);

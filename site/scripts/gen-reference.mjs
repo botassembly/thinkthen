@@ -207,6 +207,7 @@ const BACKEND_VARIABLES = [
 // The measurement harness owns packing diagnostics; they are not public user settings.
 const INTERNAL_VARIABLE_SOURCES = new Set(['crates/thinkthen/src/engine/input_report.rs']);
 const OTHER_VARIABLES = [
+  { name: 'THINKTHEN_RULES', source: 'crates/thinkthen/src/cli/invocation.rs', holds: 'A JSON array of relation-rule objects when no `--rule` is given. Each object has `name`, `source`, `target` and optional `either` fields.' },
   { name: 'THINKTHEN_CA_FILE', source: 'crates/thinkthen/src/transport/tls.rs', holds: 'A PEM file of extra certificate authorities that HTTPS requests trust, in addition to the operating system certificate store. A file that is missing, unreadable or holds no valid certificate fails every HTTPS request with `backend.transport`.' },
 ];
 {
@@ -362,7 +363,7 @@ const STAND_IN = '/install/backends/your-server/#what-a-model-server-must-accept
 const reproduceLead = (name, id, standIn) => {
   if (name === 'local.cancelled') return 'This script starts a command that waits for input, then sends it the same signal as Ctrl-C:';
   const shown = readExample(id).show;
-  const allFailed = () => exitLink(exitCodes.find((e) => (e.allRowsFailedFamilies ?? []).includes('backend')).code);
+  const allFailed = () => exitLink(exitCodes.find((e) => e.rowFailures).code);
   if (standIn) return `This command sends the request to a local [stand-in server](${STAND_IN}) that ${standIn}. Its one record fails with a backend error, so the command ends with exit code ${allFailed()}:`;
   if (/\$port\b/.test(shown)) return `This command reproduces it against a stand-in service on the local machine, so no request leaves the machine. Its one record fails with a backend error, so the command ends with exit code ${allFailed()}:`;
   if (/127\.0\.0\.1:1\b/.test(shown)) return 'This command reproduces it by sending the request to a port on the local machine where nothing listens:';
@@ -605,7 +606,7 @@ ${rows.map((r) => `| [${r.fn}](/reference/commands/${r.fn}/) | ${r.answer} | ${r
 
 | Type | What it holds | Fields or values |
 | --- | --- | --- |
-${['Source', 'Probability', 'RecordId', 'Found', 'Name', 'Relation', 'RelationName', 'LabelDetail', 'LevelDetail', 'RecognizeDetail', 'KindDetail', 'PieceDetail', 'PairDetail'].map(typeRow).join('\n')}
+${['Source', 'Probability', 'RecordId', 'Span', 'Name', 'Relation', 'RelationName', 'LabelDetail', 'LevelDetail', 'RecognizeDetail', 'KindDetail', 'PieceDetail', 'PairDetail'].map(typeRow).join('\n')}
 
 ${generatedFrom('`schemas/row.schema.json` and `schemas/contract.json`')}
 

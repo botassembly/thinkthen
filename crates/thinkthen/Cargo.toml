@@ -55,6 +55,8 @@ rustls-platform-verifier = { version = "0.7.1", default-features = false }
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem"], optional = true }
 
 [dev-dependencies]
+# Execute the guide's real StreamExt and executor consumer; no runtime is bundled.
+futures = "=0.3.31"
 rcgen = "=0.13.2"
 csv = "1.4.0"
 tempfile = "3.23.0"

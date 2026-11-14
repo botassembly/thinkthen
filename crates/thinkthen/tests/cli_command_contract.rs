@@ -136,24 +136,12 @@ fn record_failures_remain_visible_and_override_filter_check() {
     for name in ["systemone", "openai"] {
         let server = backend(name, 0.9);
         let output = execute(
-            selected(name, &server)
-                .args(["filter", "Ready?", "--from", "jsonl", "--json", "--check"]),
+            selected(name, &server).args(["filter", "Ready?", "--from", "jsonl", "--check"]),
             b"\"keep\"\nnull\n{\n\"keep again\"\n",
         );
         assert_eq!(output.status.code(), Some(6), "{name}: {output:?}");
-        let actual = rows(&output);
-        assert_eq!(actual.len(), 4);
-        assert_eq!(actual[0]["answer"], true);
-        assert_eq!(actual[1]["error"]["code"], "record.missing");
-        assert_eq!(actual[2]["error"]["code"], "record.json");
-        assert_eq!(actual[3]["answer"], true);
-        for index in [1, 2] {
-            assert_eq!(actual[index]["position"], index + 1);
-            assert_eq!(actual[index]["status"], "failed");
-            assert!(actual[index].get("answer").is_none());
-            assert!(actual[index].get("probability").is_none());
-        }
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.stdout, b"\"keep\"\n\"keep again\"\n");
+        let stderr = String::from_utf8(output.stderr).unwrap();
         assert!(stderr.contains("record.missing"));
         assert!(stderr.contains("record.json"));
     }
@@ -170,7 +158,7 @@ fn rejected_credentials_stop_the_call_and_never_leak_reply_keys() {
             selected(name, &server).args(["decide", "Ready?", "--json", "--verbose"]),
             b"evidence",
         );
-        assert_eq!(output.status.code(), Some(4), "{name}: {output:?}");
+        assert_eq!(output.status.code(), Some(6), "{name}: {output:?}");
         assert!(output.stdout.is_empty());
         assert_eq!(support::reported(&output), "backend.status");
         assert!(!String::from_utf8_lossy(&output.stdout).contains(KEY));
@@ -578,9 +566,9 @@ fn typed_relation_environment_and_explicit_direction_have_the_same_mapping() {
         support::command().args([
             "relate",
             "--rule",
-            "works_for",
             "person",
             "organization",
+            "works_for",
             "--either",
             "--backend",
             "stub",
@@ -599,9 +587,9 @@ fn typed_relation_environment_and_explicit_direction_have_the_same_mapping() {
             .args([
                 "relate",
                 "--rule",
-                "works_for",
                 "person",
                 "organization",
+                "works_for",
                 "--either",
                 "--backend",
                 "stub",

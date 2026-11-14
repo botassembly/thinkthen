@@ -4,10 +4,11 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
 case "${1:-}" in
+    --abi-only) THINKTHEN_CPP_ABI_ONLY=1; THINKTHEN_C_SOURCE_NATIVE=1; export THINKTHEN_CPP_ABI_ONLY THINKTHEN_C_SOURCE_NATIVE ;;
     --interface-only) THINKTHEN_CPP_INTERFACE_ONLY=1; THINKTHEN_C_SOURCE_NATIVE=1; export THINKTHEN_CPP_INTERFACE_ONLY THINKTHEN_C_SOURCE_NATIVE ;;
     --corrections-only) THINKTHEN_CPP_CORRECTIONS_ONLY=1; THINKTHEN_C_SOURCE_NATIVE=1; export THINKTHEN_CPP_CORRECTIONS_ONLY THINKTHEN_C_SOURCE_NATIVE ;;
     "") ;;
-    *) echo 'usage: scripts/cpp-sdk-gate [--interface-only|--corrections-only]' >&2; exit 2 ;;
+    *) echo 'usage: scripts/cpp-sdk-gate [--abi-only|--interface-only|--corrections-only]' >&2; exit 2 ;;
 esac
 if [ "${THINKTHEN_CPP_CORRECTIONS_ONLY:-0}" = 1 ]; then
     cargo fmt --all --check
@@ -34,6 +35,10 @@ build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 library=$(find "$scratch/relocated/lib" -maxdepth 1 -type f -name 'libthinkthen*' -print)
 sdk/cpp/tests/check-installed "$scratch/relocated" "$THINKTHEN_LOOPBACK" "$library"
+if [ "${THINKTHEN_CPP_ABI_ONLY:-0}" = 1 ]; then exit 0; fi
+THINKTHEN_CPP_GUIDE_FLAGS="-I$scratch/relocated/include -L$scratch/relocated/lib -lthinkthen -Wl,-rpath,$scratch/relocated/lib"
+export THINKTHEN_CPP_GUIDE_FLAGS
+python3 scripts/cpp-guide-examples
 if [ -n "${THINKTHEN_CPP_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_CPP_ARTIFACT_DIR"
     cp "$scratch/cpp-package"/*.tar.gz "$THINKTHEN_CPP_ARTIFACT_DIR/"

@@ -49,7 +49,15 @@ def compare(output, case, registry, offsets='codepoints'):
     for row in rows:
         if isinstance(row['function'], int):
             row['function'] = functions[row['function']]
-    assert rows == expected_rows(case, offsets), (case['request']['question']['function'], rows, expected_rows(case, offsets))
+    expected = expected_rows(case, 'codepoints' if offsets == 'cpp' else offsets)
+    if offsets == 'cpp':
+        kept = []
+        if case['request']['question']['function'] == 'filter':
+            kept = [case['request']['records'][row['position'] - 1] for row in expected
+                    if row['status'] == 'answered' and row['answer'] is True]
+            expected = [row for row in expected if row['status'] == 'failed']
+        assert result['kept'] == kept, (result['kept'], kept)
+    assert rows == expected, (case['request']['question']['function'], rows, expected)
 
 
 if __name__ == '__main__':

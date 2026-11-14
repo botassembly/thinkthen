@@ -1,6 +1,6 @@
 #![cfg(test)]
 #![cfg(feature = "command")]
-//! Answer-field diagnostics identify failed inputs and count discarded unsure rows.
+//! Answer-field diagnostics identify failed inputs and count missing answers without discarding unsure rows.
 mod support;
 use serde_json::{Value, json};
 use std::process::Output;
@@ -56,7 +56,7 @@ fn failed_answer_fields_name_exact_ids_and_source_files() {
 }
 
 #[test]
-fn discarded_unsure_filter_rows_report_csv_counts_unless_quiet() {
+fn unsure_answers_are_kept_and_csv_counts_respect_quiet() {
     let dir = tempfile::tempdir().unwrap();
     let jsonl = dir.path().join("input.jsonl");
     let csv = dir.path().join("input.csv");
@@ -70,7 +70,7 @@ fn discarded_unsure_filter_rows_report_csv_counts_unless_quiet() {
         let invoke = |table: bool| {
             let mut command = support::command();
             command.args([
-                "filter",
+                "decide",
                 "Refund?",
                 "--backend",
                 "stub",
@@ -101,13 +101,19 @@ fn discarded_unsure_filter_rows_report_csv_counts_unless_quiet() {
         let appended = invoke(false);
         assert_eq!(table.status.code(), Some(0), "{table:?}");
         assert_eq!(appended.status.code(), table.status.code(), "{appended:?}");
-        assert!(appended.stdout.is_empty(), "{appended:?}");
-        assert_eq!(appended.stderr, table.stderr, "{appended:?}, {table:?}");
+        assert!(appended.stderr.is_empty(), "{appended:?}");
         if quiet {
-            assert!(appended.stderr.is_empty());
+            assert!(appended.stdout.is_empty());
+        } else {
+            let answers = rows(&appended);
+            assert_eq!(answers.len(), 3);
+            assert!(answers.iter().all(|row| row["result"] == "unsure"));
+        }
+        if quiet {
+            assert!(table.stderr.is_empty());
         } else {
             assert_eq!(
-                String::from_utf8(appended.stderr).unwrap(),
+                String::from_utf8(table.stderr).unwrap(),
                 "thinkthen: 3 rows not sure, 0 rows failed\n"
             );
         }
@@ -120,7 +126,7 @@ fn quiet_keeps_failure_diagnostics_but_suppresses_counts() {
     let path = dir.path().join("input.jsonl");
     std::fs::write(
         &path,
-        "{\"id\":\"unsure\",\"body\":\"first\"}\n{\"id\":\"failed\",\"other\":1}\n",
+        "{\"id\":\"rejected\",\"body\":\"first\"}\n{\"id\":\"failed\",\"other\":1}\n",
     )
     .unwrap();
     for quiet in [false, true] {
@@ -131,10 +137,8 @@ fn quiet_keeps_failure_diagnostics_but_suppresses_counts() {
                 "Refund?",
                 "--backend",
                 "stub",
-                "--low",
-                "0.000001",
-                "--high",
-                "0.999999",
+                "--threshold",
+                "1",
                 "--field",
                 "/body",
                 "--into",
@@ -153,7 +157,7 @@ fn quiet_keeps_failure_diagnostics_but_suppresses_counts() {
             "{stderr}"
         );
         assert_eq!(
-            stderr.contains("1 rows not sure, 1 rows failed"),
+            stderr.contains("0 rows not sure, 1 rows failed"),
             !quiet,
             "{stderr}"
         );

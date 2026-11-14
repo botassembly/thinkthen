@@ -13,7 +13,7 @@ internal static partial class Program
         JsonNode schema = JsonNode.Parse(await File.ReadAllTextAsync(registry))!;
         CheckEnum<Backend>(schema, "backends");
         CheckEnum<Function>(schema, "functions");
-        CheckEnum<RowStatus>(schema, "statuses");
+        CheckEnum<Status>(schema, "statuses");
         Check(Enum.GetNames<ErrorFamily>().Select(name => name.ToLowerInvariant()).ToHashSet()
             .SetEquals(schema["codes"]!.AsArray().Select(value => value!["family"]!.GetValue<string>())),
             "error families differ from the contract");

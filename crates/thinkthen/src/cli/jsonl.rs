@@ -225,12 +225,6 @@ fn evaluate(
                         .map_err(recovery_error)?;
                 }
 
-                if completion.rows() == 0
-                    && let Some(error) = row.failure()
-                    && error.code() == crate::Code::BackendTransport
-                {
-                    return Err(error.clone());
-                }
                 completion.row(&row);
                 super::execute::report_failure(&row, origins.at(row.position()));
                 let value = answer(&row_value);

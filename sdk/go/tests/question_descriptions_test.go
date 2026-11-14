@@ -7,6 +7,7 @@ import (
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 	"iter"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -15,12 +16,12 @@ import (
 func TestQuestionMeaningsAndDescriptions(t *testing.T) {
 	descriptions := map[string]string{"billing": "Invoices and charges"}
 	box := tt.NewToolbox(map[string]tt.Question{
-		"refund": tt.NewDecide("Refund?").YesMeans("Issue a refund").NoMeans("Keep the payment"),
-		"filter": tt.NewFilter("Refund?").YesMeans("Keep refund requests").NoMeans("Drop other requests"),
-		"team":   tt.NewChoose("Which team?", []string{"billing", "other"}).Descriptions(descriptions),
-		"tags":   tt.NewTag("Which tags?", []string{"billing", "other"}).Descriptions(descriptions),
-		"score":  tt.NewScore("Priority?", []string{"low", "high"}).Descriptions(map[string]string{"high": "Urgent"}),
-		"rank":   tt.NewRank("Priority?", []string{"low", "high"}).Descriptions(map[string]string{"high": "Urgent"}),
+		"refund": tt.DecideQuestion{Question: "Refund?", YesMeans: "Issue a refund", NoMeans: "Keep the payment"},
+		"filter": tt.FilterQuestion{Question: "Refund?", YesMeans: "Keep refund requests", NoMeans: "Drop other requests"},
+		"team":   tt.ChooseQuestion[string]{Question: "Which team?", Choices: []string{"billing", "other"}, Descriptions: descriptions},
+		"tags":   tt.TagQuestion[string]{Question: "Which tags?", Labels: []string{"billing", "other"}, Descriptions: descriptions},
+		"score":  tt.ScoreQuestion[string]{Question: "Priority?", Levels: []string{"low", "high"}, Descriptions: map[string]string{"high": "Urgent"}},
+		"rank":   tt.RankQuestion[string]{Question: "Priority?", Levels: []string{"low", "high"}, Descriptions: map[string]string{"high": "Urgent"}},
 	})
 	descriptions["billing"] = "Changed after construction"
 	encoded, err := json.Marshal(box)
@@ -33,7 +34,7 @@ func TestQuestionMeaningsAndDescriptions(t *testing.T) {
 	if err := json.Unmarshal(encoded, &saved); err != nil {
 		t.Fatal(err)
 	}
-	if string(saved.Entries["refund"].Question["true"]) != `"Issue a refund"` || string(saved.Entries["refund"].Question["false"]) != `"Keep the payment"` {
+	if string(saved.Entries["refund"].Question["yes_means"]) != `"Issue a refund"` || string(saved.Entries["refund"].Question["no_means"]) != `"Keep the payment"` {
 		t.Fatalf("lost meanings: %s", encoded)
 	}
 	for _, tc := range []struct{ name, field string }{{"team", "choices"}, {"tags", "labels"}, {"score", "levels"}, {"rank", "levels"}} {
@@ -59,25 +60,25 @@ func TestQuestionMeaningsAndDescriptions(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	ctx := context.Background()
 	q, _ := restored.Decide("refund")
-	row, err := c.Decide(ctx, q, tt.Text("evidence"))
+	row, err := c.Decide(ctx, q, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
-	bare, err := c.Decide(ctx, tt.NewDecide("Refund?"), tt.Text("evidence"))
+	bare, err := c.Decide(ctx, tt.DecideQuestion{Question: "Refund?"}, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if row.Source().QuestionIdentity == bare.Source().QuestionIdentity {
 		t.Fatal("engine identity omitted meanings")
 	}
-	for _, q := range []tt.Choose{
-		tt.NewChoose("Which?", []string{"billing", "other"}).Descriptions(map[string]string{"missing": "No such choice"}),
+	for _, q := range []tt.ChooseQuestion[string]{
+		tt.ChooseQuestion[string]{Question: "Which?", Choices: []string{"billing", "other"}, Descriptions: map[string]string{"missing": "No such choice"}},
 	} {
-		if _, err := c.Choose(ctx, q, tt.Text("evidence")); !errors.Is(err, tt.ErrUsage) {
+		if _, err := c.Choose(ctx, q, "evidence"); !errors.Is(err, tt.ErrUsage) {
 			t.Fatalf("bad descriptions admitted: %v", err)
 		}
 	}
-	blank := tt.NewToolbox(map[string]tt.Question{"team": tt.NewChoose("Which?", []string{"billing", "other"}).Descriptions(map[string]string{"billing": " "})})
+	blank := tt.NewToolbox(map[string]tt.Question{"team": tt.ChooseQuestion[string]{Question: "Which?", Choices: []string{"billing", "other"}, Descriptions: map[string]string{"billing": " "}}})
 	blankJSON, err := json.Marshal(blank)
 	if err != nil {
 		t.Fatalf("shared grammar permits blank descriptions: %v", err)
@@ -103,7 +104,7 @@ func TestSequenceAndAnnotationAdapters(t *testing.T) {
 			}
 		}
 	}
-	rows, err := tt.Collect(c.DecideAll(ctx, tt.NewDecide("Ready?"), tt.TextSeq(textSequence)))
+	rows, err := tt.Collect(c.DecideAll(ctx, tt.DecideQuestion{Question: "Ready?"}, (textSequence)))
 	if err != nil || len(rows) != 2 || rows[0].Position() != 1 || rows[1].Position() != 2 {
 		t.Fatalf("sequence changed: %v %v", rows, err)
 	}
@@ -117,12 +118,12 @@ func TestSequenceAndAnnotationAdapters(t *testing.T) {
 	if !errors.Is(err, sentinel) || !reflect.DeepEqual(values, []int{1}) {
 		t.Fatalf("collect error changed: %v %v", values, err)
 	}
-	box := tt.NewToolbox(map[string]tt.Question{"ready": tt.NewDecide("Ready?"), "color": tt.NewChoose("Which?", []string{"red", "green"})})
+	box := tt.NewToolbox(map[string]tt.Question{"ready": tt.DecideQuestion{Question: "Ready?"}, "color": tt.ChooseQuestion[string]{Question: "Which?", Choices: []string{"red", "green"}}})
 	form, err := box.Annotate()
 	if err != nil {
 		t.Fatal(err)
 	}
-	annotations, err := tt.Answer(c.Annotate(ctx, form, tt.Text("evidence")))
+	annotations, err := tt.Answer(c.Annotate(ctx, form, "evidence"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,14 +144,14 @@ func TestSequenceAndAnnotationAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	selected, err := tt.Answer(c.Annotate(ctx, form, tt.Text("evidence")))
+	selected, err := tt.Answer(c.Annotate(ctx, form, "evidence"))
 	if err != nil || !reflect.DeepEqual(selected.Names(), []string{"ready"}) {
 		t.Fatalf("selection failed: %v %v", selected, err)
 	}
-	if _, err := box.Annotate("missing"); !errors.Is(err, tt.CodeLocalToolbox) {
+	if _, err := box.Annotate("missing"); !errors.Is(err, tt.CodeUsageName) {
 		t.Fatalf("missing selector: %v", err)
 	}
-	ranks := tt.NewToolbox(map[string]tt.Question{"priority": tt.NewRank("Priority?", []string{"low", "high"})})
+	ranks := tt.NewToolbox(map[string]tt.Question{"priority": tt.RankQuestion[string]{Question: "Priority?", Levels: []string{"low", "high"}}})
 	if _, err := ranks.Annotate(); !errors.Is(err, tt.ErrUsage) {
 		t.Fatalf("rank annotation admitted: %v", err)
 	}
@@ -166,19 +167,19 @@ func TestDescriptionUnknownKeysUseSharedAdmission(t *testing.T) {
 		run  func() error
 	}{
 		{"choose", func() error {
-			_, err := c.Choose(ctx, tt.NewChoose("Which?", []string{"first", "second"}).Descriptions(descriptions), tt.Text("evidence"))
+			_, err := c.Choose(ctx, tt.ChooseQuestion[string]{Question: "Which?", Choices: []string{"first", "second"}, Descriptions: descriptions}, "evidence")
 			return err
 		}},
 		{"tag", func() error {
-			_, err := c.Tag(ctx, tt.NewTag("Which?", []string{"first", "second"}).Descriptions(descriptions), tt.Text("evidence"))
+			_, err := c.Tag(ctx, tt.TagQuestion[string]{Question: "Which?", Labels: []string{"first", "second"}, Descriptions: descriptions}, "evidence")
 			return err
 		}},
 		{"score", func() error {
-			_, err := c.Score(ctx, tt.NewScore("Which?", []string{"first", "second"}).Descriptions(descriptions), tt.Text("evidence"))
+			_, err := c.Score(ctx, tt.ScoreQuestion[string]{Question: "Which?", Levels: []string{"first", "second"}, Descriptions: descriptions}, "evidence")
 			return err
 		}},
 		{"rank", func() error {
-			_, err := c.Rank(ctx, tt.NewRank("Which?", []string{"first", "second"}).Descriptions(descriptions), tt.Text("evidence"))
+			_, err := tt.Collect(c.Rank(ctx, tt.RankQuestion[string]{Question: "Which?", Levels: []string{"first", "second"}, Descriptions: descriptions}, slices.Values([]string{"evidence"})))
 			return err
 		}},
 	} {

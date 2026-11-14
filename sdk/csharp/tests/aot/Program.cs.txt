@@ -7,7 +7,6 @@ using ThinkThen;
 // It roots only explicit JsonTypeInfo overloads, including collection and toolbox calls.
 await using var client = new ThinkThenClient(new()
 {
-    Backend = Backend.Stub,
     Json = new JsonSerializerOptions { TypeInfoResolver = RecordJson.Default }
 });
 var value = new InputRecord("aot", "alpha");
@@ -15,7 +14,7 @@ var metadata = RecordJson.Default.InputRecord;
 var toolbox = AnnotationQuestions.Parse("""{"ready":{"function":"decide","question":"Ready?"}}""");
 var decision = await client.DecideWithMetadataAsync("Ready?", value, metadata);
 Successful(decision);
-var rowMetadata = (System.Text.Json.Serialization.Metadata.JsonTypeInfo<Row<bool, NoDetail>>)RecordJson.Default.GetTypeInfo(typeof(Row<bool, NoDetail>))!;
+var rowMetadata = (System.Text.Json.Serialization.Metadata.JsonTypeInfo<Row<bool, InputRecord>>)RecordJson.Default.GetTypeInfo(typeof(Row<bool, InputRecord>))!;
 string json = JsonSerializer.Serialize(decision, rowMetadata);
 if (!json.Contains("probability", StringComparison.Ordinal)) throw new Exception("AOT row serialization lost typed fields");
 var settings = new ThinkThenOptions { Backend = Backend.Stub, ApiKey = ApiKey.From("synthetic-secret") };
@@ -29,27 +28,27 @@ Successful(await client.ScoreWithMetadataAsync("Urgent?", value, ["routine", "ur
 Successful(await client.FindWithMetadataAsync("Which line?", value, metadata));
 Successful(await client.RecognizeWithMetadataAsync(value, ["person"], metadata));
 Successful(await client.RelateWithMetadataAsync(value,
-    [new RelationRule { Source = "person", Target = "company", Name = "works_for" }], metadata));
+    [new RelationRule { Source = "person", Target = "company", Relation = "works_for" }], metadata));
 Successful(await client.AnnotateWithMetadataAsync(toolbox, value, metadata));
 Successful(await client.Toolbox(toolbox).AnnotateWithMetadataAsync(value, metadata));
 int filtered = 0;
-await foreach (var item in client.FilterStreamWithMetadataAsync("Ready?", Records(), metadata))
+await foreach (var item in client.FilterWithMetadataAsync("Ready?", Records(), metadata))
 {
-    if (!ReferenceEquals(item.Item, value) || item.Row.Status == RowStatus.Failed) throw new Exception("AOT filter lost original record");
+    if (!ReferenceEquals(item,value)) throw new Exception("AOT filter lost original record");
     filtered++;
 }
 if (filtered != 1) throw new Exception("AOT filter dropped a row");
 int ranked = 0;
 await foreach (var item in client.RankWithMetadataAsync("Urgent?", Records(), ["routine", "urgent"], metadata))
 {
-    if (item.Item != value || ReferenceEquals(item.Item, value) || item.Row.Status == RowStatus.Failed) throw new Exception("AOT rank lost original record");
+    if (!ReferenceEquals(item.Item,value) || item.Status == Status.Failed) throw new Exception("AOT rank lost original record");
     ranked++;
 }
 if (ranked != 1) throw new Exception("AOT rank dropped a row");
 int annotated = 0;
 await foreach (var row in client.Toolbox(toolbox).AnnotateStreamWithMetadataAsync(Records(), metadata))
 {
-    if (row.Position != 1 || row.Status == RowStatus.Failed) throw new Exception("AOT toolbox lost input position");
+    if (row.Position != 1 || row.Status == Status.Failed) throw new Exception("AOT toolbox lost input position");
     annotated++;
 }
 if (annotated != 1) throw new Exception("AOT toolbox dropped a row");
@@ -62,11 +61,11 @@ async IAsyncEnumerable<InputRecord> Records([EnumeratorCancellation] Cancellatio
 }
 static void Successful<A, D>(Row<A, D> row)
 {
-    if (row.Status == RowStatus.Failed) throw new Exception("AOT metadata overload returned a failed row");
+    if (row.Status == Status.Failed) throw new Exception("AOT metadata overload returned a failed row");
 }
 internal sealed record InputRecord(string Id, string Body);
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(InputRecord))]
-[JsonSerializable(typeof(Row<bool, NoDetail>))]
+[JsonSerializable(typeof(Row<bool, InputRecord>))]
 [JsonSerializable(typeof(ThinkThenOptions))]
 internal partial class RecordJson : JsonSerializerContext { }

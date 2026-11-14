@@ -1,5 +1,5 @@
 {
-  "anchor": "        rc = thinkthen_recognize(client, kinds, 2,",
+  "anchor": "        rc = thinkthen_run_one(client, question, \"Morgan works for Example Group.\",",
   "before": 0,
   "after": 2
 }

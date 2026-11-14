@@ -21,11 +21,11 @@ func TestMalformedNativeRowsAreABIUsageErrors(t *testing.T) {
 			t.Fatalf("current ABI fixture failed client admission: %v", err)
 		}
 		defer client.Close()
-		record := tt.Text("evidence")
+		var record any = "evidence"
 		if kind == "unanswered-answer" {
-			record = tt.Missing()
+			record = any(nil)
 		}
-		row, err := client.Decide(context.Background(), tt.NewDecide("Ready?"), record)
+		row, err := client.Decide(context.Background(), tt.DecideQuestion{Question: "Ready?"}, record)
 		if !errors.Is(err, tt.CodeUsageABI) || !errors.Is(err, tt.ErrUsage) || row.Status() != 0 {
 			t.Fatalf("malformed %s escaped: row %v error %v", kind, row, err)
 		}

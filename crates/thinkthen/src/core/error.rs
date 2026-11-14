@@ -90,6 +90,16 @@ pub struct Error {
 }
 
 impl Error {
+    pub(crate) fn records_failed(&self, failed: usize, total: u64, position: u64) -> Self {
+        let mut error = self.clone();
+        error.message = format!(
+            "{failed} of {total} records failed; the first, at position {position}, failed with {}: {}",
+            self.code.as_str(),
+            self.message
+        );
+        error
+    }
+
     pub(crate) fn from_contract(code: Code, message: impl Into<String>) -> Self {
         Self {
             message: escape_diagnostic(&message.into()),
@@ -151,7 +161,8 @@ mod wire {
     pub(crate) struct ErrorWire<'a, C> {
         pub(super) code: C,
         pub(super) message: &'a str,
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(with = "u16")]
         pub(super) http_status: Option<u16>,
     }
 }
@@ -209,6 +220,7 @@ impl<'de> serde::Deserialize<'de> for Error {
         struct Wire {
             code: Code,
             message: String,
+            #[serde(default, deserialize_with = "crate::core::results::optional_value")]
             http_status: Option<u16>,
         }
         let wire = Wire::deserialize(deserializer)?;

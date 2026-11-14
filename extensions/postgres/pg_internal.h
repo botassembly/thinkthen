@@ -25,17 +25,12 @@ typedef struct TtOwner {
     HTAB *ids;
     thinkthen_client *temporary_client;
     thinkthen_row row;
+    thinkthen_buffer projection;
     thinkthen_error error;
     Portal source;
     bool spi_connected;
     bool admitting;
-    bool keep_failures;
-    uint64 rows;
-    uint64 failed;
-    uint64 backend_failed;
-    uint64 first_failed_position;
-    int first_failed_code;
-    char *first_failed_message;
+    bool raise_if_failed;
     MemoryContextCallback cleanup;
 } TtOwner;
 
@@ -54,7 +49,6 @@ void tt_release(void *context);
 void tt_check(TtOwner *owner, int result);
 int tt_sqlstate(int code);
 void tt_raise(int code, const char *message, const char *extra_hint);
-void tt_finish(TtOwner *owner);
 thinkthen_client *tt_client(TtOwner *owner);
 char *tt_utf8(const char *source, size_t length, size_t *converted_length);
 text *tt_server_text(const char *source, size_t length);

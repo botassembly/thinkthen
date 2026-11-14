@@ -200,8 +200,6 @@ fn function(
             return;
         }
     };
-    let mut originals = std::collections::BTreeMap::new();
-    let mut position = 0_u64;
     let mut rows = 0_u64;
     while !state.cancel.is_cancelled() {
         let event = match call.poll(POLL) {
@@ -219,11 +217,12 @@ fn function(
                     } else {
                         line
                     };
-                    position += 1;
-                    if matches!(request.question(), crate::Question::Filter(_)) {
-                        originals.insert(position, line.clone());
-                    }
-                    if let Err(error) = call.send(Record::from_json(&line)) {
+                    if let Err(error) =
+                        call.send(Record::from_json(&line).with_original_encoding(
+                            crate::records::RecordKind::Json,
+                            line.as_bytes(),
+                        ))
+                    {
                         state.fail(RunCompletion::Failure(error));
                     }
                 }
@@ -236,7 +235,8 @@ fn function(
             },
             Some(Event::Row(row)) => {
                 let failed = row.failure();
-                if rows == 0
+                if !final_step
+                    && rows == 0
                     && let Some(error) = failed
                     && error.code() == crate::Code::BackendTransport
                 {
@@ -255,9 +255,15 @@ fn function(
                         *first = Some(error.clone());
                     }
                 }
-                let original = originals
-                    .remove(&row.position())
-                    .or_else(|| ranked_item(&row));
+                let original = if final_step
+                    || matches!(
+                        &row,
+                        crate::results::AnyRow::Filter(_) | crate::results::AnyRow::Rank(_)
+                    ) {
+                    original_item(&row)
+                } else {
+                    None
+                };
                 if !final_step
                     && matches!(&row, crate::results::AnyRow::Filter(filter) if !matches!(filter.outcome(), crate::results::Outcome::Answered { answer: true, .. }))
                 {
@@ -291,17 +297,19 @@ fn function(
     call.cancel();
 }
 
-/// The original item the engine keeps with a ranked row, as one JSON value.
-fn ranked_item(row: &crate::results::AnyRow) -> Option<String> {
-    let crate::results::AnyRow::Rank(rank) = row else {
-        return None;
-    };
-    let (kind, bytes) = rank.record()?.original();
+/// The admitted original item on a terminal row, as one JSON value.
+fn original_item(row: &crate::results::AnyRow) -> Option<String> {
+    let (kind, bytes) = row.original_record()?.original();
     let text = std::str::from_utf8(bytes).ok()?;
     match kind {
-        crate::records::RecordKind::Json => Some(text.to_owned()),
+        crate::records::RecordKind::Json => {
+            serde_json::from_str::<&serde_json::value::RawValue>(text)
+                .map(|value| value.get().to_owned())
+                .ok()
+                .or_else(|| serde_json::to_string(text).ok())
+        }
         crate::records::RecordKind::Text => serde_json::to_string(text).ok(),
-        _ => None,
+        _ => Some("null".to_owned()),
     }
 }
 

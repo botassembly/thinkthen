@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { expandFunctionGroups } from '../src/lib/function-variants.mjs';
 import { functions, surfaces, cellId, cellRoute } from '../src/lib/function-surfaces.mjs';
-import { displayOutput, selectQuestionCall, capturedStreams, inlineCode, exampleInputUrl, matchesExampleInputDownload, EXAMPLES } from '../src/lib/examples.mjs';
+import { displayOutput, selectQuestionCall, capturedStreams, outputStreams, inlineCode, exampleInputUrl, matchesExampleInputDownload, EXAMPLES } from '../src/lib/examples.mjs';
 import { commandOptions } from '../src/lib/binary.mjs';
 import { bannedWords, commandLines, proseOnly, markdownShape } from '../src/lib/docs-rules.mjs';
 import { menuPages } from '../src/lib/sitemap.mjs';
@@ -20,8 +20,11 @@ for (const language of ['go', 'java', 'kotlin', 'python', 'typescript']) {
   assert.equal(product.exampleLocalCaptureCodes[id], 'record.empty');
 }
 for (const id of ['sdk-pandas-failure', 'sdk-polars-failure', ...['duckdb', 'sqlite', 'postgresql'].map((db) => `sdks/${db}/failed`)]) assert.equal(product.exampleLocalCaptures.includes(id), false);
-assert.equal(menuPages.length, 45);
-assert.equal(new Set(menuPages.map(({ route }) => route)).size, 45);
+assert.deepEqual(outputStreams({ unverified: true, output: '', stderr: '' }), [], 'unrecorded examples show source only, not fabricated empty output');
+assert.deepEqual(outputStreams({ unverified: false, output: '', stderr: '' }), [['stdout', '']], 'a verified empty result remains an actual output');
+assert.equal(menuPages.length, 49);
+assert.equal(new Set(menuPages.map(({ route }) => route)).size, 49);
+for (const route of ['/sdks/pandas/', '/sdks/polars/']) assert.equal(menuPages.filter((page) => page.route === route).length, 1);
 assert.equal(bannedWords('Read the evidence field.', '/functions/decide/')[0].word, 'evidence');
 assert.equal(bannedWords('Choose a backend.', '/configuration/').length, 0);
 assert.equal(bannedWords('Choose a backend.', '/functions/decide/').length, 1);

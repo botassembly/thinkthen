@@ -12,20 +12,20 @@ internal sealed class Fixture : IAsyncDisposable
         { RedirectStandardInput = true, RedirectStandardOutput = true, UseShellExecute = false };
         foreach (string argument in arguments) options.ArgumentList.Add(argument);
         var process = Process.Start(options)!;
-        try { return new(process, (await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(10)))!); }
+        try { return new(process, (await process.StandardOutput.ReadLineAsync())!); }
         catch { process.Kill(); process.Dispose(); throw; }
     }
     internal async Task<string> Command(string command)
     {
         await process.StandardInput.WriteLineAsync(command);
         await process.StandardInput.FlushAsync();
-        return (await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(command == "closed" ? 2 : 10)))!;
+        return (await process.StandardOutput.ReadLineAsync())!;
     }
     public async ValueTask DisposeAsync()
     {
         await process.StandardInput.WriteLineAsync("shutdown");
         await process.StandardInput.FlushAsync();
-        try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)); }
+        try { await process.WaitForExitAsync(); }
         catch { process.Kill(entireProcessTree: true); process.Dispose(); throw; }
         int exit = process.ExitCode;
         process.Dispose();

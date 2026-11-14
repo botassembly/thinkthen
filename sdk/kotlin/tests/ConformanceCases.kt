@@ -14,9 +14,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import kotlin.time.Duration.Companion.milliseconds
 
-private suspend fun <A, D> collectRows(
-    rows: Flow<Row<A, D>>, expected: JsonArray, selected: Backend, name: String?, clientModel: String,
-    answer: (A) -> JsonElement, detail: (D) -> JsonElement,
+private suspend fun <A, T> collectRows(
+    rows: Flow<Row<A, T>>, expected: JsonArray, selected: Backend, name: String?, clientModel: String,
+    answer: (A) -> JsonElement, detail: (Detail) -> JsonElement,
 ) {
     var count = 0
     rows.collect { row ->
@@ -47,9 +47,9 @@ private suspend fun exercise(client: ThinkThen, request: JsonObject, expected: J
     val text = q["question"]?.jsonPrimitive?.content
     val name = request["name"]?.jsonPrimitive?.content
     when (q.required("function").jsonPrimitive.content) {
-        "decide" -> collectRows(if (generic) client.askStream(Decide(requireNotNull(text),q.threshold(),field,name),input)
+        "decide" -> collectRows(if (generic) client.decideStream(DecideQuestion(requireNotNull(text),q.threshold(),field,name),input)
             else client.decideStream(requireNotNull(text), input, q.threshold(), field, name), expected, selected, name, model,
-            { JsonPrimitive(it) }, { error("Decide has no detail") })
+            { JsonPrimitive(it) }, { error("DecideQuestion has no detail") })
         "choose" -> collectRows(client.chooseStream(requireNotNull(text), input, q.strings("choices"), q.cut(), field, name), expected, selected, name, model,
             { JsonPrimitive(it) }, { contractValue(it) })
         "tag" -> collectRows(client.tagStream(requireNotNull(text), input, q.strings("labels"), q.cut(), field, name), expected, selected, name, model,
@@ -58,7 +58,7 @@ private suspend fun exercise(client: ThinkThen, request: JsonObject, expected: J
             { JsonPrimitive(it) }, { contractValue(it) })
         "find" -> collectRows(client.findStream(requireNotNull(text), input, q.cut(), field, name), expected, selected, name, model,
             { span -> span?.let { contractValue(it) } ?: JsonNull },
-            { error("Find has no detail") })
+            { error("FindQuestion has no detail") })
         "recognize" -> collectRows(client.recognizeStream(input, q.strings("kinds"), q.cut(), field, name), expected, selected, name, model,
             { contractValue(it) }, { contractValue(it) })
         "relate" -> collectRows(client.relateStream(input, rules(q), q.cut(), field, name), expected, selected, name, model,
@@ -66,57 +66,16 @@ private suspend fun exercise(client: ThinkThen, request: JsonObject, expected: J
         "annotate" -> {
             val toolbox = AnnotationQuestions.parse(buildJsonObject { put("questions", q.required("questions")) })
             collectRows(client.annotateStream(toolbox, input, field, name), expected, selected, name, model,
-                { contractValue(it) }, { error("Annotate has no detail") })
+                { contractValue(it) }, { error("AnnotateQuestion has no detail") })
         }
-        "filter" -> collectRows(
-            client.filterRows(requireNotNull(text), input, q.threshold(), field, name).map { item ->
-                check(item.item === records[(item.row.position - 1L).toInt()])
-                check(item.kept == ((item.row as? Row.Answered)?.answer == true))
-                item.row
-            }, expected, selected, name, model, { JsonPrimitive(it) }, { error("Filter has no detail") })
+        "filter" -> filterContract(client, requireNotNull(text), records, q.cut(), field, name, expected, selected)
         "rank" -> collectRows(
             client.rank(requireNotNull(text), input, q.strings("levels"), q["top"]?.jsonPrimitive?.int, field, name).map { item ->
-                check(item.item == records[(item.row.position - 1L).toInt()]) { "Rank item ${item.item} differs from its input" }
-                item.row
+                check(item.item === records[(item.position - 1L).toInt()]) { "RankQuestion item ${item.item} differs from its input" }
+                item
             }, expected, selected, name, model, { JsonPrimitive(it) }, { contractValue(it) })
         else -> error("Unknown shared function; update the public consumer")
     }
-}
-
-// Shared spans count Unicode scalars; JVM spans count UTF-16 units in selected evidence.
-private fun expectedOffsets(request: JsonObject, rows: JsonArray): JsonArray {
-    val question = request.required("question").jsonObject
-    fun convert(element: JsonElement, text: String): JsonElement = when (element) {
-        is JsonArray -> JsonArray(element.map { convert(it,text) })
-        is JsonObject -> JsonObject(element.mapValues { (name, child) ->
-            if (name in setOf("start", "end") && "start" in element && "end" in element)
-                JsonPrimitive(text.offsetByCodePoints(0, child.jsonPrimitive.int))
-            else convert(child,text)
-        })
-        else -> element
-    }
-    return JsonArray(rows.map { row ->
-        val value = row.jsonObject
-        val record = request.required("records").jsonArray[(value.required("position").jsonPrimitive.content.toLong() - 1L).toInt()]
-        fun field(definition: JsonObject): String {
-            var selected = record
-            val pointer = (definition["field"] ?: question["field"])?.jsonPrimitive?.content
-            pointer?.split('/')?.drop(1)?.forEach { encoded ->
-                val part = encoded.replace("~1","/").replace("~0","~")
-                selected = when (val parent = selected) {
-                    is JsonObject -> parent[part] ?: JsonNull
-                    is JsonArray -> parent.getOrNull(part.toInt()) ?: JsonNull
-                    else -> JsonNull
-                }
-            }
-            return if (selected is JsonPrimitive && selected.jsonPrimitive.isString) selected.jsonPrimitive.content else selected.toString()
-        }
-        JsonObject(value.mapValues { (name, child) ->
-            if (name == "answer" && question.required("function").jsonPrimitive.content == "annotate" && child is JsonObject)
-                JsonObject(child.mapValues { (entry, outcome) -> convert(outcome,field(question.required("questions").jsonObject.required(entry).jsonObject)) })
-            else if (name in setOf("answer","detail")) convert(child,field(question)) else child
-        })
-    })
 }
 
 private suspend fun runSample(path: Path, sample: JsonObject, selected: Backend, defaults: JsonObject, stub: Boolean, generic: Boolean = false) {
@@ -129,7 +88,7 @@ private suspend fun runSample(path: Path, sample: JsonObject, selected: Backend,
         retry = RetryPolicy(settings["retry"]?.jsonObject?.get("max_retries")?.jsonPrimitive?.int ?: 0,0.milliseconds,10000.milliseconds)
     }
     val outcome = sample.required("expected")
-    val expected = if (outcome is JsonArray) expectedOffsets(request,outcome) else JsonArray(emptyList())
+    val expected = if (outcome is JsonArray) outcome else JsonArray(emptyList())
     suspend fun checked(address: String?) {
         try {
             client(address).use { client ->
@@ -242,26 +201,13 @@ private suspend fun keptItemsCase(path: Path, selected: Backend, defaults: JsonO
     }
     Fixture.case(path).use { fixture ->
         client(fixture).use { client ->
-            var count = 0
-            client.filterRows(question.required("question").jsonPrimitive.content,records,
-                question.threshold(),question.pointer()).collect { item ->
-                val row = expected[count++].jsonObject
-                assertRow(item.row,row,selected,::JsonPrimitive,{ error("Filter has no detail") })
-                check(item.kept == (row["answer"] == JsonPrimitive(true))) { "Failed or unsure filter row was kept" }
-            }
-            check(count == expected.size) { "filterRows changed shared filter rows" }
-        }
-        check(fixture.command("count").toInt() == sample.required("requests").jsonPrimitive.int)
-    }
-    Fixture.case(path).use { fixture ->
-        client(fixture).use { client ->
             val actual = mutableListOf<JsonElement>()
             val failed = expected.filter { it.jsonObject["status"] == JsonPrimitive("failed") }
             try {
-                client.filter(question.required("question").jsonPrimitive.content,records,question.threshold(),question.pointer()).toList(actual)
+                client.filter(question.required("question").jsonPrimitive.content,records,question.cut(),question.pointer()).toList(actual)
                 check(failed.isEmpty()) { "filter hid a failed record" }
-            } catch (failure: ThinkThenException) {
-                check(failure.failures.map { it.position } == failed.map { it.jsonObject.required("position").jsonPrimitive.long }) { "filter failures changed" }
+            } catch (failure: FailedException) {
+                check(failure.rows.map { it.position } == failed.map { it.jsonObject.required("position").jsonPrimitive.long }) { "filter failures changed" }
                 check(failure.code.wireName == failed.first().jsonObject.required("error").jsonObject.required("code").jsonPrimitive.content)
             }
             check(actual == wanted && actual.indices.all { actual[it] === wanted[it] }) { "filter changed shared filter inputs" }
@@ -292,4 +238,22 @@ fun main(args: Array<String>) = runBlocking {
         val sample = Json.parseToJsonElement(Files.readString(path)).jsonObject
         for(selected in listOf(Backend.SYSTEMONE,Backend.OPENAI)) runSample(path,sample,selected,defaults,false)
     }
+}
+
+// The public filter exposes kept items and failed rows; answered-no rows have no public view.
+private suspend fun filterContract(client: ThinkThen, text: String, records: List<JsonElement>, threshold: Threshold.Cut?, field: Pointer?, name: String?, expected: JsonArray, selected: Backend) {
+    val kept = mutableListOf<JsonElement>()
+    val wanted = expected.filter { it.jsonObject["answer"] == JsonPrimitive(true) }.map { records[it.jsonObject.required("position").jsonPrimitive.int - 1] }
+    val failed = expected.filter { it.jsonObject["status"] == JsonPrimitive("failed") }
+    try {
+        client.filter(text, records, threshold, field, name).toList(kept)
+        check(failed.isEmpty()) { "Filter hid failed records" }
+    } catch (failure: FailedException) {
+        check(failure.rows.size == failed.size)
+        failure.rows.zip(failed).forEach { (row, wantedRow) ->
+            assertRow(row, wantedRow.jsonObject, selected, { error("Failed has no answer") }, { error("Failed has no detail") })
+            check(row.item === records[(row.position - 1).toInt()])
+        }
+    }
+    check(kept == wanted && kept.indices.all { kept[it] === wanted[it] })
 }

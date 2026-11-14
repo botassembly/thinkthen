@@ -12,46 +12,55 @@
 #include <type_traits>
 #include <vector>
 namespace thinkthen { inline namespace v0_2 {
-/// A failed filter input retained after the kept records have been delivered.
-struct failed_row {
-    /** One-based input position. */ std::uint64_t position;
-    /** Original id, encoded as JSON. */ std::string id_json;
-    /** The engine failure code. */ std::error_code code;
-    /** The engine failure message. */ std::string message;
-    /** HTTP status when the failure came with one. */ std::optional<std::uint16_t> http_status;
-    /** Encoding of the failed original input. */ thinkthen_record_kind record_kind;
-    /** Original input bytes; empty for a missing input. */ std::string record;
-};
+namespace detail {
+[[nodiscard]] inline const char* code_name(std::int32_t code) noexcept {
+    if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()))
+        return code == THINKTHEN_CODE_USAGE_ABI ? THINKTHEN_ABI_ERROR_CODE : nullptr;
+    return thinkthen_code_name(code);
+}
+}
 /// The standard category for every engine error code.
 [[nodiscard]] const std::error_category& category() noexcept;
 /// A native failure, with the engine's message and standard error code.
 class error : public std::system_error {
     std::string message_;
     std::optional<std::uint16_t> http_status_;
-    std::vector<failed_row> failed_rows_;
 public:
-    /// Copy an engine failure and, for filter, the failed inputs.
-    error(errc code, std::string message, std::optional<std::uint16_t> http = {}, std::vector<failed_row> rows = {})
-        : std::system_error(std::error_code(static_cast<int>(code), category()), message), message_(std::move(message)),
-          http_status_(http), failed_rows_(std::move(rows)) {}
-    /// Read the engine message without a category or code appended.
+    /// Copy an engine failure and its optional HTTP status.
+    error(errc code, std::string message, std::optional<std::uint16_t> http = {})
+        : std::system_error(std::error_code(static_cast<int>(code), category()), message),
+          message_(this->code().message() + ": " + message), http_status_(http) {}
+    /// Read the code name followed by the engine message.
     [[nodiscard]] const char* what() const noexcept override { return message_.c_str(); }
     /// Read the backend HTTP status, if supplied.
     [[nodiscard]] std::optional<std::uint16_t> http_status() const noexcept { return http_status_; }
-    /// Read all failed filter inputs after the kept records were delivered.
-    [[nodiscard]] const std::vector<failed_row>& failed_rows() const noexcept { return failed_rows_; }
     /// Read the numeric code, including a code unknown to these headers.
     [[nodiscard]] std::int32_t raw_code() const noexcept { return code().value(); }
-    /// Read the engine code family, or an empty view for an unknown code.
+    /// Read the engine code family, or an empty view when its family is unavailable.
     [[nodiscard]] std::string_view family() const noexcept {
+        if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version())) {
+            const auto* name = detail::code_name(raw_code());
+            const std::string_view code = name ? name : "";
+            return code.substr(0, code.find('.'));
+        }
         const auto* family = thinkthen_code_family(raw_code());
         return family ? std::string_view{family} : std::string_view{};
     }
     /// Test whether this header knows the code.
     [[nodiscard]] bool unknown_code() const noexcept { return !detail::known_code(raw_code()); }
 };
+/// A marker caught for either way a result has no answer.
+class no_answer {};
+/// A record failure, caught both as an engine error and as no answer.
+class failed : public error, public no_answer {
+public:
+    /// Copy the admitted native error.
+    explicit failed(const error& failure) : error(failure) {}
+};
+/// An aggregate filter failure retaining the affected caller records.
+template<class T> class filter_error;
 /// Reading a not-sure answer throws this exception, which is not an engine failure.
-class unsure : public std::exception {
+class unsure : public std::exception, public no_answer {
     std::optional<double> probability_;
 public:
     /// Retain the probability supplied by the not-sure row.
@@ -71,8 +80,7 @@ inline void check_abi() {
     struct codes final : std::error_category {
         [[nodiscard]] const char* name() const noexcept override { return "thinkthen"; }
         [[nodiscard]] std::string message(int code) const override {
-            if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version())) return THINKTHEN_ABI_ERROR_MESSAGE;
-            const auto* text = thinkthen_code_name(code);
+            const auto* text = detail::code_name(code);
             return text ? text : THINKTHEN_ABI_ERROR_MESSAGE;
         }
     };
@@ -122,6 +130,16 @@ inline question_owner clone(const thinkthen_question* source) {
 struct native_row {
     thinkthen_row value{};
     native_row() { value.struct_size = sizeof value; }
+    native_row(native_row&& other) noexcept : value(other.value) {
+        other.value = {}; other.value.struct_size = sizeof other.value;
+    }
+    native_row& operator=(native_row&& other) noexcept {
+        if (this != &other) {
+            thinkthen_row_free(&value); value = other.value;
+            other.value = {}; other.value.struct_size = sizeof other.value;
+        }
+        return *this;
+    }
     ~native_row() { thinkthen_row_free(&value); }
     native_row(const native_row&) = delete;
     native_row& operator=(const native_row&) = delete;

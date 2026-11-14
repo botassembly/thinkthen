@@ -28,12 +28,22 @@ fn command_answer_meanings_and_label_descriptions_reach_the_backend() {
     for (function, flags, expected) in [
         (
             "decide",
-            vec!["--true", "written by a Beatle", "--false", "a cover"],
+            vec![
+                "--yes-means",
+                "written by a Beatle",
+                "--no-means",
+                "a cover",
+            ],
             json!({"true":"written by a Beatle", "false":"a cover"}),
         ),
         (
             "filter",
-            vec!["--true", "written by a Beatle", "--false", "a cover"],
+            vec![
+                "--yes-means",
+                "written by a Beatle",
+                "--no-means",
+                "a cover",
+            ],
             json!({"true":"written by a Beatle", "false":"a cover"}),
         ),
         (
@@ -67,7 +77,10 @@ fn command_answer_meanings_and_label_descriptions_reach_the_backend() {
             json!({"probability":0.9})
         };
         let server = Loopback::case(&json!({"replies":[reply]})).unwrap();
-        let mut args = vec![function, "Who wrote it?", "--json"];
+        let mut args = vec![function, "Who wrote it?"];
+        if function != "filter" {
+            args.push("--json");
+        }
         args.extend(flags);
         let output = run(&server, &args, b"Yesterday");
         assert_eq!(output.status.code(), Some(0), "{function}: {output:?}");
@@ -270,8 +283,8 @@ fn beatles_setlist_branches_silently_on_one_selected_json_record() {
     let script = r#"
 is_original() {
   "$1" decide 'Did a Beatle write this song?' \
-    --true 'John, Paul, George, or Ringo wrote it.' \
-    --false 'Someone else wrote it. It is a cover.' \
+    --yes-means 'John, Paul, George, or Ringo wrote it.' \
+    --no-means 'Someone else wrote it. It is a cover.' \
     --low 0.2 --high 0.8 --check --quiet --backend stub \
     --field /title --field /album
 }
@@ -393,16 +406,16 @@ fn repeated_table_evidence_uses_only_the_named_columns() {
 }
 
 #[test]
-fn single_selected_json_filter_keeps_its_structured_item() {
+fn selected_json_stream_keeps_its_structured_item() {
     let server = Loopback::noul(0.9).unwrap();
     let item = json!({"id":"original","title":"Yesterday","album":1965,"extra":"retained"});
     let output = run(
         &server,
         &[
-            "filter",
+            "decide",
             "Original?",
             "--from",
-            "text",
+            "jsonl",
             "--json",
             "--field",
             "/title",
@@ -432,7 +445,11 @@ fn selected_empty_or_null_evidence_never_reaches_the_backend() {
             Some(if value.is_null() { 6 } else { 2 }),
             "{value}: {output:?}"
         );
-        assert!(output.stdout.is_empty(), "{output:?}");
+        if value.is_null() {
+            support::failed_stdout(&output);
+        } else {
+            assert!(output.stdout.is_empty(), "{output:?}");
+        }
         let code = if value.is_null() {
             "record.missing"
         } else {
@@ -446,7 +463,7 @@ fn selected_empty_or_null_evidence_never_reaches_the_backend() {
         br#"{"id":"null","text":null,"other":"real"}"#,
     );
     assert_eq!(output.status.code(), Some(6), "{output:?}");
-    assert!(output.stdout.is_empty());
+    support::failed_stdout(&output);
     assert!(String::from_utf8_lossy(&output.stderr).contains("record.missing"));
     assert_eq!(server.count(), 0);
 }
@@ -467,7 +484,10 @@ fn a_selected_blank_stream_row_preserves_later_answer_ids() {
         b"{\"id\":\"first\",\"text\":\"one\"}\n{\"id\":\"blank\",\"text\":\" \"}\n{\"id\":\"last\",\"text\":\"two\"}\n",
     );
     assert_eq!(output.status.code(), Some(6), "{output:?}");
-    assert_eq!(output.stdout, b"first\ttrue\nlast\ttrue\n");
+    assert_eq!(
+        output.stdout,
+        b"first\ttrue\nblank\tfailed: record.empty: the record is empty\nlast\ttrue\n"
+    );
     assert!(String::from_utf8_lossy(&output.stderr).contains("record.empty"));
     assert_eq!(server.count(), 1);
     let wire = server.requests()[0].json().unwrap().to_string();

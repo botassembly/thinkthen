@@ -1,28 +1,43 @@
+#!/bin/sh
+# Build this cell's unchanged shown source once with the staged Zig package.
 set -eu
 [ "${SITE_EXECUTE_ONLY:-}" != 1 ] || { echo "Use a prepared Zig executable" >&2; exit 2; }
-# Fetches the Zig package archive scripts/prepare-packages.sh staged, the way
-# `zig fetch --save=thinkthen URL` fetches the release archive, then builds and runs show.zig.
-# Zig resolves "$packages/.." by name, not through the target/site-packages
-# link, so use the package path the other Zig examples use and share their cache.
-packages=${SITE_PACKAGES:-$(cd ../../../target/site-packages && pwd)}
+root=$(CDPATH= cd "$(dirname "$0")/../../.." && pwd)
+packages=${SITE_PACKAGES:-$root/target/site-packages}
 zig=$THINKTHEN_BUILD_TOOLS/zig/0.17.0/zig
-export ZIG_GLOBAL_CACHE_DIR="$packages/../site-zig-cache"
-work=${2:-$packages/../site-zig-example}
-mkdir -p "$work/src"
-cp build.zig build.zig.zon "$work/"
-# show.zig uses the default settings. This routine-only branch selects
-# the test backend explicitly for the compiled local check.
-if [ "${THINKTHEN_BACKEND:-}" = stub ]; then
-  sed 's/tt.Client.init(.{}, /tt.Client.init(.{ .backend = .stub }, /' show.zig > "$work/src/main.zig"
-  grep -q '.backend = .stub' "$work/src/main.zig" || { echo 'run.sh: show.zig has no tt.Client.init(.{}, ...)' >&2; exit 1; }
+if [ "${1:-}" = --prepare ]; then
+  work=$2
+  mkdir -p "$work"
 else
-  cp show.zig "$work/src/main.zig"
+  work=$(mktemp -d)
 fi
+mkdir -p "$work/src"
+cp "$root/site/examples/lang-zig/build.zig" "$root/site/examples/lang-zig/build.zig.zon" "$work/"
+cp show.zig "$work/src/main.zig"
+export ZIG_GLOBAL_CACHE_DIR="$packages/../site-zig-cache"
 cp "$packages/zig/thinkthen-zig-linux-x64.tar.gz" "$work/thinkthen.tar.gz"
+if [ -f normalize.sh ]; then
+  cp normalize.sh "$work/normalize.sh"
+elif [ -f ../c/normalize.sh ]; then
+  cp ../c/normalize.sh "$work/normalize.sh"
+fi
+prepare=${1:-}
 cd "$work"
 "$zig" fetch --save=thinkthen "$work/thinkthen.tar.gz"
 "$zig" build -j2
 cat > "$work/run.sh" <<'RUN'
-exec "$(dirname "$0")/zig-out/bin/example"
+#!/bin/sh
+set -eu
+program=$(CDPATH= cd "$(dirname "$0")" && pwd)
+if [ -f "$program/normalize.sh" ]; then
+  output=$(mktemp)
+  status=0
+  "$program/zig-out/bin/example" > "$output" || status=$?
+  cat "$output"
+  [ "$status" -eq 0 ] || exit "$status"
+  sh "$program/normalize.sh" "$output"
+else
+  exec "$program/zig-out/bin/example"
+fi
 RUN
-[ "${1:-}" = --prepare ] || bash "$work/run.sh"
+[ "$prepare" = --prepare ] || sh "$work/run.sh"

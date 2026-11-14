@@ -4,10 +4,7 @@
     "question": {
       "function": "filter",
       "question": "Ready?",
-      "threshold": {
-        "low": 0.2,
-        "high": 0.8
-      },
+      "threshold": 0.8,
       "field": "/selected"
     },
     "records": [
@@ -64,11 +61,12 @@
     {
       "function": "filter",
       "position": 3,
-      "status": "unsure",
+      "status": "answered",
       "probability": 0.6,
       "source": {
         "name": "named-filter"
-      }
+      },
+      "answer": false
     },
     {
       "function": "filter",

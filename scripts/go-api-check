@@ -113,8 +113,8 @@ fi
 # check-examples runs every complete program; surface-example owns the collection example.
 if [ "$code_only" = 0 ]; then
 python3 "$root/sdk/go/check-examples"
-python3 "$root/scripts/surface-example" prepare go "$scratch/consumer/guide"
-(cd guide && THINKTHEN_BACKEND=stub python3 "$root/scripts/surface-example" check go "$root/scripts/go-build" run .)
+go test -c -o "$scratch/guide-contract"
+THINKTHEN_GO_GUIDE_TEST_COMMAND="$scratch/guide-contract" THINKTHEN_GO_GUIDE_MODULE="$scratch/module" python3 "$root/scripts/guide-examples" --surface go
 fi
 go version
 staticcheck -version
@@ -124,12 +124,20 @@ import sys
 print(json.load(open(sys.argv[1]))['staticcheck'])
 PYTHON
 )
-go version -m "$(command -v staticcheck)" | awk -v pin="$staticcheck_pin" '
-    $1 == "mod" && $2 == "honnef.co/go/tools" && $3 == pin { found=1 }
-    END { exit !found }
-'
+python3 - "$root/scripts" "$(command -v staticcheck)" <<'PYTHON'
+from pathlib import Path
+import sys
+sys.path.insert(0, sys.argv[1])
+from release_host_tools import verify_source_checker
+verify_source_checker(Path(sys.argv[2]))
+PYTHON
 go vet github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
+# The pinned entry variant omits SA4023 at registration because -checks only
+# filters diagnostics after execution. Every other inherited analyzer runs.
 staticcheck github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
+mkdir -p "$CARGO_TARGET_DIR"
+go test -race -count=1 github.com/botassembly/thinkthen/sdk/go/thinkthen
+go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...
 loader_cache_check
 python3 "$root/scripts/native-lookup-check" --embedded "$THINKTHEN_GO_ENGINE" -- "$scratch/loader-consumer" -test.run='^TestSharedStub$'
 # darwin/amd64 has no bundled engine, but remains a compilable public module.
@@ -166,6 +174,3 @@ else
     exit 1
 fi
 python3 "$root/scripts/go-no-cgo-check"
-mkdir -p "$CARGO_TARGET_DIR"
-go test -race -count=1 github.com/botassembly/thinkthen/sdk/go/thinkthen
-go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...

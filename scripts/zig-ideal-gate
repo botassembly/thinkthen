@@ -1,0 +1,38 @@
+#!/bin/sh
+# Focused installed guide proof; a prepared shared engine is reused unchanged.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/zig-env
+scratch=$(mktemp -d)
+zig fmt --check sdk/zig/src sdk/zig/tests sdk/zig/build.zig
+if [ "${1:-}" = --compile-only ]; then
+    exec python3 scripts/zig_guide_examples.py "$scratch"
+fi
+if [ -z "${THINKTHEN_ZIG_NATIVE_FILE:-}" ] || [ -z "${THINKTHEN_LOOPBACK:-}" ]; then
+    cargo build --offline --locked -p thinkthen-ffi -p loopback -j"${CARGO_BUILD_JOBS:-2}"
+    native_target=${CARGO_TARGET_DIR:-target}
+    case "$native_target" in /*) ;; *) native_target="$PWD/$native_target" ;; esac
+    case "$(uname -s)" in Darwin) library=libthinkthen_ffi.dylib ;; *) library=libthinkthen_ffi.so ;; esac
+    THINKTHEN_ZIG_NATIVE_FILE="$native_target/debug/$library"
+    THINKTHEN_LOOPBACK="$native_target/debug/loopback"
+    THINKTHEN_ZIG_DEBUG_NATIVE=1
+    export THINKTHEN_ZIG_NATIVE_FILE THINKTHEN_LOOPBACK THINKTHEN_ZIG_DEBUG_NATIVE
+fi
+if [ "${1:-}" = --future-only ]; then
+    exec python3 scripts/abi-minor-check --native "$THINKTHEN_ZIG_NATIVE_FILE" --bindings-only --bindings zig
+fi
+scripts/zig-package "$scratch/archive"
+cp "$THINKTHEN_ZIG_NATIVE_FILE" "$scratch/"
+if [ "${1:-}" = --readme-only ]; then
+    exec python3 scripts/zig_guide_examples.py "$scratch" --readme-only "$scratch/archive/thinkthen"
+fi
+zig_mode=--run
+if [ "${1:-}" = --consumer-only ]; then zig_mode=--consumer-only; fi
+python3 scripts/zig_guide_examples.py "$scratch" "$zig_mode" "$scratch/archive/thinkthen"
+
+if [ -z "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
+    scripts/native-fixtures --engine "$THINKTHEN_ZIG_NATIVE_FILE" --output "$scratch/abi"
+    THINKTHEN_NATIVE_FIXTURES="$scratch/abi"
+fi
+export THINKTHEN_ZIG_ABI_FIXTURES="$THINKTHEN_NATIVE_FIXTURES"
+python3 sdk/zig/tests/run.py "$scratch/consumer" "$PWD" "$THINKTHEN_LOOPBACK"

@@ -1,3 +1,3 @@
-[{"urgency_rank":1,"msg_id":3,"body":"I was charged twice for one invoice."},
-{"urgency_rank":2,"msg_id":2,"body":"Where is my parcel?"},
-{"urgency_rank":3,"msg_id":1,"body":"Please refund my order."}]
+[{"urgency_rank":1,"msg_id":3,"body":"I was charged twice for one invoice.","status":"answered"},
+{"urgency_rank":2,"msg_id":2,"body":"Where is my parcel?","status":"answered"},
+{"urgency_rank":3,"msg_id":1,"body":"Please refund my order.","status":"answered"}]

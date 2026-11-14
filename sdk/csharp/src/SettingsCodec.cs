@@ -29,7 +29,7 @@ public sealed class ThinkThenOptionsConverter : JsonConverter<ThinkThenOptions>
         if (value.TryGetProperty("batch", out var batch) && batch.ValueKind != JsonValueKind.Null) admitted.Batch = Integer(batch);
         if (value.TryGetProperty("max_requests", out var limit) && limit.ValueKind != JsonValueKind.Null) admitted.MaxRequests = limit.GetUInt64();
         if (value.TryGetProperty("retry", out var retry) && retry.ValueKind != JsonValueKind.Null)
-            admitted.Retry = new RetryOptions
+            admitted.Retry = new RetryPolicy
             {
                 MaxRetries = retry.TryGetProperty("max_retries", out var retries) ? Integer(retries) : null,
                 InitialBackoff = Duration(retry, "initial_backoff_ms"),
@@ -64,7 +64,7 @@ public sealed class ThinkThenOptionsConverter : JsonConverter<ThinkThenOptions>
         if (options.Batch is int batch) settings["batch"] = batch;
         if (options.MaxRequests is ulong limit) settings["max_requests"] = limit;
         if (includeKey && options.ApiKey is ApiKey key) settings["api_key"] = Json.HostText(key.Value, true);
-        if (options.Retry is RetryOptions retry)
+        if (options.Retry is RetryPolicy retry)
         {
             JsonObject policy = new();
             if (retry.MaxRetries is int retries) policy["max_retries"] = retries;

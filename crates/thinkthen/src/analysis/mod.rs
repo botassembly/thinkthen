@@ -187,15 +187,15 @@ fn correctness(row: &AnyRow, gold: &Gold) -> Result<Option<bool>, Error> {
     }
     match (row, gold) {
         (AnyRow::Decide(row), Gold::Boolean(gold)) => {
-            Ok(row.answer().ok().map(|answer| answer == gold))
+            Ok(row.answer().ok().map(|answer| answer == *gold))
         }
         (AnyRow::Filter(row), Gold::Boolean(gold)) => {
-            Ok(row.answer().ok().map(|answer| answer == gold))
+            Ok(row.answer().ok().map(|answer| answer == *gold))
         }
         (AnyRow::Choose(row), Gold::Choice(gold)) => {
             Ok(row.answer().ok().map(|answer| answer == gold))
         }
-        (AnyRow::Find(row), Gold::None(())) => Ok(row.answer().ok().map(Option::is_none)),
+        (AnyRow::Find(row), Gold::None(())) => Ok(row.answer().ok().map(|answer| answer.is_none())),
         (AnyRow::Find(row), Gold::Span { start, end }) => Ok(row.answer().ok().map(|answer| {
             answer
                 .as_ref()

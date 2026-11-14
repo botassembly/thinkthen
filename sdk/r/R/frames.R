@@ -1,6 +1,6 @@
 .tt_result <- function(rows) {
   producer <- attr(rows, ".thinkthen_function", exact = TRUE)
-  if (!inherits(rows, "tt_rows") || !is.character(producer) || length(producer) != 1L || is.na(producer)) {
+  if (!inherits(rows, "tt_details") || !is.character(producer) || length(producer) != 1L || is.na(producer)) {
     .tt_r_error("Expected ThinkThen result rows.", "rows")
   }
   producer
@@ -30,7 +30,7 @@ tt_answer <- function(rows, errors = "error") {
 #' @rdname tt_failures
 #' @export
 tt_failures <- function(x) {
-  if (inherits(x, "tt_rows")) return(.tt_failure_table(x))
+  if (inherits(x, "tt_details")) return(.tt_failure_table(x))
   failures <- attr(x, ".thinkthen_failures", exact = TRUE)
   if (is.null(failures)) .tt_failure_table(.tt_frame(list(), "decide")) else failures
 }
@@ -53,21 +53,9 @@ tt_bind <- function(data, rows, prefix) {
   if (!allowed) .tt_r_error("Unsupported data frame class.", "bind")
   order <- match(seq_len(nrow(data)), rows$position)
   if (producer == "annotate") {
-    columns <- list()
-    for (name in names(attr(rows, ".thinkthen_children", exact = TRUE))) {
-      verb <- attr(rows, ".thinkthen_children", exact = TRUE)[[name]]
-      children <- lapply(rows$answer[order], `[[`, name)
-      values <- lapply(children, function(child) {
-        if (is.null(child)) .tt_answer_values(list(list()), verb) else child$answer
-      })
-      answer <- do.call(vctrs::vec_c, c(values, list(.ptype = .tt_answer_values(list(), verb))))
-      status <- factor(vapply(seq_along(children), function(i) {
-        if (is.null(children[[i]])) as.character(rows$status[order[i]]) else as.character(children[[i]]$status)
-      }, character(1)), levels = unname(.tt_status_names))
-      columns <- c(columns, setNames(list(answer, status,
-        .tt_scalar(children, "probability", NA_real_, as.double), lapply(children, `[[`, "detail")),
-        c(name, paste0(name, c("_status", "_probability", "_detail")))))
-    }
+    names <- names(attr(rows, ".thinkthen_children", exact = TRUE))
+    selected <- unlist(lapply(names, function(name) c(name, paste0(name, .tt_entry_suffixes))), use.names = FALSE)
+    columns <- lapply(rows[selected], function(value) value[order])
   } else {
     columns <- as.list(tibble::as_tibble(rows[order, ]))
     columns <- columns[setdiff(names(columns), c("position", "id", "item", "kept"))]
@@ -94,62 +82,83 @@ tt_bind <- function(data, rows, prefix) {
   errors
 }
 
-.tt_child_failures <- function(rows) {
-  if (!inherits(rows, "tt_annotate_rows")) return(list())
-  lapply(rows$answer, function(entries) {
-    Filter(function(entry) isTRUE(entry$status == "failed"), entries)
-  })
+# The admitted question map is already ordered by engine UTF-8 name order.
+.tt_missing_table <- function(rows, status) {
+  verb <- .tt_result(rows)
+  children <- attr(rows, ".thinkthen_children", exact = TRUE)
+  size <- nrow(rows)
+  count <- 0L
+  owners <- integer(size)
+  questions <- character(size)
+  functions <- character(size)
+  probabilities <- double(size)
+  codes <- character(size)
+  messages <- character(size)
+  http <- integer(size)
+  for (i in order(rows$position)) {
+    prefix <- ""
+    child <- NA_character_
+    function_name <- verb
+    if (!isTRUE(rows$status[i] == status)) {
+      if (verb != "annotate" || !isTRUE(rows$status[i] == "answered")) next
+      candidates <- names(children)[vapply(names(children), function(name) {
+        isTRUE(rows[[paste0(name, "_status")]][i] == status)
+      }, logical(1))]
+      if (!length(candidates)) next
+      child <- candidates[[1]]
+      prefix <- paste0(child, "_")
+      function_name <- children[[child]][["function"]]
+    }
+    field <- function(name) rows[[paste0(prefix, name)]][i]
+    count <- count + 1L
+    owners[count] <- i
+    questions[count] <- child
+    functions[count] <- function_name
+    probabilities[count] <- field("probability")
+    codes[count] <- field("error_code")
+    messages[count] <- field("error_message")
+    http[count] <- field("error_http_status")
+  }
+  selected <- seq_len(count)
+  owners <- owners[selected]
+  result <- tibble::tibble(
+    position = rows$position[owners], id = rows$id[owners],
+    `function` = functions[selected], question = questions[selected],
+    status = factor(rep(status, length(owners)), levels = unname(.tt_status_names)),
+    probability = probabilities[selected], source = rows$source[owners],
+    error_code = codes[selected], error_message = messages[selected], error_http_status = http[selected])
+  result$item <- .tt_subset(rows$item, owners)
+  result
 }
 
-.tt_failure_table <- function(rows) {
-  failed <- which(rows$status == "failed")
-  children <- .tt_child_failures(rows)
-  entries <- unlist(children, recursive = FALSE)
-  child_errors <- unname(lapply(entries, `[[`, "error"))
-  owners <- c(failed, rep(seq_along(children), lengths(children)))
-  table <- tibble::tibble(
-    position = rows$position[owners],
-    id = rows$id[owners],
-    question = c(rep(NA_character_, length(failed)), as.character(names(entries))),
-    error_code = factor(c(as.character(rows$error_code[failed]),
-      .tt_scalar(child_errors, "code", NA_character_, as.character)), levels = unname(.tt_code_names)),
-    error_message = c(rows$error_message[failed], .tt_scalar(child_errors, "message", NA_character_)),
-    error_http_status = c(rows$error_http_status[failed], .tt_scalar(child_errors, "http_status", NA_integer_))
-  )
-  table[order(table$position), ]
-}
+.tt_failure_table <- function(rows) .tt_missing_table(rows, "failed")
 
-# Raise for errors = "error"; otherwise warn once and keep the failures beside the value.
+# Report once after the collection; unsure is a quiet condition, never an error.
 .tt_report <- function(rows, errors, value, kept = NULL) {
   failures <- .tt_failure_table(rows)
-  if (!nrow(failures)) return(value)
-  codes <- unique(as.character(failures$error_code))
-  counts <- vapply(codes, function(code) {
-    length(unique(failures$position[failures$error_code == code]))
-  }, integer(1))
-  message <- paste0("ThinkThen returned failed records: ", paste0(codes, " (", counts, ")", collapse = ", "), ".")
-  fields <- list(code = codes[[1]], codes = codes, rows = rows,
-    failed_rows = rows[which(rows$status == "failed"), ], kept = kept,
-    entries = as.list(unlist(.tt_child_failures(rows), recursive = FALSE)))
-  if (errors == "error") {
-    rlang::abort(message, class = c("thinkthen_failed_rows", "thinkthen_error"), !!!fields,
-      call = rlang::caller_env())
+  if (nrow(failures)) {
+    message <- paste0("failed: ", failures$error_code, ": ",
+      gsub("[\r\n\t]", " ", failures$error_message))
+    message <- paste(message, collapse = "\n")
+    fields <- list(code = failures$error_code[[1]],
+      http_status = if (is.na(failures$error_http_status[[1]])) NULL else failures$error_http_status[[1]],
+      rows = failures, outcomes = rows, kept = kept)
+    if (errors == "error") {
+      rlang::abort(message, class = c("thinkthen_failed", "thinkthen_no_answer", "thinkthen_error"),
+        !!!fields, call = rlang::caller_env())
+    }
+    rlang::warn(message, class = "thinkthen_record_warning", !!!fields)
+    attr(value, ".thinkthen_failures") <- failures
   }
-  rlang::warn(paste(message, "tt_failures() lists them."), class = "thinkthen_failed_rows_warning", !!!fields)
-  attr(value, ".thinkthen_failures") <- failures
+  unsure <- .tt_missing_table(rows, "unsure")
+  if (nrow(unsure)) {
+    signalCondition(structure(list(message = "unsure", call = NULL, rows = unsure, outcomes = rows),
+      class = c("thinkthen_unsure", "thinkthen_no_answer", "condition")))
+  }
   value
 }
 
 .tt_annotation_answers <- function(rows) {
-  children <- attr(rows, ".thinkthen_children", exact = TRUE)
-  columns <- lapply(names(children), function(name) {
-    verb <- children[[name]]
-    values <- lapply(rows$answer, function(entries) {
-      child <- entries[[name]]
-      if (is.null(child)) .tt_answer_values(list(list()), verb) else child$answer
-    })
-    do.call(vctrs::vec_c, c(values, list(.ptype = .tt_answer_values(list(), verb))))
-  })
-  names(columns) <- names(children)
-  tibble::new_tibble(columns, nrow = nrow(rows))
+  children <- names(attr(rows, ".thinkthen_children", exact = TRUE))
+  tibble::new_tibble(setNames(lapply(children, function(name) rows[[name]]), children), nrow = nrow(rows))
 }

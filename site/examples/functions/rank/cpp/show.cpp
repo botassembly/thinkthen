@@ -1,21 +1,29 @@
-#include <iostream>
 #include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
+
+enum class Urgency { routine, urgent };
+template<>
+inline constexpr std::array<std::pair<Urgency, std::string_view>, 2> thinkthen::words<Urgency>{{
+    {Urgency::routine, "routine"},
+    {Urgency::urgent, "urgent"},
+}};
 
 int main() try {
-    thinkthen::client client;
-    const thinkthen::rank by_urgency{"How urgent is the request?",
-                                     {"routine", "urgent"}};
+    tt::client client;
     const std::vector<std::string> messages{
         "Please refund my order.",
         "Where is my parcel?",
         "I was charged twice for one invoice.",
     };
-    // Rank 1 is the most urgent. item() is the message that rank belongs to.
-    for (const auto& ranked : client.rank_each(by_urgency, messages))
-        std::cout << ranked.value() << ' '
-                  << std::get<thinkthen::owned_text>(ranked.item()).value
-                  << '\n';
-} catch (const thinkthen::error& failure) {
-    std::cerr << failure.code().message() << ": " << failure.what() << '\n';
+    const tt::rank<Urgency> asks_urgency{"How urgent is the request?"};
+    for (const auto& ranked : client.rank_each(asks_urgency, messages))
+        std::cout << ranked.answer() << ' ' << ranked.item() << '\n';
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
     return 1;
 }

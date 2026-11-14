@@ -17,7 +17,7 @@ backend = os.environ.get("THINKTHEN_BACKEND", "systemone")
 thinkthen.set_default_client(thinkthen.Client(backend=backend))
 
 shown = runpy.run_path("show.py")
-answers = [[{"source": relation.source.text, "relation": relation.relation, "target": relation.target.text} for relation in shown["relations"]]]
+answers = [[{"source": relation.source.text, "relation": relation.relation, "target": relation.target.text} for relation in shown["relations"].answer]]
 with open(os.environ["SITE_ANSWERS_FILE"], "w", encoding="utf-8") as out:
     json.dump(answers, out)
 PY

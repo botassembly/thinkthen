@@ -10,12 +10,6 @@ import tempfile
 root = Path(__file__).resolve().parents[2]
 consumer = Path.cwd()
 guide = (root / 'docs/surfaces/go.md').read_text()
-records = re.search(r'```json\n(.*?)```', guide, re.S)
-if records is None:
-    raise SystemExit('Go guide has no records.jsonl fixture')
-triage = re.search(r'Save this as `triage.json`:\s+```json\n(.*?)```', guide, re.S)
-if triage is None:
-    raise SystemExit('Go guide has no literal triage.json fixture')
 environment = dict(os.environ, THINKTHEN_BACKEND='stub')
 for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH', 'THINKTHEN_LIBRARY'):
     environment.pop(name, None)
@@ -30,8 +24,6 @@ with tempfile.TemporaryDirectory(prefix='go-examples-', dir=consumer) as scratch
             folder = Path(scratch) / str(count)
             folder.mkdir()
             (folder / 'main.go').write_text(program)
-            (folder / 'records.jsonl').write_text(records.group(1))
-            (folder / 'triage.json').write_text(triage.group(1))
             result = subprocess.run([str(root / 'scripts/go-build'), 'run', '.'], cwd=folder, env=environment, capture_output=True, text=True)
             print(f'Go example {source.relative_to(root)} #{number}:', flush=True)
             print(result.stdout, end='', flush=True)

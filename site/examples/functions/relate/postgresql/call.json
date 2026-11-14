@@ -1,5 +1,5 @@
 {
-  "anchor": "FROM thinkthen.relate(",
+  "anchor": "FROM thinkthen.relate('SELECT msg_id AS id, body AS record FROM messages',",
   "before": 0,
   "after": 2
 }

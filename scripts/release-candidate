@@ -279,7 +279,7 @@ def cpp_package(out, version, host):
     with tarfile.open(bundle) as source:
         source.extractall(installed, filter='data')
     origin = '@loader_path' if platform.system() == 'Darwin' else '$ORIGIN'
-    native_run('c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-UNDEBUG', '-pthread',
+    native_run('c++', '-std=c++20', '-Wall', '-Wextra', '-Werror', '-UNDEBUG', '-pthread',
         '-I', installed / 'include', '-I', dependencies / 'include',
         'sdk/cpp/tests/consumer.cpp', '-I', ROOT / '.c-package/prefix/include',
         '-L', ROOT / '.c-package/prefix/lib', '-lthinkthen',
@@ -447,12 +447,12 @@ def finalize(out, version, java, r_version):
     identities['dependency_inventory'] = 'compiled-crates.json'
     (out / 'build.json').write_text(json.dumps(identities, indent=2) + '\n')
     requirements = {'command': 'operating system', 'python': 'Python >=3.10 with its pip/venv installer',
-                    'typescript': 'Node >=22.12', 'go': 'Go >=1.23 and C compiler to build; OS runtime thereafter',
+                    'typescript': 'Node >=22.12', 'go': 'Go >=1.27 and C compiler to build; OS runtime thereafter',
                     'java': 'Java >=22; bundled Jackson/JSpecify jars',
                     'kotlin': 'Java >=22; bundled Java, Kotlin stdlib and coroutine jars',
                     'csharp': '.NET10', 'r': f'R {r_version}; bundled matching R dependency binaries',
                     'c': 'C compiler to build; bundled engine library and ABI header',
-                    'cpp': 'C++17 compiler and the matching C package; optional nlohmann_json 3.11.3 adapter headers; standard C++ runtime thereafter',
+                    'cpp': 'C++20 with GCC 13/libstdc++, Clang 20/libc++ 20, or the supported Windows compiler/library route, and the matching C package; optional nlohmann_json 3.11.3 adapter headers; standard C++ runtime thereafter',
                     'ruby': 'CRuby >=3.3 and RubyGems; bundled precompiled ffi gem',
                     'zig': 'Zig 0.17.0 compiler to build; operating-system runtime thereafter',
                     'swift': 'Swift 6.3 toolchain to build; Swift 6.3.2 runtime, bundled Linux runtime libraries',

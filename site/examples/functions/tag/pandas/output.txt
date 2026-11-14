@@ -1,2 +1,2 @@
                 topics
-0  (billing, shipping)
+0  [billing, shipping]

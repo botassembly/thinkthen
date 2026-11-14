@@ -38,7 +38,7 @@ func stressInputStreaming() async throws {
   }
   precondition(generation.produced.withLock { $0 } == 0)
   let client = try Client(.init(backend: .stub, batch: 1))
-  let rows = client.decide("Ready?", records: source, options: .init(field: "/body"))
+  let rows = client.decide("Ready?", records: source, field: "/body")
   precondition(generation.produced.withLock { $0 } == 0)
   let first = try await rows.makeAsyncIterator().next()
   precondition(first?.id == .string("record-10000000") && first?.position == 1)
@@ -51,7 +51,7 @@ func stress(_ args: [String]) async throws {
   let client = try Client(
     decoded(Settings.self, JSONSerialization.jsonObject(with: Data(args[2].utf8))))
   let count = Int(args[3])!
-  let question = DecideQuestion("Ready?", options: .init(field: "/body"))
+  let question = DecideQuestion("Ready?", field: "/body")
   let cancel = args[1] == "stress-cancel"
   let workers = cancel ? 1 : Int(args[7])!
   var failures = 0
@@ -90,12 +90,13 @@ func stress(_ args: [String]) async throws {
               if case .string(let id) = row.id { mask |= UInt64(1) << id.count }
               precondition(row.position == received)
               precondition(row.id == .string("record-\(offset + received - 1)"))
-              switch row.outcome {
-              case .answered(let answer, let probability, _):
-                precondition(answer && probability == Double(args[6])!)
-              case .failed(let failure):
+              switch row.status {
+              case .answered:
+                let answer = try row.answer
+                precondition(answer && row.probability == Double(args[6])!)
+              case .failed:
                 failed += 1
-                precondition(failure.code.rawValue == args[5])
+                precondition(row.error?.code.rawValue == args[5])
               case .unsure: preconditionFailure("unexpected unsure row")
               }
             }

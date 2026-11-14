@@ -20,7 +20,7 @@ import thinkthen as tt
         tt.SetupError,
         tt.Cancelled,
         tt.InternalError,
-        tt.RecordError,
+        tt.Failed,
     ],
 )
 def test_exceptions_pickle_with_code_message_and_http_status(
@@ -62,7 +62,7 @@ def test_native_error_family_selects_the_public_exception(
     expected: type[tt.ThinkThenError] = (
         tt.UsageError if entry["family"] == "usage" else tt.SetupError
     )
-    if entry["name"] == "usage.abi":
+    if entry["name"] in {"usage.abi", "usage.key-missing"}:
         expected = tt.SetupError
     elif entry["name"] == "local.cancelled":
         expected = tt.Cancelled

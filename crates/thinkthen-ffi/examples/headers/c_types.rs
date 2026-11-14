@@ -4,18 +4,9 @@ use std::fmt::Write as _;
 pub(super) fn declarations(mut header: String) -> Result<String, Box<dyn std::error::Error>> {
     // UTF-8 text arguments use C's ordinary string type. Owned and original byte
     // buffers retain their unsigned byte view, including invalid original input.
-    let original = header
-        .split("typedef struct thinkthen_record_view {")
-        .nth(1)
-        .and_then(|body| body.split("} thinkthen_record_view;").next())
-        .map(str::to_owned);
     header = header.replace("const uint8_t *", "const char *");
     // Rust requires a Safety heading on each unsafe export; C readers get plain words.
     header = header.replace(" * # Safety\n", " * Pointers and threads:\n");
-    if let Some(original) = original {
-        let changed = original.replace("const uint8_t *", "const char *");
-        header = header.replace(&changed, &original);
-    }
     for (field, kind) in [
         ("function", "function"),
         ("status", "status"),
@@ -101,6 +92,7 @@ pub(super) fn declarations(mut header: String) -> Result<String, Box<dyn std::er
             )?;
         }
         initializers.push_str("#else\n#define THINKTHEN_ERROR_INIT {.struct_size = sizeof(thinkthen_error)}\n#define THINKTHEN_ROW_INIT {.struct_size = sizeof(thinkthen_row)}\n#endif\n");
+        initializers.push_str("#define THINKTHEN_TEXT_RECORD(text) {sizeof(thinkthen_record_input), THINKTHEN_RECORD_TEXT, (text), THINKTHEN_NUL_TERMINATED}\n#define THINKTHEN_JSON_RECORD(text) {sizeof(thinkthen_record_input), THINKTHEN_RECORD_JSON, (text), THINKTHEN_NUL_TERMINATED}\n");
         let end = header
             .rfind("#endif")
             .ok_or_else(|| std::io::Error::other("the native header needs its include guard"))?;

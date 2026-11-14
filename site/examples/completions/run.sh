@@ -1,1 +1,1 @@
-thinkthen completions bash | head -n 4
+thinkthen completions bash | sed -n '1,4p'

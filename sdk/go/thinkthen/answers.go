@@ -2,6 +2,11 @@
 
 package thinkthen
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // NoDetail marks functions without a detail payload.
 type NoDetail struct{}
 
@@ -29,28 +34,28 @@ type Span struct {
 
 // Name is a recognized entity with UTF-8 byte offsets and its probability.
 type Name struct {
+	// Kind names the recognized entity kind.
+	Kind string
 	// Text is the matched original text.
 	Text string
 	// Start is the inclusive UTF-8 byte offset.
 	Start int
 	// End is the exclusive UTF-8 byte offset.
 	End int
-	// Kind names the recognized entity kind.
-	Kind string
 	// Probability is the probability of this entity or relation.
 	Probability float64
 }
 
 // Endpoint is a relation endpoint with text, kind and UTF-8 byte offsets.
 type Endpoint struct {
+	// Kind names the recognized entity kind.
+	Kind string
 	// Text is the matched original text.
 	Text string
 	// Start is the inclusive UTF-8 byte offset.
 	Start int
 	// End is the exclusive UTF-8 byte offset.
 	End int
-	// Kind names the recognized entity kind.
-	Kind string
 }
 
 // Relation is a labeled relationship between two endpoints.
@@ -59,12 +64,12 @@ type Relation struct {
 	Source Endpoint
 	// Target is the relationship target endpoint.
 	Target Endpoint
-	// Label names the relationship.
-	Label string `json:"relation"`
+	// Relation names the relationship.
+	Relation string `json:"relation"`
 	// Probability is the probability of this entity or relation.
 	Probability float64
 	// Either reports an undirected relation when present.
-	Either *bool `json:"either,omitempty"`
+	Either bool `json:"either,omitempty"`
 }
 
 // PairsDetail holds recognized names and candidate relations.
@@ -152,4 +157,30 @@ type Source struct {
 	Backend Backend
 	// Model identifies the selected model.
 	Model string
+}
+
+// Named string answers are plain conversions, independent of user JSON hooks.
+func decodeAnswer[A any](data json.RawMessage, out *A) error {
+	target := reflect.ValueOf(out).Elem()
+	if target.Kind() == reflect.String {
+		var word string
+		if err := json.Unmarshal(data, &word); err != nil {
+			return err
+		}
+		target.SetString(word)
+		return nil
+	}
+	if target.Kind() == reflect.Slice && target.Type().Elem().Kind() == reflect.String {
+		var words []string
+		if err := json.Unmarshal(data, &words); err != nil {
+			return err
+		}
+		result := reflect.MakeSlice(target.Type(), len(words), len(words))
+		for i, word := range words {
+			result.Index(i).SetString(word)
+		}
+		target.Set(result)
+		return nil
+	}
+	return json.Unmarshal(data, out)
 }

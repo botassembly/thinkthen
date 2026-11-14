@@ -1,23 +1,28 @@
-#include <iostream>
 #include <thinkthen/thinkthen.hpp>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <utility>
+
+namespace tt = thinkthen;
 
 int main() try {
-    thinkthen::client client;
-    const thinkthen::filter refund{"Does the customer request a refund?"};
+    tt::client client;
     const std::vector<std::string> messages{
         "Please refund my order.",
         "Where is my parcel?",
         "I was charged twice for one invoice.",
     };
-    // Only the messages that answer yes. Failed messages are reported
-    // together after the last kept one.
-    for (const auto& refund_request : client.filter_each(refund, messages))
-        std::cout << std::get<thinkthen::owned_text>(refund_request).value
-                  << '\n';
-} catch (const thinkthen::error& failure) {
-    std::cerr << failure.code().message() << ": " << failure.what() << '\n';
-    for (const auto& failed : failure.failed_rows())
-        std::cerr << "message " << failed.position << ": " << failed.message
-                  << '\n';
+    const tt::filter asks_refund{"Does the customer request a refund?"};
+    try {
+        for (const auto& refund_request : client.filter_each(asks_refund, messages))
+            std::cout << refund_request << '\n';
+    } catch (const tt::filter_error<std::string>& error) {
+        for (const auto& failed : error.rows())
+            std::cerr << failed.item() << ": " << failed << '\n';
+        return 1;
+    }
+} catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
     return 1;
 }

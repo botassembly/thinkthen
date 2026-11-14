@@ -76,7 +76,9 @@ def test_record_conversion_failures_keep_positions_without_backend_requests(
             with pytest.raises(TypeError, match="decide_stream"):
                 client.decide("Ready?", invalid_value(kind))
         else:
-            single = client.decide("Ready?", invalid_value(kind))
+            with pytest.raises(tt.Failed) as raised:
+                client.decide("Ready?", invalid_value(kind))
+            single = raised.value.rows[0]
             assert single.status == "failed" and single.position == 1
             assert single.error is not None and single.error.code == "record.invalid"
         assert server.count() == 0

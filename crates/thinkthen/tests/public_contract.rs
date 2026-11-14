@@ -69,14 +69,14 @@ fn settings_admission_preserves_distinct_codes() {
     assert_eq!(error.code().as_str(), "usage.key-missing");
 }
 #[test]
-fn record_and_transport_failures_belong_to_rows() {
+fn scalar_record_and_transport_failures_are_call_errors() {
     let engine = Settings::default()
         .with_backend(BackendName::Stub)
         .engine(|_| None)
         .unwrap();
     let question = Decide::new("Ready?").unwrap();
-    let row = engine.run(&question, Record::from_json("{")).unwrap();
-    assert_eq!(row.error().unwrap().code().as_str(), "record.json");
+    let error = engine.run(&question, Record::from_json("{")).unwrap_err();
+    assert_eq!(error.code().as_str(), "record.json");
     let unavailable = loopback::UnavailableBackend::new().unwrap();
     let engine = Settings::default()
         .url(unavailable.base())
@@ -84,8 +84,8 @@ fn record_and_transport_failures_belong_to_rows() {
         .retry(Retry::new(0, Duration::ZERO, Duration::from_secs(2)).unwrap())
         .engine(|_| None)
         .unwrap();
-    let row = engine.run(&question, Record::text("alpha")).unwrap();
-    assert_eq!(row.error().unwrap().code().as_str(), "backend.transport");
+    let error = engine.run(&question, Record::text("alpha")).unwrap_err();
+    assert_eq!(error.code().as_str(), "backend.transport");
 }
 #[test]
 fn diagnostic_controls_are_escaped_once_before_host_translation() {
@@ -201,8 +201,8 @@ fn duplicate_toolbox_names_keep_their_actionable_shared_diagnostic() {
 fn typed_admission_identifies_fields_without_disclosing_values() {
     let errors = [
         thinkthen::Decide::new(" ").unwrap_err(),
-        thinkthen::Score::new("Ready?", ["only"]).unwrap_err(),
-        thinkthen::Tag::new("Ready?", ["same", "same"]).unwrap_err(),
+        thinkthen::Score::with_strings("Ready?", ["only"]).unwrap_err(),
+        thinkthen::Tag::with_strings("Ready?", ["same", "same"]).unwrap_err(),
         "secret-placeholder"
             .parse::<thinkthen::Pointer>()
             .unwrap_err(),

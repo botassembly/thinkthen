@@ -7,5 +7,5 @@ is_refund <- tt_decide("I was charged twice for one invoice.",
 print(is_refund)
 
 failure <- tryCatch(tt_decide("", question = question),
-                    thinkthen_failed_rows = identity)
+                    thinkthen_record_error = identity)
 print(failure$code)

@@ -94,7 +94,7 @@ if $PROGRAM_NAME == __FILE__
 
       Backend.open("--held", "headers") do |backend|
         ThinkThen::Client.open(backend: :systemone, url: backend.url, api_key: "synthetic-loopback-key") do |client|
-          token = ThinkThen::CancelToken.new
+          token = ThinkThen::Cancel.new
           stream = client.decide_each("Ready?", ["record"], cancel: token)
           worker = Thread.new { raises(ThinkThen::CancelledError) { stream.to_a } }
           equal("arrived", backend.command("arrived"), "native read precedes cancellation")

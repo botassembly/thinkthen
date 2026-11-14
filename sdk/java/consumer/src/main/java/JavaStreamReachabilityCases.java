@@ -18,7 +18,7 @@ public final class JavaStreamReachabilityCases {
         try (var client = ThinkThen.builder().backend(Backend.STUB).batch(1).build()) {
             Iterable<String> input = () -> IntStream.range(0, count).mapToObj(i -> "message " + i).iterator();
             // Deliberately retain only the public iterator, as an application may.
-            Iterator<Row<Boolean, NoDetail>> rows = client.decideStream("Ready?", input).iterator();
+            Iterator<Row<Boolean, String>> rows = client.decideStream("Ready?", input).iterator();
             int received = 0;
             while (rows.hasNext()) {
                 var row = rows.next();

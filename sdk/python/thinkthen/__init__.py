@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Literal, TypeVar, overload
+from typing import Any, TypeVar, overload
 
 from typing_extensions import TypeForm
 
@@ -109,13 +109,13 @@ from ._types import (
     ErrorCode as ErrorCode,
 )
 from ._types import (
+    Failed as Failed,
+)
+from ._types import (
     FailedRowsWarning as FailedRowsWarning,
 )
 from ._types import (
     FilterOutcome as FilterOutcome,
-)
-from ._types import (
-    FilterRow as FilterRow,
 )
 from ._types import (
     FindOutcome as FindOutcome,
@@ -145,6 +145,9 @@ from ._types import (
     Name as Name,
 )
 from ._types import (
+    NoAnswer as NoAnswer,
+)
+from ._types import (
     Outcome as Outcome,
 )
 from ._types import (
@@ -164,9 +167,6 @@ from ._types import (
 )
 from ._types import (
     Record as Record,
-)
-from ._types import (
-    RecordError as RecordError,
 )
 from ._types import (
     RelateOutcome as RelateOutcome,
@@ -298,31 +298,6 @@ def filter(
     question: FilterQuestion,
     records: Iterable[T],
     *,
-    errors: Literal["raise"] = "raise",
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: Client | None = None,
-) -> KeptStream[T]: ...
-@overload
-def filter(
-    question: FilterQuestion,
-    records: Iterable[T],
-    *,
-    errors: Literal["coerce"],
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: Client | None = None,
-) -> KeptStream[T | FilterRow[T]]: ...
-@overload
-def filter(
-    question: str,
-    records: Iterable[T],
-    *,
-    threshold: Threshold | None = None,
-    field: str | None = None,
-    yes_means: str | None = None,
-    no_means: str | None = None,
-    errors: Literal["raise"] = "raise",
     name: str | None = None,
     cancel: Cancel | None = None,
     client: Client | None = None,
@@ -332,44 +307,17 @@ def filter(
     question: str,
     records: Iterable[T],
     *,
-    threshold: Threshold | None = None,
+    threshold: float | None = None,
     field: str | None = None,
     yes_means: str | None = None,
     no_means: str | None = None,
-    errors: Literal["coerce"],
     name: str | None = None,
     cancel: Cancel | None = None,
     client: Client | None = None,
-) -> KeptStream[T | FilterRow[T]]: ...
+) -> KeptStream[T]: ...
 def filter(*args: Any, client: Client | None = None, **kwargs: Any) -> Any:
     """Stream the kept records; see ``Client.filter``."""
     return (default_client() if client is None else client).filter(*args, **kwargs)
-
-
-@overload
-def filter_rows(
-    question: FilterQuestion,
-    records: Iterable[T],
-    *,
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: Client | None = None,
-) -> RowStream[FilterRow[T]]: ...
-@overload
-def filter_rows(
-    question: str,
-    records: Iterable[T],
-    *,
-    threshold: Threshold | None = None,
-    field: str | None = None,
-    yes_means: str | None = None,
-    no_means: str | None = None,
-    name: str | None = None,
-    cancel: Cancel | None = None,
-    client: Client | None = None,
-) -> RowStream[FilterRow[T]]: ...
-def filter_rows(*args: Any, client: Client | None = None, **kwargs: Any) -> Any:
-    return (default_client() if client is None else client).filter_rows(*args, **kwargs)
 
 
 @overload
@@ -827,10 +775,10 @@ __all__ = [
     "DecideQuestion",
     "DecideRow",
     "ErrorCode",
+    "Failed",
     "FailedRowsWarning",
     "FilterOutcome",
     "FilterQuestion",
-    "FilterRow",
     "FindOutcome",
     "FindQuestion",
     "FindRow",
@@ -842,6 +790,7 @@ __all__ = [
     "LabelDetail",
     "LevelDetail",
     "Name",
+    "NoAnswer",
     "NonAnnotateQuestion",
     "Outcome",
     "PieceDetail",
@@ -852,7 +801,6 @@ __all__ = [
     "RecognizeQuestion",
     "RecognizeRow",
     "Record",
-    "RecordError",
     "RelateOutcome",
     "RelateQuestion",
     "RelateRow",
@@ -888,7 +836,6 @@ __all__ = [
     "close_default_client",
     "decide",
     "decide_stream",
-    "filter_rows",
     "find",
     "find_stream",
     "rank",

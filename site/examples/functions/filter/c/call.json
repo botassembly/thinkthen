@@ -1,5 +1,5 @@
 {
-  "anchor": "        rc = thinkthen_call_open_records_question(",
+  "anchor": "        rc = thinkthen_call_open(client, question, messages, 3, &call, &error);",
   "before": 0,
   "after": 2
 }

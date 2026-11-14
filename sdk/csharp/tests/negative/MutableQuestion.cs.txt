@@ -1,3 +1,4 @@
+// Expected: error CS8858|error CS0200
 using ThinkThen;
 
 public static class InvalidInput

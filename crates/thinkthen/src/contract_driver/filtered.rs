@@ -1,89 +1,104 @@
-//! Filtering yields the kept items, or every original item with its typed row.
+//! Filtering keeps successful records before one aggregate failure.
 use super::*;
 use crate::questions::Filter;
 use crate::results::Outcome;
-use std::collections::VecDeque;
-use std::sync::{Mutex, PoisonError};
-/// Original items paired with every filter result, including failures.
-#[non_exhaustive]
-#[derive(Debug)]
-pub struct Filtered<T> {
-    rows: Rows<Filter>,
-    originals: Arc<Mutex<VecDeque<T>>>,
-}
-impl<T> Iterator for Filtered<T> {
-    type Item = Result<(T, Row<Filter>), Error>;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.rows.next().map(|row| {
-            let row = row?;
-            let original = self
-                .originals
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .pop_front()
-                .ok_or_else(results::mismatch)?;
-            Ok((original, row))
-        })
-    }
-}
-impl<T> Filtered<T> {
-    /// Cancel the operation and wake any blocked input owner.
-    pub fn cancel(&self) {
-        self.rows.cancel();
-    }
-}
 /// Only the items a filter keeps, in input order, from [`Engine::filter`].
 ///
-/// A not-sure item is left out. A failed record yields its [`FilterError`] in its
-/// place, with the item, and reading can go on. A call-level error yields a
-/// [`FilterError`] without an item and ends the iteration.
+/// A single cut decides every successful record. All kept items arrive first;
+/// if any record failed, one terminal [`FilterError`] retains every failed result.
+/// A call-level error terminates the iteration immediately.
 #[non_exhaustive]
 #[derive(Debug)]
-pub struct Kept<T>(Filtered<T>);
-impl<T> Iterator for Kept<T> {
-    type Item = Result<T, FilterError<T>>;
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let (item, row) = match self.0.next()? {
-                Ok(pair) => pair,
-                Err(error) => return Some(Err(FilterError { item: None, error })),
-            };
-            match row.outcome() {
-                Outcome::Answered { answer: true, .. } => return Some(Ok(item)),
-                Outcome::Answered { answer: false, .. } | Outcome::Unsure { .. } => {}
-                Outcome::Failed { error } => {
-                    return Some(Err(FilterError {
-                        item: Some(item),
-                        error: error.clone(),
-                    }));
+pub struct Kept<T> {
+    rows: Items<Filter, T>,
+    state: KeptState<T>,
+}
+#[derive(Debug)]
+struct KeptState<T> {
+    failures: Vec<Row<Filter, T>>,
+    finished: bool,
+    total: u64,
+}
+impl<T> KeptState<T> {
+    fn accept(
+        &mut self,
+        next: Option<Result<Row<Filter, T>, Error>>,
+    ) -> Option<Result<T, FilterError<T>>> {
+        match next {
+            None => {
+                self.finished = true;
+                let rows = std::mem::take(&mut self.failures);
+                let first = rows.first()?;
+                let error = first
+                    .error()
+                    .map(|error| error.records_failed(rows.len(), self.total, first.position()))
+                    .unwrap_or_else(results::mismatch);
+                Some(Err(FilterError { rows, error }))
+            }
+            Some(Err(error)) => {
+                self.finished = true;
+                Some(Err(FilterError {
+                    rows: std::mem::take(&mut self.failures),
+                    error,
+                }))
+            }
+            Some(Ok(row)) => {
+                self.total = row.position();
+                match row.outcome() {
+                    Outcome::Answered { answer: true, .. } => Some(Ok(row.into_item())),
+                    Outcome::Answered { answer: false, .. } | Outcome::Unsure { .. } => None,
+                    Outcome::Failed { .. } => {
+                        self.failures.push(row);
+                        None
+                    }
                 }
             }
         }
     }
 }
+impl<T> Iterator for Kept<T> {
+    type Item = Result<T, FilterError<T>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        while !self.state.finished {
+            if let Some(value) = self.state.accept(self.rows.next()) {
+                return Some(value);
+            }
+        }
+        None
+    }
+}
+
 impl<T> Kept<T> {
     /// Cancel the operation and wake any blocked input owner.
     pub fn cancel(&self) {
-        self.0.cancel();
+        self.rows.cancel();
     }
 }
 /// A filter failure: a failed record with its item, or a call-level error.
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 pub struct FilterError<T> {
-    item: Option<T>,
+    rows: Vec<Row<Filter, T>>,
     error: Error,
 }
-impl<T> FilterError<T> {
-    /// The item whose record failed, or `None` for a call-level error.
-    #[must_use]
-    pub const fn item(&self) -> Option<&T> {
-        self.item.as_ref()
+impl<T> std::fmt::Debug for FilterError<T> {
+    fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        out.debug_struct("FilterError")
+            .field("error", &self.error)
+            .field("failed_records", &self.rows.len())
+            .finish()
     }
-    /// Take the item whose record failed, or `None` for a call-level error.
+}
+impl<T, U> PartialEq<FilterError<U>> for FilterError<T> {
+    fn eq(&self, other: &FilterError<U>) -> bool {
+        self.error == other.error && self.rows == other.rows
+    }
+}
+impl<T> FilterError<T> {
+    /// Every failed result, with the caller's original item retained.
     #[must_use]
-    pub fn into_item(self) -> Option<T> {
-        self.item
+    pub fn rows(&self) -> &[Row<Filter, T>] {
+        &self.rows
     }
     /// The record's or the call's error.
     #[must_use]
@@ -96,70 +111,77 @@ impl<T> std::fmt::Display for FilterError<T> {
         std::fmt::Display::fmt(&self.error, formatter)
     }
 }
-impl<T: std::fmt::Debug> std::error::Error for FilterError<T> {
+impl<T> std::error::Error for FilterError<T> {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&self.error)
     }
 }
 impl Engine {
-    /// Yield only the kept items, in input order. `record` turns each item into
-    /// its field. See [`Kept`] for not-sure items and failures.
-    ///
-    /// ```
-    /// # use thinkthen::{BackendName, Filter, Settings};
-    /// # let engine = Settings::default().with_backend(BackendName::Stub).engine(|_| None)?;
-    /// let complaint = Filter::new("Is this review a complaint?")?;
-    /// let reviews = ["Arrived early.", "The zipper broke.", "Great fit.", "Never came."];
-    /// let complaints: Vec<&str> = engine
-    ///     .filter(&complaint, reviews, |review| *review)?
-    ///     .collect::<Result<_, _>>()?;
-    /// assert!(complaints.iter().all(|review| reviews.contains(review)));
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
+    /// Yield the caller's kept records, then one failure holding every failed result.
     /// # Errors
     /// Returns call setup errors before starting the iterator.
-    pub fn filter<T: Send + 'static, I, F, R>(
-        &self,
-        question: &Filter,
-        items: I,
-        record: F,
-    ) -> Result<Kept<T>, Error>
+    pub fn filter<I>(&self, question: &Filter, items: I) -> Result<Kept<I::Item>, Error>
     where
-        I: IntoIterator<Item = T> + Send + 'static,
+        I: IntoIterator + Send + 'static,
+        I::Item: Send + 'static,
         I::IntoIter: Send,
-        F: FnMut(&T) -> R + Send + 'static,
-        R: Into<Record>,
+        for<'a> Record: From<&'a I::Item>,
     {
-        self.filter_items(question, items, record).map(Kept)
-    }
-    /// Yield every original item and its filter row in input order, kept or not.
-    /// # Errors
-    /// Returns call setup errors before starting the iterator.
-    pub fn filter_items<T: Send + 'static, I, F, R>(
-        &self,
-        question: &Filter,
-        items: I,
-        mut record: F,
-    ) -> Result<Filtered<T>, Error>
-    where
-        I: IntoIterator<Item = T> + Send + 'static,
-        I::IntoIter: Send,
-        F: FnMut(&T) -> R + Send + 'static,
-        R: Into<Record>,
-    {
-        let originals = Arc::new(Mutex::new(VecDeque::new()));
-        let pending = originals.clone();
-        let records = items.into_iter().map(move |item| {
-            let value: Record = record(&item).into();
-            pending
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .push_back(item);
-            value
-        });
-        Ok(Filtered {
-            rows: self.rows(question, records)?,
-            originals,
+        Ok(Kept {
+            rows: self.items(question, items)?,
+            state: KeptState {
+                failures: Vec::new(),
+                finished: false,
+                total: 0,
+            },
         })
+    }
+}
+
+#[cfg(feature = "stream")]
+/// Kept records as an asynchronous stream, with the same terminal failure as filtering.
+#[derive(Debug)]
+pub struct KeptStream<T> {
+    rows: ItemStream<Filter, T>,
+    state: KeptState<T>,
+}
+// The stream never pins or projects a retained caller value. Records leave it by
+// value, so moving the stream is safe even when a caller's type is not Unpin.
+#[cfg(feature = "stream")]
+impl<T> Unpin for KeptStream<T> {}
+#[cfg(feature = "stream")]
+impl<T> Kept<T> {
+    /// Read kept records asynchronously without bringing an async runtime.
+    #[must_use]
+    pub fn into_stream(self) -> KeptStream<T> {
+        KeptStream {
+            rows: self.rows.into_stream(),
+            state: self.state,
+        }
+    }
+}
+#[cfg(feature = "stream")]
+impl<T> KeptStream<T> {
+    /// Stop this call without affecting another operation.
+    pub fn cancel(&self) {
+        self.rows.cancel();
+    }
+}
+#[cfg(feature = "stream")]
+impl<T> futures_core::Stream for KeptStream<T> {
+    type Item = Result<T, FilterError<T>>;
+    fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        while !this.state.finished {
+            match futures_core::Stream::poll_next(std::pin::Pin::new(&mut this.rows), cx) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(row) => {
+                    if let Some(value) = this.state.accept(row) {
+                        return Poll::Ready(Some(value));
+                    }
+                }
+            }
+        }
+        Poll::Ready(None)
     }
 }

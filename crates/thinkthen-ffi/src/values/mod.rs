@@ -5,14 +5,13 @@
 )]
 mod answers;
 mod detail;
+mod json;
 mod metadata;
-mod views;
-use crate::{
-    HostRow,
-    memory::{live, row_size, text},
-};
+pub(crate) mod views;
+use crate::{HostRow, memory::live};
 pub use answers::*;
 pub use detail::*;
+pub use json::*;
 pub use metadata::*;
 use std::any::Any;
 use thinkthen::{
@@ -20,81 +19,25 @@ use thinkthen::{
     results::{AnnotationEntry, AnyRow, Function, Outcome, Row},
 };
 pub use views::*;
-#[derive(Debug)]
-enum Owned {
+#[derive(Debug, Clone)]
+pub(crate) enum Owned {
     Row(AnyRow),
     Entry(AnnotationEntry),
 }
 /// A copy of a row's answer, read with the thinkthen_value_* functions. Views it writes
 /// borrow from it. Free it with thinkthen_value_free.
-#[derive(Debug)]
-pub struct ValueHandle(Owned, Option<crate::original::Original>);
+#[derive(Debug, Clone)]
+pub struct ValueHandle(pub(crate) Owned);
 impl ValueHandle {
     /// Own one engine row directly, as the one-call functions return it.
     pub(crate) fn from_any(row: AnyRow) -> Self {
-        Self(Owned::Row(row), None)
+        Self(Owned::Row(row))
     }
-    unsafe fn from_row(row: *const HostRow) -> Result<Self, Error> {
-        /* SAFETY: only the supported prefix is read after size validation. */
-        unsafe {
-            row_size(row.cast_mut())?;
-        }
-        /* SAFETY: this row and its unique buffers remain live through this copy. */
-        let row = unsafe { HostRow::read(row) };
-        let mut value = serde_json::Map::new();
-        value.insert(
-            "function".into(),
-            serde_json::to_value(
-                FunctionName::from_abi(row.function).ok_or_else(native::abi_error)?,
-            )
-            .map_err(|_| native::abi_error())?,
-        );
-        value.insert(
-            "status".into(),
-            serde_json::to_value(
-                thinkthen::results::Status::from_abi(row.status).ok_or_else(native::abi_error)?,
-            )
-            .map_err(|_| native::abi_error())?,
-        );
-        value.insert("position".into(), row.position.into());
-        if !row.probability.is_nan() {
-            value.insert("probability".into(), row.probability.into());
-        }
-        for (name, buffer) in [
-            ("id", &row.id),
-            ("answer", &row.answer),
-            ("detail", &row.detail),
-            ("source", &row.source),
-            ("error", &row.error),
-        ] {
-            if buffer.len != 0 {
-                /* SAFETY: each counted buffer belongs to the live row. */
-                let data = unsafe { text(buffer.data, buffer.len) }?;
-                value.insert(
-                    name.into(),
-                    serde_json::from_str(data).map_err(|_| native::abi_error())?,
-                );
-            }
-        }
-        serde_json::from_value(serde_json::Value::Object(value))
-            .map(|value| {
-                Self(
-                    Owned::Row(value),
-                    if [
-                        thinkthen::FunctionName::Filter.abi(),
-                        thinkthen::FunctionName::Rank.abi(),
-                    ]
-                    .contains(&row.function)
-                    {
-                        unsafe { row.source.original().cloned() }
-                    } else {
-                        None
-                    },
-                )
-            })
-            .map_err(|_| native::abi_error())
+    pub(crate) unsafe fn from_row(row: *const HostRow) -> Result<Self, Error> {
+        // SAFETY: the caller lends an initialized row and its owned payload.
+        unsafe { Ok(crate::row::data(row)?.value.clone()) }
     }
-    fn function(&self) -> Result<FunctionName, Error> {
+    pub(crate) fn function(&self) -> Result<FunctionName, Error> {
         Ok(match &self.0 {
             Owned::Row(row) => row.function(),
             Owned::Entry(entry) => match entry {
@@ -102,7 +45,6 @@ impl ValueHandle {
                 AnnotationEntry::Choose(_) => FunctionName::Choose,
                 AnnotationEntry::Tag(_) => FunctionName::Tag,
                 AnnotationEntry::Score(_) => FunctionName::Score,
-                AnnotationEntry::Filter(_) => FunctionName::Filter,
                 AnnotationEntry::Find(_) => FunctionName::Find,
                 AnnotationEntry::Recognize(_) => FunctionName::Recognize,
                 AnnotationEntry::Relate(_) => FunctionName::Relate,
@@ -110,7 +52,7 @@ impl ValueHandle {
             },
         })
     }
-    fn typed<F: Function>(&self) -> Result<&Outcome<F::Answer, F::Detail>, Error> {
+    pub(crate) fn typed<F: Function>(&self) -> Result<&Outcome<F::Answer, F::Detail>, Error> {
         if self.function()? != F::NAME {
             return Err(native::argument_error(thinkthen::Code::UsageFunction));
         }
@@ -140,7 +82,6 @@ impl ValueHandle {
                     AnnotationEntry::Choose(value) => value,
                     AnnotationEntry::Tag(value) => value,
                     AnnotationEntry::Score(value) => value,
-                    AnnotationEntry::Filter(value) => value,
                     AnnotationEntry::Find(value) => value,
                     AnnotationEntry::Recognize(value) => value,
                     AnnotationEntry::Relate(value) => value,
@@ -150,14 +91,14 @@ impl ValueHandle {
             }
         }
     }
-    fn answer<F: Function>(&self) -> Result<&F::Answer, Error> {
+    pub(crate) fn answer<F: Function>(&self) -> Result<&F::Answer, Error> {
         match self.typed::<F>()? {
             Outcome::Answered { answer, .. } => Ok(answer),
             Outcome::Failed { error } => Err(error.clone()),
             _ => Err(native::abi_error()),
         }
     }
-    fn detail<F: Function>(&self) -> Result<Option<&F::Detail>, Error> {
+    pub(crate) fn detail<F: Function>(&self) -> Result<Option<&F::Detail>, Error> {
         match self.typed::<F>()? {
             Outcome::Answered { detail, .. } | Outcome::Unsure { detail, .. } => {
                 Ok(detail.as_ref())
@@ -165,16 +106,36 @@ impl ValueHandle {
             _ => Ok(None),
         }
     }
-    fn status(&self) -> Result<thinkthen::results::Status, Error> {
+    pub(crate) fn status(&self) -> Result<thinkthen::results::Status, Error> {
         Ok(match &self.0 {
             Owned::Row(row) => row.status(),
             Owned::Entry(entry) => {
                 macro_rules! status{($($variant:ident),*)=>{match entry{$(AnnotationEntry::$variant(value)=>value.status(),)*_=>return Err(native::abi_error())}};}
-                status!(Decide, Choose, Tag, Score, Filter, Find, Recognize, Relate)
+                status!(Decide, Choose, Tag, Score, Find, Recognize, Relate)
             }
         })
     }
-    fn error(&self) -> Result<Option<&Error>, Error> {
+    pub(crate) fn probability(&self) -> Result<f64, Error> {
+        fn read<A, D>(outcome: &Outcome<A, D>) -> f64 {
+            match outcome {
+                Outcome::Answered { probability, .. } => {
+                    probability.map_or(f64::NAN, thinkthen::Probability::get)
+                }
+                Outcome::Unsure { probability, .. } => probability.get(),
+                _ => f64::NAN,
+            }
+        }
+        Ok(match &self.0 {
+            Owned::Row(row) => row
+                .probability()
+                .map_or(f64::NAN, thinkthen::Probability::get),
+            Owned::Entry(entry) => {
+                macro_rules! probability{($($variant:ident),*)=>{match entry{$(AnnotationEntry::$variant(value)=>read(value),)*_=>return Err(native::abi_error())}};}
+                probability!(Decide, Choose, Tag, Score, Find, Recognize, Relate)
+            }
+        })
+    }
+    pub(crate) fn error(&self) -> Result<Option<&Error>, Error> {
         Ok(match &self.0 {
             Owned::Row(row) => row.error(),
             Owned::Entry(entry) => {
@@ -185,7 +146,7 @@ impl ValueHandle {
                     }
                 }
                 macro_rules! error{($($variant:ident),*)=>{match entry{$(AnnotationEntry::$variant(value)=>failed(value),)*_=>return Err(native::abi_error())}};}
-                error!(Decide, Choose, Tag, Score, Filter, Find, Recognize, Relate)
+                error!(Decide, Choose, Tag, Score, Find, Recognize, Relate)
             }
         })
     }
@@ -210,11 +171,17 @@ pub(crate) unsafe fn answer_project<T>(
     value: *const ValueHandle,
     out: *mut T,
     error: *mut crate::HostError,
+    functions: &[thinkthen::FunctionName],
     read: impl FnOnce() -> Result<T, Error>,
 ) -> i32 {
     /* SAFETY: the live value is borrowed and output slots are exclusive. */
     unsafe {
         crate::exports::operation(error, || {
+            if !functions.contains(&live(value)?.function()?) {
+                return Err(thinkthen::native::argument_error(
+                    thinkthen::Code::UsageFunction,
+                ));
+            }
             if live(value)?.status()? == thinkthen::results::Status::Unsure {
                 return Ok(crate::THINKTHEN_UNSURE);
             }

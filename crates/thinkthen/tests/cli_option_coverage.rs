@@ -34,7 +34,7 @@ fn functions(directory: &std::path::Path) -> Vec<Vec<String>> {
         vec!["rank", "How?", "--level", "low", "--level", "high"],
         vec!["find", "Where?"],
         vec!["recognize", "--kind", "person"],
-        vec!["relate", "--rule", "works_for", "person", "organization"],
+        vec!["relate", "--rule", "person", "organization", "works_for"],
         vec!["annotate", annotation.to_str().unwrap()],
     ]
     .into_iter()
@@ -44,17 +44,18 @@ fn functions(directory: &std::path::Path) -> Vec<Vec<String>> {
 #[test]
 fn quiet_and_short_verbose_apply_to_every_function() {
     let directory = tempfile::tempdir().unwrap();
-    for args in functions(directory.path()) {
+    for mut args in functions(directory.path()) {
+        if args[0] != "filter" {
+            args.push("--json".to_owned());
+        }
         let baseline = run(
-            support::command()
-                .args(["--backend", "stub", "--json"])
-                .args(&args),
+            support::command().args(["--backend", "stub"]).args(&args),
             b"Ada joined Acme.",
         );
         assert_eq!(baseline.status.code(), Some(0), "{args:?}: {baseline:?}");
         let quiet = run(
             support::command()
-                .args(["--backend", "stub", "--json", "--quiet"])
+                .args(["--backend", "stub", "--quiet"])
                 .args(&args)
                 .env("THINKTHEN_VERBOSE", "true"),
             b"Ada joined Acme.",
@@ -64,7 +65,7 @@ fn quiet_and_short_verbose_apply_to_every_function() {
         assert!(quiet.stderr.is_empty());
         let verbose = run(
             support::command()
-                .args(["--backend", "stub", "--json", "-v"])
+                .args(["--backend", "stub", "-v"])
                 .args(&args)
                 .env("THINKTHEN_QUIET", "true"),
             b"Ada joined Acme.",
@@ -129,14 +130,12 @@ fn unsupported_check_functions_refuse_the_option_before_sending() {
     assert_eq!(server.count(), 0);
 }
 #[test]
-fn filter_check_reduces_yes_no_and_unsure() {
-    for (probability, expected) in [(0.9, 0), (0.1, 1), (0.5, 3)] {
+fn filter_check_reduces_one_cut_to_yes_or_no() {
+    for (probability, expected) in [(0.9, 0), (0.1, 1), (0.5, 1)] {
         let server = loopback::Loopback::noul(probability).unwrap();
         let output = run(
             support::command()
-                .args([
-                    "filter", "Ready?", "--low", "0.2", "--high", "0.8", "--check",
-                ])
+                .args(["filter", "Ready?", "--threshold", "0.8", "--check"])
                 .env("THINKTHEN_BASE_URL", server.base())
                 .env("THINKTHEN_API_KEY", loopback::KEY),
             b"evidence\n",
@@ -252,7 +251,7 @@ fn function_environment_options_retain_their_typed_values() {
             vec!["--top", "1"],
         ),
         (
-            vec!["relate", "--rule", "works_for", "person", "organization"],
+            vec!["relate", "--rule", "person", "organization", "works_for"],
             "THINKTHEN_EITHER",
             "true",
             vec!["--either"],
@@ -335,8 +334,8 @@ fn saved_run_transport_setup_failure_exits_four() {
             .env("THINKTHEN_API_KEY", loopback::KEY),
         b"\"evidence\"\n",
     );
-    assert_eq!(output.status.code(), Some(4), "{output:?}");
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
+    support::failed_stdout(&output);
     assert!(String::from_utf8_lossy(&output.stderr).contains("backend.transport"));
 }
 #[test]
@@ -361,7 +360,7 @@ fn certificate_file_environment_is_checked_before_tls_or_credentials_are_sent() 
             .env("THINKTHEN_CA_FILE", directory.path().join("missing.pem")),
         b"evidence",
     );
-    assert_eq!(output.status.code(), Some(4), "{output:?}");
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
     assert!(String::from_utf8_lossy(&output.stderr).contains("THINKTHEN_CA_FILE"));
     assert_eq!(
         received

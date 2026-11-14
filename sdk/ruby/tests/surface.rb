@@ -11,13 +11,13 @@ def ruby_questions
     choices.first.replace("changed")
     choices << "extra"
     equal(client.choose("Which team?", "refund", choices: %w[billing shipping]).to_h,
-          client.choose(toolbox["topic"], "refund").to_h, "question snapshots its required domain")
+          client.choose(toolbox.choose(:topic), "refund").to_h, "question snapshots its required domain")
     assert(question.frozen? && toolbox.frozen?, "typed questions are immutable")
-    raises(KeyError) { toolbox["absent"] }
+    raises(ThinkThen::UsageError) { toolbox.choose(:absent) }
     raises(ArgumentError) { client.choose(question, "refund", choices: ["changed", "extra"]) }
-    annotation = client.annotate(ThinkThen::AnnotationQuestions.new(questions: {"topic" => toolbox["topic"]}), "refund")
+    annotation = client.annotate(ThinkThen::AnnotationQuestions.new(**{"topic" => toolbox.choose(:topic)}), "refund")
     assert(annotation.answered?, "toolbox annotation returns an outer answered row")
-    assert(annotation.answer.fetch("topic").is_a?(Data), "annotation entry is a Data value")
+    assert(annotation.answer.fetch("topic").is_a?(ThinkThen::ChooseRow), "typed annotation entry")
     assert(!ThinkThen.respond_to?(:reference), "reference questions are removed")
   end
 end
@@ -57,7 +57,7 @@ def ruby_record_identity
       equal(records.length + 1, rows.length, "every invalid or missing record survives")
       equal((1..rows.length).to_a, rows.map(&:position), "failed records consume positions")
       equal([:"record.missing", *Array.new(invalid.length, :"record.invalid")], rows.map { |row| row.error.code }, "typed admission codes")
-      assert(rows.all? { |row| row.is_a?(ThinkThen::Failed) }, "record errors are failed variants")
+      assert(rows.all? { |row| row.is_a?(ThinkThen::DecideRow) && row.failed? }, "record failures keep their function class")
       equal("0", backend.command("count"), "invalid identities make no backend call")
     end
   end
@@ -71,42 +71,34 @@ def ruby_record_identity
   end
 end
 
-# Feature: filters retain failed records and the original Ruby item.
+# Feature: filter keeps original objects and retains every failed result in one error.
 def ruby_filter_rows
   ThinkThen::Client.open(backend: :stub) do |client|
-    items = [{"id" => "first", "body" => "refund"}, nil, {"id" => false, "body" => "invalid"}]
-    rows = client.filter_each("Ready?", items).to_a
-    equal(items.length, rows.length, "filter never drops a failure")
-    rows.zip(items).each do |value, item|
-      assert(value.is_a?(ThinkThen::FilterRow) && value.is_a?(Data), "typed filter wrapper")
-      assert(value.item.equal?(item), "original item identity")
-      equal(value.row.answered? && value.row.answer == true, value.kept?, "kept projection")
-    end
-    assert(!items.first.frozen?, "binding does not freeze caller input")
-    equal([:"record.missing", :"record.invalid"], rows.drop(1).map { |value| value.row.error.code }, "filter failures stay visible")
-    raises(ThinkThen::UsageError) { client.filter("Ready?", items.first) }
+    items = [{"id"=>"first","body"=>"refund"},nil,{"id"=>false,"body"=>"invalid"}]
+    failure = raises(ThinkThen::FailedError) { client.filter("Ready?",items).to_a }
+    equal([2,3],failure.rows.map(&:position),"failed filter positions")
+    equal([:"record.missing",:"record.invalid"],failure.rows.map { |row| row.error.code },"failed filter reasons")
+    failure.rows.each { |row| assert(row.item.equal?(items[row.position-1]),"failed filter original") }
+    assert(!items.first.frozen?,"caller input remains mutable")
+    assert(!client.respond_to?(:filter_each) && !ThinkThen.respond_to?(:filter_each),"no every-row filter route")
+    raises(ArgumentError) { client.filter("Ready?",items,failures: :row) }
+    raises(ThinkThen::UsageError) { client.filter("Ready?",items.first) }
   end
 end
 
-# Feature: Ruby rows remain usable after client cleanup and freeze nested values.
+# Feature: result values outlive client cleanup and their nested values are immutable.
 def ruby_row_values
   retained = nil
   ThinkThen::Client.open(backend: :stub) do |client|
-    retained = client.choose("Which team?", "record", choices: %w[billing shipping])
-    case retained
-    in ThinkThen::Answered[answer:, probability:]
-      assert(answer.is_a?(String), "Data pattern exposes typed answer")
-      assert(probability.nil? || probability.is_a?(Float), "Data pattern exposes Float probability")
-    else
-      raise "stub choice must answer"
-    end
+    retained = client.choose("Which team?","record",choices:%w[billing shipping])
+    assert(retained.is_a?(ThinkThen::ChooseRow) && retained.answer.is_a?(String),"typed function result")
+    assert(!retained.respond_to?(:deconstruct_keys),"patterns cannot quietly read an answer")
     raises(FrozenError) { retained.answer.replace("changed") }
-    assert(retained.detail.is_a?(ThinkThen::LabelDetail), "detail is a typed value")
+    assert(retained.detail.is_a?(ThinkThen::LabelDetail),"typed detail")
     raises(FrozenError) { retained.detail.labels.clear }
     raises(FrozenError) { retained.source.model.replace("changed") }
   end
-  assert(retained.answer.is_a?(String), "answer outlives client")
-  assert(retained.detail.labels.frozen?, "detail outlives native row")
+  assert(retained.answer.is_a?(String) && retained.detail.labels.frozen?,"copied values outlive native ownership")
 end
 
 # Feature: lazy Ruby streams clean up at traversal and scope boundaries.
@@ -165,7 +157,7 @@ def ruby_held_calls
   [:token, :interrupt, :close, :client_close].each do |action|
     Backend.open("--held", "headers") do |backend|
       ThinkThen::Client.open(backend: :systemone, url: backend.url, api_key: "synthetic-loopback-key") do |client|
-        token = ThinkThen::CancelToken.new
+        token = ThinkThen::Cancel.new
         stream = client.decide_each("Ready?", ["record"], cancel: token)
         worker = Thread.new do
           begin
@@ -201,7 +193,7 @@ def ruby_held_calls
     end
   end
   ThinkThen::Client.open(backend: :stub) do |client|
-    token = ThinkThen::CancelToken.new
+    token = ThinkThen::Cancel.new
     token.cancel
     raises(ThinkThen::CancelledError) { client.decide("Ready?", "record", cancel: token) }
   end
@@ -330,12 +322,12 @@ def ruby_configuration
     config.backend = :stub
     config.api_key = secret
     config.batch = 1
-    config.retry = ThinkThen::Retry.new(max_retries: 0)
+    config.retry = ThinkThen::RetryPolicy.new(max_retries: 0)
     retained = config
   end
   shared = 4.times.map { Thread.new { ThinkThen.client } }.map(&:value)
   assert(shared.all? { |client| client.equal?(shared.first) }, "shared client creation is synchronized")
-  assert(ThinkThen.decide("Ready?", "record").is_a?(Data), "module function delegates")
+  assert(ThinkThen.decide("Ready?", "record").is_a?(ThinkThen::DecideRow), "module function delegates")
   retained.backend = :openai
   equal(:stub, ThinkThen.decide("Ready?", "record").source.backend, "configuration publishes a snapshot")
   begin
@@ -366,7 +358,7 @@ def ruby_scheduler_cancellation
   [:token, :interrupt].each do |action|
     Backend.open("--held", "headers") do |backend|
       ThinkThen::Client.open(backend: :systemone, url: backend.url, api_key: "synthetic-loopback-key") do |client|
-        token = ThinkThen::CancelToken.new
+        token = ThinkThen::Cancel.new
         stream = client.decide_each("Ready?", ["record"], cancel: token)
         Async do |task|
           fiber = nil

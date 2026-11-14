@@ -168,25 +168,18 @@ pub fn sql_request(
 /// Convert an unrepresentable PostgreSQL text or JSON value into a record failure.
 /// The original row keeps its position, attempted source and representable identifier.
 /// # Errors
-/// Returns an internal error only if typed row serialization cannot round-trip.
+/// Returns an internal error only if the typed row cannot be encoded.
 pub fn sql_postgres_row(row: crate::results::AnyRow) -> Result<crate::results::AnyRow, Error> {
-    let mut value = serde_json::to_value(&row).map_err(|_| super::internal_error())?;
+    let value = serde_json::to_value(&row).map_err(|_| super::internal_error())?;
     if !zero(&value) {
         return Ok(row);
     }
-    let fields = value.as_object_mut().ok_or_else(super::internal_error)?;
-    if fields.get("id").is_some_and(zero) {
-        fields.remove("id");
-    }
-    fields.remove("answer");
-    fields.remove("detail");
-    fields.remove("probability");
-    fields.insert("status".into(), serde_json::json!("failed"));
-    fields.insert(
-        "error".into(),
-        serde_json::to_value(representation_error()).map_err(|_| super::internal_error())?,
-    );
-    serde_json::from_value(value).map_err(|_| super::internal_error())
+    let id = if value.get("id").is_some_and(zero) {
+        None
+    } else {
+        row.id().cloned()
+    };
+    Ok(row.failure_row(representation_error(), id))
 }
 
 /// Set SQL's optional threshold parameters through one admission boundary.
@@ -201,7 +194,7 @@ pub fn sql_threshold(
     match (cut, low, high) {
         (None, None, None) => Ok(()),
         (Some(cut), None, None) => question.set_cut(cut),
-        (None, Some(low), Some(high)) => question.set_band(low, high),
+        (None, Some(low), Some(high)) => question.set_band_for(low, high, "thinkthen_decide"),
         _ => Err(Error::from_contract(
             Code::UsageThreshold,
             crate::core::diagnostic::requirement(

@@ -204,27 +204,35 @@ fn find_none_false_none_and_unknown_winners_remain_distinct() {
 }
 
 #[test]
-fn filter_envelopes_are_admitted_without_weakening_other_rows() {
+fn caller_items_are_admitted_and_retired_filter_envelopes_are_refused() {
     let question = thinkthen::Filter::new("Keep it?").unwrap();
     let engine = Settings::default()
         .with_backend(BackendName::Stub)
         .engine(|_| None)
         .unwrap();
-    let sample = engine.run(&question, "first").unwrap();
+    let request = thinkthen::Request::new(question);
+    let call = engine
+        .open_request(&request, thinkthen::OffsetUnit::Utf8)
+        .unwrap();
+    let sender = call.sender();
+    sender.send(thinkthen::Record::text("first")).unwrap();
+    sender.close();
+    let sample = call.rows().next().unwrap().unwrap();
+    let kept = matches!(&sample, thinkthen::AnyRow::Filter(row) if row.answer().is_ok_and(|answer| answer));
     let row = serde_json::to_string(&sample).unwrap();
     let envelope = format!(
         "{},\"item\":{{\"text\":\"first\"}},\"kept\":{}}}",
         row.strip_suffix('}').unwrap(),
-        sample.kept()
+        kept
     );
-    assert!(decode_row(&envelope).is_ok());
+    assert!(decode_row(&envelope).is_err());
     assert!(serde_json::from_str::<thinkthen::AnyRow>(&envelope).is_err());
-    let mut changed = envelope.clone();
-    changed = changed.replace(
-        &format!("\"kept\":{}", sample.kept()),
-        &format!("\"kept\":{}", !sample.kept()),
+    let with_item = format!(
+        "{},\"item\":{{\"text\":\"first\"}}}}",
+        row.strip_suffix('}').unwrap()
     );
-    assert!(decode_row(&changed).is_err());
+    assert!(decode_row(&with_item).is_ok());
+    assert!(serde_json::from_str::<thinkthen::AnyRow>(&with_item).is_ok());
 }
 
 #[test]
@@ -293,7 +301,7 @@ fn explicit_candidate_map_grades_identity_without_matching_display_text() {
 
 #[test]
 fn choose_grades_only_labels_in_the_admitted_domain() {
-    let question = thinkthen::Choose::new("Which?", ["first", "second"]).unwrap();
+    let question = thinkthen::Choose::with_strings("Which?", ["first", "second"]).unwrap();
     let engine = Settings::default()
         .with_backend(BackendName::Stub)
         .engine(|_| None)

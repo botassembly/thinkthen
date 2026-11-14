@@ -29,7 +29,7 @@ def public_question(question):
     return question
 
 
-COLUMNS = ['position', 'id', 'answer', 'probability', 'status', 'error_code', 'error_message',
+COLUMNS = ['position', 'id', 'record', 'answer', 'probability', 'status', 'error_code', 'error_message',
            'error_http_status', 'source', 'detail']
 
 
@@ -111,19 +111,14 @@ class Host:
             if name=='threshold' and isinstance(value,dict):
                 for key,number in value.items(): constraints.append(key+' = ?');values.append(number)
             else:
-                name='toolbox' if name=='questions' else name
                 constraints.append(name+' = ?');values.append(json.dumps(value) if isinstance(value,(dict,list)) else value)
         if 'name' in request: constraints.append('name = ?');values.append(request['name'])
         function=question['function']
-        if function=='filter':
-            # Filter keeps answered-yes rows; failed rows come back with failures = 'row'.
-            constraints.append("failures = 'row'")
         result=self.sql('SELECT * FROM thinkthen_'+function+' WHERE '+' AND '.join(constraints),values, interruptible=interruptible)
         if raw:
             return result
         if expected_error is not None:
             assert result['code'] == ERROR and expected_error in result['message'], result
-            assert not result['rows'], result
             return
         assert result['code']==DONE,result
         assert result['columns'][:len(COLUMNS)]==COLUMNS,result['columns']
@@ -276,7 +271,7 @@ with Host() as host:
         "SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?') WHERE low = 0.2",
         "SELECT * FROM thinkthen_decide('SELECT ''{}'' AS record','Ready?') WHERE format = 'text' AND field = '/body'",
         "SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?') WHERE threshold > 0.7",
-        """SELECT * FROM thinkthen_annotate('SELECT ''x'' AS record') WHERE toolbox = '{"bad":{"function":"rank","question":"Rank?","levels":["low","high"]}}'""",
+        """SELECT * FROM thinkthen_annotate('SELECT ''x'' AS record') WHERE questions = '{"bad":{"function":"rank","question":"Rank?","levels":["low","high"]}}'""",
     ]: assert host.sql(statement)['code'] not in (ROW,DONE),statement
     source="SELECT json(record) AS record FROM (SELECT '{\"body\":\"alpha\"}' AS record) ORDER BY record"
     encoded=host.ok('SELECT answer,probability FROM thinkthen_decide(?,?)',[source,'Ready?'])
@@ -291,10 +286,13 @@ with Host() as host:
         rows=host.ok('SELECT answer,probability FROM thinkthen_decide(?,?) WHERE field=?',[source,'Ready?','/body'])
         assert rows==host.ok('SELECT answer,probability FROM thinkthen_decide(?,?) WHERE field=?',
             ["SELECT '{\"body\":\"alpha\"}' AS record ORDER BY record",'Ready?','/body']),rows
-    for record in ('NULL','42','1.5',"x'00ff'"):
-        rows=host.ok('SELECT status,error_code FROM thinkthen_decide(?,?)',['SELECT '+record+' AS record','Ready?'])
-        assert rows==[['failed','record.missing' if record=='NULL' else 'record.invalid']],rows
+    for record,kind,encoded in [('NULL','null',''),('42','integer','3432'),('1.5','real','312E35'),("x'00ff'",'blob','00FF')]:
+        result=host.ok('SELECT typeof(record),hex(record),status,error_code FROM thinkthen_decide(?,?)',['SELECT '+record+' AS record','Ready?'])
+        assert result==[[kind,encoded,'failed','record.missing' if record=='NULL' else 'record.invalid']],result
     for case in json.loads((ROOT/'construction/stub.json').read_text()):
+        if case['request']['question']['function']=='filter' and any(row['status']=='failed' for row in case['expected']):
+            host.call_failure(case['request'],'records failed')
+            continue
         actual=host.call(case['request'])
         from migration_cases import decode, semantic
         actual=[decode(row,case['request']['question']['function'],'stub','stub') for row in actual]
@@ -310,7 +308,7 @@ with Host() as host:
         columns = host.ok('SELECT name,hidden FROM pragma_table_xinfo(?)', ['thinkthen_' + function])
         assert [name for name, hidden in columns if not hidden] == COLUMNS, (function, columns)
         hidden = {name for name, flag in columns if flag}
-        assert ('failures' in hidden) == (function == 'filter'), (function, hidden)
+        assert 'failures' not in hidden and ('raise_if_failed' in hidden) == (function != 'filter'), (function, hidden)
         assert {'yes_means', 'no_means'} <= hidden or function not in ('decide', 'filter'), (function, hidden)
         assert 'descriptions' in hidden or function not in ('choose', 'tag', 'score', 'rank'), (function, hidden)
     version = next(line.split('"')[1] for line in (ROOT / 'Cargo.toml').read_text().splitlines() if line.startswith('version = '))
@@ -336,21 +334,25 @@ with Host() as host:
     rows = host.ok("SELECT json_object('names', answer) FROM thinkthen_recognize(?) WHERE kinds = ?",
         ["SELECT 'Ada' AS record", '["person"]'])
     names = json.loads(rows[0][0], object_pairs_hook=lambda pairs: pairs)[0][1]
-    assert [[key for key, _ in name] for name in names] == [['text', 'kind', 'start_offset', 'end_offset', 'probability']], rows
+    assert [[key for key, _ in name] for name in names] == [['kind', 'text', 'start_offset', 'end_offset', 'probability']], rows
 
     # Feature: filter returns kept rows, then raises once for failed records.
-    host.ok('CREATE TABLE judged(n INTEGER PRIMARY KEY, record TEXT)')
-    host.ok('INSERT INTO judged VALUES(1,?),(2,?),(3,?),(4,?)', [json.dumps(v) for v in ('refund', 'parcel', 'uncertain')] + ['null'])
-    band = "SELECT position,status FROM thinkthen_filter(?,?) WHERE format = 'json' AND low = 0.2 AND high = 0.8"
-    source = 'SELECT record FROM judged ORDER BY n'
-    result = host.sql(band, [source, 'Ready?'])
-    assert result['code'] == ERROR and result['rows'] == [[2, 'answered'], [3, 'answered']], result
-    assert result['message'].startswith("record.missing: 1 of the filter's records failed, the first at position 4"), result
-    assert host.ok(band + " AND failures = 'row'", [source, 'Ready?']) == [[2, 'answered'], [3, 'answered'], [4, 'failed']]
-    # Feature: a failed materialization rolls back its table, leaving the connection usable.
-    result = host.sql('CREATE TABLE failed_filter AS ' + band, [source, 'Ready?'])
-    assert result['code'] == ERROR and result['message'].startswith('record.missing:'), result
-    assert host.ok("SELECT count(*) FROM sqlite_schema WHERE name='failed_filter'") == [[0]]
+    with fixture(LOOPBACK, ROOT / 'conformance/typed/filter-rows.json') as (server, url), Host(url) as filtered_host:
+        filtered_host.configure({'backend': 'systemone'})
+        rejected = filtered_host.sql("SELECT * FROM thinkthen_filter(?,?) WHERE low = 0.2 AND high = 0.8", ["SELECT 'refund' AS record", 'Ready?'])
+        assert rejected['code'] == ERROR and rejected['message'].startswith('usage.threshold:'), rejected
+        assert int(command(server, 'count')) == 0
+        filtered_host.ok('CREATE TABLE judged(n INTEGER PRIMARY KEY, record TEXT)')
+        filtered_host.ok('INSERT INTO judged VALUES(1,?),(2,?),(3,?),(4,?)', [json.dumps(v) for v in ('refund', 'parcel', 'uncertain')] + ['null'])
+        cut = "SELECT position,status FROM thinkthen_filter(?,?) WHERE format = 'json' AND threshold = 0.8"
+        source = 'SELECT record FROM judged ORDER BY n'
+        result = filtered_host.sql(cut, [source, 'Ready?'])
+        assert result['code'] == ERROR and result['rows'] == [[1, 'answered']], result
+        assert result['message'].startswith("record.missing: 1 of 4 records failed; the first, at position 4"), result
+        # Feature: a failed materialization rolls back its table, leaving the connection usable.
+        result = filtered_host.sql('CREATE TABLE failed_filter AS ' + cut, [source, 'Ready?'])
+        assert result['code'] == ERROR and result['message'].startswith('record.missing:'), result
+        assert filtered_host.ok("SELECT count(*) FROM sqlite_schema WHERE name='failed_filter'") == [[0]]
 
 
     # Feature: answer meanings and descriptions reach the question.
@@ -378,8 +380,8 @@ with Host() as host:
         ("SELECT * FROM thinkthen_choose('SELECT ''x'' AS record','Team?') WHERE choices = ? AND descriptions = ?",
          ['["billing","shipping"]', '{"sales":"Quotes."}'],
          "usage.argument: descriptions names 'sales', which is not one of the choices"),
-        ("SELECT * FROM thinkthen_filter('SELECT ''x'' AS record','Ready?') WHERE failures = 'rows'", [],
-         "usage.argument: failures must be 'raise' or 'row', not 'rows'"),
+        ("SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?') WHERE raise_if_failed = 2", [],
+         "usage.argument: raise_if_failed must be 0 or 1"),
         ("SELECT * FROM thinkthen_decide('DELETE FROM messages RETURNING body AS record','Ready?')", [],
          'usage.argument: source_sql must be read-only'),
     ]:
@@ -390,19 +392,6 @@ print('SQLite shared shape, typed ids, JSON columns, kept-only filter and argume
 options_cases(Host)
 run_cases(Host, LOOPBACK)
 
-# Feature: filter leaves out answered-no and not-sure rows.
-case = json.loads((ROOT / 'conformance/typed/filter-rows.json').read_text())
-manifest = json.loads((ROOT / 'conformance/typed/manifest.json').read_text())
-with fixture(LOOPBACK, ROOT / 'conformance/typed/filter-rows.json') as (server, url), Host(url) as host:
-    host.configure({**manifest['client'], 'backend': manifest['backends'][0]})
-    host.ok('CREATE TABLE judged(n INTEGER PRIMARY KEY, record TEXT)')
-    for index, record in enumerate(case['request']['records'], 1):
-        host.ok('INSERT INTO judged VALUES(?,?)', [index, json.dumps(record)])
-    rows = host.ok("SELECT position,status,answer FROM thinkthen_filter(?,?) "
-                   "WHERE format = 'json' AND low = 0.2 AND high = 0.8 AND failures = 'row'",
-                   ['SELECT record FROM judged ORDER BY n', 'Ready?'])
-    assert [row['status'] for row in case['expected']] == ['answered', 'answered', 'unsure', 'failed'], case['expected']
-    assert rows == [[1, 'answered', 1], [4, 'failed', None]], rows
 for arguments,cause in [(['--unavailable'],'connection refused'),
                         (['--held','reset'],'connection reset'),
                         (['--held','headers'],'timeout')]:
@@ -413,10 +402,11 @@ for arguments,cause in [(['--unavailable'],'connection refused'),
         # Feature: a run the backend fails throughout raises its error and returns no rows.
         result=host.sql('SELECT status,error_code,error_message FROM thinkthen_decide(?,?)',
                         ["SELECT 'x' AS record",'Ready?'])
-        assert result['code']==ERROR and not result['rows'],result
-        assert result['message']==f'backend.transport: the openai backend could not be reached: {cause}',result
+        assert result['code']==DONE and len(result['rows'])==1,result
+        assert result['rows'][0][:2]==['failed','backend.transport'],result
+        assert result['rows'][0][2]==f'the openai backend could not be reached: {cause}',result
         assert 'loopback-test-key' not in json.dumps(result),result
-for status in (401,402,429,500):
+for status in (401,403,402,429,500):
     with tempfile.TemporaryDirectory() as temporary:
         case=Path(temporary)/'reply.json'
         case.write_text(json.dumps({'replies':[{'status':status,'body':{'error':
@@ -425,9 +415,12 @@ for status in (401,402,429,500):
             host.configure({'backend':'openai','retry':{'max_retries':0}})
             result=host.sql('SELECT status,error_code,error_http_status,error_message FROM thinkthen_decide(?,?)',
                             ["SELECT 'x' AS record",'Ready?'])
-            assert result['code']==ERROR and not result['rows'],result
-            assert result['message']==(f'backend.status: the backend answered status {status}: '+
-                f'{{"error":"reason for {status} [redacted] [redacted]"}}'),result
+            message = f'the backend answered status {status}: '+f'{{"error":"reason for {status} [redacted] [redacted]"}}'
+            if 400 <= status < 500:
+                assert result['code']==ERROR and not result['rows'] and result['message']=='backend.status: '+message,result
+            else:
+                assert result['code']==DONE and len(result['rows'])==1,result
+                assert result['rows'][0]==['failed','backend.status',status,message],result
             assert 'loopback-test-key' not in json.dumps(result),result
             assert 'sk-unknown-sentinel' not in json.dumps(result),result
             assert command(server,'count')=='1'
@@ -444,11 +437,15 @@ with tempfile.TemporaryDirectory() as temporary:
                      ['SELECT n AS id, record FROM mixed ORDER BY n','Ready?'])
         assert rows==[[1,10,'failed','backend.status'],[2,20,'failed','backend.status'],
                       [3,30,'answered',None],[4,40,'failed','backend.status']],rows
-        for function,extra in [('decide',''),('filter'," AND failures = 'row'"),('filter','')]:
+        for function,extra in [('decide',' AND raise_if_failed = 1'),('filter','')]:
             result=host.sql(f"SELECT * FROM thinkthen_{function}(?,?) WHERE format='json'{extra}",
                             ['SELECT n AS id, record FROM mixed WHERE record=\'"bad"\' ORDER BY n','Ready?'])
-            assert result['code']==ERROR and not result['rows'],(function,extra,result)
-            assert result['message'].startswith('backend.status: '),(function,extra,result)
+            assert result['code']==ERROR,(function,extra,result)
+            if function=='filter':
+                assert result['rows']==[],result
+            else:
+                assert [row[1] for row in result['rows']]==[10,20,40] and all(row[5]=='failed' for row in result['rows']),result
+            assert result['message'].startswith('backend.status: 3 of 3 records failed'),(function,extra,result)
 for case in json.loads((ROOT / 'construction/stub.json').read_text()):
     function = case['request']['question']['function']
     for mode in ('headers', 'body', 'refusal-body'):

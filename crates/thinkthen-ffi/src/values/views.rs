@@ -19,14 +19,14 @@ pub struct SpanView {
 #[repr(C)]
 #[derive(Debug, Default)]
 pub struct NameView {
+    /// The kind of name, one of the question's kinds.
+    pub kind: TextView,
     /// The name as it appears in the record.
     pub text: TextView,
     /// Where the name starts, in the call's offset unit.
     pub start: u64,
     /// Where the name ends, exclusive.
     pub end: u64,
-    /// The kind of name, one of the question's kinds.
-    pub kind: TextView,
     /// How likely the name is right, from 0 to 1.
     pub probability: f64,
 }
@@ -34,14 +34,14 @@ pub struct NameView {
 #[repr(C)]
 #[derive(Debug, Default)]
 pub struct EndpointView {
+    /// The kind of name.
+    pub kind: TextView,
     /// The name as it appears in the record.
     pub text: TextView,
     /// Where the name starts, in the call's offset unit.
     pub start: u64,
     /// Where the name ends, exclusive.
     pub end: u64,
-    /// The kind of name.
-    pub kind: TextView,
 }
 /// A relation between two names, as thinkthen_value_relation_at and thinkthen_value_pair_at
 /// write it; its texts borrow from the value.
@@ -100,13 +100,13 @@ impl Default for TextView {
         }
     }
 }
-pub(super) fn text(value: &str) -> TextView {
+pub(crate) fn text(value: &str) -> TextView {
     TextView {
         data: value.as_ptr(),
         len: value.len(),
     }
 }
-pub(super) fn name(value: &results::Name) -> NameView {
+pub(crate) fn name(value: &results::Name) -> NameView {
     NameView {
         text: text(value.text()),
         start: value.start() as u64,
@@ -123,7 +123,7 @@ fn endpoint(value: &results::RelationName) -> EndpointView {
         kind: text(value.kind()),
     }
 }
-pub(super) fn relation(value: &results::Relation) -> RelationView {
+pub(crate) fn relation(value: &results::Relation) -> RelationView {
     RelationView {
         source: endpoint(value.source()),
         target: endpoint(value.target()),

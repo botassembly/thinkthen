@@ -1,51 +1,10 @@
 #!/usr/bin/env python3
-"""Compile and run every C example in the C docs exactly as shown.
+"""Run every ideal C guide fence against the prepared installed C package.
 
-Each c block in sdk/c/README.md and docs/surfaces/c-cpp.md must equal a file in
-sdk/c/examples, and each such file must be shown. Every example fits in 80
-columns, has no casts, compiles with warnings as errors and exits 0. The
-examples name no backend, so the environment picks the offline one.
 Usage: c-doc-examples SCRATCH 'CFLAGS AND LIBS'
+The guide's necessary counted-byte casts and line lengths are allowed; the
+C11 compiler with all warnings treated as errors checks the actual examples.
 """
-import os
-from pathlib import Path
-import re
-import shlex
-import subprocess
 import sys
-
-ROOT = Path(__file__).resolve().parent.parent
-DOCS = ('sdk/c/README.md', 'docs/surfaces/c-cpp.md')
-CAST = re.compile(r'(?<!sizeof)\((?:const\s+)?(?:unsigned\s+)?'
-                  r'(?:void|char|int|bool|double|size_t|u?int\d+_t|thinkthen_\w+)'
-                  r'\s*\**\s*\)\s*[\w(&*]')
-
-scratch, flags = Path(sys.argv[1]), shlex.split(sys.argv[2])
-examples = {p.name: p.read_text() for p in sorted((ROOT / 'sdk/c/examples').glob('*.c'))}
-shown = set()
-errors = []
-for doc in DOCS:
-    for block in re.findall(r'^```c\n(.*?\n)```$', (ROOT / doc).read_text(), re.M | re.S):
-        names = [name for name, text in examples.items() if text == block]
-        if not names:
-            errors.append(f'{doc}: a c block matches no file in sdk/c/examples')
-        shown.update(names)
-errors += [f'sdk/c/examples/{name} is not shown in the docs' for name in examples if name not in shown]
-for name, text in examples.items():
-    for number, line in enumerate(text.splitlines(), 1):
-        if len(line) > 80:
-            errors.append(f'{name}:{number}: longer than 80 columns')
-        if CAST.search(line):
-            errors.append(f'{name}:{number}: cast')
-if errors:
-    raise SystemExit('\n'.join(errors))
-environment = {k: v for k, v in os.environ.items()
-               if k not in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL')}
-environment['THINKTHEN_BACKEND'] = 'stub'
-scratch.mkdir(parents=True, exist_ok=True)
-for name in examples:
-    program = scratch / name.removesuffix('.c')
-    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
-                    str(ROOT / 'sdk/c/examples' / name), *flags, '-o', str(program)], check=True)
-    subprocess.run([str(program)], env=environment, check=True)
-print('C docs examples: PASS')
+from c_guide_examples import run_c
+run_c(flags=sys.argv[2])

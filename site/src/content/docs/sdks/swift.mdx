@@ -1,178 +1,630 @@
 ---
 title: Swift SDK
-description: "Swift SDK: ask the ten ThinkThen questions from Swift and get yes, no or not sure back as plain Swift values."
-goal: The reader runs a first decide in Swift, adds the SDK to a build, catches not sure and failures, and finds the Swift call for each of the ten functions.
+description: "swift functions with answered, not-sure and failed results."
+goal: Learn the tested calls and result handling for this language.
 reader: A Swift developer who wants to ask questions about text from code
 kind: reference
-verified: 2026-11-03
+verified: 2026-11-13
 sidebar:
   label: "Swift"
 ---
 import Example from '../../../components/Example.astro';
-import ExampleFile from '../../../components/ExampleFile.astro';
-import InstallLine from '../../../components/InstallLine.astro';
-import Fact from '../../../components/Fact.astro';
 
-The Swift SDK gives your Swift code the ten functions as `async` methods on one client; each call gives back a result, and its `get()` gives the plain Swift value, such as `true` or `false` from decide, or throws when the answer is not sure.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-<Example id="sdks/swift/first" title="Sources/Example/main.swift" />
+<Example id="functions/decide/swift" />
 
-`true` means yes: the message asks for a refund.
+Use Swift 6.3 or later, on macOS 15 or later on Apple silicon, or on Linux with glibc 2.35 or later. Add `https://github.com/botassembly/thinkthen` to the dependencies in `Package.swift`, and the `ThinkThen` product to your target. The SDK includes the engine. Set `THINKTHEN_API_KEY` in the environment first.
 
-Add it to your `Package.swift` dependencies (<Fact k="languages.swift.requires" />):
+A one-message call throws `Failed` at `try await` when its message could not be judged. A successfully returned result is answered or unsure, with `isFailed` false and its own `error` nil. The shared result type also represents many-message results and form entries, so it retains all three states:
 
-<InstallLine k="languages.swift.install" lang="swift" />
+- **answered**: there is an answer, and `try result.answer` is it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the message could not be judged, or the service did not respond.
 
-Then add the `ThinkThen` product to your target. This `Package.swift` builds the program above from `Sources/Example` with `swift run`:
+Three rules hold for every function on this page.
 
-<ExampleFile id="sdks/swift/first" file="Package.swift" />
+1. **Reading the answer throws when there is none.** On a successfully returned scalar result, `try result.answer` can throw `Unsure`. On a many-message result, form entry or saved result, it can also throw `Failed`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never throws.** `result.isAnswered`, `result.isUnsure`, `result.isFailed`, `result.probability` and `result.error` are plain properties that need no `try`.
+3. **Printing never throws.** `print(result)` and `"\(result)"` show the answer, `unsure`, or `failed:` with the reason. A yes prints as `true` and a no as `false`, the same words the `thinkthen` command prints.
 
-The client uses the key from the [Quickstart](/quickstart/).
+<span id="the-ten-functions"></span>
 
-## Catch not sure and failures
+## decide
 
-Set a low bar and a high bar with `.band(low:high:)`. Between them, decide is not sure, and `get()` throws `RowError.unsure`. When ThinkThen can't judge the message, `get()` throws `RowError.failed` instead. Neither one can pass for `false`.
+### The simplest if
 
-<Example id="sdks/swift/unsure" title="Sources/Example/main.swift" />
+Swift's `if` takes only a `Bool`, so the `if` reads the answer. On a decide result, `answer` is `true` or `false`.
 
-A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+```swift
+import ThinkThen
 
-`RowError.unsure` carries the chance of yes. `RowError.failed` carries a `RowFailure`, whose `code` names the error and whose `message` says what went wrong; [Troubleshooting](/reference/troubleshooting/) lists each code. A blank message or a question ThinkThen can't accept throws `ThinkThenError` from the call itself, before there is a result to read; its `failure` holds the code. To check the outcome without throwing, test the result's `isUnsure` or `isFailed`, or switch on `result()`.
+let client = try Client()
 
-## The ten functions
+if try await client.decide("Does the customer request a refund?", record: "Please refund my order.").answer {
+    print("refund queue")
+} else {
+    print("inbox")
+}
+```
 
-Each function reads the same support-inbox messages as the function pages. Where a program reads `message.txt` or `messages.txt`, the text it holds is named above the program.
+If the message could not be judged, `client.decide` throws `Failed` at the call. The `if` never receives a failed result and never falls through to `inbox` for failure. With one bar a returned decide result is yes or no; two bars can make its answer read throw `Unsure`.
 
-### decide
+Always read an answer with `try`, never with `try?`. Swift's `try?` turns every thrown error into `nil`, so it would turn not sure and failed into a quiet `nil`, which is the mistake this library is built to stop. On find it would also make both look like "no line answers". No library can change what `try?` does.
 
-<details class="example-disclosure">
-<summary>Yes or no about one message</summary>
+Every later example uses this `client`, in code that can `try` and `await`, such as `main.swift`.
 
-`message.txt` holds `Please refund my order.`
+<span id="yes-no-or-something-else"></span>
 
-<Example id="functions/decide/swift" title="Sources/Example/main.swift" />
+### Yes, no, or not sure
 
-Yes: the message asks for a refund. `decide` also takes `yesMeans:` and `noMeans:`, and `options: .init(threshold:)` with one bar, such as `0.8`, or a low and a high bar with `.band(low:high:)`. Pass `records:` instead of `record:` to judge many messages; it gives one result each, in order. [decide](/functions/decide/) shows every option.
+Set two bars and decide can also be not sure. `isAnswered` tells you whether there is a yes or no to read.
 
-</details>
+```swift
+let isRefund = try await client.decide(
+    "Does the customer request a refund?",
+    record: "Where is my parcel?",
+    threshold: .band(low: 0.2, high: 0.8)
+)
 
-### choose
+if isRefund.isAnswered {
+    print(try isRefund.answer ? "refund queue" : "inbox")
+} else {
+    print("a person reads it")
+}
+```
 
-<details class="example-disclosure">
-<summary>The one choice that fits</summary>
+You can also let the read throw and catch `Unsure`. The scalar call has already succeeded, so this read cannot report a failed result.
 
-`message.txt` holds `Please refund my order.`
+```swift
+do {
+    print(try isRefund.answer ? "refund queue" : "inbox")
+} catch is Unsure {
+    print("a person reads it")
+}
+```
 
-<Example id="functions/choose/swift" title="Sources/Example/main.swift" />
+<span id="did-it-work"></span>
 
-A refund is about billing. A choice can carry what it means, as `Choice("billing", description: "...")`, and `options: .init(threshold:)` can make choose not sure. [choose](/functions/choose/) shows every option.
+### Did the call work
 
-</details>
+```swift
+do {
+    let isRefund = try await client.decide(
+        "Does the customer request a refund?", record: "Please refund my order."
+    )
+    print(isRefund)
+} catch let failure as Failed {
+    print("could not judge it:", failure)
+} catch let failure as ThinkThenError {
+    print("the call did not complete:", failure)
+}
+```
 
-### filter
+`Failed` reports a failed judgement, including a service failure on that message. Other usage, setup, authentication and cancellation errors retain their classifications; not every call failure becomes `Failed`. Unmatched errors propagate from this throwing context, including Swift's `CancellationError`. No answer is read inside either handler.
 
-<details class="example-disclosure">
-<summary>Only the messages that answer yes</summary>
+Not sure is a successful call. Its later answer read can throw `Unsure`, which conforms to `NoAnswer` but not `ThinkThenError`.
 
-`messages.txt` holds three lines: `Please refund my order.`, `Where is my parcel?` and `I was charged twice for one invoice.`
+### Both bars and the probability
 
-<Example id="functions/filter/swift" title="Sources/Example/main.swift" />
+```swift
+let isRefund = try await client.decide(
+    "Does the customer request a refund?",
+    record: "Where is my parcel?",
+    threshold: .band(low: 0.2, high: 0.8)
+)
+if let probability = isRefund.probability {
+    print(probability)
+}
+```
 
-The parcel question is left out. `filter` gives back your own messages, in the type you passed in, and leaves out the ones it is not sure about. If any message fails, it throws one `RowFailure` after the kept ones, and its `failedRows` lists every failure. `filterResults` gives every message with its outcome and `kept` instead. [filter](/functions/filter/) shows every option.
+- No `threshold`: one bar at 0.5. The answer is always yes or no.
+- `threshold: 0.7`: one bar. Yes at 0.7 or above, otherwise no.
+- `threshold: .band(low: 0.2, high: 0.8)`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
 
-</details>
+`probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is a `Double?`. A returned scalar decide result has it even when unsure; a failed many-message result has nil.
 
-### tag
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `client.decide` with `records:`, save each `probability`, and compare with your labels.
 
-<details class="example-disclosure">
-<summary>Every label that fits</summary>
+<span id="choose"></span>
 
-`message.txt` holds `I was charged twice and my parcel is late again.`
+## choose with your own choices
 
-<Example id="functions/tag/swift" title="Sources/Example/main.swift" />
+Give your choices as an `enum` backed by `String`. The answer comes back as a case of it.
 
-The message is about both billing and shipping. The answer is a `[String]`, empty when no label fits. [tag](/functions/tag/) shows every option.
+```swift
+import ThinkThen
 
-</details>
+enum Topic: String, CaseIterable {
+    case billing, shipping, other
+}
 
-### score
+func teamFor(_ topic: Topic) -> String {
+    switch topic {
+    case .billing: "billing team"
+    case .shipping: "warehouse"
+    case .other: "front desk"
+    }
+}
+
+let topic = try await client.choose(
+    "What is the message about?",
+    record: "I was charged twice for one invoice.",
+    choices: Topic.self
+)
 
-<details class="example-disclosure">
-<summary>A number from 0 to 1 on your scale</summary>
+if topic.isUnsure {
+    print("a person reads it")
+} else {
+    print(teamFor(try topic.answer))
+}
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.isUnsure` before reading the answer. `threshold: 0.3` moves the bar.
 
-`message.txt` holds `Please refund my order.`
+The raw values of the enum (`"billing"`, `"shipping"`, `"other"`) are the words the model reads, so make them plain words or short phrases, not codes. A case with no raw value written out uses its own name, so `case billing` sends `billing`. Write one out when the words differ from the name, as in `case lateParcel = "late parcel"`. The case names are for your code.
 
-<Example id="functions/score/swift" title="Sources/Example/main.swift" />
+Add a case to `Topic` and the compiler refuses `teamFor` until you handle it.
 
-The levels run lowest first, so a plain refund request scores near routine. The answer is a `Double`. [score](/functions/score/) shows every option.
+A choose result does not go in an `if`, and is not equal to its answer. `if topic {` and `topic == Topic.billing` do not compile. Read `try topic.answer`.
 
-</details>
+Value equality and hashing cover only `function`, `status`, `answer`, `probability`, `error`, `position`, `id`, `source` and `detail`, using this language's names. They never include `item`, including on entries inside a form. Changing the caller's message cannot change a result's equality or hash.
 
-### rank
+An array of strings also works, `choices: ["billing", "shipping", "other"]`, and the answer is then a `String`.
 
-<details class="example-disclosure">
-<summary>Every message, highest first</summary>
+<span id="many-records"></span>
 
-`messages.txt` holds the three messages from filter.
+## Many messages
 
-<Example id="functions/rank/swift" title="Sources/Example/main.swift" />
+Each one-message function has a `records:` form that takes many messages and gives one result per message, in order. Each result carries your own message as `.item`.
 
-The double charge is the most urgent. Each `RankResult` gives its rank from `get()`, starting at 1, and keeps your message as `item` and its place in your input as `position`. `RankOptions(top:)` keeps only the first few. [rank](/functions/rank/) shows every option.
+```swift
+import ThinkThen
 
-</details>
+let messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
 
-### find
+let refundChecks = client.decide(
+    "Does the customer request a refund?",
+    records: messages,
+    threshold: .band(low: 0.2, high: 0.8)
+)
+
+for try await isRefund in refundChecks {
+    if isRefund.isUnsure {
+        print("a person reads it:", isRefund.item)
+    } else if isRefund.isFailed {
+        print("try again later:", isRefund.item)
+    } else if try isRefund.answer {
+        print("refund queue:", isRefund.item)
+    } else {
+        print("inbox:", isRefund.item)
+    }
+}
+```
 
-<details class="example-disclosure">
-<summary>The line that answers the question</summary>
+One failed message does not stop the stream. Each result keeps its own state, with `position` counted from 1 and the message's `id` when it has one.
 
-`message.txt` holds two lines: `Morgan works for Example Group.` and `Please refund my order.`
+Pass the whole collection to one call so ThinkThen can send the messages in batches. The messages can be a `Sendable` `Sequence` or `AsyncSequence` whose elements are `Encodable & Sendable`. The results are an `AsyncSequence` that you read once. Leaving the loop early, with `break` or a thrown error, stops the call. `try await refundChecks.collect()` collects every result into an array.
 
-<Example id="functions/find/swift" title="Sources/Example/main.swift" />
+To save every result, write `try JSONEncoder().encode(result)` as a line of JSON. It includes the state, so nothing is lost.
 
-The second line states the action. The answer is a `TextSpan?` with `text`, `start` and `end`, or `nil` when no line answers. Offsets count Unicode code points; `range(in:)` turns them into a `Range<String.Index>`. [find](/functions/find/) shows every option.
+<span id="not-sure-or-failed"></span>
 
-</details>
+<span id="raise-if-it-failed"></span>
 
-### recognize
+## Many-result not sure or failed
 
-<details class="example-disclosure">
-<summary>Each name in the text and its kind</summary>
+Yes and no are the two answers. Not sure and failed are the two ways a many-message result has none. A `records:` call retains a failed result even when its collection has one input. To name every state and have the compiler confirm none is missed, switch over `status`:
+
+```swift
+func whereItGoes(_ isRefund: DecideRow<String>) throws -> String {
+    switch isRefund.status {
+    case .answered:
+        return try isRefund.answer ? "refund queue" : "inbox"
+    case .unsure:
+        return "a person reads it"
+    case .failed:
+        return "try again later"
+    }
+}
 
-`message.txt` holds `Morgan works for Example Group.`
+let messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+for try await isRefund in client.decide(
+    "Does the customer request a refund?", records: messages,
+    threshold: .band(low: 0.2, high: 0.8)
+) {
+    print(try whereItGoes(isRefund), isRefund.item)
+}
+```
 
-<Example id="functions/recognize/swift" title="Sources/Example/main.swift" />
+Leave out a case and the code does not compile. `DecideRow<String>` is the shared result type for scalar and many-message calls; the static `.failed` case remains even though a successfully returned scalar result never has that state. The function is marked `throws` because every answer read requires `try`; inside `.answered` it has an answer.
+
+To reject a failed many-message result explicitly, call its failure helper:
 
-Each `RecognizedName` holds the name's `text`, `kind`, `start`, `end` and `probability`. [recognize](/functions/recognize/) shows every option.
+```swift
+for try await isRefund in client.decide(
+    "Does the customer request a refund?", records: ["Please refund my order."],
+    threshold: .band(low: 0.2, high: 0.8)
+) {
+    try isRefund.throwIfFailed()
+    print(isRefund)
+}
+```
 
-</details>
+`throwIfFailed()` returns the same result for answered or unsure results; unsure throws only at the answer read. The one-input `records:` call keeps many-message behavior. The helper remains on the shared type, but is redundant after an ordinary successful scalar call.
 
-### relate
+## filter
 
-<details class="example-disclosure">
-<summary>Names linked by the relations you allow</summary>
+filter means "give me the yeses". It hands back your own messages, in order.
 
-`message.txt` holds the two lines from find.
+```swift
+import ThinkThen
 
-<Example id="functions/relate/swift" title="Sources/Example/main.swift" />
+let messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
 
-A `RelationRule` names the kind of name at each end and the relation between them; `either: true` lets it read in both directions. [relate](/functions/relate/) shows every option.
+for try await refundRequest in client.filter("Does the customer request a refund?", records: messages) {
+    print("refund queue:", refundRequest)
+}
+```
 
-</details>
+filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `threshold: 0.7` moves the bar. Two bars are refused: filter's `threshold` is a `Double`, so `.band` does not compile there, and a saved filter question that holds two bars throws `UsageError`. When you want not sure, use `client.decide` with `records:`, as in the section above.
 
-### annotate
+If a message fails, you still get every kept message first. Then filter throws one `Failed`, and its `rows` holds every failed result with its `.item`.
 
-<details class="example-disclosure">
-<summary>Several questions for each message</summary>
+```swift
+do {
+    for try await refundRequest in client.filter("Does the customer request a refund?", records: messages) {
+        print("refund queue:", refundRequest)
+    }
+} catch let failure as Failed {
+    for failed in failure.rows {
+        print("try again later: \(failed.item) (\(failed))")
+    }
+}
+```
 
-`messages.txt` holds the three messages from filter.
+`Failed` is one type for every call, so it does not know your message's type. `failed.item` is an `any Sendable`: cast it, as in `failed.item as? String`, to use it as your own type.
 
-<Example id="functions/annotate/swift" title="Sources/Example/main.swift" />
+## tag
 
-Each answer is read by name with `get(_:as:)`, and throws `RowError.unsure` when not sure, as decide does. For one message, pass `record:` instead of `records:`. [annotate](/functions/annotate/) shows every option.
+Labels work as choices do. The answer is an array of the cases that fit, and it can be empty.
 
-</details>
+```swift
+import ThinkThen
 
-## The full API
+enum Topic: String, CaseIterable {
+    case billing, shipping
+}
 
-Each options type takes `field:`, a JSON Pointer such as `"/text"`, to judge one field of a structured message. A message is `.text(...)`, or `.json(...)` for a structured one. Cancelling the task that runs a call stops it and throws `CancellationError`. The [Swift API source](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/swift/Sources/ThinkThen) lists every type and method.
+let topics = try await client.tag(
+    "Which topics appear?",
+    record: "I was charged twice and my parcel is late again.",
+    labels: Topic.self
+)
+
+if try topics.answer.contains(.billing) {
+    print("billing team")
+}
+for topic in try topics.answer {
+    print(topic.rawValue)
+}
+```
+
+tag is never not sure. `threshold:` sets how likely a label must be to count.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it.
+
+```swift
+import Foundation
+import ThinkThen
+
+enum Urgency: String, CaseIterable {
+    case routine, urgent
+}
+
+let urgency = try await client.score(
+    "How urgent is the request?",
+    record: "Please refund my order.",
+    levels: Urgency.self
+)
+
+if try urgency.answer > 0.5 {
+    print("answer today")
+}
+print(String(format: "%.2f", try urgency.answer))
+```
+
+The score is a position between your levels, not one of them, so it is a `Double` and there is nothing to `switch` over. To get exactly one level back, ask with `client.choose`. score is never not sure. The order of `Urgency.allCases` defines the scale. Swift's synthesized `CaseIterable` list follows declaration order; if you supply `allCases` yourself, that list defines the order.
+
+## rank
+
+rank puts many messages in order along your levels, highest first.
+
+```swift
+import ThinkThen
+
+let messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+
+for try await ranked in client.rank("How urgent is the request?", records: messages, levels: Urgency.self) {
+    print(try ranked.answer, ranked.item)
+}
+```
+
+`try ranked.answer` is the rank, starting at 1, and `ranked.item` is your message. rank reads the whole collection before it gives anything back. `top: 5` retains the five highest-ranked messages after judging the whole collection. A failed message comes back after the ranked ones, with `isFailed` true.
+
+## find
+
+find points to the one line that answers.
+
+```swift
+import ThinkThen
+
+let message = "Morgan works for Example Group.\nPlease refund my order."
+let action = try await client.find("Which line states the requested action?", record: message)
+
+if action.isUnsure {
+    print("a person reads it")
+} else if let span = try action.answer {
+    print(span.text)
+} else {
+    print("no line answers")
+}
+```
+
+The answer is a `TextSpan` with `text`, `start` and `end`, or `nil` when no line answers. `start` and `end` are `String.Index` values, so `message[span.start..<span.end]` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```swift
+import ThinkThen
+
+let names = try await client.recognize(
+    record: "Morgan works for Example Group.",
+    kinds: ["person", "organization"]
+)
+
+for name in try names.answer {
+    print(name.kind, name.text)
+}
+```
+
+Each name also has `start`, `end` and `probability`. The answer can be empty. recognize is never not sure.
+
+## relate
+
+```swift
+import ThinkThen
+
+let message = "Morgan works for Example Group.\nPlease refund my order."
+let rules = [RelationRule(source: "person", target: "organization", relation: "works_for")]
+
+let relations = try await client.relate(record: message, rules: rules)
+
+for relation in try relations.answer {
+    print(relation.source.text, relation.relation, relation.target.text)
+}
+```
+
+Each relation has `source`, `target`, `relation`, `probability` and `either`. `relations.detail?.names` holds every name found, including names in no relation.
+
+## annotate
+
+annotate asks several questions of each message and gives back one form per message.
+
+```swift
+import Foundation
+import ThinkThen
+
+let messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+
+let questions = AnnotationQuestions([
+    "refund": DecideQuestion("Does the customer request a refund?", threshold: .band(low: 0.2, high: 0.8)),
+    "topic": ChooseQuestion("What is the message about?", choices: Topic.self),
+    "urgency": ScoreQuestion("How urgent is the request?", levels: Urgency.self),
+])
+
+let forms = client.annotate(questions, records: messages)
+
+for try await form in forms {
+    if form.isFailed {
+        print("try again later:", form.item)
+        continue
+    }
+    let entries = try form.answer
+    let isRefund = try entries.decide("refund")
+    let topic = try entries.choose("topic", choices: Topic.self)
+    let urgency = try entries.score("urgency")
+    if isRefund.isFailed || topic.isFailed || urgency.isFailed {
+        print("try again later:", form.item)
+    } else if isRefund.isUnsure || topic.isUnsure {
+        print("a person reads it:", form.item)
+    } else if isRefund.isAnswered && topic.isAnswered && urgency.isAnswered {
+        if try isRefund.answer {
+            print("refund queue:", try topic.answer.rawValue, String(format: "%.2f", try urgency.answer))
+        }
+    }
+}
+```
+
+`try form.answer` holds one entry per question, under the name you gave it. Each entry is a result of its own function, with its own state. `try entries.decide("refund")` is a decide result, so its `answer` goes in an `if`. One entry can be not sure or failed while the others answer. Check every entry used by a branch before reading its answer; an answered form alone does not mean its entries all answered. Asking for a name the form does not have, or with the wrong function, is a mistake in the call and throws `UsageError`. Here `Topic` is the three-choice enum from the choose section, and `Urgency` is the enum from the score section.
+
+A scalar `try await client.annotate(questions, record: message)` throws `Failed` only if the parent form failed. An answered parent is returned even if one, several or all entries failed. Scalar promotion checks only the parent's own state, not the recursive helper.
+
+```swift
+let form = try await client.annotate(questions, record: "Please refund my order.")
+try form.throwIfFailed()
+```
+
+The optional second line explicitly checks the form and every entry. It throws `Failed` for a failed parent or any failed entry, never merely for an unsure entry; otherwise it returns the same form unchanged. It also works on many-message forms. Checking only the parent's state does not authorize reading an unchecked child's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```swift
+let isRefund = try await client.decide(
+    "Does the customer request a refund?",
+    record: "I was charged twice for one invoice.",
+    yesMeans: "the customer wants money back, including for a duplicate charge",
+    noMeans: "the customer wants anything else"
+)
+
+let topic = try await client.choose(
+    "What is the message about?",
+    record: "I was charged twice for one invoice.",
+    choices: Topic.self,
+    descriptions: [
+        .billing: "charges, invoices and refunds",
+        .shipping: "parcels and delivery",
+    ]
+)
+```
+
+decide and filter take `yesMeans` and `noMeans`. choose, tag, score and rank take `descriptions`, keyed by your choices, labels or levels.
+
+<span id="records-and-fields"></span>
+
+## Messages and fields
+
+A message is a `String`, or any `Encodable & Sendable` value such as a struct or a dictionary. `field: "/text"` picks one field of it. Without it, ThinkThen judges the whole message. For JSON whose shape you don't know ahead of time, decode it into `JSONValue`, which is also a message.
+
+Give struct and dictionary messages an `id`. Each result carries it back as `.id`.
+
+A one-message call given an array throws `UsageError` before any request, and the message names `records:`. Swift’s generic `Encodable & Sendable` message constraint also accepts arrays, so this refusal happens when the call is awaited, including through generic forwarding. A blank message (an empty string, only spaces, or an empty dictionary) throws `Failed` from the scalar call with code `record.empty`, before any service request. The `records:` form retains that failure on its result, even with one input.
+
+## Async
+
+Every call is asynchronous. A one-message call is an `async` function you `await`, and a many-message call gives an `AsyncSequence` for `for try await`. There is no second, blocking set of functions. A failed scalar parent throws at `try await`; unsure returns successfully. Startup and cancellation errors can throw during iteration, while individual message failures remain results.
+
+```swift
+import ThinkThen
+
+let client = try Client()
+
+let isRefund = try await client.decide("Does the customer request a refund?", record: "Please refund my order.")
+print(try isRefund.answer ? "refund queue" : "inbox")
+
+let messages = ["Please refund my order.", "Where is my parcel?"]
+for try await isRefund in client.decide("Does the customer request a refund?", records: messages) {
+    print(isRefund, isRefund.item)
+}
+```
+
+If you forget the `await`, the code does not compile. A client is `Sendable`, so tasks can share one.
+
+## Saved questions
+
+A question value holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
+
+```swift
+let asksRefund = DecideQuestion(
+    "Does the customer request a refund?",
+    threshold: .band(low: 0.2, high: 0.8),
+    field: "/text"
+)
+let isRefund = try await client.decide(asksRefund, record: ["id": "a1", "text": "Please refund my order."])
+```
+
+There is one type per function, such as `ChooseQuestion` and `ScoreQuestion`. A `Toolbox` keeps named questions in a JSON file:
+
+```swift
+import Foundation
+
+let toolbox = try Toolbox(contentsOf: URL(filePath: "toolbox.json"))
+let asksTopic = try toolbox.choose("topic", choices: Topic.self)
+let topic = try await client.choose(asksTopic, record: ["id": "a1", "text": "Where is my parcel?"])
+```
+
+`toolbox.choose` throws `UsageError` when the toolbox has no choose question of that name, or when the saved choices are not exactly `Topic`'s.
+
+## Settings
+
+A client made with no settings reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, pass them when you make the client and call the same functions on it.
+
+```swift
+let client = try Client(model: "...", batch: 16, retry: RetryPolicy(maxRetries: 5))
+let isRefund = try await client.decide("Does the customer request a refund?", record: "Please refund my order.")
+```
+
+The options are `backend`, `url`, `model`, `apiKey`, `batch` and `retry`. Times in `RetryPolicy` are `Duration` values, such as `.seconds(2)`. Keep the key in the environment, not in your code. A client needs no closing: it frees the engine when your last reference to it goes.
+
+## Usage
+
+```swift
+let client = try Client()
+_ = try await client.decide("Does the customer request a refund?", record: "Please refund my order.")
+let usage = client.usage
+print(usage.attempts, usage.inputTokens.reported ?? 0, usage.outputTokens.reported ?? 0)
+```
+
+`client.usage` counts everything the client has sent so far: `attempts`, `responses`, retries, bytes sent, and tokens in and out as the service reported them.
+
+## Cancel
+
+Swift already has a way to stop work, and ThinkThen follows it: cancel the task the call runs in.
+
+```swift
+let stop = Task {
+    try await client.decide("Does the customer request a refund?", record: "Please refund my order.")
+}
+```
+
+Calling `stop.cancel()` stops the call, which throws Swift's own `CancellationError`. Anything that cancels a task does the same, such as a task group that ends early. Leaving a `for try await` loop stops a many-message call.
+
+## Errors
+
+| What happened | When it throws | What is thrown |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold | When you `await` the call, or at the first step of a `for try await` | `UsageError`, including an array given to a one-message call before any request. Two bars given to filter do not compile |
+| The client could not start, such as no API key | At `try Client()` | `SetupError` |
+| The call was cancelled | When you `await` the call, or at the next step of a `for try await` | `CancellationError` |
+| A scalar judgement failed, including blank input or service failure on its result | At `try await` on the call | `Failed` |
+| A many-message result or form entry failed | At its answer read or `throwIfFailed()` | `Failed` |
+| A scalar annotate parent failed | At `try await` on the call; many-message calls keep a failed form | `Failed` |
+| An answered annotate parent contains failed entries | The call returns it; a failed-entry read or explicit form check throws | `Failed` |
+| Not sure | When you read the answer | `Unsure` |
+| You print a result, store it, or ask about its state | Never | |
+
+Two protocols let you catch by meaning:
+
+- `catch is NoAnswer` catches `Unsure` and `Failed`: there was no answer to read.
+- `catch is ThinkThenError` catches everything that went wrong, including `Failed`. It does not catch `Unsure`, because not sure is a result and not an error. It does not catch `CancellationError` either, which is Swift's own.
+
+Write `catch let error as ThinkThenError` to read its `code` and `message`.
+
+`Failed` is the renamed concrete `RecordError`; it keeps its `code`, `message`, `httpStatus` and `rows` payloads and its conformance to both error protocols. Wire codes such as `record.empty` stay unchanged. Other call-error classifications and payloads are preserved. `Unsure` carries `probability` and `row`.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 SDK/source](https://proxy.golang.org/github.com/botassembly/thinkthen/@v/v0.1.2.zip). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
+| --- | --- |
+| `Engine().decide(q, text).value.outcome` | Client and shared result; scalar failures throw at the call, unsure at the loud answer read |
+| `CallResult.value` and `.facts` | Result answer and client usage |
+| `CancelToken`; manual `Engine.close()` | Standard task cancellation and client lifetime shown above |
+
+
+Code using the pre-release `RecordError` name must use `Failed`. Many-message calls, filter aggregation, saved wire codes and form-entry states retain their behavior.

@@ -1,0 +1,58 @@
+#!/bin/sh
+# Prepare installed Kotlin and Java packages, then execute the literal Kotlin guide.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/jvm-env
+unset JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS CLASSPATH
+scripts/jvm-generated
+if command -v ruff >/dev/null 2>&1; then
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/guide_kotlin.py scripts/kotlin-example-check scripts/kotlin-driver-witness scripts/kotlin-dispatch-check
+else
+    echo 'Ruff unavailable in the prepared builder environment'
+fi
+if [ "${1:-}" = --jvm-tail ]; then exec scripts/java-ideal-gate --jvm-after-kotlin-abi; fi
+if [ "${1:-}" = --jvm ]; then exec scripts/java-ideal-gate --jvm-guides-checked; fi
+# Deleted API classes must not survive from a previous ticket-build artifact.
+rm -rf sdk/kotlin/target/classes sdk/java/library/target/classes
+kotlin_scratch=$(mktemp -d)
+python3 scripts/jvm_repository.py seed "$cache/m2" "$kotlin_scratch/m2"
+if [ "${1:-}" = --compile-only ]; then
+    exec mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$kotlin_scratch/m2" compile -DskipTests
+fi
+cargo build --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+kotlin_target=${CARGO_TARGET_DIR:-target}
+case "$kotlin_target" in /*) ;; *) kotlin_target="$PWD/$kotlin_target" ;; esac
+kotlin_resource="sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
+mkdir -p "$kotlin_resource"
+cp "$kotlin_target/debug/$jvm_library" "$kotlin_resource/"
+mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$kotlin_scratch/m2" install -DskipTests
+mvn -o -B -q -f sdk/kotlin/pom.xml -Dmaven.repo.local="$kotlin_scratch/m2" dependency:build-classpath -Dmdep.outputFile="$kotlin_scratch/classpath"
+kotlin_jar=$(find "$kotlin_scratch/m2/io/github/botassembly/thinkthen-kotlin" -maxdepth 2 -name 'thinkthen-kotlin-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar')
+test -f "$kotlin_jar"
+if [ "${1:-}" = --update-api ]; then
+    exec python3 sdk/kotlin/tests/api_dump.py "$JAVA_HOME/bin/javap" "$kotlin_jar" sdk/kotlin/api/thinkthen-kotlin.api --update-api
+fi
+export THINKTHEN_LOOPBACK="$kotlin_target/debug/loopback"
+export THINKTHEN_KOTLIN_REPOSITORY="$kotlin_scratch/m2"
+if [ "${1:-}" = --driver-witness ]; then
+    exec python3 scripts/kotlin-driver-witness "$kotlin_jar:$(cat "$kotlin_scratch/classpath")" "$kotlin_scratch/m2"
+fi
+python3 sdk/kotlin/tests/api_dump.py "$JAVA_HOME/bin/javap" "$kotlin_jar" sdk/kotlin/api/thinkthen-kotlin.api
+kotlin_root=$PWD
+python3 scripts/jvm_repository.py consumer "$kotlin_root" "$kotlin_scratch/consumer"
+mvn -o -B -q -f "$kotlin_scratch/consumer/pom.xml" -Dmaven.repo.local="$kotlin_scratch/m2" package -DskipTests
+if [ "${1:-}" = --host-only ]; then
+    python3 scripts/kotlin-example-check "$kotlin_jar:$(cat "$kotlin_scratch/classpath")" "$kotlin_scratch/m2" "$kotlin_scratch/home" --host-only
+else
+    python3 scripts/kotlin-example-check "$kotlin_jar:$(cat "$kotlin_scratch/classpath")" "$kotlin_scratch/m2" "$kotlin_scratch/home"
+fi
+python3 scripts/kotlin-dispatch-check "$kotlin_jar:$(cat "$kotlin_scratch/classpath")" "$kotlin_scratch/m2"
+mkdir -p "$kotlin_scratch/home"
+export THINKTHEN_BACKEND=stub
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_URL THINKTHEN_BASE_URL
+"$JAVA_HOME/bin/java" "-Duser.home=$kotlin_scratch/home" --enable-native-access=ALL-UNNAMED -cp "$kotlin_scratch/consumer/target/classes:$kotlin_jar:$(cat "$kotlin_scratch/classpath")" consumer.FlowCasesKt "$kotlin_root/conformance/typed"
+
+"$JAVA_HOME/bin/java" "-Duser.home=$kotlin_scratch/home" --enable-native-access=ALL-UNNAMED -cp "$kotlin_scratch/consumer/target/classes:$kotlin_jar:$(cat "$kotlin_scratch/classpath")" consumer.SurfaceCasesKt "$kotlin_root/conformance"
+"$JAVA_HOME/bin/java" "-Duser.home=$kotlin_scratch/home" --enable-native-access=ALL-UNNAMED -cp "$kotlin_scratch/consumer/target/classes:$kotlin_jar:$(cat "$kotlin_scratch/classpath")" consumer.ConformanceCasesKt "$kotlin_root/conformance/typed"
+scripts/day-one-docs-test
+scripts/words

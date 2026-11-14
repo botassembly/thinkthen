@@ -9,11 +9,18 @@ settings = {"backend": "stub"} if sys.argv[2:] == ["--stub"] else {}
 manifest = json.loads((bundle / "typed/manifest.json").read_text())
 for filename in manifest["cases"]:
     case = json.loads((bundle / "typed" / filename).read_text())
+    if "zig" in case.get("not_applicable", {}):
+        continue
     request = case["request"]
     actual = json.loads(subprocess.check_output(
         [str(bundle / "consumer"), "run", json.dumps(settings), json.dumps(request)], text=True))
     if isinstance(case["expected"], dict) and not case["requests"]:
         assert actual == case["expected"], actual
+        continue
+    if request["question"]["function"] == "filter":
+        assert set(actual) == {"kept", "failed"}, actual
+        assert all(row["status"] == "failed" for row in actual["failed"]), actual
+        print("filter", json.dumps(actual, ensure_ascii=False))
         continue
     assert isinstance(actual, list) and actual, (request["question"]["function"], actual)
     assert all(row["status"] in ("answered", "unsure", "failed") for row in actual), actual

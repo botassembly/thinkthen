@@ -11,9 +11,9 @@ public class Relate {
             List<Relation> relations =
                 client.relate(message, List.of(worksFor)).answer();
             for (Relation relation : relations) {
-                System.out.println(relation.source().span().text()
+                System.out.println(relation.source().text()
                     + " --" + relation.relation() + "--> "
-                    + relation.target().span().text());
+                    + relation.target().text());
             }
         }
     }

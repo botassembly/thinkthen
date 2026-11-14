@@ -23,4 +23,4 @@ questions = {
     ),
 }
 forms = messages["message"].thinkthen.annotate(questions)
-print(messages.hstack(forms.struct.unnest()))
+print(messages.hstack(forms))

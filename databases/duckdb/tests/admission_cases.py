@@ -42,7 +42,7 @@ def cases(root, surface):
         # SQL's relation-name translation admits rules before the parent question.
         message = (case['message'] if child['function'] == 'relate' or not contextual else
                    'question.questions.[0].' + case['message'][len(prefix):])
-        print(f'{surface} admission {name}: public projection through annotate.toolbox child')
+        print(f'{surface} admission {name}: public projection through annotate.questions child')
         yield case, {'question': {'function': 'annotate', 'questions': {'ready': child}},
                      'records': ['evidence']}, message
 

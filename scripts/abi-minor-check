@@ -44,6 +44,55 @@ def replace_library(source, destination):
         staged.unlink(missing_ok=True)
 
 
+def projection_fixture(source, registry, mutation, restore_error=False):
+    """Corrupt complete public projections, with fixture-owned output buffers."""
+    helper = r'''
+#include <jansson.h>
+#include <string.h>
+static pthread_mutex_t buffers_lock = PTHREAD_MUTEX_INITIALIZER;
+struct fixture_buffer { void *data; struct fixture_buffer *next; };
+static struct fixture_buffer *buffers;
+static void own_buffer(thinkthen_buffer *out, char *text) {
+    struct fixture_buffer *owner = malloc(sizeof(*owner)); if (!owner || !text) abort();
+    owner->data = text; out->data = (uint8_t*)text; out->len = strlen(text);
+    pthread_mutex_lock(&buffers_lock); owner->next = buffers; buffers = owner; pthread_mutex_unlock(&buffers_lock);
+}
+static int free_buffer(thinkthen_buffer *out) {
+    if (!out) return 0;
+    pthread_mutex_lock(&buffers_lock);
+    struct fixture_buffer **at = &buffers;
+    while (*at && (*at)->data != out->data) at = &(*at)->next;
+    struct fixture_buffer *owner = *at;
+    if (owner) *at = owner->next;
+    pthread_mutex_unlock(&buffers_lock);
+    if (!owner) return 0;
+    free(owner->data); free(owner); out->data = NULL; out->len = 0; return 1;
+}
+'''
+    first = source.index('THINKTHEN_FIXTURE_API ' + registry['exports'][0]['declaration'].rstrip(';'))
+    source = source[:first] + helper + source[first:]
+    for name in ('thinkthen_row_host_json', 'thinkthen_row_to_json'):
+        declaration = next(e['declaration'].rstrip(';') for e in registry['exports'] if e['name'] == name)
+        body = ('thinkthen_row copy = *row; ' +
+            ('if (copy.error_code == 2147483647) copy.error_code = THINKTHEN_CODE_RECORD_MISSING; ' if restore_error else '') +
+            'typedef int32_t (*projection)(const thinkthen_row*, thinkthen_buffer*, thinkthen_error*); '
+            'int32_t result = ((projection)resolve("' + name + '"))(&copy, out, error); '
+            'if (result != THINKTHEN_OK) return result; '
+            'json_t *document = json_loadb((const char*)out->data, out->len, JSON_DECODE_ANY, NULL); '
+            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(out); '
+            'if (!document) abort(); ' + mutation +
+            'json_decref(document); return THINKTHEN_OK;')
+        source, count = re.subn(r'THINKTHEN_FIXTURE_API ' + re.escape(declaration) + r' \{[^\n]*\}',
+            lambda _: 'THINKTHEN_FIXTURE_API ' + declaration + ' { ' + body + ' }', source)
+        assert count == 1, name
+    source = source.replace('fixture_function(buffer);', 'if (!free_buffer(buffer)) fixture_function(buffer);')
+    return source
+
+
+def projection_flags():
+    return shlex.split(subprocess.check_output(['pkg-config', '--cflags', '--libs', 'jansson'], text=True))
+
+
 def fixture(engine, output, rows=False, children=False):
     tools = runpy.run_path(str(ROOT / 'scripts/native-fixtures'))
     registry = json.loads((ROOT / 'schemas/abi.json').read_text())
@@ -61,33 +110,20 @@ def fixture(engine, output, rows=False, children=False):
                                'THINKTHEN_FIXTURE_API ' + declaration + ' { ' + body + ' }', source)
         assert count == 1, name
     if rows:
-        payload = json.dumps({'code': 'future.code', 'message': 'the record is missing'})
         source = source.replace('return fixture_function(call, out, error);',
             'int32_t result = fixture_function(call, out, error); '
-            'if (result == THINKTHEN_OK && out->status == THINKTHEN_STATUS_FAILED) { '
-            'out->error_code = 2147483647; '
-            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(&out->error); '
-            'static const char failure[] = ' + json.dumps(payload) + '; '
-            'out->error.len = sizeof(failure) - 1; out->error.data = malloc(out->error.len); '
-            'if (!out->error.data) abort(); memcpy(out->error.data, failure, out->error.len); } return result;')
-        source = source.replace('fixture_function(row);',
-            'if (row->error_code == 2147483647) { free(row->error.data); '
-            'row->error.data = NULL; row->error.len = 0; } fixture_function(row);')
-        source = '#include <string.h>\n' + source
+            'if (result == THINKTHEN_OK && out->status == THINKTHEN_STATUS_FAILED) out->error_code = 2147483647; return result;')
+        source = projection_fixture(source, registry,
+            'if (row->status == THINKTHEN_STATUS_FAILED) json_object_set_new(document, "error", '
+            'json_pack("{s:s,s:s}", "code", "future.code", "message", "the record is missing")); '
+            'own_buffer(out, json_dumps(document, JSON_COMPACT | JSON_ENCODE_ANY)); ', restore_error=True)
     if children:
         payload = json.dumps({'future': {'function': 'decide', 'status': 'failed',
             'error': {'code': 'future.problem', 'message': 'future child message'}}})
-        source = source.replace('return fixture_function(call, out, error);',
-            'int32_t result = fixture_function(call, out, error); '
-            'if (result == THINKTHEN_OK && out->function == THINKTHEN_FUNCTION_ANNOTATE) { '
-            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(&out->answer); '
-            'static const char answer[] = ' + json.dumps(payload) + '; '
-            'out->answer.len = sizeof(answer) - 1; out->answer.data = malloc(out->answer.len); '
-            'if (!out->answer.data) abort(); memcpy(out->answer.data, answer, out->answer.len); } return result;')
-        source = source.replace('fixture_function(row);',
-            'if (row->function == THINKTHEN_FUNCTION_ANNOTATE) { free(row->answer.data); '
-            'row->answer.data = NULL; row->answer.len = 0; } fixture_function(row);')
-        source = '#include <string.h>\n' + source
+        source = projection_fixture(source, registry,
+            'if (row->function == THINKTHEN_FUNCTION_ANNOTATE) json_object_set_new(document, "answer", '
+            'json_loads(' + json.dumps(payload) + ', 0, NULL)); '
+            'own_buffer(out, json_dumps(document, JSON_COMPACT | JSON_ENCODE_ANY)); ')
     declaration = next(item['declaration'].rstrip(';') for item in registry['exports'] if item['name'] == 'thinkthen_code_name')
     source = re.sub(r'(THINKTHEN_FIXTURE_API ' + re.escape(declaration) + r' \{[^\n]*?)return fixture_function\(value\);',
                     r'\1if (value == 2147483647) return "future.code"; return fixture_function(value);', source)
@@ -95,7 +131,7 @@ def fixture(engine, output, rows=False, children=False):
     code = output / 'future.c'
     code.write_text(source)
     flags = ['-dynamiclib', '-pthread'] if sys.platform == 'darwin' else ['-shared', '-fPIC', '-pthread', '-ldl']
-    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include', code, '-o', path, *flags)
+    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include', code, '-o', path, *flags, *(projection_flags() if rows or children else []))
     return path
 
 
@@ -119,33 +155,28 @@ def malformed_fixture(engine, output, kind):
     else:
         field, payload, predicate = {
             'invalid-json': ('answer', '{', '1'),
-            'unanswered-answer': ('answer', 'true', 'out->status != THINKTHEN_STATUS_ANSWERED'),
+            'unanswered-answer': ('answer', 'true', 'row->status != THINKTHEN_STATUS_ANSWERED'),
             'source-extra': ('source', '{"question_identity":"fixture","backend":"stub","model":"stub","extra":true}', '1'),
             'source-type': ('source', '{"question_identity":"fixture","backend":"stub","model":1}', '1'),
-            'answered-error': ('error', '{"code":"record.missing","message":"inactive error"}', 'out->status == THINKTHEN_STATUS_ANSWERED'),
-            'failed-detail': ('detail', '{}', 'out->status == THINKTHEN_STATUS_FAILED'),
+            'source-missing': ('source', '{"question_identity":"fixture","backend":"stub"}', '1'),
+            'source-null': ('source', '{"question_identity":"fixture","backend":"stub","model":null}', '1'),
+            'source-name-null': ('source', '{"question_identity":"fixture","backend":"stub","model":"stub","name":null}', '1'),
+            'answered-error': ('error', '{"code":"record.missing","message":"inactive error"}', 'row->status == THINKTHEN_STATUS_ANSWERED'),
+            'failed-detail': ('detail', '{}', 'row->status == THINKTHEN_STATUS_FAILED'),
         }[kind]
-        replacement = ('int32_t result = fixture_function(call, out, error); '
-            'if (result == THINKTHEN_OK && (' + predicate + ')) { '
-            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(&out->' + field + '); '
-            'out->' + field + '.len = ' + str(len(payload)) + '; out->' + field + '.data = malloc(out->' + field + '.len); '
-            'if (!out->' + field + '.data) abort(); memcpy(out->' + field + '.data, ' + json.dumps(payload) + ', out->' + field + '.len); } return result;')
-        needle = 'return fixture_function(call, out, error);'
-        assert source.count(needle) == 1, 'missing canonical call_next wrapper'
-        source = source.replace(needle, replacement)
-        # Only injected C buffers use malloc. Every other buffer belongs to the engine.
-        marker = ('row->' + field + '.len == ' + str(len(payload)) + ' && row->' + field + '.data && '
-                  'memcmp(row->' + field + '.data, ' + json.dumps(payload) + ', row->' + field + '.len) == 0')
-        if predicate != '1': marker += ' && ' + predicate.replace('out->', 'row->')
-        marker = 'row && row->struct_size >= sizeof(*row) && ' + marker
-        source = source.replace('fixture_function(row);',
-            'if (' + marker + ') { free(row->' + field + '.data); row->' + field + '.data = NULL; row->' + field + '.len = 0; } fixture_function(row);')
+        if kind == 'invalid-json':
+            mutation = 'char *invalid = malloc(2); if (!invalid) abort(); memcpy(invalid, "{", 2); own_buffer(out, invalid); '
+        else:
+            mutation = ('if (' + predicate + ') json_object_set_new(document, ' + json.dumps(field) +
+                ', json_loads(' + json.dumps(payload) + ', JSON_DECODE_ANY, NULL)); '
+                'own_buffer(out, json_dumps(document, JSON_COMPACT | JSON_ENCODE_ANY)); ')
+        source = projection_fixture(source, registry, mutation)
     output.mkdir(parents=True, exist_ok=True)
     code, library = output / 'malformed.c', output / engine.name
     code.write_text('#include <string.h>\n' + source)
     flags = (['-dynamiclib', '-pthread', '-Wl,-install_name,@rpath/' + engine.name]
              if sys.platform == 'darwin' else ['-shared', '-fPIC', '-pthread', '-ldl'])
-    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include', code, '-o', library, *flags)
+    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include', code, '-o', library, *flags, *(projection_flags() if kind not in ('unknown-family', 'unknown-function', 'wrong-function', 'failed-probability') else []))
     return library
 
 
@@ -180,7 +211,7 @@ def bindings(engine, scratch, selected):
     failures = []
     if 'cpp' in selected:
         try:
-            run('c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-I', include,
+            run('c++', '-std=c++20', '-Wall', '-Wextra', '-Werror', '-I', include,
                 '-I', ROOT / 'sdk/cpp/include', ROOT / 'sdk/cpp/tests/minor_error.cpp', future,
                 '-Wl,-rpath,' + str(scratch), '-o', scratch / 'cpp')
             run(scratch / 'cpp', MESSAGE)
@@ -254,6 +285,9 @@ def bindings(engine, scratch, selected):
             run(consumer / 'zig-out/bin/consumer', 'the record is missing', 'row')
             replace_library(child_future, consumer / 'zig-out/bin' / future.name)
             run(consumer / 'zig-out/bin/consumer', 'future child message', 'child')
+            malformed = malformed_fixture(engine, scratch / 'zig-malformed', 'invalid-json')
+            replace_library(malformed, consumer / 'zig-out/bin' / future.name)
+            run(consumer / 'zig-out/bin/consumer', 'incompatible projection', 'malformed')
         except subprocess.CalledProcessError:
             failures.append("zig")
     if failures:

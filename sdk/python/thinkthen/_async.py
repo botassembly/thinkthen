@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import AsyncIterable, Iterable
 from concurrent.futures import CancelledError as InputCancelled
 from threading import Event
-from typing import Any, Literal, TypeVar, overload
+from typing import Any, TypeVar, overload
 from weakref import WeakSet
 
 from typing_extensions import TypeForm
@@ -26,8 +26,8 @@ from ._questions import (
     ScoreQuestion,
     TagQuestion,
 )
-from ._runtime import Cancel, binding, one_row, single_record
-from ._streams import AsyncKeptStream, AsyncRowStream, Errors, coerce_errors
+from ._runtime import Cancel, binding, single_record
+from ._streams import AsyncKeptStream, AsyncRowStream
 from ._types import (
     AnnotateRow,
     BackendInput,
@@ -36,7 +36,6 @@ from ._types import (
     ClientSettings,
     DecideRow,
     Descriptions,
-    FilterRow,
     FindRow,
     RankRow,
     RecognizeRow,
@@ -174,7 +173,8 @@ class AsyncClient:
             row = await anext(rows)
             async for _ in rows:
                 pass
-            return one_row(row)
+            row._raise_own_failure()
+            return row
 
     def _arguments(
         self,
@@ -252,31 +252,6 @@ class AsyncClient:
         question: FilterQuestion,
         records: Iterable[T] | AsyncIterable[T],
         *,
-        errors: Literal["raise"] = "raise",
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> AsyncKeptStream[T]: ...
-    @overload
-    def filter(
-        self,
-        question: FilterQuestion,
-        records: Iterable[T] | AsyncIterable[T],
-        *,
-        errors: Literal["coerce"],
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> AsyncKeptStream[T | FilterRow[T]]: ...
-    @overload
-    def filter(
-        self,
-        question: str,
-        records: Iterable[T] | AsyncIterable[T],
-        *,
-        threshold: Threshold | None = None,
-        field: str | None = None,
-        yes_means: str | None = None,
-        no_means: str | None = None,
-        errors: Literal["raise"] = "raise",
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> AsyncKeptStream[T]: ...
@@ -286,49 +261,20 @@ class AsyncClient:
         question: str,
         records: Iterable[T] | AsyncIterable[T],
         *,
-        threshold: Threshold | None = None,
-        field: str | None = None,
-        yes_means: str | None = None,
-        no_means: str | None = None,
-        errors: Literal["coerce"],
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> AsyncKeptStream[T | FilterRow[T]]: ...
-    def filter(self, *args: Any, errors: Errors = "raise", **kwargs: Any) -> Any:
-        """Stream the kept records, as passed in; not-sure records are left out.
-
-        A failed record raises one ``RecordError`` after every kept record is
-        delivered; ``errors="coerce"`` yields each failed ``FilterRow`` in its
-        place instead. ``filter_rows`` keeps every row.
-        """
-        coerce = coerce_errors(errors)
-        return AsyncKeptStream(self.filter_rows(*args, **kwargs), coerce)
-
-    @overload
-    def filter_rows(
-        self,
-        question: FilterQuestion,
-        records: Iterable[T] | AsyncIterable[T],
-        *,
-        name: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> AsyncRowStream[FilterRow[T]]: ...
-    @overload
-    def filter_rows(
-        self,
-        question: str,
-        records: Iterable[T] | AsyncIterable[T],
-        *,
-        threshold: Threshold | None = None,
+        threshold: float | None = None,
         field: str | None = None,
         yes_means: str | None = None,
         no_means: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> AsyncRowStream[FilterRow[T]]: ...
-    def filter_rows(self, *args: Any, **kwargs: Any) -> Any:
+    ) -> AsyncKeptStream[T]: ...
+    def filter(self, *args: Any, **kwargs: Any) -> Any:
         question, records = self._arguments("filter", True, args, kwargs)
-        return self._rows("filter", question, records, **kwargs)
+        if "errors" in kwargs:
+            raise TypeError(
+                "filter has no errors option; use decide_stream for every result"
+            )
+        return AsyncKeptStream(self._rows("filter", question, records, **kwargs))
 
     @overload
     async def choose(

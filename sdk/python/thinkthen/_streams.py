@@ -10,7 +10,7 @@ from contextvars import copy_context
 from dataclasses import replace
 from enum import Enum
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -19,13 +19,12 @@ if TYPE_CHECKING:
 from . import _native
 from ._decode import row_from_json
 from ._runtime import binding
-from ._types import FilterRow, RecordError
+from ._types import Failed, FilterRow
 
 R_co = TypeVar("R_co", covariant=True)
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 _END = object()
-Errors: TypeAlias = Literal["raise", "coerce"]
 
 
 class RowStream(Iterator[R_co], Generic[R_co]):
@@ -117,7 +116,7 @@ class RowStream(Iterator[R_co], Generic[R_co]):
             from .pandas import frame
 
             rows = self.to_list()
-            return frame(rows, function=self._function)
+            return frame(rows, function=self._function, question=self._question)
         finally:
             self.close()
 
@@ -167,6 +166,7 @@ class AsyncRowStream(Generic[R_co]):
                 self._stream = await asyncio.shield(self._pending)
             stream = self._stream
             assert stream is not None
+            self._question = stream._question
             self._pending = asyncio.get_running_loop().run_in_executor(
                 self._executor, copy_context().run, _next, stream
             )
@@ -230,7 +230,9 @@ class AsyncRowStream(Generic[R_co]):
         try:
             from .pandas import frame
 
-            return frame(await self.to_list(), function=self._function)
+            return frame(
+                await self.to_list(), function=self._function, question=self._question
+            )
         finally:
             await self.aclose()
 
@@ -245,18 +247,11 @@ class AsyncRowStream(Generic[R_co]):
             await self.aclose()
 
 
-def coerce_errors(errors: object) -> bool:
-    """Admit the failure policy shared with the data frame methods."""
-    if errors not in {"raise", "coerce"}:
-        raise ValueError('errors must be "raise" or "coerce"')
-    return errors == "coerce"
-
-
-def _filter_failure(rows: list[FilterRow[Any]]) -> RecordError:
+def _filter_failure(rows: list[FilterRow[Any]]) -> Failed:
     first = rows[0]
     assert first.error is not None
     count = f"{len(rows)} record{'' if len(rows) == 1 else 's'} failed"
-    return RecordError(
+    return Failed(
         first.error.code,
         f"{count}; the first at position {first.position}: {first.error.message}",
         first.error.http_status,
@@ -265,17 +260,10 @@ def _filter_failure(rows: list[FilterRow[Any]]) -> RecordError:
 
 
 class KeptStream(Iterator[T_co], Generic[T_co]):
-    """The kept records of one filter call, as the caller passed them.
+    """Yield kept original records, then report every failed result once."""
 
-    Not-sure records are left out. Under ``errors="raise"`` every kept record is
-    delivered first, then one ``RecordError`` lists the failed rows in ``rows``.
-    Under ``errors="coerce"`` each failed ``FilterRow`` is yielded in its place.
-    Use ``filter_rows`` for every row.
-    """
-
-    def __init__(self, rows: RowStream[FilterRow[Any]], coerce: bool) -> None:
+    def __init__(self, rows: RowStream[FilterRow[Any]]) -> None:
         self._rows = rows
-        self._coerce = coerce
         self._failed: list[FilterRow[Any]] = []
 
     def __iter__(self) -> KeptStream[T_co]:
@@ -286,8 +274,6 @@ class KeptStream(Iterator[T_co], Generic[T_co]):
             if row.kept:
                 return cast(T_co, row.item)
             if row.failed:
-                if self._coerce:
-                    return cast(T_co, row)
                 self._failed.append(row)
         if self._failed:
             failed, self._failed = self._failed, []
@@ -323,9 +309,8 @@ class KeptStream(Iterator[T_co], Generic[T_co]):
 class AsyncKeptStream(Generic[T_co]):
     """The kept records of one async filter call; see ``KeptStream``."""
 
-    def __init__(self, rows: AsyncRowStream[FilterRow[Any]], coerce: bool) -> None:
+    def __init__(self, rows: AsyncRowStream[FilterRow[Any]]) -> None:
         self._rows = rows
-        self._coerce = coerce
         self._failed: list[FilterRow[Any]] = []
 
     def __aiter__(self) -> AsyncKeptStream[T_co]:
@@ -336,8 +321,6 @@ class AsyncKeptStream(Generic[T_co]):
             if row.kept:
                 return cast(T_co, row.item)
             if row.failed:
-                if self._coerce:
-                    return cast(T_co, row)
                 self._failed.append(row)
         if self._failed:
             failed, self._failed = self._failed, []

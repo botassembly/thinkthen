@@ -7,5 +7,5 @@ rules = [
     )
 ]
 relations = tt.relate(message, rules=rules)
-for relation in relations:
+for relation in relations.answer:
     print(relation.source.text, relation.relation, relation.target.text)

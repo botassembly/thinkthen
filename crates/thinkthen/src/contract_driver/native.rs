@@ -138,6 +138,12 @@ pub fn internal_error() -> Error {
     Error::from_contract(Code::InternalBug, "the native operation could not complete")
 }
 
+/// Summarize failed records with the engine's shared message and first failure code.
+#[must_use]
+pub fn records_failed(first: &Error, failed: usize, total: u64, position: u64) -> Error {
+    first.records_failed(failed, total, position)
+}
+
 /// Admit an explicit native settings URL without resolving any credentials.
 /// # Errors
 /// Returns the shared URL policy error.
@@ -241,4 +247,117 @@ pub fn environment_settings(
     variable: impl Fn(&str) -> Option<String>,
 ) -> Result<crate::Settings, crate::Error> {
     crate::Settings::default().environment_request_limit(variable("THINKTHEN_MAX_REQUESTS"))
+}
+
+/// Canonical span coordinates retained beside a native host projection.
+#[derive(Debug, Clone)]
+pub struct SpanCoordinates(Vec<(usize, usize)>);
+/// Encode native answer buffers in the selected host string units.
+/// # Errors
+/// Returns the shared internal error if a typed row cannot be encoded.
+pub fn host_row_json(row: &AnyRow) -> Result<(serde_json::Value, SpanCoordinates), Error> {
+    let mut projection = row.clone();
+    let coordinates = crate::core::results::offsets::host(&mut projection);
+    serde_json::to_value(projection)
+        .map(|value| (value, SpanCoordinates(coordinates)))
+        .map_err(|_| internal_error())
+}
+/// Detach an admitted form outcome with its actual parent row metadata.
+/// The resulting row retains neither the other entries nor the original record.
+#[doc(hidden)]
+#[must_use]
+pub fn entry_row(
+    parent: &crate::results::Row<crate::questions::Annotate>,
+    entry: crate::results::AnnotationEntry,
+) -> AnyRow {
+    entry.into_row(parent)
+}
+
+/// Encode a retained form entry in its host string units.
+/// # Errors
+/// Returns the shared internal error if the typed entry cannot be encoded.
+pub fn host_entry_json(
+    entry: &crate::results::AnnotationEntry,
+) -> Result<serde_json::Value, Error> {
+    let mut projection = entry.clone();
+    crate::core::results::offsets::host_entry(&mut projection);
+    serde_json::to_value(projection).map_err(|_| internal_error())
+}
+/// Restore saved-coordinate metadata after decoding native host buffers.
+/// # Errors
+/// Returns the shared row error if the projection's span shape changed.
+pub fn restore_row_coordinates(
+    row: &mut AnyRow,
+    coordinates: &SpanCoordinates,
+) -> Result<(), Error> {
+    crate::core::results::offsets::restore(row, &coordinates.0)
+}
+
+/// Borrow an admitted question's ordered domain for native enum projection.
+#[doc(hidden)]
+#[must_use]
+pub fn question_words(question: &crate::Question) -> Vec<String> {
+    match question {
+        crate::Question::Choose(q) => q
+            .inner
+            .options
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        crate::Question::Tag(q) => q
+            .inner
+            .labels
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        crate::Question::Score(q) => q
+            .inner
+            .levels
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        crate::Question::Rank(q) => q
+            .inner
+            .levels
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+/// Retain row identity while replacing an unrepresentable host outcome.
+#[doc(hidden)]
+#[must_use]
+pub fn row_failed(row: AnyRow, error: Error) -> AnyRow {
+    row.failure_row(error, None)
+}
+
+/// Replace the admitted identifier for an explicit SQL selected identifier.
+/// SQL-only JSON classes have no typed identifier; their exact bytes remain adapter metadata.
+#[doc(hidden)]
+#[must_use]
+pub fn row_selected_id(mut row: AnyRow, id: &str) -> AnyRow {
+    row.replace_id(serde_json::from_str(id).ok());
+    row
+}
+
+/// Borrow literal evidence or normalize an admitted record through the engine's own field selector.
+/// Failed or missing fields have no selected text. This is metadata, never an answer read.
+#[doc(hidden)]
+#[must_use]
+pub fn selected_text<'a>(
+    record: &'a crate::Record,
+    pointer: &crate::Pointer,
+) -> Option<std::borrow::Cow<'a, str>> {
+    record.selected_text(pointer)
+}
+
+/// Select an annotate entry's evidence through the same inherited-field path as execution.
+#[doc(hidden)]
+#[must_use]
+pub fn selected_entry_text<'a>(
+    record: &'a crate::Record,
+    pointer: &crate::Pointer,
+) -> Option<std::borrow::Cow<'a, str>> {
+    record.selected_entry_text(pointer)
 }

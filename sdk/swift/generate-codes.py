@@ -8,8 +8,9 @@ codes = json.loads(Path(registry).read_text())["codes"]
 acronyms = {"url": "URL", "json": "JSON", "io": "IO", "abi": "ABI", "sql": "SQL", "http": "HTTP"}
 text = "// Generated from the engine registry during packaging.\n"
 text += "/// A stable engine error name, including names from newer engines.\n"
-text += "public struct ErrorCode: RawRepresentable, Sendable, Codable, Hashable, CaseIterable {\n"
+text += "public struct ErrorCode: RawRepresentable, Sendable, Codable, Hashable, CaseIterable, CustomStringConvertible {\n"
 text += "  /// The stable engine diagnostic name.\n  public let rawValue: String\n  /// Preserve an engine name, including names added by a newer engine.\n  public init(rawValue: String) { self.rawValue = rawValue }\n"
+text += "  public var description: String { rawValue }\n"
 names = []
 for code in codes:
     parts = code["name"].replace("-", ".").split(".")
@@ -20,6 +21,10 @@ text += "  /// The codes known by this package; newer names remain representable
 text += "  /// The integer engine identity, when this package knows the code.\n  public var nativeValue: Int32? {\n    switch rawValue {\n"
 for code in codes:
     text += f'    case "{code["name"]}": {code["value"]}\n'
+text += "    default: nil\n    }\n  }\n"
+text += "  public var family: String? {\n    switch rawValue {\n"
+for code in codes:
+    text += f'    case "{code["name"]}": "{code["family"]}"\n'
 text += "    default: nil\n    }\n  }\n"
 text += "  /// Decode a stable diagnostic name.\n  public init(from decoder: any Decoder) throws { self.init(rawValue: try decoder.singleValueContainer().decode(String.self)) }\n"
 text += "  /// Encode the stable diagnostic name.\n  public func encode(to encoder: any Encoder) throws { var c = encoder.singleValueContainer(); try c.encode(rawValue) }\n}\n"

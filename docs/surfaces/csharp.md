@@ -1,298 +1,656 @@
 # C# functions that answer questions about text
 
-ThinkThen 0.2.0 for C# gives you ten functions. Each one reads a record, answers one question about it, and returns a typed value your code can branch on.
+ThinkThen is a classifier you call like a function. It reads text, answers one bounded question, and hands back a result you can branch on.
 
-## Install and ask your first question
+Use .NET 10 or later. Run `dotnet add package Botassembly.ThinkThen`. The package includes the engine. Set `THINKTHEN_API_KEY` in the environment first.
 
-```sh
-dotnet add package Botassembly.ThinkThen --version 0.2.0
-```
+A one-record call throws `FailedException` when awaited if its record could not be judged. A successful call returns an answered or unsure result, with `IsFailed` false. The shared result type also represents many-record results, so it retains all three states:
 
-It needs .NET 10 and includes the native engine.
+- **answered**: there is an answer, and `result.Answer` is it.
+- **not sure**: the model's number fell between the two bars you set, or no choice was likely enough.
+- **failed**: the record could not be judged, or the service did not respond.
+
+Three rules hold for every function on this page.
+
+1. **Reading the answer throws when there is none.** On a successfully returned one-record result, `result.Answer` can throw `UnsureException`. On a many-record result, form entry or saved row, it can also throw `FailedException`. A missing answer never reads as "no" or as an empty value.
+2. **Checking the state never throws.** `result.IsAnswered`, `result.IsUnsure`, `result.IsFailed` and `result.Probability` are always safe to read.
+3. **Printing never throws.** `Console.WriteLine(result)` shows the answer, `unsure`, or `failed:` with the reason. A yes prints as `true` and a no as `false`, the same words the `thinkthen` command prints. `Console.WriteLine(result.Answer)` prints the bare answer C#'s own way, `True`.
+
+## decide
+
+### The simplest if
+
+A decide result goes straight into an `if`.
 
 ```csharp
 using ThinkThen;
 
 await using var client = new ThinkThenClient();
-bool isRefund = await client.DecideAsync(
-    "Does the customer request a refund?",
-    "Please refund my order.");
-Console.WriteLine(isRefund);
-```
 
-<!-- output: capture -->
-
-Set `THINKTHEN_API_KEY` in the environment first; the client reads it from there. [Choose a service and get a key](service.md#choose-a-service-and-get-a-key) explains the backends and how to get a key.
-
-## Handle not sure and failures
-
-A call returns a `Row`. Converting it to its answer, as `bool isRefund = ...` does above, is the one step from row to answer, and it never hands back a default:
-
-- When ThinkThen is not sure, it throws `UnsureException`. That is an `InvalidOperationException`, as `Nullable<T>.Value` throws, and its `Probability` gives the row's probability.
-- When the record failed, it throws `ThinkThenException`. Its `Code` is the engine's error code as a string, such as `"record.missing"`, and its `ErrorCode` gives the same code as an enum value, such as `ErrorCode.RecordMissing`.
-
-`row.Answer` does the same. With decide's default cut, every answer is yes or no. A band, `Threshold.Band(low, high)`, makes the middle not sure. Check `IsUnsure` first and send those records to a person:
-
-```csharp
-string message = "Please refund my order.";
-var refundCheck = await client.DecideAsync(
-    "Does the customer request a refund?", message,
-    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) });
-if (refundCheck.IsUnsure)
-    Console.WriteLine($"Ask a person: {message}");
-else if (refundCheck)
-    Console.WriteLine($"Send to refunds: {message}");
+if (await client.DecideAsync("Does the customer request a refund?", "Please refund my order."))
+{
+    Console.WriteLine("refund queue");
+}
 else
-    Console.WriteLine($"Leave in the inbox: {message}");
+{
+    Console.WriteLine("inbox");
+}
 ```
 
-A failed record still reaches `if (refundCheck)` and throws there. `IsAnswered` and `IsFailed` test without throwing, and `refundCheck is Failed<bool, NoDetail> failed` gives the error in `failed.Error`. Comparing with `==` never throws, so a not-sure row is neither `== true` nor `== false`; don't branch on it.
+If the message could not be judged, awaiting `client.DecideAsync` throws `FailedException` at the call. The `if` never receives a failed result and never falls through to `inbox` for a failure. With one bar the returned decide result is yes or no; two bars can make the answer read in an `if` throw `UnsureException`.
 
-Mistakes in the call itself throw `ThinkThenException` at once: blank text throws `ErrorCode.RecordEmpty` with no request, and a list or stream passed to a one-record call throws `ErrorCode.UsageRecordKind`. A null argument throws `ArgumentNullException`.
+A decide result works in `if`, in `? :` and after `!`. It is not a `bool`. To store the yes or no, or to join it with `&&`, read `isRefund.Answer`, which is a `bool`.
 
-## The ten functions
+Later statement snippets run after the `using ThinkThen;` import and `await using var client` declaration. In a top-level program, put enum declarations after all top-level statements and local routing helpers. The choose and score sections separate declarations from statement snippets. The page uses one `Topic` enum and one `Urgency` enum.
 
-Each snippet runs after the client line above. The many-record functions read the same three support messages:
+### Yes, no, or not sure
+
+Set two bars and decide can also be not sure. `IsAnswered` tells you whether there is a yes or no to read.
 
 ```csharp
-string[] messages = [
+var isRefund = await client.DecideAsync(
+    "Does the customer request a refund?",
+    "Where is my parcel?",
+    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) });
+
+if (isRefund.IsAnswered)
+{
+    Console.WriteLine(isRefund ? "refund queue" : "inbox");
+}
+else
+{
+    Console.WriteLine("a person reads it");
+}
+```
+
+You can also let the read throw and catch `UnsureException`. The scalar call has already succeeded, so this read cannot report a failed result.
+
+```csharp
+try
+{
+    Console.WriteLine(isRefund ? "refund queue" : "inbox");
+}
+catch (UnsureException)
+{
+    Console.WriteLine("a person reads it");
+}
+```
+
+### Did the call work
+
+```csharp
+try
+{
+    var isRefund = await client.DecideAsync(
+        "Does the customer request a refund?", "Please refund my order.");
+    Console.WriteLine(isRefund);
+}
+catch (FailedException failure)
+{
+    Console.WriteLine($"could not judge it: {failure.Message}");
+}
+catch (ThinkThenException failure)
+{
+    Console.WriteLine($"the call did not complete: {failure.Message}");
+}
+```
+
+`FailedException` reports a failed judgement, including a service failure on its record. It inherits `NoAnswerException`, not `ThinkThenException`. Other engine call errors retain `ThinkThenException` and its existing subclasses; argument mistakes and cancellation retain their standard .NET exceptions. No answer is read inside either handler.
+
+Not sure counts as a successful call. Reading its returned answer, including through a decide result's `if` shortcut, can throw `UnsureException`; neither catch above handles that result state.
+
+### Both bars and the probability
+
+```csharp
+var isRefund = await client.DecideAsync(
+    "Does the customer request a refund?",
+    "Where is my parcel?",
+    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) });
+Console.WriteLine(isRefund.Probability);
+```
+
+- No threshold: one bar at 0.5. The answer is always yes or no.
+- `Threshold.Cut(0.7)`: one bar. Yes at 0.7 or above, otherwise no.
+- `Threshold.Band(0.2, 0.8)`: two bars. No below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above.
+
+`Probability` is the number ThinkThen compared with your bars: the model's probability of yes. A confident no has a low probability, such as `0.05`. It is a `double?`, present even for an unsure decide result. A failed many-record result has null probability.
+
+The number is the model's own. To choose bars for your data, run examples you have already labelled through `client.DecideStreamAsync`, save each `Probability`, and compare with your labels.
+
+## choose with your own choices
+
+Give your choices as the members of an `enum`. The answer comes back as one of them.
+
+```csharp
+enum Topic { Billing, Shipping, Other }
+```
+
+```csharp
+static string TeamFor(Topic topic) => topic switch
+{
+    Topic.Billing => "billing team",
+    Topic.Shipping => "warehouse",
+    Topic.Other => "front desk",
+};
+
+var topic = await client.ChooseAsync(
+    "What is the message about?",
+    "I was charged twice for one invoice.",
+    Enum.GetValues<Topic>());
+
+if (topic.IsUnsure)
+{
+    Console.WriteLine("a person reads it");
+}
+else
+{
+    Console.WriteLine(TeamFor(topic.Answer));
+}
+```
+
+choose can be not sure even when you set no bar. Its bar is 0.5 on the best choice, and with three choices all three can fall below it. So check `topic.IsUnsure` before reading the answer. `new ChooseOptions<Topic> { Threshold = Threshold.Cut(0.3) }`, passed as a last argument, moves the bar.
+
+The model reads each member's name as lowercase words: `Billing` is read as `billing`, and `LateDelivery` as `late delivery`. So name your members with plain words or short phrases, not codes. The number behind a member is never sent. `Console.WriteLine(topic)` prints the word the model read, `billing`. `Console.WriteLine(topic.Answer)` prints the member C#'s own way, `Billing`.
+
+Add a member to `Topic` and the compiler points at `TeamFor` until you handle it, with the project settings in “Many-result not sure or failed” below.
+
+A choose result does not go in an `if`, and is not equal to its answer. `if (topic)` and `topic == Topic.Billing` do not compile. `topic.Equals(Topic.Billing)` is always `false`, because a result equals only another result. Compare `topic.Answer`.
+
+Value equality and hashing cover only `function`, `status`, `answer`, `probability`, `error`, `position`, `id`, `source` and `detail`, using this language's names. They never include `item`, including on entries inside a form. Changing the caller's record cannot change a result's equality or hash.
+
+A list of strings also works, `["billing", "shipping", "other"]`, and the answer is then a `string`.
+
+## Many records
+
+Each one-record function has a `Stream` form, such as `DecideStreamAsync`, that takes many records and gives one result per record, in order. Each result carries your own record as `Item`.
+
+```csharp
+string[] messages =
+[
     "Please refund my order.",
     "Where is my parcel?",
-    "I was charged twice for one invoice."];
-```
+    "I was charged twice for one invoice.",
+];
 
-### decide: answer a yes-or-no question
+var refundChecks = client.DecideStreamAsync(
+    "Does the customer request a refund?", messages,
+    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) });
 
-```csharp
-bool isRefund = await client.DecideAsync(
-    "Does the customer request a refund?",
-    "Please refund my order.");
-```
-
-### choose: pick the one option that fits
-
-```csharp
-string topic = await client.ChooseAsync(
-    "What is the message about?",
-    "Please refund my order.",
-    ["billing", "shipping", "other"]);
-```
-
-### tag: label every option that fits
-
-```csharp
-ValueList<string> topics = await client.TagAsync(
-    "Which topics appear?",
-    "I was charged twice and my parcel is late again.",
-    ["billing", "shipping"]);
-```
-
-### score: place the text on a scale from 0 to 1
-
-```csharp
-double urgency = await client.ScoreAsync(
-    "How urgent is the request?",
-    "Please refund my order.",
-    ["routine", "urgent"]);
-```
-
-Levels run from lowest to highest. A score orders a queue a person reads. Use decide for a yes-or-no gate.
-
-### filter: keep the records that answer yes
-
-```csharp
-await foreach (string refund in client.FilterAsync(
-    "Does the customer request a refund?", messages.ToAsyncEnumerable()))
-    Console.WriteLine(refund);
-```
-
-`FilterAsync` yields your own records, only the ones that answer yes. Records that are not sure are left out. When records fail, it yields every kept record first, then throws one `ThinkThenException` whose `FailedRows` lists every failed row with its `Position`. To see every record's outcome, call `FilterStreamAsync`, which yields a `FilterItem<T>` for each record with its `Item`, `Row` and `Kept`.
-
-### rank: order every record, highest first
-
-```csharp
-await foreach (var ranked in client.RankAsync(
-    "How urgent is the request?", messages.ToAsyncEnumerable(),
-    ["routine", "urgent"]))
+await foreach (var isRefund in refundChecks)
 {
-    long urgencyRank = ranked.Row;
-    Console.WriteLine($"{urgencyRank} {ranked.Item}");
-}
-```
-
-Each `RankedItem<T>` holds a copy of your record in `Item` and its row in `Row`. rank returns equal copies rebuilt from JSON, so `T` must round-trip through System.Text.Json; if it can't, rank checks your first record before any request is sent and throws a `JsonException` naming the type. filter returns the exact objects you passed. The row's answer is the rank, starting at 1; `ranked.Row.Position` is the record's place in your input. `new RankOptions { Top = n }` keeps the first `n` ranks and still reports failed records.
-
-### find: point to the line that answers
-
-```csharp
-TextSpan? action = await client.FindAsync(
-    "Which line states the requested action?",
-    "Morgan works for Example Group.\nPlease refund my order.");
-Console.WriteLine(action?.Text ?? "no line answers");
-```
-
-`null` means no line answers the question. Find picks one whole line, so keep the line breaks. A `TextSpan` gives the matched `Text` and its `Start` and `End` as UTF-16 offsets, with the end excluded.
-
-### annotate: fill in several questions for each record
-
-```csharp
-using var refundQuestion = DecideQuestion.Create("Does the customer request a refund?");
-using var topicQuestion = ChooseQuestion.Create("What is the message about?", ["billing", "shipping", "other"]);
-using var urgencyQuestion = ScoreQuestion.Create("How urgent is the request?", ["routine", "urgent"]);
-using var questions = AnnotationQuestions.Create(new Dictionary<string, AnnotationQuestion>
-{
-    ["refund"] = new AnnotationQuestion.Decide(refundQuestion),
-    ["topic"] = new AnnotationQuestion.Choose(topicQuestion),
-    ["urgency"] = new AnnotationQuestion.Score(urgencyQuestion),
-});
-await foreach (var form in client.AnnotateStreamAsync(questions, messages.ToAsyncEnumerable()))
-{
-    ValueMap<string, AnnotationEntry> answers = form;
-    bool isRefund = answers["refund"];
-    string topic = answers["topic"];
-    double urgency = answers["urgency"];
-    Console.WriteLine($"{form.Position} {isRefund} {topic} {urgency}");
-}
-```
-
-Each question has its own outcome. Converting an entry to its answer throws on not sure or failure, as a row does, and each entry has `IsUnsure`, `IsFailed` and `Probability`. For one record, `client.AnnotateAsync(questions, message)` returns the row directly. Rank cannot go in `AnnotationQuestions`, and the compiler refuses it.
-
-### recognize: pull out each name and its kind
-
-```csharp
-ValueList<Entity> names = await client.RecognizeAsync(
-    "Morgan works for Example Group.",
-    ["person", "organization"]);
-foreach (Entity name in names)
-    Console.WriteLine($"{name.Mention.Kind}: {name.Mention.Span.Text}");
-```
-
-### relate: link names by the relations you allow
-
-```csharp
-var worksFor = new RelationRule { Source = "person", Target = "organization", Name = "works_for" };
-ValueList<Relation> relations = await client.RelateAsync(
-    "Morgan works for Example Group.\nPlease refund my order.",
-    [worksFor]);
-foreach (Relation relation in relations)
-    Console.WriteLine($"{relation.Source.Span.Text} {relation.Name} {relation.Target.Span.Text}");
-```
-
-A rule's optional `Reads` words the relation, and `Either = true` makes it undirected. Relate finds its own names, so it needs no recognize call first. [Relation rule fields](service.md#relation-rule-fields) describes each field.
-
-## Judge many records
-
-Every one-record method has a `…StreamAsync` twin, such as `DecideStreamAsync`, that takes an `IAsyncEnumerable<T>` and yields rows in input order. `FilterAsync`, `FilterStreamAsync` and `RankAsync` take many records already. Pass an array or list with .NET 10's `ToAsyncEnumerable()`, and a file with `File.ReadLinesAsync`. ThinkThen packs the records into batches; `ThinkThenOptions.Batch` sets the size. Use one stream for the whole collection rather than one awaited call per record.
-
-A failed or not-sure record is a row like any other, so the stream keeps every record without stopping. This program reads `records.jsonl`, one JSON record per line, and judges each record's `text` field:
-
-```csharp
-using System.Text.Json;
-using ThinkThen;
-
-await using var client = new ThinkThenClient();
-var records = File.ReadLinesAsync("records.jsonl")
-    .Where(line => !string.IsNullOrWhiteSpace(line))
-    .Select(line => JsonSerializer.Deserialize<JsonElement>(line));
-var options = new DecideOptions { Field = Pointer.From("/text") };
-await foreach (var refundCheck in client.DecideStreamAsync(
-    "Does the customer request a refund?", records, options))
-{
-    if (refundCheck is Failed<bool, NoDetail> failed)
-        Console.WriteLine($"{failed.Position} failed {failed.Error.Code}: {failed.Error.Message}");
-    else if (refundCheck.IsUnsure)
-        Console.WriteLine($"{refundCheck.Position} unsure: ask a person");
+    if (isRefund.IsUnsure)
+    {
+        Console.WriteLine($"a person reads it: {isRefund.Item}");
+    }
+    else if (isRefund.IsFailed)
+    {
+        Console.WriteLine($"try again later: {isRefund.Item}");
+    }
+    else if (isRefund)
+    {
+        Console.WriteLine($"refund queue: {isRefund.Item}");
+    }
     else
     {
-        bool isRefund = refundCheck;
-        Console.WriteLine($"{refundCheck.Position} answered {isRefund}");
+        Console.WriteLine($"inbox: {isRefund.Item}");
     }
 }
 ```
 
-`Position` counts from 1 in input order. Each row also carries `Id`, the record's own `id` as a `StringId`, `SignedId` or `UnsignedId`, and `Source`, the question, backend and model that answered. Inside a stream, blank text gives a failed row with `ErrorCode.RecordEmpty`, and the stream continues.
+One failed record does not stop the stream. Each result keeps its own state, with `Position` counted from 1 and the record's `Id` when it has one.
 
-## Say what yes, no and each option mean
-
-Decide and filter take `YesMeans` and `NoMeans`. Choose, tag, score and rank take `Descriptions`, a map from each option or level to what it means. The answers keep their short names.
+To stop on an encountered failed bulk result, use the explicit shared check:
 
 ```csharp
-var refundOptions = new DecideOptions
+await foreach (var isRefund in client.DecideStreamAsync(
+    "Does the customer request a refund?", messages,
+    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) }))
 {
-    YesMeans = "The customer asks for money back",
-    NoMeans = "The customer asks for anything else",
-};
-var topicOptions = new ChooseOptions
-{
-    Descriptions = new Dictionary<string, string>
-    {
-        ["billing"] = "Invoices, charges and refunds",
-        ["shipping"] = "Delivery and parcels",
-        ["other"] = "Anything else",
-    },
-};
-string topic = await client.ChooseAsync(
-    "What is the message about?", "Please refund my order.",
-    ["billing", "shipping", "other"], topicOptions);
-```
-
-A description key that is not one of the options throws `ThinkThenException`.
-
-## Records and field
-
-A `string` record stays text, even when it holds JSON. Any other record is serialized with System.Text.Json, using `ThinkThenOptions.Json`; a `JsonElement`, a dictionary or your own class all work. `Pointer.From("/text")` in an options record's `Field` tells ThinkThen to judge one field. In a pointer, write `~1` for a `/` in a key and `~0` for a `~`.
-
-A null record, a record without the field the pointer selects, or a field that holds JSON null gives a failed row with `ErrorCode.RecordMissing` and sends no request.
-
-For trimmed or Native AOT applications, every record-taking method has a `…WithMetadataAsync` form, such as `DecideWithMetadataAsync`, that takes a `JsonTypeInfo<T>` from your `JsonSerializerContext`.
-
-## Read the probability and details
-
-`Probability` is a `double?` on every row, and null on a failed row. An `Answered` or `Unsure` row also has a typed `Detail`:
-
-- Choose and tag give `LabelsDetail`, with each label's probability in `Labels`.
-- Score and rank give `LevelsDetail`, with each level's probability in `Levels`, in level order.
-- Recognize gives `RecognizeDetail`, and relate gives `RelateDetail` with every name it found in `Names` and every scored pair in `Pairs`.
-
-```csharp
-var topicCheck = await client.ChooseAsync(
-    "What is the message about?", "Please refund my order.",
-    ["billing", "shipping", "other"]);
-if (topicCheck is Answered<string, LabelsDetail> { Detail: { } detail })
-    foreach (var (label, probability) in detail.Labels)
-        Console.WriteLine($"{label} {probability}");
-```
-
-Rows, `ValueList` and `ValueMap` compare by their contents, so two rows with the same data are equal and hash alike. `JsonSerializer.Serialize(row)` writes the row in the shape every ThinkThen language shares.
-
-## Save and load a toolbox
-
-A toolbox is a file of named questions. Save this as `toolbox.json`:
-
-```json
-{"entries":{"refund":{"question":{"function":"filter","question":"Does the customer request a refund?"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"]}}}}
-```
-
-Load it, pick a question by name and type, and pass that question to its function:
-
-```csharp
-using var toolbox = Toolbox.FromJson(await File.ReadAllTextAsync("toolbox.json"));
-using var topicQuestion = toolbox.Choose("topic");
-await foreach (var topicCheck in client.ChooseStreamAsync(topicQuestion, messages.ToAsyncEnumerable()))
-{
-    string topic = topicCheck;
-    Console.WriteLine($"{topicCheck.Position} {topic}");
+    Console.WriteLine(isRefund.ThrowIfFailed());
 }
 ```
 
-`Toolbox.FromJson(json)` reads this saved format, and `ToJson()` writes it. `Toolbox.Parse(json)` reads bare definitions with no `entries` wrapper, such as `{"topic":{"function":"choose", ...}}`. `Toolbox.Create(questions)` makes one in code. A typed selector, such as `toolbox.Choose(name)`, throws `ThinkThenException` for a missing name or a question of another function. Toolboxes and questions hold native resources, so dispose them with `using`.
+`ThrowIfFailed()` throws `FailedException` for a failed row and otherwise returns the same row. Unsure does not throw here, and printing is safe. The method remains on the shared type but is redundant after an ordinary successful scalar call. A one-element stream still retains a failed row rather than acquiring scalar failure behavior.
 
-## Cancel, dispose and register the client
+Pass the whole collection to one stream so ThinkThen can send the records in batches. The records can be any `IEnumerable<T>` or `IAsyncEnumerable<T>`. The stream is an `IAsyncEnumerable`. `await foreach` closes it when the loop ends, even when you `break` early. `await refundChecks.ToListAsync()` collects every result.
 
-Every async method takes a final `CancellationToken`, and `WithCancellation` passes one to a stream. Cancelling throws `OperationCanceledException` and stops the native work. `await using` disposes the client, which cancels its running calls; a call after that throws `ObjectDisposedException`.
+To save every result, write `JsonSerializer.Serialize(result)` as a line of JSON. It includes the state, so nothing is lost.
 
-In an ASP.NET Core or generic host application, `services.AddThinkThen(options => options.Model = "...")` registers one client for the application. It logs to `ILogger<ThinkThenClient>` without record text, settings or keys.
+## Many-result not sure or failed
 
-## Reference
+Here `isRefund` comes from a stream, where all three states remain possible.
 
-[Read the API reference](../../sdk/csharp/API.md). Every public type and member has XML documentation in the package, so your editor shows it on hover.
+```csharp
+await foreach (var isRefund in client.DecideStreamAsync(
+    "Does the customer request a refund?", messages,
+    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) }))
+{
+    if (isRefund.IsUnsure)
+    {
+        Console.WriteLine($"a person reads it {isRefund.Probability}");
+    }
+    else if (isRefund is Failed<bool, string> failed)
+    {
+        Console.WriteLine($"try again later {failed.Error.Code}");
+    }
+    else if (isRefund)
+    {
+        Console.WriteLine("refund queue");
+    }
+    else
+    {
+        Console.WriteLine("inbox");
+    }
+}
+```
+
+Yes and no are the two answers. Not sure and failed are the two ways of having none. A failed result is a `Failed`, and only a `Failed` has an `Error`, so there is never an empty error to check for.
+
+A result is one of three records: `Answered`, `Unsure` or `Failed`. Its `Status` says which, as `Status.Answered`, `Status.Unsure` or `Status.Failed`. To name every state and have the compiler confirm none is missed, use a `switch` expression over `Status` with no `_` arm:
+
+```csharp
+static string WhereItGoes(Row<bool, string> isRefund) => isRefund.Status switch
+{
+    Status.Answered => isRefund ? "refund queue" : "inbox",
+    Status.Unsure => "a person reads it",
+    Status.Failed => "try again later",
+};
+```
+
+`Row<bool, string>` is a yes-or-no result about a `string` record.
+
+Leave a state out and the compiler gives warning CS8509, which names it. C# also gives warning CS8524 on every such `switch`, because an enum variable can hold a number that is none of its members. These two lines in your project file make the first an error and turn the second off:
+
+```xml
+<WarningsAsErrors>CS8509</WarningsAsErrors>
+<NoWarn>CS8524</NoWarn>
+```
+
+The same shared `Row<bool, string>` type serves scalar calls and streams. Its static failed case remains even though a successfully awaited scalar call cannot return it. C# checks the enum switch with the warning settings above, rather than proving exhaustive type patterns over the record hierarchy.
+
+Call the routing helper on actual stream results:
+
+```csharp
+await foreach (var isRefund in client.DecideStreamAsync(
+    "Does the customer request a refund?", messages,
+    new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) }))
+{
+    Console.WriteLine($"{WhereItGoes(isRefund)}: {isRefund.Item}");
+}
+```
+
+`NoAnswerException` groups `UnsureException` and `FailedException` for answer reads on many-record results, form entries and saved rows. Use separate catches when their routes differ.
+
+## filter
+
+filter means "give me the yeses". It hands back your own records, in order.
+
+```csharp
+string[] messages =
+[
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+];
+
+await foreach (var refundRequest in client.FilterAsync("Does the customer request a refund?", messages))
+{
+    Console.WriteLine($"refund queue: {refundRequest}");
+}
+```
+
+filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `new FilterOptions { Threshold = Threshold.Cut(0.7) }` moves the bar. Two bars are refused: `Threshold.Band` does not compile there, and a saved filter question that holds two bars throws `UsageException`. When you want not sure, use `client.DecideStreamAsync`, as in the section above.
+
+If a record fails, you still get every kept record first. Then filter throws one `FailedException`, and its `Rows` holds every failed result with its `Item`.
+
+```csharp
+try
+{
+    await foreach (var refundRequest in client.FilterAsync("Does the customer request a refund?", messages))
+    {
+        Console.WriteLine($"refund queue: {refundRequest}");
+    }
+}
+catch (FailedException failure)
+{
+    foreach (var failed in failure.Rows)
+    {
+        Console.WriteLine($"try again later: {failed.Item} {failed.Error.Code}");
+    }
+}
+```
+
+## tag
+
+Labels work as choices do. The answer is a list of the members that fit, and it can be empty.
+
+```csharp
+var topics = await client.TagAsync(
+    "Which topics appear?",
+    "I was charged twice and my parcel is late again.",
+    [Topic.Billing, Topic.Shipping]);
+
+if (topics.Answer.Contains(Topic.Billing))
+{
+    Console.WriteLine("billing team");
+}
+foreach (var topic in topics.Answer)
+{
+    Console.WriteLine(topic);
+}
+```
+
+Here the labels are two members of the `Topic` enum from the choose section. tag is never not sure. `new TagOptions<Topic> { Threshold = Threshold.Cut(0.7) }` sets how likely a label must be to count.
+
+## score
+
+Levels name a scale, lowest first. The answer is a number from 0 to 1 along it. Give the members in an explicit ordered list: that list defines the scale, regardless of the enum's numeric values. `Enum.GetValues` orders by numeric value, so it must not stand in for your chosen scale order.
+
+```csharp
+enum Urgency { Routine, Urgent }
+```
+
+```csharp
+var urgency = await client.ScoreAsync(
+    "How urgent is the request?",
+    "Please refund my order.",
+    [Urgency.Routine, Urgency.Urgent]);
+
+if (urgency.Answer > 0.5)
+{
+    Console.WriteLine("answer today");
+}
+Console.WriteLine($"{urgency.Answer:F2}");
+```
+
+The score is a position between your levels, not one of them, so it is a `double` and there is nothing to `switch` over. To get exactly one level back, ask with `client.ChooseAsync`. score is never not sure.
+
+## rank
+
+rank puts many records in order along your levels, highest first.
+
+```csharp
+string[] messages =
+[
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+];
+
+await foreach (var ranked in client.RankAsync("How urgent is the request?", messages, [Urgency.Routine, Urgency.Urgent]))
+{
+    Console.WriteLine($"{ranked.Answer} {ranked.Item}");
+}
+```
+
+`ranked.Answer` is the rank, starting at 1, and `ranked.Item` is your record. rank reads the whole collection before it gives anything back. `new RankOptions<Urgency> { Top = 5 }` retains the five highest-ranked records after judging the collection. A failed record comes back after the ranked ones, with `IsFailed` true.
+
+## find
+
+find points to the one line that answers.
+
+```csharp
+string message = "Morgan works for Example Group.\nPlease refund my order.";
+var action = await client.FindAsync("Which line states the requested action?", message);
+
+if (action.IsUnsure)
+{
+    Console.WriteLine("a person reads it");
+}
+else if (action.Answer is null)
+{
+    Console.WriteLine("no line answers");
+}
+else
+{
+    Console.WriteLine(action.Answer.Text);
+}
+```
+
+The answer is a `TextSpan?`. A `TextSpan` has `Text`, `Start` and `End`, and the answer is `null` when no line answers. `message[span.Start..span.End]` is the line. Like choose, find can be not sure with no bar set.
+
+## recognize
+
+```csharp
+var names = await client.RecognizeAsync(
+    "Morgan works for Example Group.",
+    ["person", "organization"]);
+
+foreach (var name in names.Answer)
+{
+    Console.WriteLine($"{name.Kind} {name.Text}");
+}
+```
+
+Each name also has `Start`, `End` and `Probability`. The answer can be empty. recognize is never not sure.
+
+## relate
+
+```csharp
+string message = "Morgan works for Example Group.\nPlease refund my order.";
+RelationRule[] rules = [new() { Source = "person", Target = "organization", Relation = "works_for" }];
+
+var relations = await client.RelateAsync(message, rules);
+
+foreach (var relation in relations.Answer)
+{
+    Console.WriteLine($"{relation.Source.Text} {relation.Relation} {relation.Target.Text}");
+}
+```
+
+Each relation has `Source`, `Target`, `Relation`, `Probability` and `Either`. `relations.Detail` is a `RelationDetail`, and its `Names` holds every name found, including names in no relation. Reach it with `if (relations.Detail is RelationDetail detail)`.
+
+## annotate
+
+annotate asks several questions of each record and gives back one form per record.
+
+```csharp
+string[] messages =
+[
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+];
+
+var questions = new AnnotationQuestions
+{
+    { "refund", DecideQuestion.Create("Does the customer request a refund?", new DecideOptions { Threshold = Threshold.Band(0.2, 0.8) }) },
+    { "topic", ChooseQuestion.Create("What is the message about?", Enum.GetValues<Topic>()) },
+    { "urgency", ScoreQuestion.Create("How urgent is the request?", [Urgency.Routine, Urgency.Urgent]) },
+};
+
+var forms = client.AnnotateStreamAsync(questions, messages);
+
+await foreach (var form in forms)
+{
+    if (form.IsFailed)
+    {
+        Console.WriteLine($"try again later: {form.Item}");
+        continue;
+    }
+    var entries = form.Answer;
+    var isRefund = entries.Decide("refund");
+    var topic = entries.Choose<Topic>("topic");
+    var urgency = entries.Score("urgency");
+    if (isRefund.IsFailed || topic.IsFailed || urgency.IsFailed)
+    {
+        Console.WriteLine($"try again later: {form.Item}");
+    }
+    else if (isRefund.IsUnsure || topic.IsUnsure)
+    {
+        Console.WriteLine($"a person reads it: {form.Item}");
+    }
+    else if (isRefund.IsAnswered && topic.IsAnswered && urgency.IsAnswered && isRefund.Answer)
+    {
+        Console.WriteLine($"refund queue: {topic} {urgency.Answer:F2}");
+    }
+}
+```
+
+`form.Answer` holds one entry per question, under the name you gave it. Each entry is a result of its own function, with its own state. `entries.Decide("refund")` is a decide result, so it goes in an `if`. One entry can be not sure or failed while the others answer. Check every entry used by a branch before reading its answer; an answered form alone does not mean its entries all answered. Here `Topic` is the enum from the choose section and `Urgency` the one from the score section.
+
+A scalar `await client.AnnotateAsync(questions, message)` throws `FailedException` only if the parent form failed. An answered parent is returned even if one, several or all entries failed. The scalar boundary checks the parent's own state, not the recursive helper.
+
+```csharp
+var form = await client.AnnotateAsync(questions, "Please refund my order.");
+form.ThrowIfFailed();
+```
+
+The optional second line checks the form and every entry, throwing `FailedException` for a failed parent or any failed entry. An unsure entry is not a failure; otherwise the same form is returned unchanged. The helper also works on bulk forms. A check of the parent alone never authorizes reading an unchecked entry's answer.
+
+## Say what each answer means
+
+When a short question is not enough, say what the answers mean.
+
+```csharp
+var isRefund = await client.DecideAsync(
+    "Does the customer request a refund?",
+    "I was charged twice for one invoice.",
+    new DecideOptions
+    {
+        YesMeans = "the customer wants money back, including for a duplicate charge",
+        NoMeans = "the customer wants anything else",
+    });
+
+var topic = await client.ChooseAsync(
+    "What is the message about?",
+    "I was charged twice for one invoice.",
+    Enum.GetValues<Topic>(),
+    new ChooseOptions<Topic>
+    {
+        Descriptions = new Dictionary<Topic, string>
+        {
+            [Topic.Billing] = "charges, invoices and refunds",
+            [Topic.Shipping] = "parcels and delivery",
+        },
+    });
+```
+
+decide and filter take `YesMeans` and `NoMeans`. choose, tag, score and rank take `Descriptions`, keyed by your choices, labels or levels.
+
+## Records and fields
+
+A record is a `string`, or any value System.Text.Json can write, such as a dictionary, a list or an anonymous object. `Field = Pointer.From("/text")` in the options picks one field. Without it, ThinkThen judges the whole record. A record of your own class is written with the `JsonSerializerOptions` you set once on the client, as `Json` in `ThinkThenOptions`.
+
+Give your records an `id`. Each result carries it back as `Id`.
+
+A one-record call given an array, a list or other collection throws `ArgumentException` and names the `Stream` form. A blank scalar record (an empty string, only spaces, or an empty object) fails the awaited call with `FailedException` and code `record.empty` before any service request. A `null` scalar record does the same with `record.missing`. A many-record call retains those failures as rows, including when its input collection has one element.
+
+## Async
+
+Every call on this page is already async. A one-record call gives a `Task` of the result, and a many-record call gives an `IAsyncEnumerable` of results. There is no second client and no second set of names, and there is no blocking form. A failed scalar parent faults its task, and `await` throws `FailedException`; unsure completes the task successfully. Stream startup or cancellation errors may fail iteration, while per-record failures stay in stream rows.
+
+```csharp
+using ThinkThen;
+
+await using var client = new ThinkThenClient();
+
+var isRefund = await client.DecideAsync("Does the customer request a refund?", "Please refund my order.");
+Console.WriteLine(isRefund ? "refund queue" : "inbox");
+```
+
+Cancelling the token you pass stops the call, as the Cancel section shows.
+
+To judge many records, pass them to one `Stream` call instead of starting one task per record.
+
+## Saved questions
+
+A question object holds a question and its options, so many calls can share one definition. Pass it in place of the question text.
+
+```csharp
+var asksRefund = DecideQuestion.Create(
+    "Does the customer request a refund?",
+    new DecideOptions
+    {
+        Threshold = Threshold.Band(0.2, 0.8),
+        Field = Pointer.From("/text"),
+    });
+var isRefund = await client.DecideAsync(asksRefund, new { id = "a1", text = "Please refund my order." });
+```
+
+There is one class per function, such as `ChooseQuestion` and `ScoreQuestion`. A `Toolbox` keeps named questions in a JSON file:
+
+```csharp
+var toolbox = Toolbox.Load("toolbox.json");
+var topic = await client.ChooseAsync(
+    toolbox.Choose("topic"),
+    new { id = "a1", text = "Where is my parcel?" });
+```
+
+`Toolbox.Load` throws .NET's own file exceptions, such as `FileNotFoundException`, when the file can't be read. `toolbox.Choose(name)` throws `UsageException` when the toolbox has no choose question of that name.
+
+## Settings
+
+A client created with no settings reads `THINKTHEN_API_KEY` and `THINKTHEN_BACKEND` from the environment. To choose settings yourself, set them in `ThinkThenOptions` and call the same functions.
+
+```csharp
+await using var client = new ThinkThenClient(new ThinkThenOptions
+{
+    Model = "...",
+    Batch = 16,
+    Retry = new RetryPolicy { MaxRetries = 5 },
+});
+var isRefund = await client.DecideAsync("Does the customer request a refund?", "Please refund my order.");
+```
+
+The options are `Backend`, `Url`, `Model`, `ApiKey`, `Batch`, `Retry` and `Json`. Times in `RetryPolicy` are `TimeSpan` values. Keep the key in the environment, not in your code.
+
+One client is safe to share between threads. Disposing it stops its running calls.
+
+## Usage
+
+```csharp
+await using var client = new ThinkThenClient();
+await client.DecideAsync("Does the customer request a refund?", "Please refund my order.");
+var usage = client.Usage;
+Console.WriteLine($"{usage.Attempts} {usage.InputTokens.Reported} {usage.OutputTokens.Reported}");
+```
+
+`client.Usage` counts everything the client has sent so far: `Attempts`, `Responses`, retries, bytes sent, and tokens in and out as the service reported them.
+
+## Cancel
+
+.NET already has the way to stop work, a `CancellationToken`, and every call takes one as `cancellationToken`.
+
+```csharp
+using var stop = new CancellationTokenSource();
+var isRefund = await client.DecideAsync(
+    "Does the customer request a refund?", "Please refund my order.",
+    cancellationToken: stop.Token);
+```
+
+Calling `stop.Cancel()` from anywhere stops the call, which throws `OperationCanceledException`. Leaving an `await foreach` early stops a many-record call without throwing.
+
+## Errors
+
+| What happened | When it throws | What is thrown |
+| --- | --- | --- |
+| A mistake in the call, such as a bad threshold or a list given to a one-record call | At the call | `UsageException`, `ArgumentException` |
+| The client could not start, such as no API key | When the client is created | `SetupException` |
+| The call was cancelled | At the call | `OperationCanceledException` |
+| A scalar judgement failed, including blank input or service failure on its row | When you await the call | `FailedException` |
+| A many-record result or form entry failed | At `Answer`, the decide `if` shortcut, or `ThrowIfFailed()` | `FailedException` |
+| A scalar annotate parent failed | When you await the call; streams retain a failed form | `FailedException` at the scalar call or later bulk read/check |
+| An answered annotate parent contains failed entries | The call returns it; failed-entry reads or explicit form checks throw | `FailedException` |
+| Not sure | When you read the answer or put a decide result in an `if` | `UnsureException` |
+| You print a result, store it, or ask about its state | Never | |
+
+Two catches let you catch by meaning:
+
+- `catch (NoAnswerException)` catches `UnsureException` and `FailedException`: there was no answer to read.
+- `catch (Exception e) when (e is FailedException or ThinkThenException)` catches failed judgements and engine call errors. `ThinkThenException` is the parent of `UsageException`, `SetupException` and `InternalException`. A C# class has one parent, and `FailedException` has `NoAnswerException`, so this catch names both. It does not catch `UnsureException`, because not sure is a result and not an error. Standard `ArgumentException` and `OperationCanceledException` remain separate; handle those separately when needed.
+
+`FailedException` replaces the concrete pre-release `RecordException` name and preserves `Code`, `HttpStatus` and `Rows`, the failed results. It remains separate from the sealed `Failed<TAnswer,TRecord>` result case. Wire codes such as `record.empty` and other call-error classifications do not change. `UnsureException` carries `Probability` and `Row`.
+
+## Upgrading from 0.1
+
+The baseline is the [published 0.1.2 package/source](https://api.nuget.org/v3-flatcontainer/botassembly.thinkthen/0.1.2/botassembly.thinkthen.0.1.2.nupkg). Replace its call envelopes with the results shown above.
+
+| 0.1.2 | Now |
+| --- | --- |
+| `Engine.Open` and a separately installed C library | `ThinkThenClient` and packaged native assets |
+| `TypedResult<T>.Value`, `Answer.OutcomeKind` | Await the shared result, then read `Answer`. Scalar failed judgements throw at the call; unsure throws at the answer read. Bulk results retain all three states |
+| `AnnotatedField.Read` | Form `Answer` and typed entry reads |
+| Per-call `Facts` | Client usage |
+
+Replace the pre-release `RecordException` spelling with `FailedException`. Keep the sealed `Failed` result case for bulk results and entries; no wire code is renamed.

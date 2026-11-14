@@ -30,7 +30,7 @@ public final class ScoreOptions {
      * @param value the value value
      * @return the descriptions result
      */
-        public Builder descriptions(java.util.Map<String,String> value) { values.put("descriptions",Values.orderedMap(value)); return this; }
+        public Builder descriptions(java.util.Map<?,String> value) { values.put("descriptions",Domain.descriptions(value)); return this; }
         /**
          * Select record field with a JSON pointer.
          * @param value the value to set

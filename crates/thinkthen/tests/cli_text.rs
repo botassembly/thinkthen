@@ -44,21 +44,29 @@ fn all_ten_functions_judge_literal_text_as_one_record() {
         vec!["rank", "How urgent?", "--level", "low", "--level", "high"],
         vec!["find", "Which line?"],
         vec!["recognize", "--kind", "person", "--kind", "company"],
-        vec!["relate", "--rule", "works_for", "person", "company"],
+        vec!["relate", "--rule", "person", "company", "works_for"],
         vec!["annotate", toolbox.path().to_str().unwrap()],
     ];
     let text = "Ada works for Acme.\nPlease refund my order.";
     for mut args in cases {
         let function = args[0];
-        args.push("--json");
+        if function == "filter" {
+            args.extend(["--threshold", "0.000001"]);
+        } else {
+            args.push("--json");
+        }
         let mut stdin_args = args.clone();
         stdin_args.extend(["--from", "text"]);
         let expected = run(&stdin_args, text.as_bytes(), None);
         assert_eq!(expected.status.code(), Some(0), "{function}: {expected:?}");
-        let row: Value = serde_json::from_slice(&expected.stdout).unwrap();
-        assert_eq!(row["function"], function);
-        assert_eq!(row["position"], 1);
-        assert!(row.get("answer").is_some());
+        if function == "filter" {
+            assert_eq!(expected.stdout, format!("{text}\n").as_bytes());
+        } else {
+            let row: Value = serde_json::from_slice(&expected.stdout).unwrap();
+            assert_eq!(row["function"], function);
+            assert_eq!(row["position"], 1);
+            assert!(row.get("answer").is_some());
+        }
 
         args.extend(["--text", text]);
         let actual = run(&args, b"ignored stdin\nsecond ignored record", None);

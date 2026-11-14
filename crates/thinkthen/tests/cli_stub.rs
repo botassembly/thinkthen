@@ -28,10 +28,15 @@ fn all_functions_match_the_shared_stub_rows_without_http() {
         let mut entry = request.as_object().unwrap().clone();
         entry.remove("records");
         std::fs::write(&path, serde_json::to_string(&entry).unwrap()).unwrap();
-        let mut child = support::command()
+        let mut command = support::command();
+        command
             .arg("run")
             .arg(&path)
-            .args(["--backend", "stub", "--url", server.base(), "--json"])
+            .args(["--backend", "stub", "--url", server.base()]);
+        if function != "filter" {
+            command.arg("--json");
+        }
+        let mut child = command
             .env("THINKTHEN_API_KEY", "unused-synthetic-key")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -73,15 +78,19 @@ fn all_functions_match_the_shared_stub_rows_without_http() {
         .map(|case| {
             let function = &case["request"]["question"]["function"];
             let mut rows = case["expected"].clone();
+            let records = case["request"]["records"].as_array().unwrap();
             if function == "filter" {
-                for (row, record) in rows
-                    .as_array_mut()
-                    .unwrap()
-                    .iter_mut()
-                    .zip(case["request"]["records"].as_array().unwrap())
-                {
-                    row["item"] = record.clone();
-                    row["kept"] = json!(row["status"] == "answered" && row["answer"] == true);
+                rows = Value::Array(
+                    rows.as_array()
+                        .unwrap()
+                        .iter()
+                        .filter(|row| row["status"] == "answered" && row["answer"] == true)
+                        .map(|row| records[row["position"].as_u64().unwrap() as usize - 1].clone())
+                        .collect(),
+                );
+            } else {
+                for row in rows.as_array_mut().unwrap() {
+                    row["item"] = records[row["position"].as_u64().unwrap() as usize - 1].clone();
                 }
             }
             json!({"function":function,"rows":rows})

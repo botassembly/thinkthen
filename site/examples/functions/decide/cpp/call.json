@@ -1,5 +1,5 @@
 {
-  "anchor": "        client.decide(refund, \"Please refund my order.\").value();",
+  "anchor": "    const auto is_refund = client.decide(asks_refund, \"Please refund my order.\");",
   "before": 0,
   "after": 2
 }

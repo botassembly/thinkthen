@@ -17,7 +17,7 @@ backend = os.environ.get("THINKTHEN_BACKEND", "systemone")
 thinkthen.set_default_client(thinkthen.Client(backend=backend))
 
 shown = runpy.run_path("show.py")
-answers = [{"refund": bool(form["refund"]), "topic": str(form["topic"]), "urgency": float(form["urgency"])} for form in sorted(shown["forms"], key=lambda form: form.position)]
+answers = [{"refund": form.answer["refund"].answer if form.answer["refund"].answered else None, "topic": form.answer["topic"].answer if form.answer["topic"].answered else None, "urgency": form.answer["urgency"].answer if form.answer["urgency"].answered else None} for form in sorted(shown["forms"], key=lambda form: form.position)]
 with open(os.environ["SITE_ANSWERS_FILE"], "w", encoding="utf-8") as out:
     json.dump(answers, out)
 PY

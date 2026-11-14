@@ -33,8 +33,10 @@ int main(void) {
         rc = thinkthen_run_one(client, refund, "I may send it back.",
                                THINKTHEN_NUL_TERMINATED, THINKTHEN_RECORD_TEXT,
                                &row, &error);
+    bool is_refund = false;
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_row_answer_bool(&row, &is_refund, &error);
     if (rc == THINKTHEN_OK) {
-        bool is_refund = row.answer_bool;
         puts(is_refund ? "refund" : "no refund");
     } else if (rc == THINKTHEN_UNSURE) {
         puts("not sure");

@@ -1,8 +1,10 @@
 //! Ask typed questions about text and branch on the answer.
 //!
-//! Build a question, run it on a record, and take the answer with
-//! [`Row::into_answer`]. That one step refuses "not sure" and a failed record,
-//! so neither can quietly become "no".
+//! Build a question and run it on one record with [`Engine::run`], which
+//! returns a failed judgement as an error at the call. Take the successful
+//! result's answer with [`Row::into_answer`], which refuses "not sure".
+//! Bulk rows and form entries also refuse failed answer reads, so neither
+//! missing-answer state can quietly become "no".
 //!
 //! # Setup
 //!
@@ -34,14 +36,14 @@
 //! let refund = Decide::new("Does the customer ask for a refund?")?;
 //! let is_refund: bool = engine.run(&refund, "Please refund my order.")?.into_answer()?;
 //!
-//! let team = Choose::new("Which team owns this?", ["billing", "shipping", "other"])?;
+//! let team = Choose::with_strings("Which team owns this?", ["billing", "shipping", "other"])?;
 //! let owner: String = engine.run(&team, "My parcel went to the wrong address.")?.into_answer()?;
 //! assert!(["billing", "shipping", "other"].contains(&owner.as_str()));
 //!
-//! let topics = Tag::new("Which topics does it raise?", ["billing", "shipping"])?;
+//! let topics = Tag::with_strings("Which topics does it raise?", ["billing", "shipping"])?;
 //! let raised: Vec<String> = engine.run(&topics, "Charged twice, still no parcel.")?.into_answer()?;
 //!
-//! let urgency = Score::new("How urgent is it?", ["low", "medium", "high"])?;
+//! let urgency = Score::with_strings("How urgent is it?", ["low", "medium", "high"])?;
 //! let how_urgent: f64 = engine.run(&urgency, "The site is down for everyone.")?.into_answer()?;
 //! assert!((0.0..=1.0).contains(&how_urgent));
 //!
@@ -58,7 +60,7 @@
 //!     println!("{}: {}", name.kind(), name.text());
 //! }
 //!
-//! let lives_in = Relate::new([RelationRule::new("lives_in", "person", "place")?])?;
+//! let lives_in = Relate::new([RelationRule::new("person", "place", "lives_in")?])?;
 //! let relations = engine.run(&lives_in, "Ada Lovelace lived in London.")?.into_answer()?;
 //! # let _ = (is_refund, raised, relations);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
@@ -67,9 +69,10 @@
 //! # Not sure
 //!
 //! A band threshold leaves a middle where the answer is not sure. `into_answer`
-//! returns [`NoAnswer::Unsure`] there, and [`NoAnswer::Failed`] for a failed
-//! record. [`Status`] and [`Outcome`] are closed, so a `match`
-//! over them needs no catch-all arm.
+//! returns [`NoAnswer::Unsure`] there. A successful scalar result cannot be
+//! failed, but the shared [`NoAnswer`] type retains [`NoAnswer::Failed`] for
+//! bulk rows and form entries. The static match below therefore names both
+//! variants. [`Status`] and [`Outcome`] are closed too.
 //!
 //! ```
 //! # use thinkthen::{BackendName, Settings};
@@ -92,7 +95,7 @@
 //! [`Engine::rows`] takes any owned iterator of records and yields one row per
 //! record, in input order; a failed record is a row, and the call goes on.
 //! [`Engine::filter`] yields only the kept items, and
-//! [`Engine::filter_items`] yields every item with its row. [`Engine::rank`]
+//! [`Engine::rows`] with decide yields every state. [`Engine::rank`]
 //! yields each item with its row, best first.
 //!
 //! ```
@@ -108,14 +111,14 @@
 //! }
 //! assert_eq!(refund_requests.len(), 2);
 //!
-//! let severity = Rank::new("How severe is the outage?", ["minor", "major", "total"])?;
+//! let severity = Rank::with_strings("How severe is the outage?", ["minor", "major", "total"])?;
 //! let outages = ["One page is slow.", "Nothing loads."];
-//! for ranked in engine.rank(&severity, outages, |outage| *outage)? {
-//!     let (outage, row) = ranked?;
-//!     println!("{} {outage}", row.answer()?);
+//! for ranked in engine.rank(&severity, outages)? {
+//!     let row = ranked?;
+//!     println!("{} {}", row.answer()?, row.item());
 //! }
 //!
-//! let team = Choose::new("Which team owns this?", ["billing", "shipping"])?;
+//! let team = Choose::with_strings("Which team owns this?", ["billing", "shipping"])?;
 //! let form = Annotate::new([
 //!     ("refund", AnnotatableQuestion::from(refund)),
 //!     ("team", AnnotatableQuestion::from(team)),
@@ -163,10 +166,10 @@ pub use batch::Batch;
 #[doc(hidden)]
 pub use contract_driver::native;
 pub use contract_driver::{
-    AnyCall, AnyRows, Call, FilterError, Filtered, Kept, Ranked, RecordSender, Rows,
+    AnyCall, AnyRows, Call, FilterError, Items, Kept, Ranked, RecordRows, RecordSender, Rows,
 };
 #[cfg(feature = "stream")]
-pub use contract_driver::{AnyRowStream, RowStream};
+pub use contract_driver::{AnyRowStream, ItemStream, KeptStream, RecordRowStream, RowStream};
 pub use contract_request::Request;
 #[doc(hidden)]
 pub use core::{ABI_VERSION, OffsetUnit};

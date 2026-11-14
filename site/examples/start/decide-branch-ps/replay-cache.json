@@ -1,0 +1,27 @@
+{
+  "a81a08a893db04d9ea4c8ff5a341a53af76ed54671a8a34dc93e5cf059e354ce": {
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "jev-1.13.0",
+      "questions": {
+        "q1": {
+          "type": "noul",
+          "instructions": "The text is \"Please refund my order.\". Does the customer request a refund?"
+        }
+      }
+    },
+    "response": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "q1": {
+          "type": "noul",
+          "noul": 0.99
+        }
+      },
+      "usage": {
+        "input_tokens": 291,
+        "output_tokens": 21
+      }
+    }
+  }
+}

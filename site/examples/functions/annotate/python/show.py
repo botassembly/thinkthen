@@ -18,4 +18,5 @@ questions = {
 }
 forms = tt.annotate_stream(questions, messages).to_list()
 for form in forms:
-    print(form["refund"], form["topic"], form["urgency"])
+    entries = form.raise_if_failed().answer
+    print(entries["refund"], entries["topic"], entries["urgency"])

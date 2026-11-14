@@ -230,9 +230,20 @@ impl FileJob {
                 }
             }
         }
+        if let Question::Annotate(question) = prepared {
+            let columns: Vec<_> = input_headers.iter().map(String::as_str).collect();
+            let suffixes: &[&str] = if self.details {
+                &cells::DETAIL_SUFFIXES
+            } else {
+                &[]
+            };
+            question
+                .validate_table_columns(&columns, suffixes)
+                .map_err(FileError::Engine)?;
+        }
         let mut unique: BTreeSet<_> = input_headers.iter().map(String::as_str).collect();
         for name in &generated {
-            if name.is_empty() || !unique.insert(name) {
+            if !annotation && (name.is_empty() || !unique.insert(name)) {
                 return Err(invalid(
                     Code::UsageColumn,
                     &format!(
@@ -299,7 +310,6 @@ impl FileJob {
         )?;
         let mut failures: Vec<(usize, Error)> = Vec::new();
         let mut rows = 0_u64;
-        let mut answered = 0_u64;
         let mut unsure = 0_u64;
         let mut failed: Vec<(crate::Family, u64)> = Vec::new();
         loop {
@@ -328,7 +338,6 @@ impl FileJob {
                     rows += 1;
                     let source_row =
                         records.source_row(usize::try_from(row.position()).map_err(local)?)?;
-                    answered += u64::from(row.status() != crate::Status::Failed);
                     unsure += u64::from(row.status() == crate::Status::Unsure);
                     let mut failure = row.failure().cloned();
                     let mut cells = Vec::new();
@@ -367,7 +376,6 @@ impl FileJob {
             backup: None,
             recovery: None,
             failures,
-            answered,
             unsure,
             failed,
         };

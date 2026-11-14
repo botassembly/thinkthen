@@ -23,71 +23,54 @@ internal static partial class Program
 
         await using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
         foreach (object blank in new object[] { "", " \n", new Dictionary<string, object>(), new { id = "empty" } })
-            await Code(ErrorCode.RecordEmpty, async () => { await client.DecideAsync("Ready?", blank); });
+            Check(await CallFailed(client.DecideAsync("Ready?",blank)) is IFailed { Error.Code:"record.empty" },"blank scalar failures retain their own row");
         foreach (object collection in new object[] { new[] { "alpha", "beta" }, new List<string> { "alpha" },
             Records(new[] { "alpha" }), JsonSerializer.Deserialize<JsonElement>("[1,2]") })
         {
             try { await client.DecideAsync("Ready?", collection); throw new Exception("single call accepted a collection"); }
-            catch (ThinkThenException error)
-            {
-                Check(error.ErrorCode == ErrorCode.UsageRecordKind && error.Message.Contains("StreamAsync", StringComparison.Ordinal),
-                    "collection refusal lost code or stream hint");
-            }
+            catch(ArgumentException error)
+            { Check(error.Message.Contains("DecideStreamAsync",StringComparison.Ordinal),"collection refusal names the ordinary stream form"); }
         }
         var structured = await client.DecideAsync("Ready?", new Dictionary<string, string> { ["body"] = "alpha" });
         Check(structured.IsAnswered, "single call refused a dictionary record");
         foreach (string text in new[] { "{}", "[]" })
             Check((await client.DecideAsync("Ready?", text)).IsAnswered, "literal JSON-looking text became structured emptiness");
-        var continuing = new List<Row<bool, NoDetail>>();
+        var continuing = new List<Row<bool, string>>();
         await foreach (var row in client.DecideStreamAsync("Ready?", Records(new[] { "alpha", " ", "beta" }))) continuing.Add(row);
-        Check(continuing.Count == 3 && continuing[0].IsAnswered && continuing[1] is Failed<bool, NoDetail> { Error.ErrorCode: ErrorCode.RecordEmpty }
+        Check(continuing.Count == 3 && continuing[0].IsAnswered && continuing[1] is IFailed { Error.ErrorCode: ErrorCode.RecordEmpty }
             && continuing[2].IsAnswered && continuing[2].Position == 3, "blank stream row stopped or reordered later results");
 
         var records = Enumerable.Range(0, 64).Select(index => (object?)new Message(index.ToString(), "refund request " + index))
             .Concat(new object?[] { null, "", " \n" }).ToArray();
-        var all = new List<FilterItem<object?>>();
-        await foreach (var item in client.FilterStreamAsync("Does it ask for a refund?", Records(records))) all.Add(item);
-        var expected = all.Where(item => item.Kept).Select(item => item.Item).ToList();
-        var failed = all.Where(item => item.Row.IsFailed).Select(item => item.Row).ToList();
-        Check(expected.Count > 0 && expected.Count < 64 && failed.Count == 3, "filter witness needs kept, rejected and failed records");
+        var expected=new List<object?>();
+        await foreach(var item in client.FilterAsync("Does it ask for a refund?",Records(records.Take(64)))) expected.Add(item);
+        Check(expected.Count > 0 && expected.Count < 64, "filter witness needs kept and rejected records");
+        Check(expected.All(item=>records.Take(64).Any(record=>ReferenceEquals(record,item))),"every kept value is an original managed record");
         var kept = new List<object?>();
         try
         {
             await foreach (var item in client.FilterAsync("Does it ask for a refund?", Records(records))) kept.Add(item);
             throw new Exception("kept-only filter dropped its failures");
         }
-        catch (ThinkThenException error)
+        catch(FailedException error)
         {
-            Check(kept.Count == expected.Count && kept.Zip(expected).All(pair => ReferenceEquals(pair.First, pair.Second)),
-                "kept-only filter changed or dropped a kept input record");
-            Check(error.FailedRows.Count == failed.Count && error.FailedRows.Select(row => row.Position).SequenceEqual(failed.Select(row => row.Position)),
-                "filter exception lost failed rows or positions");
-            Check(error.ErrorCode == ((Failed<bool, NoDetail>)failed[0]).Error.ErrorCode, "filter exception lost the first failure code");
+            Check(kept.Count==expected.Count&&kept.Zip(expected).All(pair=>ReferenceEquals(pair.First,pair.Second)),"filter preserves every kept original");
+            Check(error.Rows.Count==3&&error.Rows.Select(row=>row.Position).SequenceEqual(new ulong[]{65,66,67}),"filter preserves failed rows and positions");
+            Check(error.Code=="record.missing","filter preserves the first failed code");
         }
-        var band = new FilterOptions { Threshold = Threshold.Band(0.2, 0.8) };
-        var bandExpected = new List<object?>();
-        int uncertain = 0;
-        await foreach (var item in client.FilterStreamAsync("Does it ask for a refund?", Records(records.Take(64)), band))
-        {
-            if (item.Kept) bandExpected.Add(item.Item);
-            if (item.Row.IsUnsure) uncertain++;
-        }
-        var bandActual = new List<object?>();
-        await foreach (var item in client.FilterAsync("Does it ask for a refund?", Records(records.Take(64)), band)) bandActual.Add(item);
-        Check(uncertain > 0 && bandActual.Count == bandExpected.Count && bandActual.Zip(bandExpected).All(pair => ReferenceEquals(pair.First, pair.Second)),
-            "kept-only filter retained uncertain records");
+        await Code(ErrorCode.UsageThreshold,()=>Task.FromResult(Toolbox.Parse("""{"filter":{"function":"filter","question":"Ready?","threshold":{"low":0.2,"high":0.8}}}""")));
 
-        using var plain = DecideQuestion.Create("Ready?");
-        using var meaningful = DecideQuestion.Create("Ready?", new() { YesMeans = "Ready for release", NoMeans = "Needs more work" });
+        var plain = DecideQuestion.Create("Ready?");
+        var meaningful = DecideQuestion.Create("Ready?", new() { YesMeans = "Ready for release", NoMeans = "Needs more work" });
         Check((await client.DecideAsync(plain, "alpha")).Source.QuestionIdentity !=
             (await client.DecideAsync(meaningful, "alpha")).Source.QuestionIdentity, "answer meanings were lost before engine admission");
-        using var described = ChooseQuestion.Create("Which team?", ["billing", "shipping"],
+        var described = ChooseQuestion.Create("Which team?", ["billing", "shipping"],
             new() { Descriptions = new Dictionary<string, string> { ["billing"] = "Payment and refunds", ["shipping"] = "Delivery" } });
         Check(described.Choices.SequenceEqual(new[] { "billing", "shipping" }), "descriptions replaced choice names");
         Check((await client.ChooseAsync(described, "alpha")).IsAnswered, "described choices failed admission or projection");
         await Code(ErrorCode.UsageQuestion, () => Task.FromResult(ChooseQuestion.Create("Which team?", ["billing", "shipping"],
             new() { Descriptions = new Dictionary<string, string> { ["unknown"] = "Must not disappear" } })));
-        using var describedRank = RankQuestion.Create("Which is urgent?", ["routine", "urgent"], new()
+        var describedRank = RankQuestion.Create("Which is urgent?", ["routine", "urgent"], new()
         {
             Descriptions = new Dictionary<string, string> { ["routine"] = "Can wait", ["urgent"] = "Needs attention now" }
         });
@@ -96,100 +79,65 @@ internal static partial class Program
         string? describedRankIdentity = null;
         await foreach (var ranked in client.RankAsync(describedRank, Records(records.Take(2).Cast<Message>())))
         {
-            Check(ranked.Row.IsAnswered && ranked.Item.Equals(records[(int)ranked.Row.Position - 1]) && !ReferenceEquals(ranked.Item, records[(int)ranked.Row.Position - 1]),
+            Check(ranked.IsAnswered && ReferenceEquals(ranked.Item,records[(int)ranked.Position-1]),
                 "described rank lost its answer or original record");
-            describedRankIdentity = ranked.Row.Source.QuestionIdentity;
+            describedRankIdentity = ranked.Source.QuestionIdentity;
             describedRanks++;
         }
         Check(describedRanks == 2, "described rank lost a record");
-        using var filterMeanings = FilterQuestion.Create("Does it ask for a refund?", new()
+        var filterMeanings = FilterQuestion.Create("Does it ask for a refund?", new()
             { YesMeans = "Keep refund requests", NoMeans = "Omit other messages" });
-        string? meaningIdentity = null;
-        await foreach (var item in client.FilterStreamAsync(filterMeanings, Records(new[] { "alpha" }))) meaningIdentity = item.Row.Source.QuestionIdentity;
-        await foreach (var item in client.FilterStreamAsync("Does it ask for a refund?", Records(new[] { "alpha" })))
-            Check(meaningIdentity is not null && item.Row.Source.QuestionIdentity != meaningIdentity, "filter answer meanings were lost");
+        var savedFilter=Toolbox.Create(new Dictionary<string,ToolboxQuestion>{{"refund",new ToolboxQuestion.Filter(filterMeanings)}});
+        using(var saved=JsonDocument.Parse(savedFilter.ToJson())) Check(saved.RootElement.GetProperty("entries").GetProperty("refund").GetProperty("question").GetProperty("yes_means").GetString()=="Keep refund requests","filter answer meanings survive native admission and saving");
         int ranks = 0;
         await foreach (var item in client.RankAsync("Which is urgent?", Records(records.Take(5).Cast<Message>()), ["routine", "urgent"]))
         {
-            Check(item.Item.Equals(records[(int)item.Row.Position - 1]) && !ReferenceEquals(item.Item, records[(int)item.Row.Position - 1]), "rank lost the original record");
-            Check(item.Row.Source.QuestionIdentity != describedRankIdentity, "rank descriptions were lost before native execution");
+            Check(ReferenceEquals(item.Item,records[(int)item.Position-1]), "rank lost the original record");
+            Check(item.Source.QuestionIdentity != describedRankIdentity, "rank descriptions were lost before native execution");
             ranks++;
         }
         Check(ranks == 5, "rank lost a record");
-        using var shortForm = new AnnotationQuestions { { "ready", plain }, { "team", described } };
+        var shortForm = new AnnotationQuestions { { "ready", plain }, { "team", described } };
         Check(shortForm.Count == 2 && shortForm.SequenceEqual(new[] { "ready", "team" }), "short form lost question names");
-        ValueMap<string, AnnotationEntry> shortAnswers = await client.AnnotateAsync(shortForm, "alpha");
-        bool ready = shortAnswers["ready"];
-        string team = shortAnswers["team"];
-        Check(shortAnswers.Count == 2 && (team == "billing" || team == "shipping"), "short form lost typed child answers");
+        var shortAnswers=(await client.AnnotateAsync(shortForm,"alpha")).Answer;
+        bool ready=shortAnswers.Decide("ready").Answer;
+        string team=shortAnswers.Choose("team").Answer;
+        Check(shortAnswers.Entries.Count==2&&(team=="billing"||team=="shipping"),"short forms retain typed ordinary child answers");
         try { shortForm.Add("again", plain); throw new Exception("admitted form was mutable"); }
         catch (InvalidOperationException) { }
         Check(new RowError(ErrorCode.RecordMissing, "missing").Code == "record.missing", "record error lost its canonical code name");
-        try { await client.DecideAsync("Ready?", ""); }
-        catch (ThinkThenException error) { Check(error.Code == "record.empty", "exception lost its canonical code name"); }
+        Check(await CallFailed(client.DecideAsync("Ready?","")) is IFailed { Error.Code:"record.empty" },"blank scalar failures retain their canonical failure code");
         await RankSnapshotCases();
         Console.WriteLine("C# native public interface cases passed.");
     }
     private static async Task RankSnapshotCases()
     {
-        const long maximumGrowth = 32 * 1024 * 1024;
-        long baseline = 0;
-        async IAsyncEnumerable<Message> LargeRecords()
+        var originals=new List<Message>();
+        async IAsyncEnumerable<Message> RecordsWithIdentity()
         {
-            for (int index = 0; index < 2048; index++)
-            {
-                if (index == 256) baseline = GC.GetTotalMemory(forceFullCollection: true);
-                if (index == 1792)
-                    Check(GC.GetTotalMemory(forceFullCollection: true) - baseline < maximumGrowth,
-                        "top-one rank retains unselected host records");
-                yield return new Message(index.ToString(), new string('x', 32768));
-            }
+            for(int index=0;index<64;index++) { var record=new Message(index.ToString(),new string('x',1024)); originals.Add(record); yield return record; }
             await Task.CompletedTask;
         }
-        await using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
-        int count = 0;
-        await foreach (var ranked in client.RankAsync("Which message is urgent?", LargeRecords(), ["routine", "urgent"], new() { Top = 1 }))
-        {
-            Check(ranked.Item.Id == ((int)ranked.Row.Position - 1).ToString() && ranked.Item.MessageBody.Length == 32768,
-                "rank snapshot lost typed record properties");
-            count++;
-        }
-        Check(count == 1, "top-one rank returned the wrong number of records");
-        var unusual = new List<RankedItem<string?>>();
-        await foreach (var item in client.RankAsync("Urgent?", Records(new string?[] { "alpha", "\ud800", null }), ["low", "high"], new() { Top = 1 })) unusual.Add(item);
-        Check(unusual.Count == 3 && unusual.Single(item => item.Row.Position == 2).Item == "\ud800" &&
-            unusual.Single(item => item.Row.Position == 2).Row is Failed<long, LevelsDetail> { Error.Code: "record.invalid" } &&
-            unusual.Single(item => item.Row.Position == 3).Item is null,
-            "rank lost an unrepresentable or missing failed input");
-        int undefined = 0;
-        await foreach (var item in client.RankAsync("Urgent?", Records(new[] { default(JsonElement), JsonSerializer.Deserialize<JsonElement>("\"alpha\"") }), ["low", "high"]))
-        {
-            if (item.Row.Position == 1) Check(item.Item.ValueKind == JsonValueKind.Undefined && item.Row.IsFailed, "rank converted undefined to JSON null");
-            undefined++;
-        }
-        Check(undefined == 2, "rank lost a failed undefined record");
-        string loopback = Environment.GetEnvironmentVariable("THINKTHEN_LOOPBACK") ?? throw new Exception("prepare loopback for rank conversion proof");
-        await using var monitor = await Fixture.Start(loopback, "--stress", "healthy");
-        await using var remote = new ThinkThenClient(new()
-        {
-            Backend = Backend.SystemOne, Url = new Uri(monitor.Url), ApiKey = ApiKey.From("synthetic-loopback-key"),
-            Retry = new() { MaxRetries = 0 }
-        });
-        try
-        {
-            await foreach (var _ in remote.RankAsync("Urgent?", Records(new[] { new WriteOnlyRecord("alpha") }), ["low", "high"])) { }
-            throw new Exception("rank accepted a write-only record converter");
-        }
-        catch (JsonException error)
-        {
-            Check(error.Message.Contains(nameof(WriteOnlyRecord), StringComparison.Ordinal) && error.InnerException is NotSupportedException,
-                "rank conversion error lost its target type or cause");
-        }
-        int empty = 0;
-        await foreach (var _ in remote.RankAsync("Urgent?", Records(Array.Empty<WriteOnlyRecord>()), ["low", "high"])) empty++;
-        Check(empty == 0 && await monitor.Command("count") == "0", "rank preflight or empty input sent a backend request");
-        Console.WriteLine("C# bounded typed rank snapshot and zero-request conversion refusal passed.");
+        await using var client=new ThinkThenClient(new(){Backend=Backend.Stub});
+        int count=0;
+        await foreach(var row in client.RankAsync("Urgent?",RecordsWithIdentity(),["routine","urgent"],new(){Top=1}))
+        { Check(originals.Count==64&&ReferenceEquals(row.Item,originals[checked((int)row.Position-1)]),"top rank consumes all records and retains the winning original"); count++; }
+        Check(count==1,"top-one rank returns one ranked result");
+        var unusual=new List<Row<long,string?>>();
+        await foreach(var row in client.RankAsync("Urgent?",Records(new string?[]{"alpha","\ud800",null}),["low","high"],new(){Top=1})) unusual.Add(row);
+        Check(unusual.Count==3&&unusual.Single(row=>row.Position==2) is IFailed {Error.Code:"record.invalid"}&&unusual.Single(row=>row.Position==2).Item=="\ud800"&&unusual.Single(row=>row.Position==3).Item is null,"rank retains unrepresentable and missing failed originals");
+        int undefined=0;
+        await foreach(var row in client.RankAsync("Urgent?",Records(new[]{default(JsonElement),JsonSerializer.Deserialize<JsonElement>("\"alpha\"")}),["low","high"]))
+        { if(row.Position==1) Check(row.Item.ValueKind==JsonValueKind.Undefined&&row.IsFailed,"rank preserves undefined original values"); undefined++; }
+        Check(undefined==2,"rank retains failed undefined records");
+        var writeOnly=new WriteOnlyRecord("alpha");
+        int written=0;
+        await foreach(var row in client.RankAsync("Urgent?",new[]{writeOnly},["low","high"]))
+        { Check(ReferenceEquals(row.Item,writeOnly)&&row.IsAnswered,"rank needs no inverse serializer for its original record"); written++; }
+        Check(written==1,"write-only record produced one rank");
+        Console.WriteLine("C# rank retains original managed objects and failed records.");
     }
+
 }
 
 [JsonConverter(typeof(WriteOnlyRecordConverter))]

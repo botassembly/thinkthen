@@ -1,5 +1,5 @@
 {
-  "anchor": "        client.choose(about, \"Please refund my order.\").value();",
+  "anchor": "    const auto topic = client.choose(asks_topic, \"Please refund my order.\");",
   "before": 0,
   "after": 2
 }

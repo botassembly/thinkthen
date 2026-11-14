@@ -31,7 +31,7 @@ impl Meanings {
         let function = question.function();
         let mut value = serde_json::to_value(&question).map_err(|_| native::internal_error())?;
         let object = value.as_object_mut().ok_or_else(native::internal_error)?;
-        for (field, meaning) in [("true", &self.yes), ("false", &self.no)] {
+        for (field, meaning) in [("yes_means", &self.yes), ("no_means", &self.no)] {
             if let Some(meaning) = meaning {
                 object.insert(field.into(), Value::String(meaning.clone()));
             }

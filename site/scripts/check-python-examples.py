@@ -38,7 +38,7 @@ def check(root):
     page = root / 'site/src/content/docs/sdks/python.mdx'
     settings_ids = set()
     for heading, body in sections(page.read_text()):
-        if heading == 'When to make a client':
+        if heading in {'When to make a client', 'Settings', 'Usage', 'Async'}:
             settings_ids.update(re.findall(r'<Example\s+id="([^"]+)"\s*/>', body))
     errors = []
     examples = root / 'site/examples'
@@ -51,7 +51,7 @@ def check(root):
                       for line in client_calls(source.read_text()))
     readme = root / 'sdk/python/README.md'
     for heading, body in sections(readme.read_text()):
-        if heading == 'When to make a client':
+        if heading in {'When to make a client', 'Settings', 'Usage', 'Async'}:
             continue
         for block in re.findall(r'(?ms)^```python\s*\n(.*?)^```\s*$', body):
             if client_calls(block):

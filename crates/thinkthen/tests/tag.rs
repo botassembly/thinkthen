@@ -37,7 +37,7 @@ fn independent_labels_keep_their_probability_and_input_order() {
             json!({"type": "noul", "noul": probabilities[position]})
         })
         .unwrap();
-        let question = Tag::new("What applies?", ["billing", "refund", "shipping"])
+        let question = Tag::with_strings("What applies?", ["billing", "refund", "shipping"])
             .unwrap()
             .threshold(Cut::new(0.7).unwrap())
             .field("/body".parse().unwrap());
@@ -86,7 +86,7 @@ fn invalid_questions_and_threshold_bands_are_refused_at_construction() {
         ("What?", vec!["billing", "billing"]),
     ] {
         assert_eq!(
-            Tag::new(text, labels).unwrap_err().code().as_str(),
+            Tag::with_strings(text, labels).unwrap_err().code().as_str(),
             "usage.question"
         );
     }
@@ -103,7 +103,7 @@ fn one_missing_label_or_failed_record_fails_the_whole_row() {
         )
     })
     .unwrap();
-    let question = Tag::new("What?", ["billing", "shipping"]).unwrap();
+    let question = Tag::with_strings("What?", ["billing", "shipping"]).unwrap();
     let records = [
         Record::text("text"),
         Record::from_json("bad json"),
@@ -129,7 +129,7 @@ fn one_missing_label_or_failed_record_fails_the_whole_row() {
 
 #[test]
 fn multi_ask_records_span_requests_at_the_byte_limit() {
-    let question = Tag::new("What?", ["shipping", "billing"]).unwrap();
+    let question = Tag::with_strings("What?", ["shipping", "billing"]).unwrap();
     // Measure the wire overhead rather than copying the request encoding.
     let server = Loopback::noul(0.9).unwrap();
     engine(&server)
