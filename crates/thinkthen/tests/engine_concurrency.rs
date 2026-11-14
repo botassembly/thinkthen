@@ -144,11 +144,10 @@ fn retry_after_accepts_an_http_date() {
     assert_eq!(server.count(), 2);
 }
 
-/// Records whose owner can see the producer reach a place, and see it let go of them.
+/// Records whose owner can see the job queue fill and the producer let go of them.
 struct Input {
     next: usize,
     full: mpsc::Sender<()>,
-    drained: mpsc::Sender<()>,
     released: mpsc::Sender<()>,
 }
 impl Iterator for Input {
@@ -158,9 +157,6 @@ impl Iterator for Input {
         self.next += 1;
         if place == QUEUE_FULL {
             self.full.send(()).unwrap();
-        }
-        if place == DRAINED {
-            self.drained.send(()).unwrap();
         }
         let kind = if place < HEALTHY { "healthy" } else { "broken" };
         (place < 40).then(|| Record::text(format!("{kind} {place}")))
@@ -176,29 +172,23 @@ const WORKERS: usize = 4;
 const HEALTHY: usize = 3;
 /// With the third row's reply held, asking for this record means the job queue is full.
 const QUEUE_FULL: usize = 10;
-/// Asking for this record means a worker took a queued job after its request failed.
-const DRAINED: usize = 12;
 
 /// The events one stalled-reader call reports.
 struct Stalled {
     input: Input,
     queue_full: Mutex<mpsc::Receiver<()>>,
-    drained: mpsc::Receiver<()>,
     released: mpsc::Receiver<()>,
 }
 fn stalled() -> Stalled {
     let (full, queue_full) = mpsc::channel();
-    let (reached, drained) = mpsc::channel();
     let (dropped, released) = mpsc::channel();
     Stalled {
         input: Input {
             next: 0,
             full,
-            drained: reached,
             released: dropped,
         },
         queue_full: Mutex::new(queue_full),
-        drained,
         released,
     }
 }
@@ -206,18 +196,18 @@ fn text(request: &Request) -> String {
     request.json().unwrap().to_string()
 }
 
-// The first error reaches the reader even from a stuck call, and nothing joins the call's
-// thread, so a stuck producer shows only by never moving on. A reader that is behind stalls
-// the collector, so no cancel can reach the workers before all four fail.
+// Keep the reader behind until all workers reach the rejected requests. Then drain
+// the answers and error before requiring input release: bounded event queues may
+// legitimately stop the producer while the reader is behind.
 #[test]
 fn a_key_rejected_on_every_worker_lets_the_producer_end() {
     let Stalled {
         input,
         queue_full,
-        drained,
         released,
     } = stalled();
-    let together = std::sync::Barrier::new(WORKERS);
+    let together = Barrier::new(WORKERS);
+    let (rejected, rejections) = mpsc::channel();
     let server = Loopback::start(move |request| {
         let text = text(request);
         if text.contains("healthy 2") {
@@ -226,6 +216,7 @@ fn a_key_rejected_on_every_worker_lets_the_producer_end() {
         if text.contains("healthy") {
             return answer(request);
         }
+        rejected.send(()).unwrap();
         together.wait();
         Reply::json(401, &json!({}))
     })
@@ -233,15 +224,19 @@ fn a_key_rejected_on_every_worker_lets_the_producer_end() {
     let mut rows = engine(&server)
         .rows(&Decide::new("Relevant?").unwrap(), input)
         .unwrap();
-    drained
-        .recv_timeout(WAIT)
-        .expect("the producer is stuck behind workers that stopped");
+    for _ in 0..WORKERS {
+        rejections
+            .recv_timeout(WAIT)
+            .expect("each worker reaches a rejected request before the reader advances");
+    }
     let answered = rows.by_ref().take(HEALTHY).filter(Result::is_ok).count();
     let error = rows.next().unwrap().unwrap_err();
     assert_eq!(answered, HEALTHY);
     assert_eq!(error.http_status(), Some(401));
     assert_eq!(server.count(), HEALTHY + WORKERS);
-    released.recv_timeout(WAIT).unwrap();
+    released
+        .recv_timeout(WAIT)
+        .expect("the producer releases its input after the authentication error");
 }
 
 struct Barrier {

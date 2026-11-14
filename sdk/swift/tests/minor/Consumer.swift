@@ -16,12 +16,13 @@ import ThinkThen
   static func main() async throws {
     if CommandLine.arguments.last == "row" {
       let client = try Client(Settings(backend: .stub))
-      let row = try await client.decide("Ready?", record: Record.missing)
-      guard let failure = row.error else {
+      do {
+        _ = try await client.decide("Ready?", record: Record.missing)
         preconditionFailure("Future record failure was ignored")
+      } catch let failure as Failed {
+        precondition(failure.code.rawValue == "future.code")
+        precondition(failure.message == CommandLine.arguments[1])
       }
-      precondition(failure.code.rawValue == "future.code")
-      precondition(failure.message == CommandLine.arguments[1])
     } else if CommandLine.arguments.last == "child" {
       let client = try Client(Settings(backend: .stub))
       let questions = AnnotationQuestions(["future": DecideQuestion("Ready?")])
