@@ -15,6 +15,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_go as go
+import release_host_tools as host
 import release_workflow_prepare as unix
 import release_windows_host as windows
 import release_windows_r
@@ -25,6 +26,40 @@ class PreparedWindows(Exception):
 
 
 class ToolInstallation(unittest.TestCase):
+    def test_prepared_macos_cpp_reaches_default_and_explicit_compilers_without_replacing_c(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prefix = root / 'installed LLVM'
+            compiler = prefix / 'bin/clang++'
+            compiler.parent.mkdir(parents=True)
+            compiler.write_text('#!/bin/sh\nprintf "LLVM C++: %s\\n" "$*"\n')
+            compiler.chmod(0o755)
+
+            def prepare(command, *arguments, **options):
+                output = str(prefix) if arguments == ('--prefix', 'llvm@' + host.PINS['macos_llvm'].split('.')[0]) else ''
+                if Path(command) == compiler:
+                    output = 'clang version ' + host.PINS['macos_llvm']
+                return subprocess.CompletedProcess((command, *arguments), 0, output, '')
+
+            tools = root / '.local/share/thinkthen-build-tools'
+            with patch.object(host, 'TOOLS', tools), patch.object(host.Path, 'is_file', return_value=False), \
+                    patch.object(host, 'run', side_effect=prepare):
+                host.macos_cpp()
+            commands = root / 'commands'
+            commands.mkdir()
+            for name, program in {'uname': 'echo Darwin arm64', 'xcrun': 'echo /selected/SDK',
+                                  'cc': 'echo Apple-C'}.items():
+                if name == 'uname':
+                    program = 'if [ "$1" = -s ]; then echo Darwin; else echo Darwin arm64; fi'
+                executable = commands / name
+                executable.write_text('#!/bin/sh\n' + program + '\n')
+                executable.chmod(0o755)
+            environment = dict(os.environ, HOME=str(root), PATH=str(commands) + os.pathsep + os.environ['PATH'])
+            environment.pop('CXX', None)
+            output = subprocess.check_output(['scripts/native-tools-env', 'sh', '-eu', '-c',
+                'c++; "$CXX"; cc'], cwd=host.ROOT, env=environment, text=True).splitlines()
+            self.assertEqual(output, ['LLVM C++: -isysroot /selected/SDK'] * 2 + ['Apple-C'])
+
     def test_native_windows_preparation_uses_canonical_sqlite_and_r_pins(self):
         selected = windows.selections()['INPUTS']
         sqlite_url, sqlite_digest = selected['sqlite-amalgamation-3410000.zip']

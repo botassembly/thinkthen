@@ -2,6 +2,7 @@
 # Check release credential reachability from parsed workflow jobs and steps.
 require 'yaml'
 require 'set'
+require 'rubygems/version'
 
 ROOT = File.expand_path('..', __dir__)
 OWNERS = {
@@ -85,6 +86,12 @@ end
 def check_windows(workflow)
   job = workflow.fetch('jobs').fetch('windows-check')
   steps = job.fetch('steps')
+  go = steps.find { |step| step['id'] == 'setup-go' }
+  pin = File.read(File.join(ROOT, 'scripts/floors/Dockerfile'))[/go([0-9.]+)\.linux-amd64\.tar\.gz/, 1]
+  minimum = File.read(File.join(ROOT, 'sdk/go/thinkthen/go.mod'))[/^go ([0-9.]+)$/, 1]
+  unless go&.dig('with', 'go-version') == pin && Gem::Version.new(pin) >= Gem::Version.new(minimum)
+    raise 'Windows Go compiler must match the pinned floor and satisfy the Go SDK minimum'
+  end
   native = steps.index { |step| step['id'] == 'prepare-rust' }
   trust = steps.index { |step| step['id'] == 'transport-trust' }
   raise 'Windows transport trust must follow the native build' unless native && trust && trust > native
@@ -147,6 +154,7 @@ end
 def windows_self_test(workflow)
   check_windows(workflow)
   mutations = {
+    'Go compiler below the SDK minimum' => ->(steps) { steps.find { |step| step['id'] == 'setup-go' }['with']['go-version'] = '1.24.13' },
     'missing trust test' => ->(steps) { steps.reject! { |step| step['id'] == 'transport-trust' } },
     'missing short build folder' => ->(steps) { steps.find { |step| step['id'] == 'prepare-rust' }['run'].sub!('CARGO_TARGET_DIR=', 'WRONG_TARGET=') },
     'loopback overrides short build folder' => ->(steps) { steps.find { |step| step['id'] == 'windows-loopback' }['env']['CARGO_TARGET_DIR'] = 'long/target' },
@@ -288,6 +296,7 @@ begin
   end
   puts 'release workflow: credentials reach only their own sites'
   puts 'Windows workflow: transport trust runs offline after the native build'
+  puts 'Windows workflow: Go compiler matches the pinned floor and satisfies the SDK minimum'
   puts 'Windows workflow: windows-prepare repeats windows-check preparation with the first jobs'
 rescue RuntimeError, Psych::Exception => error
   warn "release-workflow-check: #{error.message}"

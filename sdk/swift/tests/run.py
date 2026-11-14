@@ -19,6 +19,7 @@ consumer, root, loopback = sys.argv[1:]
 root = Path(root)
 not_applicable = 0
 sys.path.insert(0, str(root / "scripts"))
+sys.path.insert(0, str(root / "scripts/release"))
 from filter_contract import expected_filter
 from test_control import read_line, request as fixture_request
 with tempfile.TemporaryDirectory() as folder:

@@ -27,6 +27,7 @@
     "withr_3.0.3.tar.gz": "d86c6454164fc85678bfc85e2a6cce42f7461d45fa9a87de71f376e7956c991e"
   },
   "staticcheck": "v0.8.2",
+  "macos_llvm": "20.1.8",
   "uv": "0.11.14",
   "windows_msys2": {
     "release": "v20261024.010459",

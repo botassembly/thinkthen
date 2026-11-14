@@ -1,6 +1,6 @@
 """Check the Windows candidate's inventory and run its installed CLI and C stub cases."""
 from production_native import check as production_native
-from release_records import encode_records
+from release_records import command_output, encode_records
 import hashlib
 import json
 import os
@@ -95,10 +95,11 @@ def smoke(folder, *, core_only=False):
         request = first['request']
         record = request['records'][0]
         question = request['question']['question']
-        expected = first['expected'][0]
+        expected = command_output(first)[0]
         output = run(command, 'decide', '--backend', 'stub', question, '--from', 'jsonl', '--json',
                      payload=encode_records([record]))
-        assert json.loads(output) == expected
+        actual = json.loads(output)
+        assert actual == expected, json.dumps({'expected': expected, 'actual': actual})[:8000]
     print('Windows candidate: checked inventory; installed CLI and C ABI shared stub cases pass')
     if not core_only:
         from release_windows_sdks import full

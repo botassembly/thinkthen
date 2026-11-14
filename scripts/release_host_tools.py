@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -33,7 +34,9 @@ def host_tools():
             run('sudo', 'apt-get', 'install', '-y', 'build-essential', 'cmake', 'ninja-build',
                 'pkg-config', 'curl', 'libssl-dev', 'libyaml-dev', 'zlib1g-dev')
     host_languages()
-    if platform.system() == 'Darwin': macos_swift()
+    if platform.system() == 'Darwin':
+        macos_cpp()
+        macos_swift()
     from release_rust import prepare as prepare_rust
     prepare_rust()
     prepared('cargo', 'fetch', '--locked')
@@ -76,6 +79,28 @@ def host_languages():
             source.extractall(temporary, filter='data')
         run('sh', '-eu', '-c', './configure --disable-install-doc --prefix="$1"; make -j2; make install',
             'ruby-prepare', TOOLS / 'ruby/runtime', cwd=Path(temporary) / ('ruby-' + HOST_PINS['ruby']))
+
+
+def macos_cpp():
+    """Select supported C++ headers without replacing Apple's C tools or runtime."""
+    formula = 'llvm@' + PINS['macos_llvm'].split('.')[0]
+    roots = (Path('/opt/zerobrew/opt'), Path('/opt/homebrew/opt'), Path('/usr/local/opt'))
+    prefix = next((root / formula for root in roots if (root / formula / 'bin/clang++').is_file()), None)
+    if prefix is None:
+        run('brew', 'install', formula)
+        prefix = Path(run('brew', '--prefix', formula, capture_output=True, text=True).stdout.strip())
+    compiler = prefix / 'bin/clang++'
+    actual = run(compiler, '--version', capture_output=True, text=True).stdout
+    if re.search(r'clang version ([0-9.]+)', actual)[1] != PINS['macos_llvm']:
+        raise ValueError('prepared macOS C++ compiler differs from its declared LLVM release')
+    commands = TOOLS / 'macos-cpp/bin'
+    commands.mkdir(parents=True, exist_ok=True)
+    command = commands / 'c++'
+    temporary = command.with_suffix('.partial')
+    temporary.write_text('#!/bin/sh\nexec ' + shlex.quote(str(compiler))
+                         + ' -isysroot "$(xcrun --sdk macosx --show-sdk-path)" "$@"\n')
+    temporary.chmod(0o755)
+    temporary.replace(command)
 
 
 def macos_swift():

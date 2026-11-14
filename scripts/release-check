@@ -6,7 +6,7 @@ Usage: check PLATFORM_DIRECTORY. Prints one result per package; errors stop it.
 from package_inventory import python_wheelhouse as wheelhouse
 from release_images import image
 from package_inventory import check as package_inventory
-from release_records import encode_records
+from release_records import command_output, encode_records
 import json
 import io
 import hashlib
@@ -246,16 +246,16 @@ def command():
         entry = {key: value for key, value in request.items() if key != 'records'}
         path = SCRATCH / 'question.json'
         path.write_text(json.dumps(entry))
-        result = run(installed / 'thinkthen', 'run', path, '--backend', 'stub', '--json',
+        flags = [] if function == 'filter' else ['--json']
+        result = run(installed / 'thinkthen', 'run', path, '--backend', 'stub', *flags,
                      input=encode_records(request['records']), capture_output=True, check=False)
         failed = any(row['status'] == 'failed' or (row['function'] == 'annotate' and any(entry['status'] == 'failed' for entry in row['answer'].values())) for row in case['expected'])
         assert result.returncode == (6 if failed else 0), result.stderr
-        expected = [dict(row) for row in case['expected']]
-        if function == 'filter':
-            for row in expected:
-                row['item'] = request['records'][row['position'] - 1]
-                row['kept'] = row['status'] == 'answered' and row.get('answer') is True
-        assert [json.loads(line) for line in result.stdout.splitlines()] == expected, function
+        expected = command_output(case)
+        actual = [json.loads(line) for line in result.stdout.splitlines()]
+        assert actual == expected, {'function': function,
+                                    'rows': json.dumps({'expected': expected, 'actual': actual})[:8000],
+                                    'stderr': result.stderr.decode(errors='replace')[-2000:]}
     print('candidate command: ten shared stub cases pass', flush=True)
 
 
@@ -278,7 +278,7 @@ def python_node():
 
 
 def native_languages():
-    installed = unpack(only('c/*.tar.gz'), SCRATCH / 'c')
+    unpack(only('c/*.tar.gz'), SCRATCH / 'c')
     binary = SCRATCH / 'bin/c-consumer'
     binary.parent.mkdir()
     shutil.copy2(CHECKS / 'c-consumer', binary)

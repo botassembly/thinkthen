@@ -17,6 +17,11 @@ for thinkthen_python in "$HOME"/.local/share/uv/python/cpython-3.13-*/bin; do
 done
 . scripts/native-build-env
 if [ "$(uname -s)" = Darwin ]; then
+    if [ -x "$HOME/.local/share/thinkthen-build-tools/macos-cpp/bin/c++" ]; then
+        PATH="$HOME/.local/share/thinkthen-build-tools/macos-cpp/bin:$PATH"
+        CXX=${CXX:-$HOME/.local/share/thinkthen-build-tools/macos-cpp/bin/c++}
+        export CXX
+    fi
     THINKTHEN_GO_HOME=${THINKTHEN_GO_HOME:-$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_go import home; print(home())')}
     PATH="$THINKTHEN_GO_HOME/bin:$PATH"
     export THINKTHEN_GO_HOME

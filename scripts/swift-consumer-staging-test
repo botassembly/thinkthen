@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 # swift-gate comes first: every other caller must stage what it builds.
@@ -88,6 +89,59 @@ def contents(consumer):
             for path in consumer.rglob('*') if path.is_file()}
 
 
+def runtime_checker(name, revision, destination):
+    """Stage the runtime checker with its producer's actual portable copy loop."""
+    tree = ast.parse(source(name, revision))
+    function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == ('language_packages' if name == 'release-candidate' else 'check_sources'))
+    loop = next(node for node in function.body if isinstance(node, ast.For)
+                and ast.unparse(node.iter) == "(ROOT / 'scripts/release').iterdir()")
+    copy = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'copy')
+    namespace = dict(ROOT=ROOT, Path=Path, shutil=shutil, out=destination,
+                     checks=destination / 'checks')
+    exec(compile(ast.Module(body=[copy, loop], type_ignores=[]), name, 'exec'), namespace)
+    return destination / 'checks/swift.py'
+
+
+def runtime_checkers(revision, scratch, consumer, fixtures):
+    environment = dict(os.environ)
+    environment.pop('THINKTHEN_LIBRARY', None)
+    for name in ('release-candidate', 'release_windows.py'):
+        checker = runtime_checker(name, revision, scratch / name)
+        run(sys.executable, '-E', '-s', checker, consumer, fixtures, cwd=scratch, env=environment)
+        print(name + ': relocated runtime Swift checker passes without checkout imports', flush=True)
+
+
+def runtime_fixture(revision):
+    """The staged checker accepts kept records and rejects an incorrect projection."""
+    with tempfile.TemporaryDirectory(prefix='thinkthen-swift-runtime-check-') as temporary:
+        scratch = Path(temporary)
+        failed = dict(function='decide', position=3, status='failed',
+                      error=dict(code='fixture.failed', message='failed record'))
+        cases = [dict(request=dict(question=dict(function='filter'),
+                                   records=[dict(id='kept'), dict(id='unsure'),
+                                            dict(id='failed'), dict(id='rejected')]),
+                      expected=[dict(position=1, status='answered', answer=True),
+                                dict(position=2, status='unsure'), failed,
+                                dict(position=4, status='answered', answer=False)])]
+        fixtures = scratch / 'stub.json'
+        fixtures.write_text(json.dumps(cases))
+        consumer = scratch / 'Consumer'
+        output = dict(kept=[dict(id='kept')], failed=[failed])
+        consumer.write_text(f'#!{sys.executable}\nimport os\nassert "THINKTHEN_LIBRARY" not in os.environ\nprint({json.dumps(output)!r})\n')
+        consumer.chmod(0o755)
+        with patch.dict(os.environ, THINKTHEN_LIBRARY=str(scratch / 'foreign-engine')):
+            runtime_checkers(revision, scratch, consumer, fixtures)
+        output['kept'] = [dict(id='unsure')]
+        consumer.write_text(f'#!{sys.executable}\nprint({json.dumps(output)!r})\n')
+        for name in ('release-candidate', 'release_windows.py'):
+            checker = scratch / name / 'checks/swift.py'
+            result = subprocess.run([sys.executable, '-E', '-s', checker, consumer, fixtures],
+                                    cwd=scratch, capture_output=True, text=True)
+            assert result.returncode != 0 and 'AssertionError' in result.stderr, result.stderr
+        print('Both staged checkers reject an unsure record incorrectly kept by the consumer', flush=True)
+
+
 def without(line, root):
     """Overlay the checkout with a shared step that lost one generating line."""
     (root / 'scripts').mkdir(parents=True)
@@ -140,6 +194,7 @@ def staging(revision):
             failures.append('source-install-check: --readmes did not stage the installed README')
     if failures:
         raise SystemExit('\n'.join(failures))
+    runtime_fixture(revision)
 
 
 def prepared_engine(assets, receipt_path):
@@ -191,6 +246,8 @@ def mac_package(assets, receipt_path, revision):
             environment.pop('THINKTHEN_LIBRARY', None)
             run(sys.executable, ROOT / 'scripts/release/swift.py', installed / 'Consumer',
                 ROOT / 'construction/stub.json', cwd=scratch, env=environment)
+            runtime_checkers(revision, scratch / 'runtime-checkers', installed / 'Consumer',
+                             ROOT / 'construction/stub.json')
             run(installed / 'Consumer', 'surface', cwd=scratch, env=environment)
             print('Actual Mac archive round-trip, release build and relocated consumer surface pass', flush=True)
         finally:
@@ -265,6 +322,8 @@ if __name__ == '__main__':
     parser.add_argument('--mac-native-assets', '--native-assets', type=Path)
     parser.add_argument('--native-receipt', type=Path)
     modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--runtime-checkers', action='store_true',
+                       help='exercise source-free runtime checker staging and filter assertions')
     modes.add_argument('--mac-source-install', action='store_true',
                         help='run the actual Swift source-install recipe with a local tag mirror')
     modes.add_argument('--linux-source-resolve', action='store_true',
@@ -272,7 +331,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if (args.mac_source_install or args.linux_source_resolve) and not args.mac_native_assets:
         parser.error('source installation proof requires --native-assets')
-    if args.mac_native_assets:
+    if args.runtime_checkers:
+        runtime_fixture(args.source_revision)
+    elif args.mac_native_assets:
         if not args.native_receipt:
             parser.error('--mac-native-assets requires --native-receipt')
         if args.mac_source_install or args.linux_source_resolve:
