@@ -1,12 +1,23 @@
 """Run shared construction rows through standard database commands."""
 import json
 import math
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 kind, executable, extension, fixture = sys.argv[1:]
 cases = [(case, False) for case in json.loads(Path(fixture).read_text(encoding='utf-8'))]
+for case, _ in tuple(cases):
+    if case['request']['question']['function'] != 'filter':
+        continue
+    # Keep the canonical failed-record case; also consume its valid prefix and
+    # its first (not kept) record without changing the question or positions.
+    first_failed = next(row['position'] for row in case['expected'] if row['status'] == 'failed')
+    assert case['expected'][0]['answer'] is False, case
+    for count in (first_failed - 1, 1):
+        cases.append(({**case, 'request': {**case['request'],
+            'records': case['request']['records'][:count]}, 'expected': case['expected'][:count]}, False))
 if kind == 'sqlite':
     shared = cases[0][0]
     request = shared['request']
@@ -38,14 +49,14 @@ def arguments(question):
             result.extend((bound, scalar(number)) for bound, number in value.items())
             continue
         if name == 'questions':
-            name, value = 'toolbox', quote(json.dumps(value)) + ('::jsonb' if kind == 'postgres' else '::JSON')
+            value = quote(json.dumps(value)) + ('::jsonb' if kind == 'postgres' else '::JSON')
         elif name in ('choices', 'labels', 'levels', 'kinds'):
             value = ('ARRAY' if kind == 'postgres' else '') + '[' + ','.join(quote(item) for item in value) + ']'
         elif name == 'rules':
             rules = []
             for rule in value:
                 fields = [(key, rule.get(key, False if key == 'either' else None))
-                          for key in ('relation', 'source', 'target', 'reads', 'either')]
+                          for key in ('source', 'target', 'relation', 'reads', 'either')]
                 if kind == 'postgres':
                     rules.append('ROW(' + ','.join(scalar(item) for _, item in fields) + ')::thinkthen.rule')
                 else:
@@ -123,7 +134,7 @@ def normalize(row, function):
             answer = compact(answer)
         value['answer'] = answer
     if function == 'filter':
-        assert row['status'] == 'failed' or (row['status'] == 'answered' and value.get('answer') is True), row
+        assert row['status'] == 'answered' and value.get('answer') is True, row
     return value
 
 
@@ -142,20 +153,16 @@ for case, selected_field in cases:
             if name == 'threshold' and isinstance(item, dict):
                 constraints.extend(bound + ' = ' + scalar(number) for bound, number in item.items())
             else:
-                name = 'toolbox' if name == 'questions' else name
                 constraints.append(name + ' = ' + (quote(json.dumps(item)) if isinstance(item, (dict, list)) else scalar(item)))
-        if function == 'filter':
-            constraints.append("failures = 'row'")
         if 'name' in request:
             constraints.append('name = ' + quote(request['name']))
         statement = 'SELECT * FROM thinkthen_' + function + ' WHERE ' + ' AND '.join(constraints) + ';'
         load_path = json.dumps(extension.replace('\\', '/'), ensure_ascii=False)
-        sql = '.bail on\n.load ' + load_path + '\n' + settings + '.mode json\n' + statement
+        sql = ('.bail on\n.load ' + load_path + '\n.output ' + json.dumps(os.devnull) + '\n'
+               + settings + '.output\n.mode json\n' + statement)
         command = [executable, ':memory:']
     else:
         args = arguments(question)
-        if function == 'filter':
-            args.append(('failures', quote('row')))
         if 'name' in request:
             args.append(('name', quote(request['name'])))
         if kind.startswith('duckdb'):
@@ -173,23 +180,45 @@ for case, selected_field in cases:
             invocation = 'thinkthen.' + function + '(' + quote(source) + ''.join(', ' + key + ' => ' + value for key, value in args) + ')'
             sql = settings + "SELECT coalesce(json_agg(row_to_json(t)), '[]') FROM " + invocation + ' t;'
             command = [executable, '-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1']
+    failed = [row for row in case['expected'] if row['status'] == 'failed'] if function == 'filter' else []
+    expected_failure = None
+    if failed:
+        first = failed[0]
+        expected_failure = (f"{len(failed)} of {len(case['expected'])} records failed; "
+                            f"the first, at position {first['position']}, failed with "
+                            f"{first['error']['code']}: {first['error']['message']}")
+    failure = None
     if kind == 'duckdb-python':
         import duckdb
-        with duckdb.connect(config={'allow_unsigned_extensions': True}) as connection:
-            result = connection.execute(sql)
-            columns = [column[0] for column in result.description]
-            result = [dict(zip(columns, row)) for row in result.fetchall()]
+        try:
+            with duckdb.connect(config={'allow_unsigned_extensions': True}) as connection:
+                result = connection.execute(sql)
+                columns = [column[0] for column in result.description]
+                result = [dict(zip(columns, row)) for row in result.fetchall()]
+        except duckdb.Error as error:
+            failure = str(error)
     else:
         completed = subprocess.run(command, input=sql, text=True, encoding='utf-8', capture_output=True)
         if completed.returncode:
-            raise RuntimeError((kind, function, completed.stdout, completed.stderr))
+            failure = completed.stderr
+    if expected_failure is not None:
+        assert failure is not None and expected_failure in failure, (kind, function, expected_failure, failure)
+        continue
+    if failure is not None:
+        raise RuntimeError((kind, function, failure))
+    if kind != 'duckdb-python':
         lines = completed.stdout.strip().splitlines()
-        start = next(i for i, line in enumerate(lines) if line.lstrip().startswith('['))
-        result = json.loads('\n'.join(lines[start:]))
+        if kind == 'sqlite':
+            # JSON mode prints nothing for zero rows; any nonempty output must
+            # be a complete JSON result, rather than an ignored diagnostic.
+            result = json.loads(completed.stdout) if lines else []
+        else:
+            start = next(i for i, line in enumerate(lines) if line.lstrip().startswith('['))
+            result = json.loads('\n'.join(lines[start:]))
     if kind.startswith('duckdb'):
         result = [json.loads(row['row']) for row in result]
     actual = [normalize(row, function) for row in result]
-    expected = [row for row in case['expected'] if function != 'filter' or row['status'] == 'failed'
+    expected = [row for row in case['expected'] if function != 'filter'
                 or (row['status'] == 'answered' and row.get('answer') is True)]
     if selected_field:
         for row, wanted in zip(actual, expected, strict=True):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regression checks for release continuation and Windows diagnostic transport."""
 import io
+from contextlib import redirect_stderr, redirect_stdout
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,68 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 
+def installed_checks(scripts):
+    main = runpy.run_path(str(scripts / 'release-check'))['main']
+    groups = ('command', 'python_node', 'native_languages', 'managed', 'extra_languages', 'r_package', 'databases')
+    all_pass = 'candidate: all installed packages pass shared stub cases'
+    for name, errors, expected in (
+        ('all-pass', {}, groups),
+        ('early-failure', {'command': ValueError('first consumer failed')}, groups),
+        ('multiple-failures', {'python_node': RuntimeError('frame consumer failed'), 'r_package': ValueError('R consumer failed')}, groups),
+        ('admission', {'inventory': ValueError('inventory rejected')}, ()),
+        ('interrupt', {'python_node': KeyboardInterrupt('stop now')}, groups[:2]),
+        ('exit', {'python_node': SystemExit(7)}, groups[:2]),
+    ):
+        calls, scratches = [], []
+        def check(label):
+            def call():
+                if label != 'inventory':
+                    calls.append(label)
+                    scratches.append(main.__globals__['SCRATCH'])
+                if label in errors:
+                    raise errors[label]
+            call.__name__ = label
+            return call
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary)
+            (package / 'build.json').write_text(json.dumps({'platform': 'linux-x86_64', 'version': '0.2.0'}), encoding='utf-8')
+            (package / 'checks').mkdir()
+            (package / 'checks/stub.json').write_text(json.dumps([{}] * 10), encoding='utf-8')
+            output = io.StringIO()
+            caught = None
+            with patch.dict(main.__globals__, {label: check(label) for label in ('inventory', *groups)}), \
+                    patch.object(sys, 'argv', ['release-check', str(package)]), \
+                    redirect_stdout(output), redirect_stderr(output):
+                try:
+                    main()
+                except BaseException as error:  # noqa: BLE001 - assert propagation, including interruptions
+                    caught = error
+            text = output.getvalue()
+            assert calls == list(expected), (name, calls, text)
+            assert all(not scratch.exists() for scratch in scratches), name
+            assert (all_pass in text) == (not errors), (name, text)
+            if not errors:
+                assert caught is None, caught
+            elif name in ('admission', 'interrupt', 'exit'):
+                assert caught is next(iter(errors.values())), (name, caught)
+                assert ': FAIL' not in text, text
+            else:
+                assert isinstance(caught, SystemExit) and caught.code, (name, caught)
+                for label, error in errors.items():
+                    assert f'candidate group {label}: FAIL' in text, text
+                    assert f'{type(error).__name__}: {error}' in text, text
+                    assert label in str(caught), caught
+                assert 'Traceback (most recent call last)' in text, text
+            for label in expected:
+                if label not in errors:
+                    assert text.count(f'candidate group {label}: PASS') == 1, text
+        print('installed-check ' + name + ': orchestration verified')
+
+
 def probe(name, scripts):
+    if name == 'installed-checks':
+        installed_checks(scripts)
+        return
     if name in ('windows', 'windows-loop'):
         sys.path.insert(0, str(scripts))
         import release_windows_sdks
@@ -90,6 +152,7 @@ if len(sys.argv) > 1:
     probe(sys.argv[1], Path(sys.argv[2]))
 else:
     for name, expected in [
+        ('installed-checks', ['installed-check ' + name + ': orchestration verified' for name in ('all-pass', 'early-failure', 'multiple-failures', 'admission', 'interrupt', 'exit')]),
         ('windows', ['candidate Windows ' + language + ': NOT RUN:' for language in ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R', 'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')]),
         ('windows-loop', ['candidate Windows ' + language + ': FAIL:' for language in ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R', 'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')]),
         ('candidate', ['qualification release-check: FAIL', 'qualification source-install-check: FAIL', 'qualification qualification-readmes: FAIL']),
