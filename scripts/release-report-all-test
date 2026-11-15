@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Regression checks for release continuation and Windows diagnostic transport."""
 import io
+import hashlib
+import shutil
 from contextlib import redirect_stderr, redirect_stdout
 import json
 import os
@@ -29,7 +31,7 @@ def installed_checks(scripts):
         ('interrupt', {'python_node': KeyboardInterrupt('stop now')}, groups[:2]),
         ('exit', {'python_node': SystemExit(7)}, groups[:2]),
     ):
-        calls, scratches = [], []
+        calls, scratches, environments = [], [], []
         def check(label):
             def call():
                 if label != 'inventory':
@@ -37,13 +39,31 @@ def installed_checks(scripts):
                     scratches.append(main.__globals__['SCRATCH'])
                 if label in errors:
                     raise errors[label]
+                if label == 'command' and name == 'all-pass':
+                    import_helper()
+                    environments.append(dict(main.__globals__['ENV']))
             call.__name__ = label
             return call
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary)
             (package / 'build.json').write_text(json.dumps({'platform': 'linux-x86_64', 'version': '0.2.0'}), encoding='utf-8')
             (package / 'checks').mkdir()
-            (package / 'checks/stub.json').write_text(json.dumps([{}] * 10), encoding='utf-8')
+            shutil.copy2(ROOT / 'construction/stub.json', package / 'checks/stub.json')
+            shutil.copy2(ROOT / 'scripts/release/filter_contract.py', package / 'checks/filter_contract.py')
+            (package / 'SHA256SUMS').write_text(''.join(
+                hashlib.sha256(path.read_bytes()).hexdigest() + '  ' + path.relative_to(package).as_posix() + '\n'
+                for path in sorted(package.rglob('*')) if path.is_file()))
+            def import_helper(environment=None):
+                state = main.__globals__
+                state['run'](sys.executable, '-c',
+                    'import json,sys; sys.path.insert(0,sys.argv[1]); from filter_contract import expected_filter; '
+                    'cases=json.load(open(sys.argv[2])); '
+                    'case=next(c for c in cases if c["request"]["question"]["function"]=="filter"); '
+                    'actual=expected_filter(case); assert actual["kept"]==["parcel"]; '
+                    'assert [row["error"]["code"] for row in actual["failed"]]==["record.missing"]',
+                    package / 'checks', package / 'checks/stub.json',
+                    **({'env': environment} if environment is not None else {}))
+
             output = io.StringIO()
             caught = None
             with patch.dict(main.__globals__, {label: check(label) for label in ('inventory', *groups)}), \
@@ -59,6 +79,27 @@ def installed_checks(scripts):
             assert (all_pass in text) == (not errors), (name, text)
             if not errors:
                 assert caught is None, caught
+                from release_workflow import checksums
+                checksums(package)
+                assert not list((package / 'checks').rglob('*.pyc'))
+                def refuses_extra():
+                    try:
+                        checksums(package)
+                    except ValueError as error:
+                        assert 'incomplete checksum inventory' in str(error), error
+                    else:
+                        raise AssertionError('unlisted candidate payload was admitted')
+                child = environments[0]
+                child.pop('PYTHONDONTWRITEBYTECODE')
+                child['HOME'] = str(package)
+                # The old child environment writes into a writable candidate.
+                with patch.dict(main.__globals__, {'ENV': child, 'SCRATCH': package}):
+                    import_helper(child)
+                assert list((package / 'checks').rglob('filter_contract.*.pyc'))
+                refuses_extra()
+                shutil.rmtree(package / 'checks/__pycache__')
+                (package / 'unexpected-payload').write_text('unlisted content')
+                refuses_extra()
             elif name in ('admission', 'interrupt', 'exit'):
                 assert caught is next(iter(errors.values())), (name, caught)
                 assert ': FAIL' not in text, text

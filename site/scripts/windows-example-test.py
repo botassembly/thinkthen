@@ -72,36 +72,10 @@ if len(sys.argv) > 2 and sys.argv[1] in ('--native-fixture', '--local-native-fix
 
     native_os = SimpleNamespace(name='nt', environ={'SYSTEMROOT': '/simulated-windows'},
                                 pathsep=os.pathsep, read=os.read)
-    real_check_output = subprocess.check_output
-    real_popen = subprocess.Popen
-
-    def metadata(command, **options):
-        assert command[1:4] == ['-NoProfile', '-NonInteractive', '-Command']
-        # The helper's control pipe remains open. A separate metadata child must
-        # see EOF rather than waiting on or consuming that control input.
-        with patch.object(subprocess, 'Popen', real_popen):
-            return real_check_output([sys.executable, '-c',
-                'import sys; assert sys.stdin.buffer.read() == b""; '
-                'print(\'{"version":"simulated-native-boundary"}\')'], **options)
-
     with patch.object(helper, 'os', native_os), \
          patch.object(helper.platform, 'platform', return_value='simulated-native-boundary'), \
-         patch.object(helper.subprocess, 'Popen', NativeProcess), \
-         patch.object(helper.subprocess, 'check_output', side_effect=metadata):
+         patch.object(helper.subprocess, 'Popen', NativeProcess):
         result = helper.capture(request)
-        failure = subprocess.TimeoutExpired('metadata-fixture', 10,
-            output=b'o' * 2048 + b'output-tail', stderr=b'e' * 2048 + b'error-tail')
-        with patch.object(helper.subprocess, 'check_output', side_effect=failure), \
-             patch.object(helper.subprocess, 'Popen', side_effect=AssertionError('authored program started after metadata failure')):
-            try:
-                helper.capture(request)
-            except RuntimeError as error:
-                diagnostic = str(error)
-                assert diagnostic.startswith('PowerShell metadata preflight failed after ')
-                assert 's: ' in diagnostic and 'o' * 64 in diagnostic and 'e' * 64 in diagnostic
-                assert 'output-tail' not in diagnostic and 'error-tail' not in diagnostic
-            else:
-                raise AssertionError('metadata timeout returned a successful capture')
     print(json.dumps(result), flush=True)
     sys.exit(0)
 

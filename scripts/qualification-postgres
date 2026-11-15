@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Run the delivered PostgreSQL README quickstart in an isolated local server."""
 import os
+import csv
+import io
 from pathlib import Path
 import re
 import subprocess
@@ -17,10 +19,16 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-pg-') as temporary:
     try:
         env = dict(os.environ, PGHOST=temporary, PGUSER='thinkthen', PGDATABASE='postgres',
                    PGOPTIONS='-c thinkthen.backend=stub -c thinkthen.allowed_backends=stub:*')
-        sql = blocks[0]
-        result = subprocess.run(['psql', '-X', '-v', 'ON_ERROR_STOP=1'], input=sql, text=True,
+        sql = '\n'.join(blocks[:3])
+        result = subprocess.run(['psql', '-X', '-q', '--csv', '-v', 'ON_ERROR_STOP=1'], input=sql, text=True,
                                 stdout=subprocess.PIPE, env=env, check=True)
-        assert '(3 rows)' in result.stdout, result.stdout
+        rows = list(csv.reader(io.StringIO(result.stdout)))
+        assert rows and rows[0] == ['msg_id', 'body', 'is_refund', 'status'], result.stdout
+        assert len(rows) == 6 and all(len(row) == 4 for row in rows[1:]), result.stdout
+        assert {row[0] for row in rows[1:]} == {'1', '2', '3', '4', '5'}, result.stdout
+        assert all(row[1] and (row[2], row[3]) in {
+            ('t', 'answered'), ('f', 'answered'), ('', 'unsure')
+        } for row in rows[1:]), result.stdout
     finally:
         subprocess.run(['pg_ctl', '-D', data, '-m', 'fast', '-w', 'stop'], check=True)
 print('README: PostgreSQL passes')

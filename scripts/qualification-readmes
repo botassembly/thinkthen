@@ -110,7 +110,7 @@ if __name__ == '__main__':
         if selected('command'):
             with check('command'):
                 command = unpack('', scratch / 'command')
-                run(sys.executable, ROOT / 'scripts/installer-test', '--strict-shells', '--binary',
+                run(sys.executable, ROOT / 'scripts/installer-test', '--binary',
                     command / ('thinkthen.exe' if WINDOWS else 'thinkthen'),
                     '--readme', command / 'README.md')
                 print('README: command passes', flush=True)

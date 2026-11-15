@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
@@ -76,18 +75,6 @@ def capture(request):
         if request.get('model') is not None:
             environment['THINKTHEN_MODEL'] = request['model']
         environment = cache_environment(root / 'cache', environment)
-        started = time.monotonic()
-        try:
-            observed = subprocess.check_output([shell, '-NoProfile', '-NonInteractive', '-Command',
-                '[pscustomobject]@{version=$PSVersionTable.PSVersion.ToString();'
-                'outputCodePage=[Console]::OutputEncoding.CodePage;'
-                'pipelineCodePage=$OutputEncoding.CodePage}|ConvertTo-Json -Compress'],
-                env=environment, stdin=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=10)
-        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
-            output = {name: (getattr(error, name, None) or b'')[:2048] for name in ('stdout', 'stderr')}
-            raise RuntimeError(
-                f'PowerShell metadata preflight failed after {time.monotonic() - started:.3f}s: '
-                f'{error}; captured output (first 2048 bytes per stream): {output!r}') from error
         command = [str(shell), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(program / 'run.ps1')]
         process = subprocess.Popen(command, cwd=program, env=environment, stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -123,8 +110,7 @@ def capture(request):
                 'exit': 124 if timed_out else process.returncode, 'timedOut': timed_out,
                 'provenance': {'source': request['source'], 'program_sha256': hashes,
                                'binary_source': request['binarySource'], 'binary_sha256': request['binaryHash'],
-                               'os': platform.platform(), 'shell': str(shell),
-                               'powershell': json.loads(observed.decode('utf-8-sig'))}}
+                               'os': platform.platform(), 'shell': str(shell)}}
 
 
 if __name__ == '__main__':
