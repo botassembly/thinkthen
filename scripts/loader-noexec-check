@@ -41,6 +41,9 @@ export GOCACHE=/work/go-cache GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENAB
 cd /work/consumer
 go mod edit -replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=/work/module
 go test -c -o /work/go-consumer
+/work/go-consumer -test.list='^TestSharedStub$' | grep -qx TestSharedStub || {
+    echo 'Required Go test not found: TestSharedStub' >&2; exit 1;
+}
 /jdk/bin/javac --release 22 --module-path /work/java/dependencies -d /work/classes $(find /work/java-source -name '*.java')
 /jdk/bin/jar --update --file /work/java/thinkthen-java-0.2.0.jar -C /work/classes .
 # Independent processes publish into one cold cache, then reuse it read-only.

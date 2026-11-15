@@ -199,6 +199,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         options.push(case);
     }
 
+    for case in &mut options {
+        let markers = match case.get("name").and_then(Value::as_str) {
+            Some("choose-missing-domain") => json!({
+                "postgres": "The public SQL function requires a choices argument before question admission; actual missing-argument refusal runs separately.",
+                "sqlite": "The public SQL function requires a choices argument before question admission; actual missing-argument refusal runs separately."
+            }),
+            Some("tag-rejects-band") => json!({
+                "duckdb": "The public SQL tag function accepts a scalar threshold and refuses a band before question admission; native type refusal runs separately.",
+                "postgres": "The public SQL tag function accepts a scalar threshold and refuses a band before question admission; native type refusal runs separately.",
+                "sqlite": "The public SQL tag function accepts a scalar threshold and refuses a band before question admission; native type refusal runs separately."
+            }),
+            Some("annotation-rejects-rank") => json!({
+                "cpp": "The public annotation_question variant excludes rank at compile time; an actual static_assert refusal witness runs separately.",
+                "go": "The public AnnotationQuestion interface excludes Rank at compile time; TestAnnotationTypesRejectIneligibleQuestions checks the compiler refusal.",
+                "java": "The public AnnotationQuestions.Builder.put accepts only AnnotationQuestion, which excludes rank at compile time. Java exposes no raw annotation parser; the public type rejection is checked separately.",
+                "zig": "The public AnnotationQuestion union has no rank member; the invalid_annotation consumer checks the compiler refusal."
+            }),
+            _ => continue,
+        };
+        case.insert("not_applicable".into(), markers);
+    }
+
     emit(
         Path::new("construction/options.json"),
         &json!(options),

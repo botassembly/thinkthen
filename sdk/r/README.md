@@ -491,7 +491,7 @@ needs_a_person <- checks[checks$status == "unsure", ]
 
 `details = TRUE` gives one row per record with `position`, `id`, `item`, `answer`, `status`, `probability`, the error columns `error_code`, `error_message` and `error_http_status`, and `detail`. For a data frame, `item` is your own rows, so `checks$item$text` is the text column. There is one details form for every function but filter, which has none.
 
-A plain column can't hold a failure. So if any row fails, the call stops with one `thinkthen_failed` after every row is judged, and its `outcomes` holds every result. Pass `errors = "na"` to get `NA` for a failed row instead; the call then warns once, and `tt_failures()` on the returned column lists each failure. Subsetting the column drops that list, so read it first.
+A plain column can't hold a failure. So if any row fails, the call stops with one `thinkthen_failed` after every row is judged, and its `outcomes` holds every result. Pass `errors = "na"` to get `NA` for a failed row instead; the call then warns once, and `tt_failures()` on the returned column lists each failure. In the answer column alone, failed and not-sure results both look like `NA`; the distinction is lost unless you read that list or request details. Subsetting the column drops that list, so read it first.
 
 `tt_filter(frame, ...)` gives back the rows that answered yes. Like every filter, it takes one bar. It takes no `details` and no `errors`: a failed row stops the call after every row is judged.
 

@@ -133,7 +133,8 @@ unsafe fn answer<T>(
 /// negative thinkthen_code with *answer unchanged:
 /// -THINKTHEN_CODE_RECORD_EMPTY for empty or blank text (never sent to the backend), a
 /// usage code for a bad argument, or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. question is a NUL-terminated
 /// string. text points to len readable bytes (or a NUL-terminated string with
@@ -213,7 +214,8 @@ pub unsafe extern "C" fn thinkthen_decide_band(
 /// choice reaches the cut; or a negative thinkthen_code with *choice unchanged:
 /// usage.question for fewer than two or repeated choices, -THINKTHEN_CODE_RECORD_EMPTY for
 /// blank text, or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. question and each of the
 /// count choices are NUL-terminated strings. text points to len readable bytes (or a NUL-
@@ -257,7 +259,8 @@ pub unsafe extern "C" fn thinkthen_choose(
 /// all to false. Returns THINKTHEN_OK with selected written, or a negative thinkthen_code
 /// with selected unchanged: usage.question for no or repeated labels,
 /// -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. question and each of the
 /// count labels are NUL-terminated strings. text points to len readable bytes (or a NUL-
@@ -305,7 +308,8 @@ pub unsafe extern "C" fn thinkthen_tag(
 /// *score written, or a negative thinkthen_code with *score unchanged: usage.question for
 /// fewer than two or repeated levels, -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a
 /// backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. question and each of the
 /// count levels are NUL-terminated strings. text points to len readable bytes (or a NUL-
@@ -344,7 +348,8 @@ pub unsafe extern "C" fn thinkthen_score(
 /// written; THINKTHEN_UNSURE with *found unchanged; or a negative thinkthen_code with
 /// *found unchanged: -THINKTHEN_CODE_RECORD_EMPTY for blank text, a usage code for a bad
 /// argument, or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. question is a NUL-terminated
 /// string. text points to len readable bytes (or a NUL-terminated string with
@@ -414,7 +419,8 @@ unsafe fn owner(
 /// THINKTHEN_OK with *names set (an answer may hold no names), or a negative thinkthen_code
 /// with *names unchanged: usage.question for no or repeated kinds,
 /// -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. Each of the count kinds is a
 /// NUL-terminated string. text points to len readable bytes (or a NUL-terminated string
@@ -449,7 +455,8 @@ pub unsafe extern "C" fn thinkthen_recognize(
 /// answer may hold no relations), or a negative thinkthen_code with *relations unchanged:
 /// usage.question for no rules or a bad rule, -THINKTHEN_CODE_RECORD_EMPTY for blank text,
 /// or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client. rules points to count
 /// readable rules whose text fields are readable. text points to len readable bytes (or a
@@ -490,7 +497,8 @@ pub unsafe extern "C" fn thinkthen_relate(
 /// negative thinkthen_code with *annotation unchanged: usage.name for repeated or bad
 /// names, usage.question for a rank or annotate child, -THINKTHEN_CODE_RECORD_EMPTY for
 /// blank text, or a backend code.
-/// A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+/// Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+/// Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
 /// # Safety
 /// Any thread may call this, and threads may share the client and the questions while no
 /// thread changes them. names holds count NUL-terminated strings and questions count live

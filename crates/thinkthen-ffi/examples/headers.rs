@@ -95,12 +95,17 @@ const CONVENTIONS: &str = "/*
  * variable never leaks. An error whose struct_size is not set returns
  * -THINKTHEN_CODE_USAGE_ABI and is left untouched.
  *
+ * Supported C interface. The functions taught in the published C guide at
+ * https://thinkthen.dev/sdks/c/ are the supported C interface. Other exports serve the
+ * language packages and may change in any 0.x release.
+ *
  * Text. Text is UTF-8, passed as a pointer and a byte length. Pass
  * THINKTHEN_NUL_TERMINATED as the length for a NUL-terminated string. The library
  * copies input before returning, except that thinkthen_find returns a span borrowing
- * the caller's text. Keep that text alive while using the span. An argument that is not UTF-8 is refused
- * with -THINKTHEN_CODE_USAGE_ABI; a record that is not UTF-8 fails its own row as
- * record.invalid. Text it returns (thinkthen_text) is not
+ * the caller's text. Keep that text alive while using the span. A question or settings
+ * argument that is not UTF-8 is refused with -THINKTHEN_CODE_USAGE_ABI. Record text that is
+ * not UTF-8 fails with -THINKTHEN_CODE_RECORD_INVALID in a scalar call, or record.invalid
+ * in its own row in a collection call. Text it returns (thinkthen_text) is not
  * NUL-terminated; print it with printf(\"%.*s\", (int)text.len, text.data).
  *
  * Ownership. Each object has one free function: thinkthen_settings_free,

@@ -11,7 +11,7 @@ export function validatePreparedExamples(directory) {
   if (!path.relative(fs.realpathSync('..'), preparedDir).startsWith(`..${path.sep}`)) throw new Error('Prepared examples must be outside the checkout');
   const prepared = JSON.parse(fs.readFileSync(path.join(preparedDir, 'manifest.json')));
   const source = fs.readFileSync(path.join(preparedDir, 'source-commit'), 'utf8').trim();
-  const unchanged = spawnSync('git', ['diff', '--quiet', source, '--', '.', ...['output.txt', 'stderr.txt', 'exit', 'ran', 'capture.json', 'unverified'].map((name) => `:(exclude)site/examples/**/${name}`)], { cwd: path.resolve('..') });
+  const unchanged = spawnSync('git', ['diff', '--quiet', source, '--', '.', ':(exclude)sdlc/**', ':(exclude)AGENTS.md', ...['output.txt', 'stderr.txt', 'exit', 'ran', 'capture.json', 'unverified'].map((name) => `:(exclude)site/examples/**/${name}`)], { cwd: path.resolve('..') });
   if (prepared.source !== source || unchanged.status !== 0) throw new Error('Prepared example source inputs differ');
   const inventory = (dir, prefix = '') => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const name = prefix + entry.name;

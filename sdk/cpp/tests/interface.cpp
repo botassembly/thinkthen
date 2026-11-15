@@ -1,3 +1,4 @@
+#include "scalar_lifetime.hpp"
 #include <thinkthen/thinkthen.hpp>
 #include <cassert>
 #include <sstream>
@@ -28,7 +29,8 @@ int main() {
     assert(saw_no && saw_unsure);
     static_assert(std::is_base_of_v<tt::error, tt::failed>);
     static_assert(std::is_base_of_v<tt::no_answer, tt::failed>);
-    const auto blank = [&](auto operation) {
+    const auto blank = [&](const char* name, auto operation) {
+        scalar_lifetime::begin(name);
         const auto before = client.usage().attempts;
         try { operation(); assert(false); }
         catch (const tt::failed& error) {
@@ -37,16 +39,16 @@ int main() {
             assert(std::string(error.what()).starts_with("record.empty: "));
         }
         assert(client.usage().attempts == before);
-        assert(client.usage().active_calls == 0);
+        scalar_lifetime::finish();
     };
-    blank([&]{(void)client.decide(question," \t");});
-    blank([&]{(void)client.choose(tt::choose<>{"Q",{"a","b"}}," ");});
-    blank([&]{(void)client.tag(tt::tag<>{"Q",{"a","b"}}," ");});
-    blank([&]{(void)client.score(tt::score<>{"Q",{"a","b"}}," ");});
-    blank([&]{(void)client.find(tt::find{"Q"}," ");});
-    blank([&]{(void)client.recognize(tt::recognize{{"person"}}," ");});
-    blank([&]{(void)client.relate(tt::relate{{tt::rule{.source="person",.target="person",.relation="knows"}}}," ");});
-    blank([&]{(void)client.annotate(tt::annotate{{"ready",question}}," ");});
+    blank("decide",[&]{(void)client.decide(question," \t");});
+    blank("choose",[&]{(void)client.choose(tt::choose<>{"Q",{"a","b"}}," ");});
+    blank("tag",[&]{(void)client.tag(tt::tag<>{"Q",{"a","b"}}," ");});
+    blank("score",[&]{(void)client.score(tt::score<>{"Q",{"a","b"}}," ");});
+    blank("find",[&]{(void)client.find(tt::find{"Q"}," ");});
+    blank("recognize",[&]{(void)client.recognize(tt::recognize{{"person"}}," ");});
+    blank("relate",[&]{(void)client.relate(tt::relate{{tt::rule{.source="person",.target="person",.relation="knows"}}}," ");});
+    blank("annotate",[&]{(void)client.annotate(tt::annotate{{"ready",question}}," ");});
     auto failed_rows = client.decide_each(question,std::vector<std::string>{" \t"});
     const auto failed_row = failed_rows.next();
     assert(failed_row && failed_row->failed() && failed_row->item() == " \t");

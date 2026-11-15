@@ -217,7 +217,9 @@ func heldInputCleanup(_ url: String, drop: Bool) async throws {
   precondition(row?.position == 1)
   FileHandle.standardOutput.write(Data("row\n".utf8))
   if drop { iterator = nil } else { rows.cancel() }
-  await BridgeAudit.join()
+  #if os(macOS) || os(Linux)
+    await BridgeAudit.join()
+  #endif
   FileHandle.standardOutput.write(Data("closed\n".utf8))
   await returned.wait()
   withExtendedLifetime(iterator) {}

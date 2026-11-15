@@ -4,7 +4,7 @@ description: "Answer questions about text in polars columns."
 goal: Learn the tested table calls and result handling.
 reader: A polars user
 kind: reference
-verified: 2026-11-14
+verified: 2026-11-15
 ---
 import Example from '../../../components/Example.astro';
 
@@ -475,6 +475,8 @@ Pass `cancel=tt.Cancel()` to a table call. Calling that object's `cancel()` from
 | Printing or reusing a materialized answer | No request or answer-read exception |
 
 `tt.Failed` is a `tt.ThinkThenError`; its existing `code`, `http_status` and failed `rows` payloads remain. The aggregate adds `outcomes`. Other general call errors retain their own classifications and payloads. Wire codes such as `record.empty` and `record.missing` do not change. The table API does not raise `tt.Unsure` for a null cell; native missing values take its place. Check state before Python truth testing if a cell may be null.
+
+With the default `errors="raise"`, the exception names only the first failed message or entry's code and message. It does not summarize every failure. Read `failure.outcomes` for all completed states and error columns.
 
 ## Upgrading from 0.1
 

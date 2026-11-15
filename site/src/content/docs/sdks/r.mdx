@@ -4,7 +4,7 @@ description: "r functions with answered, not-sure and failed results."
 goal: Learn the tested calls and result handling for this language.
 reader: An R developer who wants to ask questions about text from code or a data frame
 kind: reference
-verified: 2026-11-13
+verified: 2026-11-15
 sidebar:
   label: "R"
 ---
@@ -517,7 +517,7 @@ needs_a_person <- checks[checks$status == "unsure", ]
 
 `details = TRUE` gives one result per message with `position`, `id`, `item`, `answer`, `status`, `probability`, the error columns `error_code`, `error_message` and `error_http_status`, and `detail`. For a data frame, `item` holds your input data, so `checks$item$text` is the text column. There is one details form for every function but filter, which has none.
 
-A plain column can't hold a failure. So if any result fails, the call stops with one `thinkthen_failed` after every input is judged, and its `outcomes` holds every result. Pass `errors = "na"` to get `NA` for a failed result instead; the call then warns once, and `tt_failures()` on the returned column lists each failure. Subsetting the column drops that list, so read it first.
+A plain column can't hold a failure. So if any result fails, the call stops with one `thinkthen_failed` after every input is judged, and its `outcomes` holds every result. Pass `errors = "na"` to get `NA` for a failed result instead; the call then warns once, and `tt_failures()` on the returned column lists each failure. In the answer column alone, failed and not-sure results both look like `NA`; the distinction is lost unless you read that list or request details. Subsetting the column drops that list, so read it first.
 
 `tt_filter(frame, ...)` gives back the inputs that answered yes. Like every filter, it takes one bar. It takes no `details` and no `errors`: a failed result stops the call after every input is judged.
 

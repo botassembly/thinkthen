@@ -4,7 +4,7 @@ description: What ThinkThen 0.2.0 holds, from the ten functions and their not-su
 goal: Someone about to install ThinkThen or send it paid questions leaves knowing what 0.2.0 holds and each known limit, with the step that avoids it.
 reader: A developer or reviewer about to install ThinkThen or put it in front of a paid service
 kind: reference
-verified: 2026-11-12
+verified: 2026-11-15
 head:
   - tag: title
     content: "Release notes: what ThinkThen 0.2.0 holds and its limits"
@@ -39,6 +39,41 @@ The baseline is the [published 0.1.2 crate’s command source](https://static.cr
 | find picked one message out of many | find picks one line inside each message. Send the candidates as one message, one per line |
 | Answers were cached between runs | Each run asks the service again. Save the results to reuse them |
 
+## Package upgrades from 0.1.2
+
+The old default answer cache is gone, along with `--record`, `--replay`, `--cache`, `--no-cache` and `--refresh-cache`. Save current JSON results or database results when you need to reuse answers. Old call envelopes and detailed recordings are not current saved results; keep their original inputs and regenerate results through the current API.
+
+The Ada, COBOL, Dart, Objective-C, PHP and Scala bindings are not included in this release.
+
+The built-in service names are `systemone` and `openai`; `typesafe`, `liquid` and `ollama` are removed. Configure the selected service again. `THINKTHEN_URL` overrides `THINKTHEN_BASE_URL` for System One only; OpenAI reads `OPENAI_BASE_URL`. An explicit URL selects the address for the chosen service. `THINKTHEN_MODEL` applies to the command; SDK callers set the model on their client.
+
+Intel macOS and static musl Linux archives are no longer supplied. Use Apple silicon on macOS and the glibc Linux archives. Language packages carry their matching engine; do not mix them with the separate native library from the previous release.
+
+Every package has its own migration section. These are the package and caller changes to make before using the current results:
+
+| Package | Upgrade |
+| --- | --- |
+| [Python](/sdks/python/#upgrading-from-01) | Replace `Engine` and call `.value` envelopes with `Client`, scalar results and explicit stream calls. Rename `true`, `false`, `options` to `yes_means`, `no_means`, `choices`. |
+| [pandas](/sdks/pandas/#upgrading-from-01) | Keep the Python extra; import `thinkthen.pandas` and use the `.thinkthen` accessor. Plain answers use native missing values; details retain states. |
+| [Polars](/sdks/polars/#upgrading-from-01) | Keep the Python extra; import `thinkthen.polars` and use the `.thinkthen` accessor instead of scalar calls on a Series. |
+| [TypeScript](/sdks/typescript/#upgrading-from-01) | Replace `Engine` and nullable `.value` envelopes with `Client`, typed questions and checked `.answer` reads. |
+| [Go](/sdks/go/#upgrading-from-01) | Change the import from `libraries/go` to `sdk/go/thinkthen`; use typed questions, single results and collection iterators. |
+| [Java](/sdks/java/#upgrading-from-01) | Replace Maven `thinkthen-jvm` with `thinkthen-java`, and `Door` with `ThinkThen`. |
+| [Kotlin](/sdks/kotlin/#upgrading-from-01) | Replace the `thinkthen-jvm` Kotlin classifier with `thinkthen-kotlin`, and `KotlinFacade` with `ThinkThen` and suspend calls. |
+| [C#](/sdks/csharp/#upgrading-from-01) | Use `ThinkThenClient` and packaged native assets in place of `Engine.Open` and a separate C library. |
+| [R](/sdks/r/#upgrading-from-01) | Replace `$value` envelopes with plain answer vectors or details; use clients and typed saved questions. |
+| [Ruby](/sdks/ruby/#upgrading-from-01) | Replace `Engine`, `question` and `.value` envelopes with clients, typed questions and checked results. |
+| [Rust](/sdks/rust/#upgrading-from-01) | Use the single `thinkthen` crate. `command` replaces `cli`; `polars`, `bundled-sqlite` and `host-sqlite` features are removed. Use typed questions and result answer reads. |
+| [Swift](/sdks/swift/#upgrading-from-01) | Replace `Engine` and `.value` envelopes with clients and results; use standard task cancellation. |
+| [Zig](/sdks/zig/#upgrading-from-01) | Replace `Engine` and call envelopes with clients and three-state results; follow the current call and arena ownership. |
+| [C](/sdks/c/#upgrading-from-01) | Replace engine and JSON envelopes with the guide's typed client, question and result API and explicit answer readers. |
+| [C++](/sdks/cpp/#upgrading-from-01) | Replace free calls and call envelopes with typed client calls and move-only results. |
+| [DuckDB](/sdks/duckdb/#upgrading-from-01) | Rewrite scalar and keyed `_many` calls as query/table calls with state and error columns. |
+| [SQLite](/sdks/sqlite/#upgrading-from-01) | Rewrite scalar and keyed `_many` calls as query/table calls with state and error columns. |
+| [PostgreSQL](/sdks/postgresql/#upgrading-from-01) | Back up, replace extension files, drop and recreate the extension without `CASCADE`, and rewrite calls in the `thinkthen` schema. Recreate dependent views and columns deliberately. |
+
+find now selects a line inside each message, rather than selecting among messages. Filter has one bar and returns kept inputs; use decide collections for every input's state. Per-call facts become client usage. Follow each guide's error table for scalar failures, collection failures and not-sure answer reads.
+
 ## Language requirements
 
 Go requires 1.27 or later. C++ requires C++20 with GCC 13/libstdc++, Clang 20/libc++20, or the documented Windows compiler route. Swift requires 6.3; arrays passed to one-message functions are refused before any request, with the diagnostic naming the collection form.
@@ -56,7 +91,7 @@ See the [command guide](/command-line/guide/), [Python](/sdks/python/#upgrading-
 | SQLite joins | Changed correlated arguments perform new work. An unchanged invocation can reuse answers within the statement, but this is not a persistent answer cache. | Save one ThinkThen query in a temporary table, then join the table. [SQLite](/sdks/sqlite/) shows how. |
 | PostgreSQL LATERAL joins | A correlated invocation can send requests for each outer argument set. An uncorrelated invocation can reuse its answers without repeating requests. | Save one ThinkThen query in a table, then join its answers. |
 | PostgreSQL LIMIT | PostgreSQL answers every input before it applies LIMIT, so LIMIT 1 can pay for them all. | Limit the input inside a subquery, before the ThinkThen function. |
-| DuckDB LIMIT | An outer LIMIT can wait for other questions and pay for answers it never returns. | Put LIMIT inside the input subquery. |
+| DuckDB LIMIT | An outer LIMIT can wait for other questions and pay for answers it never returns. A short LIMIT can stop before later failed results are read, so a successful short result does not prove every input succeeded. | Put LIMIT inside the input subquery. |
 | Cancelling a database query | Cancellation can discard the current statement's results, and does not refund sent requests. Earlier committed chunks remain saved. | Commit each chunk's answers and completed-range marker in the same transaction before starting the next chunk. |
 | Swift arrays in one-message calls | Swift’s generic `Encodable & Sendable` constraint also accepts arrays. The call refuses them before any request. | Use the `records:` form for a collection; keep arrays inside a message when they are part of its data. |
 | DuckDB version | The extension loads only into DuckDB 2.0.0, with unsigned extensions allowed. | Start DuckDB with `duckdb -unsigned`. [DuckDB](/sdks/duckdb/) shows the steps. |
@@ -64,4 +99,6 @@ See the [command guide](/command-line/guide/), [Python](/sdks/python/#upgrading-
 | Slow memory leaks | Releases are not tested for memory over long runs on any platform. Each release runs one short engine leak check, and the engine has a check that later calls start no new threads. A slow leak in one SDK or database extension that shows only after hours of use can go uncaught. Older measurements on Linux left memory growth unresolved for C#, Java and TypeScript. | Keep long-running programs bounded, restart them from time to time and watch their memory. The [resource observations](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/resource-observations.md) hold the older measurements. |
 | Full disk during a write | A full disk can interrupt writing output. | Keep the input, check the error and treat incomplete output as unsaved work. |
 | Hard termination | A hard kill can leave an empty temporary file. | Treat empty temporary files as incomplete, and keep the original input. A rerun may send requests again. |
-| Temporary-file access lists | A newly created empty temporary file has a brief interval before its final access list is applied. | Use a private working folder for sensitive inputs and outputs. |
+| Windows temporary-file access lists | A newly created empty temporary file has a brief interval before its final access list is applied. | Use a private working folder for sensitive inputs and outputs. |
+| Windows forced termination | A command can hang when you force it to stop on Windows. The cause is unknown. | End the remaining process in Task Manager. Keep your input and any saved output; repeating a question may charge you again. |
+| Windows PowerShell example | Reading command information in PowerShell can time out before the example starts. The cause is unknown. | Run `thinkthen --version` first. If it does not finish, stop the command before trying the example. |

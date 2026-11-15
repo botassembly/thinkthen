@@ -50,14 +50,14 @@ def host_tools():
     if not shutil.which('uv'):
         run(sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'uv==' + PINS['uv'])
     prepared('uv', 'python', 'install', '3.10', '3.13')
-    required = ('cc', 'make', 'cmake', 'pkg-config', 'node', 'ruby')
+    required = ('cc', 'make', 'cmake', 'pkg-config', 'node', 'ruby', 'zsh')
     if any(not shutil.which(name) for name in required):
         if platform.system() == 'Darwin':
             run('brew', 'install', 'cmake', 'pkgconf', 'gettext', 'node@22', 'ruby@3.3')
         else:
             run('sudo', 'apt-get', 'update')
             run('sudo', 'apt-get', 'install', '-y', 'build-essential', 'cmake', 'ninja-build',
-                'pkg-config', 'curl', 'libssl-dev', 'libyaml-dev', 'zlib1g-dev')
+                'pkg-config', 'curl', 'libssl-dev', 'libyaml-dev', 'zlib1g-dev', 'zsh')
     host_languages()
     if platform.system() == 'Darwin':
         macos_cpp()

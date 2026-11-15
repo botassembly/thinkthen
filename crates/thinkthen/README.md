@@ -614,7 +614,7 @@ Two types let you handle by meaning:
 
 ## Upgrading from 0.1
 
-A call now returns a result, not an `Answer`.
+The baseline is the [published 0.1.2 crate](https://static.crates.io/crates/thinkthen/thinkthen-0.1.2.crate). A call now returns a result, not an `Answer`. Use the single `thinkthen` crate for the command and library. Its default `command` feature replaces `cli`; `polars`, `bundled-sqlite` and `host-sqlite` are removed. Library callers use `--no-default-features`.
 
 | 0.1 | Now |
 | --- | --- |

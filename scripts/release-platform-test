@@ -17,6 +17,79 @@ from release_workflow import ROOT, version
 
 
 class PlatformRelease(unittest.TestCase):
+    def test_prepared_image_ids_and_tags_must_exist(self):
+        import release_images
+        identity = 'sha256:' + 'a' * 64
+        for supplied in (False, True):
+            env = {'THINKTHEN_FLOOR_IMAGE': identity} if supplied else {}
+            with self.subTest(supplied=supplied), patch.dict(os.environ, env, clear=True):
+                with patch.object(subprocess, 'check_output', return_value=identity + '\n') as inspect:
+                    self.assertEqual(release_images.image('floor'), identity)
+                    self.assertEqual(inspect.call_args.args[0][3], identity if supplied else release_images.TAGS['floor'])
+                with patch.object(subprocess, 'check_output', side_effect=subprocess.CalledProcessError(1, 'docker')):
+                    with self.assertRaisesRegex(RuntimeError, 'prepared image unavailable: floor'):
+                        release_images.image('floor')
+
+    def test_foreign_image_metadata_keeps_identity_without_local_lookup(self):
+        import release_images
+        identity = 'sha256:' + 'a' * 64
+        with patch.dict(os.environ, {'THINKTHEN_FLOOR_IMAGE': identity}, clear=True):
+            with patch.object(subprocess, 'check_output') as inspect:
+                self.assertEqual(release_images.image('floor', require_local=False), identity)
+                inspect.assert_not_called()
+        with patch.dict(os.environ, {'THINKTHEN_FLOOR_IMAGE': 'unvalidated-tag'}, clear=True):
+            with self.assertRaisesRegex(ValueError, 'immutable identity'):
+                release_images.image('floor', require_local=False)
+        with patch.dict(os.environ, {}, clear=True):
+            with patch.object(subprocess, 'check_output', return_value=identity + '\n') as inspect:
+                self.assertEqual(release_images.image('floor', require_local=False), identity)
+                self.assertEqual(inspect.call_args.args[0][3], release_images.TAGS['floor'])
+            os.environ.pop('THINKTHEN_FLOOR_IMAGE')
+            with patch.object(subprocess, 'check_output', side_effect=subprocess.CalledProcessError(1, 'docker')):
+                with self.assertRaisesRegex(RuntimeError, 'prepared image unavailable'):
+                    release_images.image('floor', require_local=False)
+
+    def test_publication_invalid_ref_refuses_before_upload_jobs(self):
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load(STDIN.read, aliases: true))'],
+            input=(ROOT / '.github/workflows/release.yml').read_bytes()))
+        jobs = workflow['jobs']
+        validation = jobs['validate-ref']
+        self.assertNotIn('if', validation)
+        script = validation['steps'][0]['run']
+        for ref, success in [('refs/heads/main', False), ('refs/tags/other', False), ('refs/tags/v0.2.0', True)]:
+            result = subprocess.run(['bash', '-eu', '-c', script], env=dict(os.environ, GITHUB_REF=ref), capture_output=True, text=True)
+            self.assertEqual(result.returncode == 0, success, result.stderr)
+        for name in ('upload', 'homebrew'):
+            self.assertEqual(jobs[name]['needs'], 'validate-ref')
+
+    def test_required_installer_shell_missing_refuses(self):
+        installer = runpy.run_path(str(ROOT / 'scripts/installer-test'))
+        with patch('shutil.which', return_value=None):
+            with self.assertRaisesRegex(RuntimeError, 'Required installer startup runtime unavailable'):
+                installer['require_shells']()
+        with patch('shutil.which', side_effect=lambda name: '/bin/' + name):
+            installer['require_shells']()
+
+    def test_named_go_consumers_refuse_zero_matches(self):
+        import go_guide_examples
+        from release_windows_sdks import require_go_test
+        with tempfile.TemporaryDirectory() as temporary:
+            binary = Path(temporary) / 'consumer'
+            binary.write_text('#!' + sys.executable + '\nimport sys\n'
+                              'print("TestGuideFixture" if "-test.list=^TestGuide" in sys.argv else "PASS")\n')
+            binary.chmod(0o755)
+            go_guide_examples.runtime_contract(str(binary), os.environ)
+            binary.write_text('#!' + sys.executable + '\nprint("PASS")\n')
+            with self.assertRaisesRegex(RuntimeError, 'Required Go tests not found'):
+                go_guide_examples.runtime_contract(str(binary), os.environ)
+            def execute(*arguments):
+                return subprocess.check_output(list(map(str, arguments)), text=True)
+            with self.assertRaisesRegex(RuntimeError, 'Required Go test not found'):
+                require_go_test(execute, binary, 'TestSharedStub')
+            binary.write_text('#!' + sys.executable + '\nprint("TestSharedStub")\n')
+            require_go_test(execute, binary, 'TestSharedStub')
+
     def test_homebrew_trusts_only_rehearsal_formula_before_loading_and_cleans_up(self):
         for failure in ('none', 'cache', 'install', 'test', 'uninstall', 'preexisting'):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:

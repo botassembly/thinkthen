@@ -15,12 +15,17 @@
  * variable never leaks. An error whose struct_size is not set returns
  * -THINKTHEN_CODE_USAGE_ABI and is left untouched.
  *
+ * Supported C interface. The functions taught in the published C guide at
+ * https://thinkthen.dev/sdks/c/ are the supported C interface. Other exports serve the
+ * language packages and may change in any 0.x release.
+ *
  * Text. Text is UTF-8, passed as a pointer and a byte length. Pass
  * THINKTHEN_NUL_TERMINATED as the length for a NUL-terminated string. The library
  * copies input before returning, except that thinkthen_find returns a span borrowing
- * the caller's text. Keep that text alive while using the span. An argument that is not UTF-8 is refused
- * with -THINKTHEN_CODE_USAGE_ABI; a record that is not UTF-8 fails its own row as
- * record.invalid. Text it returns (thinkthen_text) is not
+ * the caller's text. Keep that text alive while using the span. A question or settings
+ * argument that is not UTF-8 is refused with -THINKTHEN_CODE_USAGE_ABI. Record text that is
+ * not UTF-8 fails with -THINKTHEN_CODE_RECORD_INVALID in a scalar call, or record.invalid
+ * in its own row in a collection call. Text it returns (thinkthen_text) is not
  * NUL-terminated; print it with printf("%.*s", (int)text.len, text.data).
  *
  * Ownership. Each object has one free function: thinkthen_settings_free,
@@ -1780,7 +1785,8 @@ int32_t thinkthen_row_answer_entry(const struct thinkthen_row *row,
  * negative thinkthen_code with *answer unchanged:
  * -THINKTHEN_CODE_RECORD_EMPTY for empty or blank text (never sent to the backend), a
  * usage code for a bad argument, or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. question is a NUL-terminated
  * string. text points to len readable bytes (or a NUL-terminated string with
@@ -1835,7 +1841,8 @@ int32_t thinkthen_decide_band(const struct thinkthen_client *client,
  * choice reaches the cut; or a negative thinkthen_code with *choice unchanged:
  * usage.question for fewer than two or repeated choices, -THINKTHEN_CODE_RECORD_EMPTY for
  * blank text, or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. question and each of the
  * count choices are NUL-terminated strings. text points to len readable bytes (or a NUL-
@@ -1861,7 +1868,8 @@ int32_t thinkthen_choose(const struct thinkthen_client *client,
  * all to false. Returns THINKTHEN_OK with selected written, or a negative thinkthen_code
  * with selected unchanged: usage.question for no or repeated labels,
  * -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. question and each of the
  * count labels are NUL-terminated strings. text points to len readable bytes (or a NUL-
@@ -1887,7 +1895,8 @@ int32_t thinkthen_tag(const struct thinkthen_client *client,
  * *score written, or a negative thinkthen_code with *score unchanged: usage.question for
  * fewer than two or repeated levels, -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a
  * backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. question and each of the
  * count levels are NUL-terminated strings. text points to len readable bytes (or a NUL-
@@ -1915,7 +1924,8 @@ int32_t thinkthen_score(const struct thinkthen_client *client,
  * written; THINKTHEN_UNSURE with *found unchanged; or a negative thinkthen_code with
  * *found unchanged: -THINKTHEN_CODE_RECORD_EMPTY for blank text, a usage code for a bad
  * argument, or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. question is a NUL-terminated
  * string. text points to len readable bytes (or a NUL-terminated string with
@@ -1940,7 +1950,8 @@ int32_t thinkthen_find(const struct thinkthen_client *client,
  * THINKTHEN_OK with *names set (an answer may hold no names), or a negative thinkthen_code
  * with *names unchanged: usage.question for no or repeated kinds,
  * -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. Each of the count kinds is a
  * NUL-terminated string. text points to len readable bytes (or a NUL-terminated string
@@ -1967,7 +1978,8 @@ int32_t thinkthen_recognize(const struct thinkthen_client *client,
  * answer may hold no relations), or a negative thinkthen_code with *relations unchanged:
  * usage.question for no rules or a bad rule, -THINKTHEN_CODE_RECORD_EMPTY for blank text,
  * or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client. rules points to count
  * readable rules whose text fields are readable. text points to len readable bytes (or a
@@ -1994,7 +2006,8 @@ int32_t thinkthen_relate(const struct thinkthen_client *client,
  * negative thinkthen_code with *annotation unchanged: usage.name for repeated or bad
  * names, usage.question for a rank or annotate child, -THINKTHEN_CODE_RECORD_EMPTY for
  * blank text, or a backend code.
- * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Record text that is not UTF-8 returns -THINKTHEN_CODE_RECORD_INVALID.
+ * Question and option strings that are not UTF-8 return -THINKTHEN_CODE_USAGE_ABI.
  * Pointers and threads:
  * Any thread may call this, and threads may share the client and the questions while no
  * thread changes them. names holds count NUL-terminated strings and questions count live

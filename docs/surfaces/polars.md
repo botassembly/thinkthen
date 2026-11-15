@@ -458,6 +458,8 @@ Pass `cancel=tt.Cancel()` to a table call. Calling that object's `cancel()` from
 
 `tt.Failed` is a `tt.ThinkThenError`; its existing `code`, `http_status` and failed `rows` payloads remain. The aggregate adds `outcomes`. Other general call errors retain their own classifications and payloads. Wire codes such as `record.empty` and `record.missing` do not change. The table API does not raise `tt.Unsure` for a null cell; native missing values take its place. Check state before Python truth testing if a cell may be null.
 
+With the default `errors="raise"`, the exception names only the first failed record or entry's code and message. It does not summarize every failure. Read `failure.outcomes` for all completed states and error columns.
+
 ## Upgrading from 0.1
 
 The package baseline is [Python 0.1.2](https://pypi.org/project/thinkthen/0.1.2/). Use the dedicated namespace instead of passing a Polars object to scalar `tt.decide`. `series.thinkthen.decide(...)` returns an answer Series; `details=True` returns a DataFrame with states. Replace `true=`, `false=` and `options=` in question definitions with `yes_means=`, `no_means=` and `choices=`. Do not assume null means no or that row failures are silently dropped. Code using the pre-release `RecordError` name must use `tt.Failed`; do not rename wire error codes. Scalar Python's new call-time failure rule does not change table aggregation, even for a one-row input.

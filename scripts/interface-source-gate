@@ -15,6 +15,8 @@ case "$(uname -s)" in
     *) echo 'source gate requires Linux or macOS' >&2; exit 2 ;;
 esac
 . scripts/native-tools-env
+scripts/words
+scripts/secrets
 # Child checks may run outside this checkout; retain its pinned toolchain.
 RUSTUP_TOOLCHAIN=$(python3 - <<'TOOLCHAIN'
 from pathlib import Path
@@ -198,8 +200,6 @@ if [ "$shared_abi" = 1 ]; then
     if [ "$(uname -s)" = Linux ]; then stage postgres-gate scripts/postgres-gate; fi
     stage duckdb-gate scripts/duckdb-gate
 fi
-stage words scripts/words
-stage secrets scripts/secrets
 if [ -n "$failed" ]; then
     exit 1
 fi

@@ -78,7 +78,7 @@ def cache_path():
     if output('rustc', '-vV').split('host: ')[1].splitlines()[0] == 'aarch64-unknown-linux-gnu':
         inputs['linux_arm_compiler_image'] = ARM_BASE
     if sys.platform == "linux" or "THINKTHEN_FLOOR_IMAGE" in os.environ:
-        inputs["prepared_compiler_image"] = image("floor")
+        inputs["prepared_compiler_image"] = image("floor", require_local=False)
     inputs["toolchain"] = (ROOT / "rust-toolchain.toml").read_text()
     inputs["compiler"] = [line for line in output("rustc", "-vV").splitlines()
                           if not line.startswith("host:")]

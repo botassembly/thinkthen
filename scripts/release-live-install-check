@@ -109,6 +109,9 @@ def check(site, scratch, fixture, case):
     elif site == 'go':
         shutil.copytree(ROOT / 'sdk/go/tests', scratch / 'consumer')
         (scratch / 'consumer/go.mod').write_text('module liveconsumer\n\ngo 1.27\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v' + version() + '\n')
+        listed = run('go', 'test', '-mod=mod', '-list=^TestSharedStub$', cwd=scratch / 'consumer', env=env, capture_output=True, text=True)
+        if 'TestSharedStub' not in listed.splitlines():
+            raise RuntimeError('Required Go test not found: TestSharedStub')
         run('go', 'test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=scratch / 'consumer', env=env)
     elif site == 'swift':
         consumer = scratch / 'consumer'

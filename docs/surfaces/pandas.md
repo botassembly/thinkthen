@@ -560,6 +560,8 @@ Calling `stop.cancel()` from another thread cancels the operation and raises `tt
 
 `tt.Failed` is a `tt.ThinkThenError` and a `tt.NoAnswer`. It retains the failure's `code`, `http_status` and failed `rows`, with the accessor's full details frame attached as `outcomes`. Other call errors keep their classifications. Wire codes such as `record.empty` do not change. A missing table cell does not raise `tt.Unsure` on access: native pandas missing-value rules apply.
 
+With the default `errors="raise"`, the exception names only the first failed record or entry's code and message. It does not summarize every failure. Read `failure.outcomes` for all completed states and error columns.
+
 ## Upgrading from 0.1
 
 The baseline is the Python guide's [published Python 0.1.2](https://pypi.org/project/thinkthen/0.1.2/).

@@ -384,6 +384,14 @@ exit 2
   const runPrepared = (...ids) => spawnSync(process.execPath, ['scripts/run-examples.mjs', '--replay', ...ids], { cwd: site, encoding: 'utf8', env: { PATH: process.env.PATH, SITE_PREPARED_EXAMPLES: preparedDir, SITE_CAPTURE_FILE: path.join(scratch, 'responses.json'), SITE_CAPTURE_ARTIFACT_DIR: path.join(artifacts, String(++artifactIndex)) } });
   assert.equal(runPrepared('lang-go', 'version').status, 0, 'ready entry runs while an interpreted/local runner stays unchanged');
   assert.equal(fs.existsSync(path.join(site, 'examples/lang-go/compiler-executed')), false);
+  fs.mkdirSync(path.join(scratch, 'sdlc'), { recursive: true });
+  fs.writeFileSync(path.join(scratch, 'sdlc/plan.md'), 'Planning update\n');
+  fs.writeFileSync(path.join(scratch, 'AGENTS.md'), 'Agent instructions\n');
+  git('add', 'sdlc/plan.md', 'AGENTS.md');
+  git('commit', '-qm', 'Update planning files');
+  assert.equal(runPrepared('lang-go').status, 0, 'planning commits preserve prepared programs');
+  assert.equal(fs.readFileSync(path.join(preparedDir, 'source-commit'), 'utf8'), prepared.source + '\n');
+  assert.deepEqual(fs.readFileSync(path.join(preparedDir, 'manifest.json')), beforePrepared);
   prepared.ids = []; savePrepared();
   assert.match(runPrepared('lang-go').stderr, /prepared executable is required/);
   assert.equal(fs.existsSync(path.join(site, 'examples/lang-go/compiler-executed')), false, 'a missing ready entry never falls back to a compiler');

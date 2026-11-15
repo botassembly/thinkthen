@@ -4,7 +4,7 @@ description: "java functions with answered, not-sure and failed results."
 goal: Learn the tested calls and result handling for this language.
 reader: A Java developer who wants answers about text inside a program
 kind: reference
-verified: 2026-11-13
+verified: 2026-11-15
 ---
 import Example from '../../../components/Example.astro';
 
@@ -654,6 +654,6 @@ The baseline is the [published 0.1.2 SDK/source](https://repo.maven.apache.org/m
 
 | 0.1.2 | Now |
 | --- | --- |
-| Maven `io.github.botassembly:thinkthen-jvm`; `new Door()` | The current SDK and typed client |
+| Maven `io.github.botassembly:thinkthen-jvm`; `new Door()` | `io.github.botassembly:thinkthen-java` and `ThinkThen` |
 | `door.decide(q, bytes).value().outcome()` | Scalar judgement failures throw `FailedException` at the call; a returned result is answered or unsure, with loud `answer()` for unsure |
 | Per-call facts | Client usage |

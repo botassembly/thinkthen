@@ -167,6 +167,10 @@ def runtime_contract(command, env, negative=None):
     executable = command or os.environ.get('THINKTHEN_GO_GUIDE_TEST_COMMAND')
     if not executable:
         raise RuntimeError('Go guide needs its prepared runtime-contract consumer')
+    listed = subprocess.run([executable, '-test.list=^TestGuide'],
+                            env=env, text=True, capture_output=True, check=True)
+    if not any(name.startswith('TestGuide') for name in listed.stdout.splitlines()):
+        raise RuntimeError('Required Go tests not found: TestGuide')
     result = subprocess.run([executable, '-test.run=^TestGuide', '-test.v'],
                             env=env, text=True, capture_output=True)
     check('go runtime refusals, form failures, record identity, scale order and canonical offsets',

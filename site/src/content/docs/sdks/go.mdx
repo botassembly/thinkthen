@@ -4,7 +4,7 @@ description: "go functions with answered, not-sure and failed results."
 goal: Learn the tested calls and result handling for this language.
 reader: A Go developer who wants answers about text inside a service or a batch job
 kind: reference
-verified: 2026-11-13
+verified: 2026-11-15
 ---
 import Example from '../../../components/Example.astro';
 
@@ -351,7 +351,7 @@ for refundRequest, err := range client.Filter(ctx, asksRefund, slices.Values(mes
 
 filter takes one bar, so every message is a yes or a no and none is left out for being not sure. `Threshold: tt.Cutoff(0.7)` moves the bar. Two bars are refused: `tt.Band` does not compile in a `tt.FilterQuestion`, and a saved filter question that holds two bars returns an error that matches `tt.ErrUsage`. When you want not sure, use `client.DecideAll`, as in the section above.
 
-If a message fails, you still get every kept message first. Then the loop gets one last error, a `*tt.FilterError`, and its `Rows` holds every failed result with its `Item()`.
+If a message fails, you still get every kept message first. Then the loop gets one last error, a `*tt.FilterError`, and its `Rows` holds every failed result with its `Item()`. Its `Error()` text only says `filter: records failed; inspect Rows`; it gives no count, position or cause. Read `Rows` for those details.
 
 ```go
 for refundRequest, err := range client.Filter(ctx, asksRefund, slices.Values(messages)) {

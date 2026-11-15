@@ -29,7 +29,6 @@ def comparable(cases):
     cases = copy.deepcopy(cases)
     for case in cases:
         applicability(case)
-        case.pop("not_applicable", None)
     return json.dumps(cases, sort_keys=True)
 
 
@@ -54,9 +53,6 @@ def main():
             generated = json.loads((folder / "construction" / name).read_text())
             compare(actual, generated)
             if "--self-test" in sys.argv:
-                valid = copy.deepcopy(actual)
-                valid[0]["not_applicable"] = {"go": "Fixture metadata validation control"}
-                compare(valid, generated)
                 mutations = []
                 changed_row = copy.deepcopy(actual)
                 changed_row[0]["expected"][0]["probability"] = 0.123456789
@@ -67,6 +63,16 @@ def main():
                 unknown = copy.deepcopy(actual)
                 unknown[0]["unexpected_fixture_field"] = True
                 mutations.append(unknown)
+                for index, case in enumerate(actual):
+                    if "not_applicable" not in case:
+                        continue
+                    missing = copy.deepcopy(actual)
+                    del missing[index]["not_applicable"]
+                    mutations.append(missing)
+                    changed = copy.deepcopy(actual)
+                    surface = next(iter(changed[index]["not_applicable"]))
+                    changed[index]["not_applicable"][surface] += " Changed"
+                    mutations.append(changed)
                 for reasons in ({"unknown-surface": "reason"}, {"go": " "}, {"go": 1}, []):
                     malformed = copy.deepcopy(actual)
                     malformed[0]["not_applicable"] = reasons
@@ -77,9 +83,9 @@ def main():
                     except ValueError:
                         continue
                     raise AssertionError("construction mutation was admitted")
-        print("Construction semantics match generated fixtures; applicability metadata is valid")
+        print("Construction semantics and applicability match generated fixtures")
         if "--self-test" in sys.argv:
-            print("Construction check refuses stale semantics, unknown fields and malformed applicability")
+            print("Construction check refuses stale semantics, unknown fields and missing or changed applicability")
 
 
 if __name__ == "__main__":

@@ -94,9 +94,7 @@ def files():
 def verified(folder=None):
     folder = Path(folder or os.environ.get('THINKTHEN_WINDOWS_R_PACKAGE', TOOLS / 'windows-r' / revision()))
     manifest = json.loads((folder / 'manifest.json').read_text())
-    from release_retry import r_revision
-    source_revision = r_revision(folder, revision())
-    if (manifest.get('revision') != source_revision or manifest.get('target') != 'x86_64-pc-windows-msvc'
+    if (manifest.get('revision') != revision() or manifest.get('target') != 'x86_64-pc-windows-msvc'
             or manifest.get('inputs') != {name: digest for name, (_, digest) in pins().items()}
             or set(manifest.get('files', {})) != set(files())):
         raise ValueError('Windows R package provenance differs from this source and pinned inputs')

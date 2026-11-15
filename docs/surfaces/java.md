@@ -628,6 +628,6 @@ The baseline is the [published 0.1.2 package/source](https://repo.maven.apache.o
 
 | 0.1.2 | Now |
 | --- | --- |
-| Maven `io.github.botassembly:thinkthen-jvm`; `new Door()` | The current package and typed client |
+| Maven `io.github.botassembly:thinkthen-jvm`; `new Door()` | `io.github.botassembly:thinkthen-java` and `ThinkThen` |
 | `door.decide(q, bytes).value().outcome()` | Scalar judgement failures throw `FailedException` at the call; a returned result is answered or unsure, with loud `answer()` for unsure |
 | Per-call facts | Client usage |

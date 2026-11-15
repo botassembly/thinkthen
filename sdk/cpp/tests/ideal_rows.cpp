@@ -1,3 +1,4 @@
+#include "scalar_lifetime.hpp"
 #include <thinkthen/nlohmann.hpp>
 #include <cassert>
 #include <iostream>
@@ -40,22 +41,23 @@ int main(int argc,char** argv) {
         std::cout<<scenario<<": aggregate failure "<<std::boolalpha<<threw<<'\n';return 0;
     }
     if(scenario=="failed") {
-        const auto failed_call=[&](auto operation) {
+        const auto failed_call=[&](const char* name,auto operation) {
+            scalar_lifetime::begin(name);
             try {operation();assert(false);}
             catch(const tt::failed& failure) {
                 assert(failure.code()==tt::errc::backend_status);
                 assert(failure.http_status()==503 && failure.family()=="backend");
                 assert(std::string(failure.what()).starts_with("backend.status: "));
             }
-            assert(client.usage().active_calls==0);
+            scalar_lifetime::finish();
         };
-        failed_call([&]{(void)client.decide(decide,"evidence");});
-        failed_call([&]{(void)client.choose(tt::choose<>{"Q",{"a","b"}},"evidence");});
-        failed_call([&]{(void)client.tag(tt::tag<>{"Q",{"a","b"}},"evidence");});
-        failed_call([&]{(void)client.score(tt::score<>{"Q",{"a","b"}},"evidence");});
-        failed_call([&]{(void)client.find(tt::find{"Q"},"evidence");});
-        failed_call([&]{(void)client.recognize(tt::recognize{{"person"}},"evidence");});
-        failed_call([&]{(void)client.relate(tt::relate{{tt::rule{.source="person",.target="person",.relation="knows"}}},"evidence");});
+        failed_call("decide",[&]{(void)client.decide(decide,"evidence");});
+        failed_call("choose",[&]{(void)client.choose(tt::choose<>{"Q",{"a","b"}},"evidence");});
+        failed_call("tag",[&]{(void)client.tag(tt::tag<>{"Q",{"a","b"}},"evidence");});
+        failed_call("score",[&]{(void)client.score(tt::score<>{"Q",{"a","b"}},"evidence");});
+        failed_call("find",[&]{(void)client.find(tt::find{"Q"},"evidence");});
+        failed_call("recognize",[&]{(void)client.recognize(tt::recognize{{"person"}},"evidence");});
+        failed_call("relate",[&]{(void)client.relate(tt::relate{{tt::rule{.source="person",.target="person",.relation="knows"}}},"evidence");});
     }
     auto result_rows=client.decide_each(decide,std::vector<std::string>{"Please refund my order."});
     auto result=std::move(*result_rows.next());
@@ -87,8 +89,10 @@ int main(int argc,char** argv) {
     } else {(void)form.throw_if_failed();}
     if(scenario!="yes") {std::cout<<"safe state and loud answer: "<<scenario<<'\n';return 0;}
     const auto before_blank=client.usage().attempts;
+    scalar_lifetime::begin("annotate blank");
     refuses(tt::errc::record_empty,[&]{(void)client.annotate(form_question,"   ");});
-    assert(client.usage().attempts==before_blank && client.usage().active_calls==0);
+    scalar_lifetime::finish();
+    assert(client.usage().attempts==before_blank);
     {
         tt::client measured;const auto answer=measured.decide(decide,"Please refund my order.");assert(answer.answered());
         const auto usage=measured.usage();assert(usage.attempts==1 && usage.responses==1);

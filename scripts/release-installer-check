@@ -40,6 +40,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-real-installer-') as temporar
         sys.exit(0)
     helper = 'windows-cli-check' if args.cli else 'installer-test'
     arguments = ['--binary', binary]
+    if not args.cli:
+        arguments.append('--strict-shells')
     if windows and args.cli:
         arguments.extend(('--diagnostics', ROOT / 'target/windows-cli-diagnostics'))
     run(sys.executable, ROOT / 'scripts' / helper, *arguments)

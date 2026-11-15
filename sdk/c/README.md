@@ -16,6 +16,8 @@ Three rules hold for every function on this page.
 2. **Checking the state never fails.** `result.status`, `result.probability` and `result.error_code` are plain fields, always safe to read.
 3. **Printing never fails.** `thinkthen_row_string(&result)` gives the answer, `unsure`, or `failed:` with the reason, as text for `printf`.
 
+The functions on this page are the supported C interface. Other exported functions serve the language packages and may change in any 0.x release.
+
 ## decide
 
 ### The simplest if

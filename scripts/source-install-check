@@ -28,6 +28,8 @@ for stream in (sys.stdout, sys.stderr):
 def run(*arguments, **options):
     if os.name == 'nt':
         from release_windows_sdks import run as native_run
+        options.pop('capture_output', None)
+        options.pop('text', None)
         output = native_run(*arguments, cwd=options.pop('cwd', ROOT), env=options.pop('env', os.environ), **options)
         print(output, end='')
         return output
@@ -119,20 +121,24 @@ with long_path_scratch('thinkthen-source-install-', 'Source install') as scratch
             go_env = env | {'GOPROXY': (scratch / 'proxy').as_uri(), 'GOMODCACHE': str(scratch / 'go-modules'),
                             'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
                             'THINKTHEN_CASES': str(ROOT / 'conformance')}
-            def go_run(*arguments, cwd):
+            def go_run(*arguments, cwd, **options):
                 if sys.platform == 'linux':
                     if args.tag_source:
                         from release_go import command
-                        return run(command(), *arguments, cwd=cwd, env=go_env)
+                        return run(command(), *arguments, cwd=cwd, env=go_env, **options)
                     floor_env = dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch))
                     values = go_env | {'GOCACHE': str(scratch / 'go-build')}
                     selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_BACKEND', 'THINKTHEN_STUB_CASES', 'THINKTHEN_CASES']
                     return run(ROOT / 'scripts/runtime-floor-build', 'env',
-                               *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env)
+                               *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env, **options)
                 if sys.platform == 'darwin':
-                    return run(sys.executable, ROOT / 'scripts/go-build', *arguments, cwd=cwd, env=go_env)
-                return run('go', *arguments, cwd=cwd, env=go_env)
+                    return run(sys.executable, ROOT / 'scripts/go-build', *arguments, cwd=cwd, env=go_env, **options)
+                return run('go', *arguments, cwd=cwd, env=go_env, **options)
 
+            listed = go_run('test', '-mod=mod', '-list=^TestSharedStub$', cwd=go, capture_output=True, text=True)
+            names = listed if isinstance(listed, str) else listed.stdout
+            if 'TestSharedStub' not in names.splitlines():
+                raise RuntimeError('Required Go test not found: TestSharedStub')
             go_run('test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=go)
             if args.readmes:
                 app = scratch / 'go-readme'

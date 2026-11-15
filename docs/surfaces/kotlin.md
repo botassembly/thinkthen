@@ -602,6 +602,6 @@ The baseline is the [published 0.1.2 package/source](https://repo.maven.apache.o
 
 | 0.1.2 | Now |
 | --- | --- |
-| Maven `thinkthen-jvm` with `kotlin` classifier; `KotlinFacade(Door)` | The current package and typed client |
+| Maven `thinkthen-jvm` with `kotlin` classifier; `KotlinFacade(Door)` | `io.github.botassembly:thinkthen-kotlin` and `ThinkThen` |
 | `facade.decide(q, text).value().outcome()` | Scalar judgement failures throw `FailedException` at the call; a returned result is answered or unsure, with loud `answer()` for unsure |
 | `decideAsync(...).await()` | The suspend call shown above |

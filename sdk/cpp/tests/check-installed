@@ -96,7 +96,7 @@ else:
     assert "(SONAME)" in identity and "[" + engines[0].name + "]" in identity, identity
 PYTHON
 mkdir "$scratch/source"
-cp sdk/cpp/tests/stress.hpp sdk/cpp/tests/consumer.cpp sdk/cpp/tests/typed_consumer.cpp sdk/cpp/tests/interface.cpp sdk/cpp/tests/typed_network_consumer.cpp sdk/cpp/tests/unknown_code_consumer.cpp sdk/cpp/tests/CMakeLists.txt "$scratch/source/"
+cp sdk/cpp/tests/scalar_lifetime.hpp sdk/cpp/tests/stress.hpp sdk/cpp/tests/consumer.cpp sdk/cpp/tests/typed_consumer.cpp sdk/cpp/tests/interface.cpp sdk/cpp/tests/typed_network_consumer.cpp sdk/cpp/tests/unknown_code_consumer.cpp sdk/cpp/tests/CMakeLists.txt "$scratch/source/"
 cmake -S "$scratch/source" -B "$scratch/build" -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_PREFIX_PATH="$prefix;$HOME/.local/share/thinkthen-build-tools/nlohmann-json/3.11.3" \
     -DCMAKE_INSTALL_PREFIX="$scratch/application"

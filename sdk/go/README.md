@@ -325,7 +325,7 @@ for refundRequest, err := range client.Filter(ctx, asksRefund, slices.Values(mes
 
 filter takes one bar, so every record is a yes or a no and none is left out for being not sure. `Threshold: tt.Cutoff(0.7)` moves the bar. Two bars are refused: `tt.Band` does not compile in a `tt.FilterQuestion`, and a saved filter question that holds two bars returns an error that matches `tt.ErrUsage`. When you want not sure, use `client.DecideAll`, as in the section above.
 
-If a record fails, you still get every kept record first. Then the loop gets one last error, a `*tt.FilterError`, and its `Rows` holds every failed result with its `Item()`.
+If a record fails, you still get every kept record first. Then the loop gets one last error, a `*tt.FilterError`, and its `Rows` holds every failed result with its `Item()`. Its `Error()` text only says `filter: records failed; inspect Rows`; it gives no count, position or cause. Read `Rows` for those details.
 
 ```go
 for refundRequest, err := range client.Filter(ctx, asksRefund, slices.Values(messages)) {

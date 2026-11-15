@@ -129,12 +129,20 @@ def runtime_environment(scratch, prepared):
     return env
 
 
+def require_go_test(execute, binary, name):
+    output = execute(binary, '-test.list=^' + name + '$')
+    if name not in output.splitlines():
+        raise RuntimeError('Required Go test not found: ' + name)
+
+
 def go_load_failure(execute, binary):
+    require_go_test(execute, binary, 'TestNativeLoadFailure')
     execute(binary, '-test.run=^TestNativeLoadFailure$', '-test.count=1', '-test.v',
             '-test.timeout=10m', stream_output=True)
 
 
 def go_temporary_cache(execute, binary):
+    require_go_test(execute, binary, 'TestNativeTemporaryCache')
     execute(binary, '-test.run=^TestNativeTemporaryCache$', '-test.count=1', '-test.v',
             '-test.timeout=10m', stream_output=True)
 
@@ -256,6 +264,8 @@ def full(folder, build, *, caller_owned=False, families=None):
                 build_consumer('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(go / 'package'), cwd=go / 'consumer')
                 go_binary = go / 'consumer.exe'
                 build_consumer('go', 'test', '-mod=mod', '-c', '-o', go_binary, cwd=go / 'consumer')
+                require_go_test(execute, go_binary, 'TestSharedStub')
+                require_go_test(execute, go_binary, 'TestSharedStress')
                 go_arguments = ['-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=10m']
                 go_env = {'THINKTHEN_STUB_CASES': str(fixture), 'THINKTHEN_CASES': str(checks)}
                 execute(go_binary, *go_arguments, stream_output=True,
