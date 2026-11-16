@@ -35,7 +35,7 @@ end
 
 
 def active?(condition, site)
-  return true if condition.nil? || condition == true
+  return true if condition.nil? || condition == true || condition == 'always()'
   return false if condition == false
   condition = condition.delete_prefix('${{').delete_suffix('}}').strip
   match = /\Amatrix\.site\s*(==|!=)\s*'([^']+)'\z/.match(condition)

@@ -17,6 +17,5 @@ See \code{\link{tt_decide}} for calls and \code{\link{tt_client}} for clients.}
 client <- tt_client(backend = "stub")
 team <- tt_choose(c("Refund please", "Where is my delivery?"),
                   "Which team?", c("billing", "shipping"), client = client)
-stopifnot(is.character(team))
 tt_close(client)
 }

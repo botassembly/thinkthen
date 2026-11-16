@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise final artifact identity, target routing and consumer continuation."""
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -11,12 +12,74 @@ import tarfile
 import tempfile
 import textwrap
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 from release_workflow import ROOT, version
 
 
 class PlatformRelease(unittest.TestCase):
+    def test_live_windows_job_refuses_invalid_or_unpublished_releases(self):
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load(STDIN.read, aliases: true))'],
+            input=(ROOT / '.github/workflows/release-live-install.yml').read_bytes()))
+        job, = workflow['jobs'].values()
+        self.assertEqual(job['runs-on'], 'windows-2022')
+        self.assertLessEqual(job['timeout-minutes'], 90)
+        self.assertNotIn('if', job)
+        checkout, = (step for step in job['steps'] if step.get('uses', '').startswith('actions/checkout@'))
+        self.assertEqual(checkout['with']['ref'], 'refs/tags/${{ inputs.tag }}')
+        admission = next(step for step in job['steps'] if step.get('name') == 'Require a published version tag')
+        code = admission['run'].split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]
+        published = {'tagName': 'v0.2.0', 'isDraft': False, 'publishedAt': '2026-11-16T00:00:00Z'}
+        cases = [('v0.2.0', published, True), ('main', published, False),
+                 ('v0.2.0', dict(published, isDraft=True), False),
+                 ('v0.2.0', dict(published, publishedAt=None), False),
+                 ('v0.2.0', dict(published, tagName='v0.1.2'), False)]
+        for tag, release, success in cases:
+            with self.subTest(tag=tag, release=release), patch.dict(os.environ,
+                    RELEASE_TAG=tag, GITHUB_REPOSITORY='botassembly/thinkthen'), \
+                    patch.object(subprocess, 'check_output', return_value=json.dumps(release)):
+                if success:
+                    exec(compile(code, '<workflow-admission>', 'exec'), {})
+                else:
+                    with self.assertRaises(ValueError):
+                        exec(compile(code, '<workflow-admission>', 'exec'), {})
+        with patch.dict(os.environ, RELEASE_TAG='v0.2.0', GITHUB_REPOSITORY='botassembly/thinkthen'), \
+                patch.object(subprocess, 'check_output', side_effect=subprocess.CalledProcessError(1, 'gh')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                exec(compile(code, '<workflow-admission>', 'exec'), {})
+
+    def test_live_windows_job_runs_existing_consumers_and_propagates_failure(self):
+        import release_rust, release_windows_r, release_windows_host
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load(STDIN.read, aliases: true))'],
+            input=(ROOT / '.github/workflows/release-live-install.yml').read_bytes()))
+        job, = workflow['jobs'].values()
+        step = job['steps'][-1]
+        self.assertNotIn('if', step)
+        self.assertFalse(step.get('continue-on-error', False))
+        code = step['run'].split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]
+        sites = runpy.run_path(str(ROOT / 'scripts/release-live-install-check'))['SITES']
+        calls = []
+        def install(arguments, *, env, check):
+            calls.append(arguments)
+            self.assertTrue(env['PATH'].startswith(str(Path('/pinned/cargo').parent)))
+            if check:
+                raise subprocess.CalledProcessError(23, arguments)
+            return subprocess.CompletedProcess(arguments, 23)
+        with patch.object(release_rust, 'prepare'), patch.object(release_windows_r, 'runtime'), \
+                patch.object(release_windows_host, 'prepare_msys2'), \
+                patch.object(release_windows_host, 'environment', return_value={'PATH': 'consumer-tools'}), \
+                patch.object(release_windows_host, 'prepare_swift', side_effect=lambda env, folder: env), \
+                patch.object(subprocess, 'check_output', return_value='/pinned/cargo\n'), \
+                patch.object(subprocess, 'run', side_effect=install):
+            with self.assertRaises(subprocess.CalledProcessError):
+                exec(compile(code, '<workflow-consumers>', 'exec'), {})
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][1], 'scripts/release-live-install-check')
+        self.assertEqual(calls[0][2:], [site for site in sites if site != 'homebrew'])
+
     def test_prepared_image_ids_and_tags_must_exist(self):
         import release_images
         identity = 'sha256:' + 'a' * 64
@@ -57,11 +120,218 @@ class PlatformRelease(unittest.TestCase):
         validation = jobs['validate-ref']
         self.assertNotIn('if', validation)
         script = validation['steps'][0]['run']
-        for ref, success in [('refs/heads/main', False), ('refs/tags/other', False), ('refs/tags/v0.2.0', True)]:
-            result = subprocess.run(['bash', '-eu', '-c', script], env=dict(os.environ, GITHUB_REF=ref), capture_output=True, text=True)
+        for ref, deployment, success in [('refs/heads/main', '', False), ('refs/tags/other', '', False),
+                                         ('refs/tags/v0.2.0', '', True), ('refs/tags/v0.2.0', 'recorded-id', False),
+                                         ('refs/tags/v0.2.0-registry-recovery.1', 'recorded-id', True)]:
+            result = subprocess.run(['bash', '-eu', '-c', script],
+                                    env=dict(os.environ, GITHUB_REF=ref, MAVEN_DEPLOYMENT_ID=deployment), capture_output=True, text=True)
             self.assertEqual(result.returncode == 0, success, result.stderr)
+        recovery = 'refs/tags/v0.2.0-registry-recovery.1'
         for name in ('upload', 'homebrew'):
             self.assertEqual(jobs[name]['needs'], 'validate-ref')
+            self.assertEqual(jobs[name]['if'], f"github.ref != '{recovery}'")
+        ruby = jobs['rubygems']
+        self.assertEqual(ruby['needs'], 'validate-ref')
+        self.assertEqual(ruby['if'], f"github.ref == '{recovery}' && inputs.deployment_id == ''")
+        self.assertEqual(ruby['environment'], 'release')
+        self.assertNotIn('strategy', ruby)
+        checkouts = [step['with'] for step in ruby['steps'] if step.get('uses', '').startswith('actions/checkout@')]
+        self.assertEqual(checkouts, [
+            {'ref': '${{ github.sha }}', 'persist-credentials': False},
+            {'ref': 'v0.2.0', 'path': 'source', 'persist-credentials': False}])
+        download, = [step['run'] for step in ruby['steps'] if step.get('name') == 'Download and verify the approved release']
+        self.assertIn('download rubygems', download)
+        self.assertIn('--source source', download)
+        self.assertNotIn('GITHUB_REF=', download)
+        maven = jobs['maven']
+        self.assertEqual(maven['if'], f"github.ref == '{recovery}'")
+        self.assertEqual(maven['environment'], 'release')
+        retained, = [step for step in maven['steps'] if step.get('name') == 'Retain Central deployment evidence']
+        self.assertEqual(retained['if'], 'always()')
+        self.assertEqual(retained['with']['path'], 'maven-recovery/')
+
+    def test_rubygems_platform_absence_and_immutable_bytes(self):
+        import release_upload
+        payload = b'approved native gem'
+        with tempfile.TemporaryDirectory() as temporary:
+            registry = Path(temporary)
+            (registry / 'rubygems').mkdir()
+            package = registry / 'rubygems/thinkthen-0.2.0-x86_64-linux.gem'
+            package.write_bytes(payload)
+            api = 'https://rubygems.org/api/v2/rubygems/thinkthen/versions/0.2.0.json?platform=x86_64-linux'
+            download = 'https://rubygems.org/downloads/' + package.name
+            for metadata, served, pushes in [(404, None, 1), (200, payload, 0), (403, None, 0),
+                                             (500, None, 0), (200, b'different gem', 0), (200, 403, 0),
+                                             (200, 404, 0)]:
+                with self.subTest(metadata=metadata, served=served):
+                    requests = []
+                    def response(request):
+                        url = request.full_url
+                        requests.append(url)
+                        status = metadata if url == api else served if isinstance(served, int) else 200
+                        if status != 200:
+                            raise urllib.error.HTTPError(url, status, 'fixture response', {}, None)
+                        self.assertIn(url, (api, download))
+                        return io.BytesIO(b'{}' if url == api else served)
+                    with patch('urllib.request.urlopen', side_effect=response), patch.object(release_upload, 'quiet') as push:
+                        if metadata in (403, 500) or served in (403, 404) or served == b'different gem':
+                            with self.assertRaises((ValueError, urllib.error.HTTPError)):
+                                release_upload.upload('rubygems', registry)
+                        else:
+                            release_upload.upload('rubygems', registry)
+                        self.assertEqual(push.call_count, pushes)
+                    self.assertEqual(requests[0], api)
+                    if metadata != 200:
+                        self.assertEqual(requests, [api])
+            # A failed push can mean the server accepted it: verify the now-public bytes.
+            with patch('urllib.request.urlopen', side_effect=[
+                    urllib.error.HTTPError(api, 404, 'absent', {}, None), io.BytesIO(b'{}'), io.BytesIO(payload)]), \
+                    patch.object(release_upload, 'quiet', side_effect=ValueError('transport failed')) as push:
+                release_upload.upload('rubygems', registry)
+                self.assertEqual(push.call_count, 1)
+
+    def test_recovery_requires_exact_ref_target_checksum_and_provenance(self):
+        import release_upload
+        digest = '102b6539e2e90d74a4c4f862a17067851f82c14236059964c8612f8ada903859'
+        target = '24e419497cf89715a88727546e4f3b6661f8303e'
+        ref = 'refs/tags/v0.2.0-registry-recovery.1'
+        provenance = {'revision': 'fff4022dd247d21bde20d367bc1b738242396865', 'version': '0.2.0'}
+        for execution, tag, checksum, checkout, different in [
+                (ref, 'v0.2.0', digest, target, False),
+                ('refs/heads/main', 'v0.2.0', digest, target, False),
+                ('refs/tags/v0.2.0-registry-recovery.2', 'v0.2.0', digest, target, False),
+                (ref, 'v0.2.1', digest, target, False), (ref, 'v0.2.0', '0' * 64, target, False),
+                (ref, 'v0.2.0', digest, '0' * 40, False), (ref, 'v0.2.0', digest, target, True)]:
+            with self.subTest(execution=execution, tag=tag, checksum=checksum, checkout=checkout, different=different), \
+                    tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                source, destination = root / 'source', root / 'approved'
+                source.mkdir()
+                (source / 'release-source.json').write_text(json.dumps(provenance))
+                downloaded = dict(provenance, revision='wrong') if different else provenance
+                def download(*args):
+                    destination.mkdir()
+                    with tarfile.open(destination / 'thinkthen-0.2.0-registries.tar.gz', 'w:gz') as archive:
+                        data = json.dumps(downloaded).encode()
+                        member = tarfile.TarInfo('source.json')
+                        member.size = len(data)
+                        archive.addfile(member, io.BytesIO(data))
+                def output(*args):
+                    return checkout if args[0] == 'git' else json.dumps({'tagName': 'v0.2.0'})
+                success = (execution, tag, checksum, checkout, different) == (ref, 'v0.2.0', digest, target, False)
+                with patch.dict(os.environ, GITHUB_REF=execution), \
+                        patch.object(release_upload.subprocess, 'run', return_value=type('Result', (), {'returncode': 1})()), \
+                        patch.object(release_upload, 'output', side_effect=output), \
+                        patch.object(release_upload, 'quiet', side_effect=download), \
+                        patch.object(release_upload, 'verify_download') as verify:
+                    if success:
+                        self.assertEqual(release_upload.approved(tag, checksum, destination, source), destination / 'registries')
+                        verify.assert_called_once_with(destination, digest)
+                    else:
+                        with self.assertRaises(ValueError):
+                            release_upload.approved(tag, checksum, destination, source)
+
+    def test_approved_download_preserves_checksum_and_inventory_refusal(self):
+        from release_upload import verify_download
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary)
+            (destination / 'package.gem').write_bytes(b'approved package')
+            sums = destination / 'SHA256SUMS'
+            sums.write_text(hashlib.sha256(b'approved package').hexdigest() + '  package.gem\n')
+            digest = hashlib.sha256(sums.read_bytes()).hexdigest()
+            verify_download(destination, digest)
+            with self.assertRaisesRegex(ValueError, 'PM-approved checksum'):
+                verify_download(destination, '0' * 64)
+            (destination / 'package.gem').write_bytes(b'changed package')
+            with self.assertRaisesRegex(ValueError, 'checksum differs'):
+                verify_download(destination, digest)
+            (destination / 'package.gem').write_bytes(b'approved package')
+            (destination / 'extra.gem').write_bytes(b'unapproved')
+            with self.assertRaisesRegex(ValueError, 'incomplete checksum inventory'):
+                verify_download(destination, digest)
+
+    def test_maven_recovery_preserves_payload_and_requires_failed_predecessor(self):
+        import release_upload
+        original = (b'<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+                    b'<parent><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm-parent</artifactId>'
+                    b'<version>0.2.0</version><relativePath/></parent>'
+                    b'<groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId>'
+                    b'<version>0.2.0</version><packaging>pom</packaging>'
+                    b'<distributionManagement><relocation><groupId>io.github.botassembly</groupId>'
+                    b'<artifactId>thinkthen-java</artifactId><version>0.2.0</version>'
+                    b'</relocation></distributionManagement></project>\n')
+        self.assertEqual(hashlib.sha256(original).hexdigest(), 'b63131f98b802f41e7e8dab7b5e092ee7f09537ec1d0303371146c8cf5a1de57')
+        predecessor = '67d06e5b-c5e4-43b5-a357-f7818e726d77'
+        deployment = '11111111-2222-3333-4444-555555555555'
+        pom_name = 'io/github/botassembly/thinkthen-jvm/0.2.0/thinkthen-jvm-0.2.0.pom'
+        for scenario in ('published', 'failed', 'timeout', 'missing', 'nonfailed', 'wrong-pom', 'rerun',
+                         'status-only', 'ambiguous'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                registry = root / 'approved'
+                pom = registry / 'maven' / pom_name
+                pom.parent.mkdir(parents=True)
+                pom.write_bytes(original + (b'changed' if scenario == 'wrong-pom' else b''))
+                jar = registry / 'maven/thinkthen-java.jar'
+                jar.write_bytes(b'qualified JAR bytes')
+                before = {path.relative_to(registry).as_posix(): path.read_bytes() for path in registry.rglob('*') if path.is_file()}
+                calls = []
+                errors = {'pkg:maven/io.github.botassembly/thinkthen-jvm@0.2.0': ['Project name is missing']}
+                def central(path, method='POST'):
+                    calls.append((path, method))
+                    if path == 'status?id=' + predecessor:
+                        if scenario == 'missing':
+                            raise urllib.error.HTTPError(path, 404, 'not found', {}, None)
+                        state = 'PUBLISHED' if scenario == 'nonfailed' else 'FAILED'
+                        return json.dumps({'deploymentId': predecessor, 'deploymentState': state, 'errors': errors}).encode()
+                    if path == 'deployment/' + predecessor:
+                        self.assertEqual(method, 'DELETE')
+                        return b''
+                    self.assertEqual(path, 'status?id=' + deployment)
+                    state = 'FAILED' if scenario == 'failed' else 'PUBLISHING' if scenario == 'timeout' else 'PUBLISHED'
+                    return json.dumps({'deploymentId': deployment, 'deploymentState': state, 'errors': errors if state == 'FAILED' else {}}).encode()
+                def quiet(*args, **options):
+                    if '--detach-sign' in args:
+                        Path(str(args[-1]) + '.asc').write_bytes(b'public fixture signature')
+                environment = {'GITHUB_RUN_ATTEMPT': '2' if scenario == 'rerun' else '1',
+                               'MAVEN_DEPLOYMENT_ID': deployment if scenario == 'status-only' else '',
+                               'MAVEN_CENTRAL_USERNAME': 'fixture', 'MAVEN_CENTRAL_PASSWORD': 'fixture',
+                               'MAVEN_CENTRAL_GPG_PRIVATE_KEY': 'fixture', 'MAVEN_CENTRAL_GPG_PASSPHRASE': 'fixture'}
+                with patch.dict(os.environ, environment), patch.object(release_upload, 'ROOT', root), \
+                        patch.object(release_upload, 'central', side_effect=central), \
+                        patch.object(release_upload, 'quiet', side_effect=quiet), \
+                        patch.object(release_upload.urllib.request, 'urlopen', return_value=io.BytesIO(b'' if scenario == 'ambiguous' else deployment.encode())) as upload, \
+                        patch.object(release_upload.time, 'monotonic', side_effect=[0, 1201]), \
+                        patch.object(release_upload.time, 'sleep'):
+                    success = scenario in ('published', 'status-only')
+                    if success:
+                        release_upload.maven_recovery(registry)
+                    else:
+                        with self.assertRaises((ValueError, TimeoutError, urllib.error.HTTPError)):
+                            release_upload.maven_recovery(registry)
+                    expected_upload = scenario in ('published', 'failed', 'timeout', 'ambiguous')
+                    self.assertEqual(upload.call_count, int(expected_upload))
+                    evidence = root / 'maven-recovery'
+                    if expected_upload:
+                        self.assertIn(('deployment/' + predecessor, 'DELETE'), calls)
+                        self.assertEqual(json.loads((evidence / 'predecessor.json').read_text())['errors'], errors)
+                        receipt = json.loads((evidence / 'receipt.json').read_text())
+                        self.assertTrue(receipt['upload_started'])
+                        outbound = evidence / 'outbound'
+                        corrected = (outbound / 'maven' / pom_name).read_bytes()
+                        self.assertEqual(corrected.replace(b'<name>ThinkThen JVM</name>', b'', 1), original)
+                        self.assertEqual((outbound / 'maven/thinkthen-java.jar').read_bytes(), jar.read_bytes())
+                        self.assertEqual(receipt['bundle_sha256'], hashlib.sha256((outbound / 'maven-central.zip').read_bytes()).hexdigest())
+                        if scenario != 'ambiguous':
+                            self.assertEqual(receipt['deployment_id'], deployment)
+                            self.assertEqual((evidence / 'deployment-id.txt').read_text().strip(), deployment)
+                        # Reentering after even an ambiguous response cannot upload again.
+                        with self.assertRaisesRegex(ValueError, 'reruns require'):
+                            release_upload.maven_recovery(registry)
+                        self.assertEqual(upload.call_count, 1)
+                    else:
+                        self.assertNotIn(('deployment/' + predecessor, 'DELETE'), calls)
+                    self.assertEqual({path.relative_to(registry).as_posix(): path.read_bytes() for path in registry.rglob('*') if path.is_file()}, before)
 
     def test_required_installer_shell_missing_refuses(self):
         installer = runpy.run_path(str(ROOT / 'scripts/installer-test'))
