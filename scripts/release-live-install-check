@@ -116,14 +116,26 @@ def check(site, scratch, fixture, case, source=ROOT):
     elif site == 'swift':
         consumer = scratch / 'consumer'
         consumer.mkdir()
-        for path in (source / 'sdk/swift/tests').glob('*.swift'):
-            if path.name != 'Package.swift':
-                shutil.copy2(path, consumer / path.name)
+        sources = [path for path in (ROOT / 'sdk/swift/tests').glob('*.swift') if path.name != 'Package.swift']
+        if not sources:
+            raise ValueError('Swift consumer sources are unavailable: ' + str(ROOT / 'sdk/swift/tests'))
+        wrapper = source / 'scripts/release/swift.py'
+        for path in (fixture, wrapper, wrapper.with_name('filter_contract.py')):
+            if not path.is_file():
+                raise ValueError('Swift check input is unavailable: ' + str(path))
+        if not (source / 'conformance').is_dir():
+            raise ValueError('Swift conformance inputs are unavailable: ' + str(source / 'conformance'))
+        for path in sources:
+            shutil.copy2(path, consumer / path.name)
         (consumer / 'Package.swift').write_text('// swift-tools-version: 6.3\nimport PackageDescription\nlet package = Package(name: "Consumer", platforms: [.macOS("15.0")], dependencies: [.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version(source) + '")], targets: [.executableTarget(name: "Consumer", dependencies: [.product(name: "ThinkThen", package: "thinkthen")], path: ".", exclude: ["Package.swift"])])\n')
-        run('swift', 'build', '--package-path', consumer, '--disable-sandbox', **options)
+        build_output = run('swift', 'build', '--package-path', consumer, '--disable-sandbox',
+                           capture_output=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **options)
+        print(build_output, end='', flush=True)
         binary = Path(run('swift', 'build', '--package-path', consumer, '--show-bin-path', **options).strip())
-        run(sys.executable, source / 'scripts/release/swift.py',
-            binary / ('Consumer.exe' if os.name == 'nt' else 'Consumer'), fixture, **options)
+        executable = binary / ('Consumer.exe' if os.name == 'nt' else 'Consumer')
+        if not executable.is_file():
+            raise ValueError('Swift build did not produce the consumer executable: ' + str(executable))
+        run(sys.executable, wrapper, executable, fixture, **options)
     elif site == 'r':
         library = scratch / 'r-library'
         library.mkdir()
