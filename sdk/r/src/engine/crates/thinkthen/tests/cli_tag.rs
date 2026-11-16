@@ -1,0 +1,108 @@
+#![cfg(test)]
+//! Label arguments, rendering and exit codes through the command.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
+mod support;
+
+use std::io::Write;
+use std::process::{Output, Stdio};
+
+use loopback::{KEY, Loopback};
+use serde_json::json;
+
+fn run(server: &Loopback, extra: &[&str], input: &str) -> Output {
+    let mut child = support::command()
+        .args([
+            "tag",
+            "What applies?",
+            "--label",
+            "billing",
+            "--label",
+            "shipping",
+        ])
+        .args(extra)
+        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_API_KEY", KEY)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let _ = child.stdin.take().unwrap().write_all(input.as_bytes());
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn the_command_prints_each_matching_label_and_always_exits_zero() {
+    for (billing, shipping, expected) in [(0.1, 0.2, "\n"), (0.5, 0.9, "billing\tshipping\n")] {
+        let server = Loopback::answering(move |q| {
+            let p = if q["instructions"]
+                .as_str()
+                .unwrap()
+                .ends_with("\"billing\" apply?")
+            {
+                billing
+            } else {
+                shipping
+            };
+            json!({"type": "noul", "noul": p})
+        })
+        .unwrap();
+        let output = run(&server, &[], "message");
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
+        assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn details_and_record_streams_print_json_rows_without_a_scalar_probability() {
+    for (args, input, count, item) in [
+        (vec!["--json"], "message", 1, None),
+        (
+            vec!["--from", "lines", "--json", "--threshold", "0.8"],
+            "first\nsecond\n",
+            2,
+            Some(json!("first")),
+        ),
+        (
+            vec!["--from", "jsonl", "--json", "--field", "/body"],
+            "{\"body\":\"message\"}\n",
+            1,
+            Some(json!({"body":"message"})),
+        ),
+    ] {
+        let server = Loopback::noul(0.8).unwrap();
+        let output = run(&server, &args, input);
+        assert_eq!(output.status.code(), Some(0));
+        let text = String::from_utf8(output.stdout).unwrap();
+        let rows: Vec<serde_json::Value> = text
+            .lines()
+            .map(|line| {
+                let mut row: serde_json::Value = serde_json::from_str(line).unwrap();
+                row.as_object_mut().unwrap().remove("source");
+                row
+            })
+            .collect();
+        assert_eq!(rows.len(), count);
+        let mut expected = json!({"function":"tag","position": 1, "status": "answered", "answer": ["billing", "shipping"],
+            "detail": {"labels":{"billing": 0.8, "shipping": 0.8}}});
+        if let Some(item) = item {
+            expected["item"] = item;
+        }
+        assert_eq!(rows[0], expected);
+    }
+}
+
+#[test]
+fn a_threshold_band_exits_two_without_a_send() {
+    let server = Loopback::noul(0.9).unwrap();
+    let output = run(&server, &["--threshold", "0.2:0.8"], "message");
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(support::reported(&output), "usage.option");
+    assert!(output.stdout.is_empty());
+    assert_eq!(server.count(), 0);
+}

@@ -1,0 +1,22 @@
+{
+  "archive": "https://static.crates.io/crates/extendr-ffi/extendr-ffi-0.8.2.crate",
+  "checksum": "acf3ace33b895bdfc13d02fd7486b26dc71078c256f3399f6272f8bd70fc3a1e",
+  "license_sha256": "fb9c2cccbdcb61ea51e0d553a6474297031544104985279c5c32d25c5c99977e",
+  "linkage_attribute": "#[cfg_attr(all(windows, target_env = \"msvc\"), link(name = \"R\", kind = \"dylib\"))]",
+  "name": "extendr-ffi",
+  "patch_sha256": "e80d2fdae4030acf9ac557c7312b70341d149018c2a79e95dc06e65a40b32c03",
+  "upstream_files": {
+    ".cargo_vcs_info.json": "754ed8619c172bd8cd6c50f9a4244f06c41e3ef995d193478bc6b572890531c4",
+    "Cargo.toml": "a4d95a84fd2fbc00ba3ef70b3325c5473bb70d8e030f111bba9abb28dab17bde",
+    "Cargo.toml.orig": "c4af64f334a33f4642556c43bc9b274a39da83e71c716368295f48cb5d7d9be8",
+    "README.md": "8895e59f004c806e5a726f3074c8943fdf0f8e60994a9c202a657a9037f7a4ab",
+    "build.rs": "fd687b6094db959c4a5574babb296f08a960d1b31d51801213525d8848fd11f6",
+    "src/altrep.rs": "c42eaec3fd476e68eb5255f99c2661620f4a535e1343d84910518c2727d6f3aa",
+    "src/backports.rs": "749c36f663e913e7649b6803dab2a40552350833fecc002ba958b56ff6f2cda3",
+    "src/graphics.rs": "5c0986f43083ffc65ba42c22a759164ac925eaa9e3214557621381dbc2c85907",
+    "src/lib.rs": "73b01e9a25315279631935b6bd9f57a079e24c31ddbb1e154b91172cac395e6d",
+    "src/non_api.rs": "8ce0a5116095e91da81aadceb3ea0ef5c93176d964506911bbf433eb93c251dd",
+    "src/symbols.rs": "e46401f909417c1bf08d01bff35bbac491a32cb1b257942328276ad00f771560"
+  },
+  "version": "0.8.2"
+}

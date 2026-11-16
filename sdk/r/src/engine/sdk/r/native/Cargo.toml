@@ -1,0 +1,24 @@
+[package]
+name = "thinkthen-r"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "thinkthen_r"
+crate-type = ["staticlib", "rlib"]
+test = false
+doctest = false
+
+[dependencies]
+thinkthen = { workspace = true, features = ["native"] }
+serde_json.workspace = true
+extendr-api = "=0.8.2"
+
+[lints]
+workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["log"]

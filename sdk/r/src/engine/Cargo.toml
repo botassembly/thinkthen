@@ -1,0 +1,59 @@
+[workspace]
+members = ["crates/thinkthen", "sdk/r/native"]
+exclude = ["sdk/r/native/vendor/extendr-ffi", "sdk/r/native/vendor/extendr-api"]
+resolver = "3"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.95.0"
+license = "MIT"
+repository = "https://github.com/botassembly/thinkthen"
+
+[workspace.dependencies]
+# Every HTTP consumer disables dependency wire tracing to protect credentials.
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_debug"] }
+thinkthen = { path = "crates/thinkthen", version = "0.2.0", default-features = false }
+loopback = { path = "crates/loopback" }
+socket2 = "0.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+schemars = "1.2.3"
+sha2 = { version = "0.10", default-features = false }
+thiserror = "2"
+unicode-general-category = "1.1"
+unicode-normalization = "0.1.24"
+# The custom TLS connector uses ureq's unversioned transport API.
+ureq = { version = "=3.4.2", default-features = false, features = ["rustls-no-provider"] }
+
+# Offline checks use these prepared, reviewed inputs. Refresh these pins deliberately.
+# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+[workspace.metadata.supply-chain]
+cargo-deny = "0.20.2"
+cargo-machete = "0.9.2"
+advisory-revision = "99670cfc0bc574433034b75876a4b791ccaa2efb"
+
+[workspace.lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "deny"
+unreachable_pub = "forbid"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+allow_attributes_without_reason = "deny"
+dbg_macro = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
+
+[profile.release]
+overflow-checks = true
+
+[patch.crates-io]
+extendr-ffi = { path = "sdk/r/native/vendor/extendr-ffi" }
+extendr-api = { path = "sdk/r/native/vendor/extendr-api" }

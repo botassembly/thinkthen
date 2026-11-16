@@ -1,0 +1,23 @@
+{
+  "crates": {
+    "extendr-api-0.8.2": {
+      "checksum": "e002a15028421248374d3beb66d1802ce70d738b666a043a1f4dfffad14bc595",
+      "files": {
+        "LICENSE": "fb9c2cccbdcb61ea51e0d553a6474297031544104985279c5c32d25c5c99977e"
+      },
+      "license": "MIT",
+      "patch_sha256": "8412252c1353d123748b5f665f93d0f179878d1608012e0c296f1523700b91e9"
+    },
+    "extendr-ffi-0.8.2": {
+      "checksum": "acf3ace33b895bdfc13d02fd7486b26dc71078c256f3399f6272f8bd70fc3a1e",
+      "files": {
+        "LICENSE": "fb9c2cccbdcb61ea51e0d553a6474297031544104985279c5c32d25c5c99977e"
+      },
+      "license": "MIT",
+      "patch_sha256": "e80d2fdae4030acf9ac557c7312b70341d149018c2a79e95dc06e65a40b32c03"
+    }
+  },
+  "license_expression": "MIT",
+  "package": "thinkthen-r",
+  "target": "source"
+}

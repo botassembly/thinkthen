@@ -1,0 +1,363 @@
+//! Bridge-only admission and polling over the ordinary shared driver.
+//!
+//! Native hosts use one driver. NEEDS_INPUT reserves one queue slot before the
+//! host supplies its next record. Row publication and input capacity share a
+//! wake source, so neither side requires a second execution producer or polling.
+mod builders;
+mod events;
+mod recording;
+mod sql;
+use super::*;
+use crate::{ABI_VERSION, Code, questions};
+pub use builders::{QuestionBuilder, ToolboxBuilder};
+pub use events::Events;
+pub use recording::{recording_field, validate_recording_answer};
+pub use sql::{
+    sql_engine, sql_engine_unrestricted, sql_postgres_id_error, sql_postgres_record,
+    sql_postgres_row, sql_question, sql_request, sql_settings, sql_settings_with_policy,
+    sql_threshold,
+};
+use std::time::Duration;
+/// Native driver event; record failures remain ordinary rows.
+#[non_exhaustive]
+#[derive(Debug)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "the 208-byte row crosses a bounded queue without a per-row allocation"
+)]
+pub enum Event {
+    /// An independently owned canonical row.
+    Row(AnyRow),
+    /// An input slot is reserved until send or end_input.
+    NeedsInput,
+    /// Completion, including after record failures.
+    Finished,
+}
+impl From<super::driver::Event> for Event {
+    fn from(event: super::driver::Event) -> Self {
+        match event {
+            super::driver::Event::Row(row) => Self::Row(row),
+            super::driver::Event::NeedsInput => Self::NeedsInput,
+            super::driver::Event::Finished => Self::Finished,
+        }
+    }
+}
+/// Native ownership delegates to the same private driver used by command hosts.
+#[non_exhaustive]
+#[derive(Debug)]
+pub struct Call(super::driver::Driver);
+impl Call {
+    /// Admit and open a canonical request.
+    /// # Errors
+    /// Returns shared setup or question errors.
+    pub fn open(engine: &Engine, request: &Request, offsets: OffsetUnit) -> Result<Self, Error> {
+        super::driver::Driver::open(engine, request, offsets).map(Self)
+    }
+    /// Open a finite collection of already admitted records on the same producer.
+    /// The request must have no JSON initial records. Input is closed at creation,
+    /// so temporary host scheduling gaps cannot split this collection's batches.
+    /// # Errors
+    /// Returns usage.abi for competing collections, or a shared setup error.
+    pub fn open_records(
+        engine: &Engine,
+        request: &Request,
+        records: Vec<Record>,
+        offsets: OffsetUnit,
+    ) -> Result<Self, Error> {
+        super::driver::Driver::open_records(engine, request, records, offsets).map(Self)
+    }
+    /// Transfer one record into a reserved input slot.
+    /// # Errors
+    /// Returns usage.abi for a protocol error. A concurrently stopped call
+    /// accepts its reserved slot and reports its terminal error on read.
+    pub fn send(&mut self, record: Record) -> Result<(), Error> {
+        self.0.send(record)
+    }
+    /// Close input without waiting for output.
+    pub fn end_input(&mut self) {
+        self.0.end_input();
+    }
+    /// Cancel the shared worker.
+    pub fn cancel(&self) {
+        self.0.cancel();
+    }
+    /// Retain the independently shared concurrent cancellation token.
+    #[must_use]
+    pub fn cancellation(&self) -> Cancel {
+        self.0.cancellation()
+    }
+    /// Retain the independent wake source before any concurrent wait begins.
+    #[must_use]
+    pub fn events(&self) -> Events {
+        Events(self.0.events())
+    }
+    /// Wait for one event.
+    /// # Errors
+    /// Returns the same terminal call error on every later read.
+    pub fn next_event(&mut self) -> Result<Event, Error> {
+        self.0.next_event().map(Into::into)
+    }
+    /// Wait at most timeout for one event.
+    /// # Errors
+    /// Returns the same terminal call error on every later read.
+    pub fn poll(&mut self, timeout: Duration) -> Result<Option<Event>, Error> {
+        self.0.poll(timeout).map(|event| event.map(Into::into))
+    }
+}
+/// Reject incompatible native versions before any row or client operation.
+/// # Errors
+/// Requires equal majors and an engine minor at least the required minor.
+pub fn check_version(required: u32, actual: u32) -> Result<(), Error> {
+    if required >> 16 != actual >> 16 || (actual & 0xffff) < (required & 0xffff) {
+        Err(abi_error())
+    } else {
+        Ok(())
+    }
+}
+/// The engine's native contract requirement, independent of package version.
+#[must_use]
+pub const fn version() -> u32 {
+    ABI_VERSION
+}
+/// Construct the shared error for an invalid native layout or protocol.
+#[must_use]
+pub fn abi_error() -> Error {
+    super::abi_error()
+}
+/// Explain how a C caller initializes an empty row output without changing its ABI error code.
+#[must_use]
+pub fn uninitialized_row_error() -> Error {
+    Error::from_contract(
+        Code::UsageAbi,
+        "row.struct_size is 0; initialize it with THINKTHEN_ROW_INIT",
+    )
+}
+/// Map a caught native-boundary panic without unwinding through a host.
+#[must_use]
+pub fn internal_error() -> Error {
+    Error::from_contract(Code::InternalBug, "the native operation could not complete")
+}
+
+/// Summarize failed records with the engine's shared message and first failure code.
+#[must_use]
+pub fn records_failed(first: &Error, failed: usize, total: u64, position: u64) -> Error {
+    first.records_failed(failed, total, position)
+}
+
+/// Admit an explicit native settings URL without resolving any credentials.
+/// # Errors
+/// Returns the shared URL policy error.
+pub fn validate_url(text: &str) -> Result<(), Error> {
+    crate::backend::validate_url(text).map(|_| ())
+}
+/// Select a canonical named snapshot without constructing a host error.
+/// # Errors
+/// Returns usage.name for an absent or ambiguous selection.
+pub fn select_toolbox(toolbox: &questions::Toolbox, name: Option<&str>) -> Result<Question, Error> {
+    let selected = if let Some(name) = name {
+        toolbox.get(name)
+    } else {
+        let mut entries = toolbox.iter();
+        let first = entries.next();
+        if entries.next().is_none() {
+            first.map(|(_, question)| question)
+        } else {
+            None
+        }
+    };
+    selected.cloned().map(Into::into).ok_or_else(|| {
+        Error::from_contract(
+            Code::UsageName,
+            crate::core::diagnostic::requirement(
+                "name",
+                "an existing named question",
+                "no selected question",
+            ),
+        )
+    })
+}
+/// Report host settings that cannot enter the canonical representation.
+#[must_use]
+pub fn settings_conversion_error() -> Error {
+    Error::from_contract(
+        Code::UsageSettings,
+        crate::core::diagnostic::requirement(
+            "settings",
+            "a JSON-representable settings object",
+            "an incompatible host value (contents redacted)",
+        ),
+    )
+}
+/// Report a host question that cannot enter the canonical representation.
+#[must_use]
+pub fn question_conversion_error() -> Error {
+    Error::from_contract(
+        Code::UsageQuestion,
+        crate::core::diagnostic::requirement(
+            "question",
+            "a JSON-representable question object",
+            "an incompatible host value (contents redacted)",
+        ),
+    )
+}
+/// Report a host value that could not enter the canonical record representation.
+#[must_use]
+pub fn record_conversion_error() -> Error {
+    Error::from_contract(
+        Code::RecordInvalid,
+        "the host value cannot be represented as a record",
+    )
+}
+/// Return the engine's own cancellation result after a host releases its call.
+#[must_use]
+pub fn cancelled_error() -> Error {
+    crate::retry::cancelled()
+}
+
+/// Report a call attempted after a host released its client owner.
+#[must_use]
+pub fn closed_client_error() -> Error {
+    Error::from_contract(
+        Code::UsageClosed,
+        crate::core::diagnostic::requirement("client", "an open client", "a closed client"),
+    )
+}
+
+/// Report a wrong native argument value using the engine's stable code and message.
+#[must_use]
+pub fn argument_error(code: Code) -> Error {
+    let (field, expected) = match code {
+        Code::UsageBackend => ("backend", "a known backend"),
+        Code::UsageFunction => ("function", "a known function"),
+        Code::UsageRecordKind => ("record kind", "a known record kind"),
+        Code::UsageOffsets => ("offsets", "a known string offset unit"),
+        Code::UsageName => ("name", "the name of an existing question"),
+        _ => ("argument", "a supported argument value"),
+    };
+    Error::from_contract(
+        code,
+        crate::core::diagnostic::requirement(field, expected, "an unsupported value"),
+    )
+}
+
+/// Admit settings for a native constructor explicitly documented as from-environment.
+/// # Errors
+/// Returns the shared settings error for an invalid request allowance.
+pub fn environment_settings(
+    variable: impl Fn(&str) -> Option<String>,
+) -> Result<crate::Settings, crate::Error> {
+    crate::Settings::default().environment_request_limit(variable("THINKTHEN_MAX_REQUESTS"))
+}
+
+/// Canonical span coordinates retained beside a native host projection.
+#[derive(Debug, Clone)]
+pub struct SpanCoordinates(Vec<(usize, usize)>);
+/// Encode native answer buffers in the selected host string units.
+/// # Errors
+/// Returns the shared internal error if a typed row cannot be encoded.
+pub fn host_row_json(row: &AnyRow) -> Result<(serde_json::Value, SpanCoordinates), Error> {
+    let mut projection = row.clone();
+    let coordinates = crate::core::results::offsets::host(&mut projection);
+    serde_json::to_value(projection)
+        .map(|value| (value, SpanCoordinates(coordinates)))
+        .map_err(|_| internal_error())
+}
+/// Detach an admitted form outcome with its actual parent row metadata.
+/// The resulting row retains neither the other entries nor the original record.
+#[doc(hidden)]
+#[must_use]
+pub fn entry_row(
+    parent: &crate::results::Row<crate::questions::Annotate>,
+    entry: crate::results::AnnotationEntry,
+) -> AnyRow {
+    entry.into_row(parent)
+}
+
+/// Encode a retained form entry in its host string units.
+/// # Errors
+/// Returns the shared internal error if the typed entry cannot be encoded.
+pub fn host_entry_json(
+    entry: &crate::results::AnnotationEntry,
+) -> Result<serde_json::Value, Error> {
+    let mut projection = entry.clone();
+    crate::core::results::offsets::host_entry(&mut projection);
+    serde_json::to_value(projection).map_err(|_| internal_error())
+}
+/// Restore saved-coordinate metadata after decoding native host buffers.
+/// # Errors
+/// Returns the shared row error if the projection's span shape changed.
+pub fn restore_row_coordinates(
+    row: &mut AnyRow,
+    coordinates: &SpanCoordinates,
+) -> Result<(), Error> {
+    crate::core::results::offsets::restore(row, &coordinates.0)
+}
+
+/// Borrow an admitted question's ordered domain for native enum projection.
+#[doc(hidden)]
+#[must_use]
+pub fn question_words(question: &crate::Question) -> Vec<String> {
+    match question {
+        crate::Question::Choose(q) => q
+            .inner
+            .options
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        crate::Question::Tag(q) => q
+            .inner
+            .labels
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        crate::Question::Score(q) => q
+            .inner
+            .levels
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        crate::Question::Rank(q) => q
+            .inner
+            .levels
+            .iter()
+            .map(|v| v.label().to_owned())
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+/// Retain row identity while replacing an unrepresentable host outcome.
+#[doc(hidden)]
+#[must_use]
+pub fn row_failed(row: AnyRow, error: Error) -> AnyRow {
+    row.failure_row(error, None)
+}
+
+/// Replace the admitted identifier for an explicit SQL selected identifier.
+/// SQL-only JSON classes have no typed identifier; their exact bytes remain adapter metadata.
+#[doc(hidden)]
+#[must_use]
+pub fn row_selected_id(mut row: AnyRow, id: &str) -> AnyRow {
+    row.replace_id(serde_json::from_str(id).ok());
+    row
+}
+
+/// Borrow literal evidence or normalize an admitted record through the engine's own field selector.
+/// Failed or missing fields have no selected text. This is metadata, never an answer read.
+#[doc(hidden)]
+#[must_use]
+pub fn selected_text<'a>(
+    record: &'a crate::Record,
+    pointer: &crate::Pointer,
+) -> Option<std::borrow::Cow<'a, str>> {
+    record.selected_text(pointer)
+}
+
+/// Select an annotate entry's evidence through the same inherited-field path as execution.
+#[doc(hidden)]
+#[must_use]
+pub fn selected_entry_text<'a>(
+    record: &'a crate::Record,
+    pointer: &crate::Pointer,
+) -> Option<std::borrow::Cow<'a, str>> {
+    record.selected_entry_text(pointer)
+}

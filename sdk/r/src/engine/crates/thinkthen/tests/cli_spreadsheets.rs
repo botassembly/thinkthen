@@ -1,0 +1,1156 @@
+#![cfg(test)]
+//! File framing appends existing judgments and preserves the caller's content.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
+#[path = "spreadsheets/admission.rs"]
+mod admission;
+#[path = "spreadsheets/cancellation.rs"]
+mod cancellation;
+#[path = "spreadsheets/cells.rs"]
+mod cells;
+#[path = "spreadsheets/dates.rs"]
+mod dates;
+#[path = "spreadsheets/hardening.rs"]
+mod hardening;
+#[path = "spreadsheets/limits.rs"]
+mod limits;
+#[path = "spreadsheets/publication.rs"]
+mod publication;
+mod support;
+use serde_json::{Value, json};
+use std::fs;
+use std::io::{Read, Write};
+use std::path::Path;
+use tempfile::TempDir;
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
+
+fn table(path: &Path, delimiter: u8) -> Vec<Vec<String>> {
+    csv::ReaderBuilder::new()
+        .delimiter(delimiter)
+        .has_headers(false)
+        .from_path(path)
+        .unwrap()
+        .records()
+        .map(|r| r.unwrap().iter().map(str::to_owned).collect())
+        .collect()
+}
+fn write_csv(path: &Path, records: &[Value]) {
+    let mut writer = csv::Writer::from_path(path).unwrap();
+    writer.write_record(["body"]).unwrap();
+    for record in records {
+        writer
+            .write_record([record.as_str().or_else(|| record["body"].as_str()).unwrap()])
+            .unwrap();
+    }
+    writer.flush().unwrap();
+}
+fn request_args(request: &Value) -> Vec<String> {
+    let question = &request["question"];
+    let function = question["function"].as_str().unwrap();
+    let mut args = vec![function.to_owned()];
+    match function {
+        "recognize" => {
+            for kind in question["kinds"].as_array().unwrap() {
+                args.extend(["--kind".into(), kind.as_str().unwrap().into()]);
+            }
+        }
+        "relate" => {
+            for rule in question["rules"].as_array().unwrap() {
+                args.extend([
+                    "--rule".into(),
+                    rule["relation"].as_str().unwrap().into(),
+                    rule["source"].as_str().unwrap().into(),
+                    rule["target"].as_str().unwrap().into(),
+                ]);
+            }
+        }
+        _ => args.push(question["question"].as_str().unwrap().to_owned()),
+    }
+    for (key, flag) in [
+        ("choices", "--choice"),
+        ("labels", "--label"),
+        ("levels", "--level"),
+    ] {
+        if let Some(values) = question[key].as_array() {
+            for value in values {
+                args.extend([flag.to_owned(), value.as_str().unwrap().to_owned()]);
+            }
+        }
+    }
+    if let Some(threshold) = question.get("threshold") {
+        if threshold.is_object() {
+            args.extend([
+                "--low".to_owned(),
+                threshold["low"].to_string(),
+                "--high".to_owned(),
+                threshold["high"].to_string(),
+            ]);
+        } else {
+            args.extend(["--threshold".to_owned(), threshold.to_string()]);
+        }
+    }
+    if let Some(field) = question.get("field").and_then(Value::as_str) {
+        args.extend(["--field".to_owned(), field.to_owned()]);
+    }
+    if let Some(top) = question.get("top") {
+        args.extend(["--top".to_owned(), top.to_string()]);
+    }
+
+    args
+}
+/// The readable cell a spreadsheet user sees for an answered value.
+fn encoded(value: &Value) -> String {
+    match value {
+        Value::Null => String::new(),
+        Value::Bool(true) => "TRUE".into(),
+        Value::Bool(false) => "FALSE".into(),
+        Value::String(s) => s.clone(),
+        Value::Array(items) => items.iter().map(encoded).collect::<Vec<_>>().join("; "),
+        Value::Object(fields) if fields.contains_key("relation") => format!(
+            "{} {} {}",
+            fields["source"]["text"].as_str().unwrap(),
+            fields["relation"].as_str().unwrap(),
+            fields["target"]["text"].as_str().unwrap()
+        ),
+        Value::Object(fields) if fields.contains_key("kind") => format!(
+            "{} ({})",
+            fields["text"].as_str().unwrap(),
+            fields["kind"].as_str().unwrap()
+        ),
+        Value::Object(fields) => fields["text"].as_str().unwrap().to_owned(),
+        _ => value.to_string(),
+    }
+}
+
+#[test]
+fn in_place_preserves_a_workbook_saved_or_opened_during_the_request() {
+    for change_source in [true, false] {
+        let directory = TempDir::new().unwrap();
+        let input = directory.path().join("requests.xlsx");
+        workbook(&input);
+        let original = fs::read(&input).unwrap();
+        let previous = directory.path().join("requests.thinkthen.xlsx");
+        fs::write(&previous, b"a prior completed output").unwrap();
+        let changed = input.clone();
+        let server = loopback::Loopback::answering(move |_| {
+            if change_source {
+                // The request proves the source snapshot has already been read.
+                fs::write(&changed, b"another program's completed save").unwrap();
+            } else {
+                fs::write(changed.with_file_name("~$requests.xlsx"), b"owner").unwrap();
+            }
+            json!({"type": "noul", "noul": 0.99})
+        })
+        .unwrap();
+        let result = support::command()
+            .args(["decide", "Ready?", "--from", "xlsx"])
+            .arg(&input)
+            .args([
+                "--sheet",
+                "Intake",
+                "--column",
+                "Body",
+                "--into",
+                "ready",
+                "--in-place",
+                "--details",
+                "--url",
+                server.base(),
+            ])
+            .env("THINKTHEN_API_KEY", loopback::KEY)
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(5), "{result:?}");
+        // Found after the answers exist, so the source is left alone and the output kept.
+        assert_eq!(support::reported(&result), "local.io");
+        assert!(server.count() > 0);
+        assert_eq!(
+            fs::read(&input).unwrap(),
+            if change_source {
+                b"another program's completed save".to_vec()
+            } else {
+                original
+            }
+        );
+        assert_eq!(fs::read(previous).unwrap(), b"a prior completed output");
+        let kept = directory.path().join("requests.thinkthen-2.xlsx");
+        let diagnostic = String::from_utf8(result.stderr).unwrap();
+        assert!(diagnostic.contains(kept.to_str().unwrap()), "{diagnostic}");
+        let mut archive = ZipArchive::new(fs::File::open(&kept).unwrap()).unwrap();
+        let mut sheet = String::new();
+        archive
+            .by_name("xl/worksheets/sheet1.xml")
+            .unwrap()
+            .read_to_string(&mut sheet)
+            .unwrap();
+        assert!(sheet.contains("ready_status"));
+        assert!(sheet.contains("answered"));
+        assert!(sheet.contains("alpha"));
+    }
+}
+
+#[test]
+fn function_tables_append_readable_answers_without_reordering_source_rows() {
+    let directory = TempDir::new().unwrap();
+    let cases: Vec<Value> =
+        serde_json::from_str(include_str!("../../../construction/stub.json")).unwrap();
+    for mut case in cases {
+        let records = case["request"]["records"].as_array().unwrap();
+        let positions: Vec<_> = records
+            .iter()
+            .enumerate()
+            .filter(|(_, record)| {
+                record.is_string() || record["body"].is_string() && record["id"].is_string()
+            })
+            .map(|(index, _)| index + 1)
+            .collect();
+        let records: Vec<_> = positions
+            .iter()
+            .map(|position| records[position - 1].clone())
+            .collect();
+        case["request"]["records"] = json!(records);
+        case["expected"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|row| positions.contains(&(row["position"].as_u64().unwrap() as usize)));
+        let request = &case["request"];
+        let function = request["question"]["function"].as_str().unwrap();
+        if function == "annotate" {
+            // One column replaces this case's per-question pointers, so its
+            // stored answers do not apply; `cli_annotation_columns` owns annotate.
+            continue;
+        }
+        let input = directory.path().join(format!("{function}.csv"));
+        write_csv(&input, request["records"].as_array().unwrap());
+        let mut command = support::command();
+        command
+            .args(request_args(request))
+            .args(["--backend", "stub", "--from", "csv"])
+            .arg(&input)
+            .args(["--column", "body", "--details", "--into", "result"]);
+        let output = command.output().unwrap();
+        assert!(
+            output.status.code() == Some(0),
+            "{function}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let destination = input.with_file_name(format!("{function}.thinkthen.csv"));
+        let rows = table(&destination, b',');
+        let records = request["records"].as_array().unwrap();
+        let outcome = |position: usize| {
+            case["expected"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["position"] == position)
+        };
+        // Filter writes only its kept rows; every other function keeps them all.
+        let shown: Vec<usize> = (1..=records.len())
+            .filter(|position| {
+                function != "filter" || outcome(*position).is_some_and(|row| row["answer"] == true)
+            })
+            .collect();
+        assert_eq!(rows.len(), shown.len() + 1, "{function}");
+        let column = rows[0].iter().position(|h| h == "result").unwrap();
+        for (line, position) in shown.into_iter().enumerate() {
+            let row = &rows[line + 1];
+            let original = &records[position - 1];
+            assert_eq!(
+                row[0],
+                original
+                    .as_str()
+                    .or_else(|| original["body"].as_str())
+                    .unwrap()
+            );
+            let Some(outcome) = outcome(position) else {
+                continue;
+            };
+            let answer = if outcome["status"] == "answered" {
+                encoded(&outcome["answer"])
+            } else {
+                String::new()
+            };
+            assert_eq!(row[column], answer, "{function} answer");
+            assert_eq!(row[column + 1], outcome["status"].as_str().unwrap());
+            if let Some(p) = outcome.get("probability") {
+                assert_eq!(row[column + 2].parse::<f64>().unwrap(), p.as_f64().unwrap());
+            }
+        }
+    }
+}
+
+#[test]
+fn filter_writes_only_kept_rows_in_file_order() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("filter.csv");
+    fs::write(
+        &input,
+        "Body\npositive one\nnegative\nuncertain\npositive two\n",
+    )
+    .unwrap();
+    let entry = directory.path().join("filter.json");
+    fs::write(
+        &entry,
+        r#"{"question":{"function":"filter","question":"Keep?","threshold":0.8}}"#,
+    )
+    .unwrap();
+    let server = loopback::Loopback::answering(|question| {
+        let text = question["instructions"].as_str().unwrap();
+        let probability = if text.contains("positive") {
+            0.9
+        } else if text.contains("negative") {
+            0.1
+        } else {
+            0.5
+        };
+        json!({"type":"noul","noul":probability})
+    })
+    .unwrap();
+    let output = support::command()
+        .args(["run", "--allow-shell"])
+        .arg(&entry)
+        .args(["--from", "csv"])
+        .arg(&input)
+        .args([
+            "--column",
+            "Body",
+            "--into",
+            "result",
+            "--url",
+            server.base(),
+        ])
+        .env("THINKTHEN_API_KEY", loopback::KEY)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(
+        fs::read_to_string(directory.path().join("filter.thinkthen.csv")).unwrap(),
+        "Body,result\npositive one,TRUE\npositive two,TRUE\n"
+    );
+}
+
+#[test]
+fn tsv_keeps_original_bytes_and_in_place_keeps_distinct_backups() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("notes.tsv");
+    let original = b"\xef\xbb\xbfBody\tCode\r\n\"alpha\"\t001\r\n\"line one\nline two\"\t002";
+    fs::write(&input, original).unwrap();
+    let lock = directory.path().join(".notes.tsv.thinkthen.lock");
+    fs::write(&lock, "").unwrap();
+    let blocked = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "tsv"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready", "--in-place"])
+        .output()
+        .unwrap();
+    assert_eq!(blocked.status.code(), Some(5));
+    assert_eq!(fs::read(&input).unwrap(), original);
+    assert!(!directory.path().join("notes.backup.tsv").exists());
+    fs::remove_file(&lock).unwrap();
+    for backup in ["notes.backup.tsv", "notes.backup-2.tsv"] {
+        let output = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "tsv"])
+            .arg(&input)
+            .args(["--column", "Body", "--into", "ready", "--in-place"])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(fs::read(directory.path().join(backup)).unwrap(), original);
+        let result = fs::read(&input).unwrap();
+        assert!(result.starts_with(b"\xef\xbb\xbfBody\tCode\tready"));
+        assert!(
+            result
+                .windows(b"\"alpha\"\t001\t".len())
+                .any(|w| w == b"\"alpha\"\t001\t")
+        );
+        assert_eq!(result.windows(2).filter(|w| *w == b"\r\n").count(), 2);
+        assert!(!result.ends_with(b"\n"));
+        assert!(!lock.exists());
+        fs::write(&input, original).unwrap();
+    }
+}
+
+#[test]
+fn malformed_records_and_name_collisions_fail_before_publication() {
+    let directory = TempDir::new().unwrap();
+    for (number, contents, message) in [
+        (0, "Body,Code\nalpha,1,extra\n", "row 2 (line 2)"),
+        (1, "Body\nalpha\"broken\n", "quote"),
+        (2, "Body\n\"line one\nline two\n", "row 2 (line 2)"),
+        (3, "Body,ready\nalpha,manual\n", "already exists"),
+        (4, "Body,Body\nalpha,beta\n", "unique"),
+    ] {
+        let path = directory.path().join(format!("bad-{number}.csv"));
+        fs::write(&path, contents).unwrap();
+        let output = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
+            .arg(&path)
+            .args(["--column", "Body", "--into", "ready"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(message),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            !path
+                .with_file_name(format!("bad-{number}.thinkthen.csv"))
+                .exists()
+        );
+        assert_eq!(fs::read_to_string(&path).unwrap(), contents);
+    }
+}
+
+fn workbook(path: &Path) {
+    let mut zip = ZipWriter::new(fs::File::create(path).unwrap());
+    for (name, contents) in [
+        (
+            "[Content_Types].xml",
+            "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/><Override PartName=\"/xl/tables/table1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/></Types>",
+        ),
+        (
+            "_rels/.rels",
+            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+        ),
+        (
+            "xl/workbook.xml",
+            "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Intake\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Keep\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>",
+        ),
+        (
+            "xl/_rels/workbook.xml.rels",
+            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/><Relationship Id=\"styles\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/></Relationships>",
+        ),
+        (
+            "xl/worksheets/sheet1.xml",
+            "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><dimension ref=\"A1:B2\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetData><row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>Body</t></is></c><c r=\"B1\" t=\"inlineStr\"><is><t>Formula</t></is></c></row><row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t>alpha</t></is></c><c r=\"B2\" s=\"1\"><f>1+2</f><v>3</v></c></row></sheetData><tableParts count=\"1\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><tablePart r:id=\"tableRel\"/></tableParts></worksheet>",
+        ),
+        (
+            "xl/worksheets/_rels/sheet1.xml.rels",
+            r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="tableRel" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table1.xml"/></Relationships>"#,
+        ),
+        (
+            "xl/tables/table1.xml",
+            r#"<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="IntakeTable" displayName="IntakeTable" ref="A1:B2" totalsRowShown="0"><autoFilter ref="A1:B2"/><tableColumns count="2"><tableColumn id="1" name="Body"/><tableColumn id="2" name="Formula"/></tableColumns></table>"#,
+        ),
+        (
+            "xl/styles.xml",
+            r#"<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>"#,
+        ),
+        (
+            "xl/worksheets/sheet2.xml",
+            "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>Keep me</t></is></c></row></sheetData></worksheet>",
+        ),
+    ] {
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(contents.as_bytes()).unwrap();
+    }
+    zip.finish().unwrap();
+}
+fn member(path: &Path, name: &str) -> Vec<u8> {
+    let mut zip = ZipArchive::new(fs::File::open(path).unwrap()).unwrap();
+    let mut bytes = Vec::new();
+    zip.by_name(name).unwrap().read_to_end(&mut bytes).unwrap();
+    bytes
+}
+
+#[test]
+fn excel_appends_typed_cells_preserving_formulas_and_other_sheet_parts() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("book.xlsx");
+    workbook(&input);
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+        .arg(&input)
+        .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let destination = directory.path().join("book.thinkthen.xlsx");
+    for name in [
+        "[Content_Types].xml",
+        "_rels/.rels",
+        "xl/workbook.xml",
+        "xl/_rels/workbook.xml.rels",
+        "xl/worksheets/sheet2.xml",
+        "xl/styles.xml",
+        "xl/worksheets/_rels/sheet1.xml.rels",
+        "xl/tables/table1.xml",
+    ] {
+        assert_eq!(member(&input, name), member(&destination, name), "{name}");
+    }
+    let sheet = String::from_utf8(member(&destination, "xl/worksheets/sheet1.xml")).unwrap();
+    assert!(sheet.contains("<c r=\"B2\" s=\"1\"><f>1+2</f><v>3</v></c>"));
+    assert!(sheet.contains("<c r=\"C2\" t=\"b\"><v>1</v></c>"));
+    // One answer column by default.
+    assert!(!sheet.contains("ready_status"));
+    assert!(sheet.contains("ref=\"A1:C2\""));
+    let bytes = fs::read(&destination).unwrap();
+    let repeated = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+        .arg(&input)
+        .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+        .output()
+        .unwrap();
+    assert_eq!(repeated.status.code(), Some(2));
+    assert_eq!(fs::read(&destination).unwrap(), bytes);
+}
+
+#[test]
+fn saved_function_uses_file_framing_and_shell_chains_refuse_it() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("in.csv");
+    fs::write(&input, "Body\nalpha\n").unwrap();
+    let entry = directory.path().join("ready.json");
+    fs::write(
+        &entry,
+        json!({"question":{"function":"decide","question":"Ready?"}}).to_string(),
+    )
+    .unwrap();
+    let output = support::command()
+        .args(["run", "--allow-shell"])
+        .arg(&entry)
+        .args(["--backend", "stub", "--from", "csv"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        table(&directory.path().join("in.thinkthen.csv"), b',')[1][1],
+        "TRUE"
+    );
+    fs::write(
+        &entry,
+        json!({"run":[{"shell":["sh","-c","exit 99"]}]}).to_string(),
+    )
+    .unwrap();
+    let output = support::command()
+        .args(["run", "--allow-shell"])
+        .arg(&entry)
+        .args(["--backend", "stub", "--from", "csv"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("single-function entry"));
+}
+
+fn change_sheet(path: &Path, change: impl FnOnce(String) -> String) {
+    let mut archive = ZipArchive::new(fs::File::open(path).unwrap()).unwrap();
+    let mut parts = Vec::new();
+    for index in 0..archive.len() {
+        let mut file = archive.by_index(index).unwrap();
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).unwrap();
+        parts.push((file.name().unwrap().into_owned(), bytes));
+    }
+    drop(archive);
+    let mut change = Some(change);
+    let mut output = ZipWriter::new(fs::File::create(path).unwrap());
+    for (name, bytes) in parts {
+        output
+            .start_file(&name, SimpleFileOptions::default())
+            .unwrap();
+        if name == "xl/worksheets/sheet1.xml" {
+            output
+                .write_all(change.take().unwrap()(String::from_utf8(bytes).unwrap()).as_bytes())
+                .unwrap();
+        } else {
+            output.write_all(&bytes).unwrap();
+        }
+    }
+    output.finish().unwrap();
+}
+
+#[test]
+fn excel_handles_prefixed_sparse_rows_and_literal_escape_patterns() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("prefix.xlsx");
+    workbook(&input);
+    change_sheet(&input, |sheet| {
+        sheet
+            .replace("</sheetData>", "<row r=\"4\"/></sheetData>")
+            .replace("xmlns=", "xmlns:s=")
+            .replace("<", "<s:")
+            .replace("<s:/", "</s:")
+    });
+    let output = support::command()
+        .args([
+            "choose",
+            "Pick",
+            "--choice",
+            "_x0041_",
+            "--choice",
+            "_x0042_",
+            "--backend",
+            "stub",
+            "--from",
+            "xlsx",
+        ])
+        .arg(&input)
+        .args(["--sheet", "Intake", "--column", "Body", "--into", "choice"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let sheet = String::from_utf8(member(
+        &directory.path().join("prefix.thinkthen.xlsx"),
+        "xl/worksheets/sheet1.xml",
+    ))
+    .unwrap();
+    assert!(sheet.contains("<s:t xml:space=\"preserve\">_x005F_x004"));
+    assert!(sheet.contains("<s:c r=\"B2\" s=\"1\"><s:f>1+2</s:f><s:v>3</s:v></s:c>"));
+    assert!(sheet.contains("<s:row r=\"4\"></s:row>"));
+}
+
+#[test]
+fn excel_reports_missing_caches_and_selected_merges_without_output() {
+    let directory = TempDir::new().unwrap();
+    for (name, column, code, cause) in [
+        ("cache", "Formula", "usage.table", "without a saved value"),
+        ("merge", "Body", "usage.column", "merged cells"),
+    ] {
+        let input = directory.path().join(format!("{name}.xlsx"));
+        workbook(&input);
+        change_sheet(&input, |sheet| {
+            if name == "cache" {
+                sheet.replace("<v>3</v>", "")
+            } else {
+                sheet.replace(
+                    "</sheetData>",
+                    "</sheetData><mergeCells count=\"1\"><mergeCell ref=\"A2:A3\"/></mergeCells>",
+                )
+            }
+        });
+        let output = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+            .arg(&input)
+            .args(["--sheet", "Intake", "--column", column, "--into", "ready"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(support::reported(&output), code);
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(cause),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            !directory
+                .path()
+                .join(format!("{name}.thinkthen.xlsx"))
+                .exists()
+        );
+    }
+}
+
+fn replace_member(path: &Path, name: &str, contents: &[u8]) {
+    let mut archive = ZipArchive::new(fs::File::open(path).unwrap()).unwrap();
+    let mut parts = Vec::new();
+    for index in 0..archive.len() {
+        let mut file = archive.by_index(index).unwrap();
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).unwrap();
+        if file.name().unwrap() != name {
+            parts.push((file.name().unwrap().into_owned(), bytes));
+        }
+    }
+    drop(archive);
+    parts.push((name.into(), contents.to_vec()));
+    let mut output = ZipWriter::new(fs::File::create(path).unwrap());
+    for (name, bytes) in parts {
+        output
+            .start_file(name, SimpleFileOptions::default())
+            .unwrap();
+        output.write_all(&bytes).unwrap();
+    }
+    output.finish().unwrap();
+}
+
+#[test]
+fn excel_value_decoding_retains_numeric_text_and_shared_string_indexes() {
+    let directory = TempDir::new().unwrap();
+    for (name, field, replacement) in [
+        (
+            "number",
+            "9007199254740993",
+            "<c r=\"A2\"><v>9007199254740993</v></c>",
+        ),
+        ("shared", "alpha", "<c r=\"A2\" t=\"s\"><v>1</v></c>"),
+    ] {
+        let input = directory.path().join(format!("{name}.xlsx"));
+        workbook(&input);
+        change_sheet(&input, |sheet| {
+            sheet.replace(
+                "<c r=\"A2\" t=\"inlineStr\"><is><t>alpha</t></is></c>",
+                replacement,
+            )
+        });
+        if name == "shared" {
+            replace_member(&input, "xl/sharedStrings.xml", br#"<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si/><si><t>a<![CDATA[l]]>&#112;ha</t><rPh sb="0" eb="5"><t>pronunciation</t></rPh></si></sst>"#);
+        }
+        let reference = directory.path().join(format!("{name}.csv"));
+        fs::write(&reference, format!("Body\n{field}\n")).unwrap();
+        let csv = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
+            .arg(&reference)
+            .args(["--column", "Body", "--into", "ready", "--details"])
+            .output()
+            .unwrap();
+        assert!(csv.status.success());
+        let expected = table(
+            &directory.path().join(format!("{name}.thinkthen.csv")),
+            b',',
+        );
+        let output = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+            .arg(&input)
+            .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+            .arg("--details")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{name}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let sheet = String::from_utf8(member(
+            &directory.path().join(format!("{name}.thinkthen.xlsx")),
+            "xl/worksheets/sheet1.xml",
+        ))
+        .unwrap();
+        let boolean = if expected[1][1] == "TRUE" { "1" } else { "0" };
+        assert!(
+            sheet.contains(&format!("<c r=\"C2\" t=\"b\"><v>{boolean}</v></c>")),
+            "{name}: {sheet}"
+        );
+        assert!(
+            sheet.contains(&format!(
+                "<c r=\"E2\" t=\"n\"><v>{}</v></c>",
+                expected[1][3]
+            )),
+            "{name}: {sheet}"
+        );
+    }
+}
+
+#[test]
+fn excel_rejects_inconsistent_or_truncated_rows_and_preserves_foreign_extensions() {
+    let directory = TempDir::new().unwrap();
+    for (name, replacement) in [
+        (
+            "address",
+            "<row r=\"2\"><c r=\"A3\" t=\"inlineStr\"><is><t>alpha</t></is></c></row></sheetData></worksheet>",
+        ),
+        (
+            "order",
+            "<row r=\"4\"/><row r=\"3\"/></sheetData></worksheet>",
+        ),
+        (
+            "duplicate",
+            "<row r=\"2\"><c r=\"A2\"><v>1</v></c><c r=\"A2\"/></row></sheetData></worksheet>",
+        ),
+        (
+            "truncated",
+            "<row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t>alpha</t></is></c></row>",
+        ),
+    ] {
+        let input = directory.path().join(format!("{name}.xlsx"));
+        workbook(&input);
+        change_sheet(&input, |sheet| {
+            format!(
+                "{}{replacement}",
+                sheet.split("<row r=\"2\">").next().unwrap()
+            )
+        });
+        let output = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+            .arg(&input)
+            .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{name}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            !directory
+                .path()
+                .join(format!("{name}.thinkthen.xlsx"))
+                .exists()
+        );
+    }
+    let input = directory.path().join("extension.xlsx");
+    workbook(&input);
+    let extension = "<extLst><ext uri=\"urn:example\"><ext:row xmlns:ext=\"urn:example\" r=\"77\"><ext:c r=\"Z77\"><ext:v>example data</ext:v></ext:c></ext:row></ext></extLst>";
+    change_sheet(&input, |sheet| {
+        sheet
+            .replace(
+                "<dimension ref=\"A1:B2\"/>",
+                "<dimension ref=\"A1:B2\"></dimension>",
+            )
+            .replace("</worksheet>", &format!("{extension}</worksheet>"))
+    });
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+        .arg(&input)
+        .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let sheet = String::from_utf8(member(
+        &directory.path().join("extension.thinkthen.xlsx"),
+        "xl/worksheets/sheet1.xml",
+    ))
+    .unwrap();
+    assert!(sheet.contains(extension));
+    assert!(sheet.contains("<dimension ref=\"A1:C2\"></dimension>"));
+}
+
+#[test]
+fn excel_refuses_declared_signatures_and_other_workbook_content_types() {
+    let directory = TempDir::new().unwrap();
+    for (name, content_type) in [
+        (
+            "macro",
+            "application/vnd.ms-excel.sheet.macroEnabled.main+xml",
+        ),
+        (
+            "signature",
+            "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml",
+        ),
+    ] {
+        let input = directory.path().join(format!("{name}.xlsx"));
+        workbook(&input);
+        let original = String::from_utf8(member(&input, "[Content_Types].xml")).unwrap();
+        let types = if name == "macro" {
+            original.replace(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+                content_type,
+            )
+        } else {
+            original.replace("</Types>", &format!("<Override PartName=\"/custom/signature.xml\" ContentType=\"{content_type}\"/></Types>"))
+        };
+        replace_member(&input, "[Content_Types].xml", types.as_bytes());
+        let output = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+            .arg(&input)
+            .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{name}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(String::from_utf8_lossy(&output.stderr).contains(".xlsx copy"));
+        assert!(
+            !directory
+                .path()
+                .join(format!("{name}.thinkthen.xlsx"))
+                .exists()
+        );
+    }
+}
+
+#[test]
+fn backend_only_table_failures_exit_four_for_direct_and_saved_calls() {
+    for saved in [false, true] {
+        let directory = TempDir::new().unwrap();
+        let input = directory.path().join("records.csv");
+        fs::write(&input, "body\nevidence\n").unwrap();
+        let server = loopback::Loopback::answering(|_| json!({})).unwrap();
+        let entry = directory.path().join("run.json");
+        fs::write(
+            &entry,
+            json!({"question":{"function":"decide","question":"Ready?"}}).to_string(),
+        )
+        .unwrap();
+        let mut command = support::command();
+        if saved {
+            command.args(["run", "--allow-shell"]).arg(entry);
+        } else {
+            command.args(["decide", "Ready?"]);
+        }
+        let output = command
+            .args(["--from", "csv", "--column", "body", "--into", "ready"])
+            .args(["--details"])
+            .arg(&input)
+            .env("THINKTHEN_API_KEY", loopback::KEY)
+            .env("THINKTHEN_BASE_URL", server.base())
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(6),
+            "saved={saved}, stderr={:?}",
+            output.stderr
+        );
+        assert!(
+            String::from_utf8(output.stderr)
+                .unwrap()
+                .contains("backend.reply")
+        );
+        let result = directory.path().join("records.thinkthen.csv");
+        assert!(
+            fs::read_to_string(result)
+                .unwrap()
+                .contains("backend.reply")
+        );
+    }
+}
+
+#[test]
+fn workbook_individual_shared_string_uses_the_record_byte_limit() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("shared-limit.xlsx");
+    workbook(&input);
+    let mut strings =
+        String::from("<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">");
+    let text = "x".repeat(1024 * 1024);
+    strings.push_str("<si><t>");
+    for _ in 0..65 {
+        strings.push_str(&text);
+    }
+    strings.push_str("</t></si>");
+    // A malformed suffix proves admission stops when the text limit is reached.
+    strings.push_str("<broken");
+    replace_member(&input, "xl/sharedStrings.xml", strings.as_bytes());
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready", "--sheet", "Intake"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    assert!(output.stdout.is_empty());
+    let error = String::from_utf8(output.stderr).unwrap();
+    assert!(error.contains("usage.table"), "{error}");
+    assert!(error.contains("record exceeds the 64 MiB limit"), "{error}");
+    assert!(
+        !directory
+            .path()
+            .join("shared-limit.thinkthen.xlsx")
+            .exists()
+    );
+}
+
+#[test]
+fn spreadsheet_choices_ignore_the_environment() {
+    let directory = TempDir::new().unwrap();
+    let csv = directory.path().join("input.csv");
+    let original = "Body\nevidence\n";
+    fs::write(&csv, original).unwrap();
+    let elsewhere = directory.path().join("elsewhere.csv");
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub"])
+        .arg(&csv)
+        .args(["--column", "Body", "--into", "ready"])
+        .env("THINKTHEN_IN_PLACE", "true")
+        .env("THINKTHEN_OUTPUT", &elsewhere)
+        .env("THINKTHEN_SHEET", "Intake")
+        .env("THINKTHEN_COLUMNS", r#"["Other"]"#)
+        .env("THINKTHEN_INTO", "other")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    // An exported setting never replaces the source or moves the output.
+    assert_eq!(fs::read_to_string(&csv).unwrap(), original);
+    assert!(!elsewhere.exists());
+    let result = directory.path().join("input.thinkthen.csv");
+    assert_eq!(table(&result, b',')[0], ["Body", "ready"]);
+    let missing = support::command()
+        .args(["decide", "Ready?", "--backend", "stub"])
+        .arg(&csv)
+        .env("THINKTHEN_COLUMNS", r#"["Body"]"#)
+        .env("THINKTHEN_INTO", "ready")
+        .output()
+        .unwrap();
+    assert_eq!(missing.status.code(), Some(2), "{missing:?}");
+}
+
+#[test]
+fn table_mistakes_print_the_code_naming_what_to_change() {
+    let directory = TempDir::new().unwrap();
+    for (name, contents) in [
+        ("good.csv", "Body,ready\nhello,no\n"),
+        ("taken.csv", ""),
+        ("ragged.csv", "Body\nhello,extra\n"),
+        ("repeated.csv", "Body,Body\nhello,there\n"),
+        ("empty.csv", ""),
+    ] {
+        fs::write(directory.path().join(name), contents).unwrap();
+    }
+    for (question, arguments, code) in [
+        (
+            "Ready?",
+            "good.csv --column Bdy --into answer",
+            "usage.column",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --column Body --into answer",
+            "usage.column",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --into ready",
+            "usage.column",
+        ),
+        (
+            "Ready?",
+            "good.csv --sheet Intake --column Body --into answer",
+            "usage.sheet",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --into answer --output taken.csv",
+            "usage.output",
+        ),
+        (
+            "Ready?",
+            "good.csv --column Body --into answer --output answers.txt",
+            "usage.output",
+        ),
+        (
+            "Ready?",
+            "ragged.csv --column Body --into answer",
+            "usage.table",
+        ),
+        (
+            "Ready?",
+            "repeated.csv --column Body --into answer",
+            "usage.table",
+        ),
+        (
+            "Ready?",
+            "empty.csv --column Body --into answer",
+            "usage.table",
+        ),
+        ("", "good.csv --column Body --into answer", "usage.question"),
+        (
+            "Ready?",
+            "good.csv --column Body --into answer --in-place --output new.csv",
+            "usage.option",
+        ),
+    ] {
+        let output = support::command()
+            .current_dir(directory.path())
+            .args(["decide", question, "--backend", "stub"])
+            .args(arguments.split(' '))
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2), "{arguments}: {output:?}");
+        assert_eq!(support::reported(&output), code, "{arguments}: {output:?}");
+    }
+    assert_eq!(fs::read(directory.path().join("taken.csv")).unwrap(), b"");
+    assert!(!directory.path().join("good.thinkthen.csv").exists());
+}
+
+fn csv_answers(server: &loopback::Loopback, input: &str) -> std::process::Output {
+    let mut child = support::command()
+        .args(["decide", "Ready?", "--from", "csv"])
+        .args(["--column", "Body", "--into", "ready"])
+        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_API_KEY", loopback::KEY)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn trailing_blank_csv_lines_are_ignored() {
+    for (input, table, requests) in [
+        ("Body\nhello\n\n\r\n\n", "Body,ready\nhello,TRUE\n", 1),
+        (
+            "Body,Note\r\nhello,x\r\n\r\n",
+            "Body,Note,ready\r\nhello,x,TRUE\r\n",
+            1,
+        ),
+        ("Body\n\"a\n\nb\"\n\n", "Body,ready\n\"a\n\nb\",TRUE\n", 1),
+        ("Body\n\n", "Body,ready\n", 0),
+    ] {
+        let server = loopback::Loopback::noul(0.9).unwrap();
+        let output = csv_answers(&server, input);
+        assert_eq!(output.status.code(), Some(0), "{input:?}: {output:?}");
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            table,
+            "{input:?}"
+        );
+        assert_eq!(server.count(), requests, "{input:?}");
+    }
+}
+
+#[test]
+fn a_blank_csv_line_inside_the_data_is_refused_by_line() {
+    for (input, place) in [
+        ("Body\nhello\n\nworld\n", "row 3 (line 3)"),
+        (
+            "Body,Note\r\nhello,x\r\n\r\n\r\nworld,y\r\n",
+            "row 3 (line 3)",
+        ),
+        ("Body\n\"a\nb\"\n\nworld\n", "row 3 (line 4)"),
+        ("\nBody\nhello\n", "row 1 (line 1)"),
+    ] {
+        let server = loopback::Loopback::noul(0.9).unwrap();
+        let output = csv_answers(&server, input);
+        assert_eq!(output.status.code(), Some(2), "{input:?}: {output:?}");
+        assert_eq!(support::reported(&output), "usage.table", "{input:?}");
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains(place), "{input:?}: {error}");
+        assert!(error.contains("blank line"), "{input:?}: {error}");
+        assert!(output.stdout.is_empty(), "{input:?}");
+        assert_eq!(server.count(), 0, "{input:?}");
+    }
+}
+
+#[test]
+fn an_empty_quoted_csv_cell_stays_a_failed_row() {
+    let server = loopback::Loopback::noul(0.9).unwrap();
+    let output = csv_answers(&server, "Body\n\"\"\nworld\n");
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("record.empty"), "{error}");
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "Body,ready\n\"\",\nworld,TRUE\n"
+    );
+}

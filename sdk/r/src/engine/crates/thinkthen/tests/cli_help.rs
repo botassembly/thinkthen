@@ -1,0 +1,103 @@
+#![cfg(test)]
+//! Help and file diagnostics teach the current command grammar.
+#![cfg(feature = "command")]
+
+mod support;
+
+#[test]
+fn help_lists_current_options_and_settings() {
+    for name in [
+        None,
+        Some("decide"),
+        Some("filter"),
+        Some("choose"),
+        Some("tag"),
+        Some("score"),
+        Some("rank"),
+        Some("find"),
+        Some("annotate"),
+        Some("recognize"),
+        Some("relate"),
+        Some("run"),
+    ] {
+        let mut command = support::command();
+        if let Some(name) = name {
+            command.arg(name);
+        }
+        let output = command.arg("--help").output().unwrap();
+        assert!(output.status.success(), "{name:?}: {output:?}");
+        let help = String::from_utf8(output.stdout).unwrap();
+        for current in [
+            "--backend",
+            "--field",
+            "--from",
+            "--json",
+            "THINKTHEN_API_KEY",
+            "OPENAI_API_KEY",
+            "THINKTHEN_URL or THINKTHEN_BASE_URL (System One only)",
+            "OPENAI_BASE_URL (OpenAI only)",
+            "--url overrides the chosen backend",
+            "THINKTHEN_CA_FILE",
+            "Exits:",
+            "6 failed records",
+        ] {
+            assert!(help.contains(current), "{name:?}: missing {current}");
+        }
+        let lines: Vec<_> = help.lines().collect();
+        for (index, line) in lines.iter().enumerate() {
+            if line.starts_with("  ") && line.trim_start().starts_with(['-', '[', '<']) {
+                let inline = line
+                    .trim()
+                    .split("  ")
+                    .filter(|part| !part.is_empty())
+                    .count()
+                    >= 2;
+                // Clap wraps descriptions when the longest flag widens its column.
+                let wrapped = lines.get(index + 1).is_some_and(|next| {
+                    next.starts_with("  ")
+                        && !next.trim().is_empty()
+                        && !next.trim_end().ends_with(':')
+                        && !next.trim_start().starts_with(['-', '[', '<'])
+                });
+                assert!(inline || wrapped, "missing description: {line}");
+            }
+        }
+    }
+}
+
+#[test]
+fn single_column_diagnostic_names_the_current_evidence_option() {
+    let directory = tempfile::tempdir().unwrap();
+    let input = directory.path().join("requests.csv");
+    std::fs::write(&input, "Body\nready\n").unwrap();
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready", "--field", "/Body"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    assert!(output.stdout.is_empty());
+    let diagnostic = String::from_utf8(output.stderr).unwrap();
+    assert!(diagnostic.contains("usage.option"), "{diagnostic}");
+    assert!(diagnostic.contains("omit --field"), "{diagnostic}");
+    assert!(!diagnostic.contains("--on"), "{diagnostic}");
+    assert!(!diagnostic.contains("--details"), "{diagnostic}");
+    assert!(!directory.path().join("requests.thinkthen.csv").exists());
+}
+
+#[test]
+fn top_level_help_describes_every_function() {
+    let output = support::command().arg("--help").output().unwrap();
+    assert!(output.status.success());
+    let help = String::from_utf8(output.stdout).unwrap();
+    for function in thinkthen::FunctionName::ALL {
+        let name = serde_json::to_value(function).unwrap();
+        let name = name.as_str().unwrap();
+        let line = help
+            .lines()
+            .find(|line| line.trim_start().starts_with(&format!("{name} ")))
+            .unwrap();
+        assert!(line.split_whitespace().count() > 2, "{line}");
+    }
+}

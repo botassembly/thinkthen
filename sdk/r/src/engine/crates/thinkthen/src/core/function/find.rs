@@ -1,0 +1,173 @@
+//! Find the line that best answers a question.
+
+use std::collections::BTreeMap;
+
+use crate::core::{
+    Answer, Ask, ChoiceOption, Detail, Error, ErrorKind, Outcome, Threshold, Verdict,
+};
+
+/// A question selecting one nonblank line of each record.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub(crate) struct Find {
+    pub(crate) text: String,
+    pub(crate) threshold: Threshold,
+}
+
+// Schema derives emit metadata maps in sibling impls, scoped to result values.
+#[allow(
+    clippy::disallowed_types,
+    reason = "schema derivation builds metadata; evidence remains typed"
+)]
+mod output {
+
+    /// A chosen line and its Unicode scalar offsets in the record.
+    #[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
+    pub(crate) struct Span {
+        /// The line without its line ending.
+        pub(crate) text: String,
+        /// Inclusive start, counted in Unicode scalar values.
+        pub(crate) start: usize,
+        /// Exclusive end, counted in Unicode scalar values.
+        pub(crate) end: usize,
+    }
+}
+pub(crate) use output::Span;
+
+impl Find {
+    /// Create a nonblank question.
+    ///
+    /// # Errors
+    /// Returns `usage.question` for a blank question.
+    pub(crate) fn new(text: impl Into<String>) -> Result<Self, Error> {
+        let text = text.into();
+        if text.trim().is_empty() {
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement("question", "nonblank text", "blank text"),
+            ));
+        }
+        Ok(Self {
+            text,
+            threshold: Threshold::default(),
+        })
+    }
+}
+
+pub(crate) fn units(text: &str) -> Vec<Span> {
+    let mut start = 0;
+    text.split_inclusive('\n')
+        .filter_map(|part| {
+            let line = part.strip_suffix('\n').unwrap_or(part);
+            let line = if part.ends_with('\n') {
+                line.strip_suffix('\r').unwrap_or(line)
+            } else {
+                line
+            };
+            let unit = Span {
+                text: line.to_owned(),
+                start,
+                end: start + line.chars().count(),
+            };
+            start += part.chars().count();
+            (!line.trim().is_empty()).then_some(unit)
+        })
+        .collect()
+}
+
+impl super::Function for Find {
+    #[expect(clippy::expect_used, reason = "generated option labels are nonblank")]
+    fn try_asks_record(
+        &self,
+        record: &crate::core::AdmittedRecord,
+        limits: crate::core::Limits,
+    ) -> Result<Vec<Ask>, Error> {
+        let field = record.field();
+        let units = units(field);
+        if let Some(limit) = limits.options.map(std::num::NonZeroUsize::get)
+            && units.len() >= limit
+        {
+            return Err(Error::new(
+                ErrorKind::BackendLimit,
+                format!(
+                    "the backend supports at most {} nonblank lines for find",
+                    limit - 1
+                ),
+            ));
+        }
+        if units.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut options: Vec<_> = units
+            .into_iter()
+            .enumerate()
+            .map(|(i, unit)| {
+                ChoiceOption::new(format!("u{}", i + 1))
+                    .expect("generated label")
+                    .description(unit.text)
+            })
+            .collect();
+        options.push(
+            ChoiceOption::new("none")
+                .expect("nonblank label")
+                .description("No line answers the question."),
+        );
+        Ok(vec![Ask::Choice {
+            instructions: format!(
+                "Select the line that contains the answer to this question. Select none only if no line contains the answer.\n\nQuestion: {}",
+                self.text
+            ),
+            options,
+        }])
+    }
+
+    fn read_record(
+        context: crate::core::FunctionAnswers<'_, Self>,
+        _limits: crate::core::Limits,
+    ) -> Outcome {
+        let question = context.question();
+        let record = context.record();
+        let answers = context.answers();
+        let field = record.field();
+        let units = units(field);
+        let answer = match super::single(answers) {
+            Ok(answer) => answer,
+            Err(error) => return Outcome::Failed { error },
+        };
+        let probabilities = answer.probabilities();
+        let detail = Detail::Labels(
+            probabilities
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    (
+                        if i == units.len() {
+                            "none".to_owned()
+                        } else {
+                            format!("u{}", i + 1)
+                        },
+                        *p,
+                    )
+                })
+                .collect::<BTreeMap<_, _>>(),
+        );
+        let (winner, p) = crate::core::ask::argmax(probabilities);
+        if question.threshold.verdict(p) != Verdict::Yes {
+            return Outcome::Unsure {
+                p,
+                detail: Some(detail),
+            };
+        }
+        if probabilities.last().is_some_and(|none| *none == p) {
+            return Outcome::Answered {
+                answer: Answer::Span(None),
+                p: Some(p),
+                detail: Some(detail),
+            };
+        }
+        Outcome::Answered {
+            answer: Answer::Span(units.into_iter().nth(winner)),
+            p: Some(p),
+            detail: Some(detail),
+        }
+    }
+}

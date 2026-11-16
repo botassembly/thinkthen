@@ -1,0 +1,4 @@
+linux-x86_64: libthinkthen_ffi.so
+linux-arm64: libthinkthen_ffi.so
+macos-arm64: libthinkthen_ffi.dylib
+windows-x86_64: thinkthen_ffi.dll

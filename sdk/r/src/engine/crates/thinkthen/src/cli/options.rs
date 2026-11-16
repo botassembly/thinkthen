@@ -1,0 +1,235 @@
+//! Resolve explicit options before consulting environment values.
+use crate::{Code, Engine, Error, Settings};
+use clap::ArgMatches;
+use serde_json::{Map, Value};
+
+pub(super) fn usage(field: &str, expected: &str, received: &str) -> Error {
+    Error::from_contract(
+        Code::UsageOption,
+        crate::core::diagnostic::requirement(field, expected, received),
+    )
+}
+pub(super) fn unknown(field: &str, name: &str, accepted: &[&str]) -> Error {
+    Error::from_contract(
+        Code::UsageOption,
+        crate::core::diagnostic::unknown(field, name, accepted),
+    )
+}
+pub(super) fn unknown_value(field: &str, value: &str, accepted: &[&str]) -> Error {
+    Error::from_contract(
+        Code::UsageOption,
+        crate::core::diagnostic::unknown_option_value(field, value, accepted),
+    )
+}
+pub(super) fn explicit(matches: &ArgMatches, key: &str) -> Option<String> {
+    matches.try_get_one::<String>(key).ok().flatten().cloned()
+}
+pub(super) fn variable(key: &str) -> String {
+    format!("THINKTHEN_{}", key.replace('-', "_").to_uppercase())
+}
+pub(super) fn value(matches: &ArgMatches, key: &str) -> Option<String> {
+    explicit(matches, key).or_else(|| std::env::var(variable(key)).ok())
+}
+pub(super) fn boolean(key: &str, value: Option<String>) -> Result<Option<bool>, Error> {
+    value
+        .map(|v| match v.as_str() {
+            "true" => Ok(true),
+            "false" => Ok(false),
+            _ => Err(usage(
+                key,
+                "true or false",
+                &format!("{:?}", crate::escape_diagnostic(&v)),
+            )),
+        })
+        .transpose()
+}
+pub(super) fn switch(matches: &ArgMatches, key: &str) -> Result<bool, Error> {
+    Ok(boolean(key, value(matches, key))?.unwrap_or(false))
+}
+pub(super) fn group(matches: &ArgMatches, keys: &[&str]) -> Vec<Option<String>> {
+    let explicit_group = keys.iter().any(|key| explicit(matches, key).is_some());
+    keys.iter()
+        .map(|key| {
+            if explicit_group {
+                explicit(matches, key)
+            } else {
+                std::env::var(variable(key)).ok()
+            }
+        })
+        .collect()
+}
+pub(super) fn list(matches: &ArgMatches, key: &str, env: &str) -> Result<Option<Value>, Error> {
+    if let Some(values) = matches.try_get_many::<String>(key).ok().flatten() {
+        return Ok(Some(Value::Array(
+            values.cloned().map(Value::String).collect(),
+        )));
+    }
+    std::env::var(env)
+        .ok()
+        .map(|text| {
+            serde_json::from_str(&text)
+                .map_err(|_| usage(key, "a JSON array", "invalid JSON (contents redacted)"))
+        })
+        .transpose()
+}
+pub(super) fn number(key: &str, text: &str) -> Result<Value, Error> {
+    text.parse::<serde_json::Number>()
+        .map(Value::Number)
+        .map_err(|_| {
+            Error::from_contract(
+                Code::UsageOption,
+                crate::core::diagnostic::requirement(
+                    key,
+                    "a number",
+                    &format!("`{}`", crate::escape_diagnostic(text)),
+                ),
+            )
+        })
+}
+
+#[derive(Debug)]
+pub(super) struct Output {
+    pub json: bool,
+    pub quiet: bool,
+    pub verbose: bool,
+    pub check: bool,
+}
+impl Output {
+    pub(super) fn validate_function(&self, function: crate::FunctionName) -> Result<(), Error> {
+        if function == crate::FunctionName::Filter && self.json {
+            return Err(usage(
+                "json",
+                "thinkthen decide --json for every record",
+                "filter --json",
+            ));
+        }
+        Ok(())
+    }
+    pub(super) fn resolve(matches: &ArgMatches) -> Result<Self, Error> {
+        let selectors = group(matches, &["format", "json"]);
+        let mut values = selectors.into_iter();
+        let format = values
+            .next()
+            .flatten()
+            .map(|v| {
+                parse_choice::<OutputFormat>("format", &v).map(|f| matches!(f, OutputFormat::Json))
+            })
+            .transpose()?;
+        let json = boolean("json", values.next().flatten())?;
+        if format.zip(json).is_some_and(|(a, b)| a != b) {
+            return Err(usage(
+                "format",
+                "agreement with json",
+                "conflicting output formats",
+            ));
+        }
+        let mut verbosity = group(matches, &["quiet", "verbose"]).into_iter();
+        let quiet = boolean("quiet", verbosity.next().flatten())?.unwrap_or(false);
+        let verbose = boolean("verbose", verbosity.next().flatten())?.unwrap_or(false);
+        if quiet && verbose {
+            return Err(usage("quiet", "false when verbose is true", "true"));
+        }
+        let check = if matches.try_get_one::<String>("check").is_ok() {
+            switch(matches, "check")?
+        } else {
+            false
+        };
+        // Color affects diagnostics only; rows are always uncolored.
+        let color = explicit(matches, "color")
+            .or_else(|| std::env::var_os("NO_COLOR").map(|_| "never".into()))
+            .or_else(|| std::env::var("THINKTHEN_COLOR").ok());
+        if let Some(color) = color {
+            parse_choice::<clap::ColorChoice>("color", &color)?;
+        }
+        Ok(Self {
+            json: json.or(format).unwrap_or(false),
+            quiet,
+            verbose,
+            check,
+        })
+    }
+}
+
+pub(super) fn client(
+    matches: &ArgMatches,
+    account: &crate::usage::Account,
+) -> Result<Engine, Error> {
+    let mut settings = Map::new();
+    for key in ["backend", "model", "batch"] {
+        if let Some(text) = value(matches, key) {
+            settings.insert(
+                key.into(),
+                if key == "batch" {
+                    number(key, &text)?
+                } else {
+                    text.into()
+                },
+            );
+        }
+    }
+    if let Some(url) = explicit(matches, "url") {
+        settings.insert("url".into(), url.into());
+    }
+    let mut engine = Settings::from_json(&Value::Object(settings).to_string())?
+        .engine(|key| std::env::var(key).ok())?;
+    engine.account = account.clone();
+    Ok(engine)
+}
+
+/// Select diagnostic styling before Clap renders syntax errors or help.
+pub(super) fn diagnostic_color() -> clap::ColorChoice {
+    let arguments: Vec<_> = std::env::args_os()
+        .filter_map(|arg| arg.into_string().ok())
+        .take_while(|arg| arg != "--")
+        .collect();
+    let explicit = arguments
+        .windows(2)
+        .find(|pair| pair.first().is_some_and(|arg| arg == "--color"))
+        .and_then(|pair| pair.get(1))
+        .cloned()
+        .or_else(|| {
+            arguments
+                .iter()
+                .find_map(|arg| arg.strip_prefix("--color=").map(str::to_owned))
+        });
+    let color = explicit
+        .or_else(|| std::env::var_os("NO_COLOR").map(|_| "never".into()))
+        .or_else(|| std::env::var("THINKTHEN_COLOR").ok());
+    color
+        .and_then(|value| <clap::ColorChoice as clap::ValueEnum>::from_str(&value, false).ok())
+        .unwrap_or(clap::ColorChoice::Auto)
+}
+
+#[derive(Clone, clap::ValueEnum)]
+pub(super) enum OutputFormat {
+    Text,
+    Json,
+}
+pub(super) fn choices<T: clap::ValueEnum>() -> clap::builder::PossibleValuesParser {
+    clap::builder::PossibleValuesParser::new(
+        T::value_variants()
+            .iter()
+            .filter_map(clap::ValueEnum::to_possible_value),
+    )
+}
+pub(super) fn parse_choice<T: clap::ValueEnum>(field: &str, text: &str) -> Result<T, Error> {
+    T::from_str(text, false).map_err(|_| {
+        let names: Vec<_> = T::value_variants()
+            .iter()
+            .filter_map(clap::ValueEnum::to_possible_value)
+            .map(|v| v.get_name().to_owned())
+            .collect();
+        unknown_value(
+            field,
+            text,
+            &names.iter().map(String::as_str).collect::<Vec<_>>(),
+        )
+    })
+}
+
+/// Admit the invocation allowance once, before backend setup.
+pub(super) fn request_limit(matches: &ArgMatches) -> Result<Option<u64>, Error> {
+    Ok(Settings::default()
+        .environment_request_limit(value(matches, "max-requests"))?
+        .request_limit())
+}
