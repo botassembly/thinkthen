@@ -101,4 +101,3 @@ See the [command guide](/command-line/guide/), [Python](/sdks/python/#upgrading-
 | Hard termination | A hard kill can leave an empty temporary file. | Treat empty temporary files as incomplete, and keep the original input. A rerun may send requests again. |
 | Windows temporary-file access lists | A newly created empty temporary file has a brief interval before its final access list is applied. | Use a private working folder for sensitive inputs and outputs. |
 | Windows forced termination | A command can hang when you force it to stop on Windows. The cause is unknown. | End the remaining process in Task Manager. Keep your input and any saved output; repeating a question may charge you again. |
-| Windows PowerShell example | Reading command information in PowerShell can time out before the example starts. The cause is unknown. | Run `thinkthen --version` first. If it does not finish, stop the command before trying the example. |

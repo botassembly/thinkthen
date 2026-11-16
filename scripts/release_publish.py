@@ -69,7 +69,7 @@ def publish(tag, digest, remote, repository):
         if entry != {'package': 'thinkthen', 'url': f'https://github.com/{repository}',
                      'subdir': 'sdk/r', 'branch': '*release'}:
             raise ValueError('R-universe entry differs from the approved source')
-        registry_endpoint = 'repos/' + repository.split('/')[0] + '/r-universe/contents/packages.json'
+        registry_endpoint = f"repos/{repository.split('/')[0]}/{repository.split('/')[0]}.r-universe.dev/contents/packages.json"
         registry = api(registry_endpoint)
         packages = json.loads(base64.b64decode(registry['content']))
         packages = [item for item in packages if item['package'] != entry['package']] + entries

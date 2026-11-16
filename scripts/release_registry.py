@@ -173,7 +173,7 @@ def jvm(libraries, destination, scratch, notices):
         '<parent><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm-parent</artifactId>'
         f'<version>{version()}</version><relativePath/></parent>'
         '<groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId>'
-        f'<version>{version()}</version><packaging>pom</packaging>'
+        f'<version>{version()}</version><packaging>pom</packaging><name>ThinkThen JVM</name>'
         '<distributionManagement><relocation><groupId>io.github.botassembly</groupId>'
         f'<artifactId>thinkthen-java</artifactId><version>{version()}</version>'
         '</relocation></distributionManagement></project>\n')

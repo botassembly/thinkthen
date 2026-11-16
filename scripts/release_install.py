@@ -2,6 +2,7 @@
 import hashlib
 import json
 from pathlib import Path
+import re
 import tarfile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -144,16 +145,19 @@ def release_note(version, platforms):
     for requirements in platforms.values():
         for name in ('sqlite', 'duckdb', 'postgres'):
             if name in requirements:
-                database_runtimes.setdefault(name, requirements[name]['runtime'])
+                runtime = re.sub(r'PostgreSQL(?=\d)', 'PostgreSQL ', requirements[name]['runtime'])
+                if runtime not in database_runtimes.setdefault(name, []):
+                    database_runtimes[name].append(runtime)
     language_requirements = []
     for name, value in FLOORS['runtimes'].items():
         # Only Swift needs a separate runtime floor after its build requirement.
         requirement = value.split(',')[0] if name == 'swift' else value.split(';')[0]
+        requirement = re.sub(r'\.NET(?=\d)', '.NET ', requirement)
         language_requirements.append(('Kotlin: ' if name == 'kotlin' else '') + requirement)
     lines += ['', 'Language requirements: ' + '; '.join(language_requirements) + '.', '',
               f'The optional C++ JSON adapter headers and license are in nlohmann-json-{version}.tar.gz on this release.', '',
               f'R source packages require R >=4.2.0. Supplied R binary packages require the {FLOORS["r"]["Linux"]} series on Linux and the {FLOORS["r"]["Darwin"]} series on macOS; Windows requires ' + platforms.get('windows-x86_64', {}).get('r', {}).get('runtime', 'the R version in its archive requirements.json').split(';')[0] + '. C needs a C compiler to build, and C++ needs C++20 with GCC 13/libstdc++, Clang 20/libc++ 20, or the Windows route in the archive README. See each archive’s requirements.json for its package requirements and supplied runtime dependencies.', '',
-              'Database requirements: ' + '; '.join(database_runtimes.values()) + '.', '',
+              'Database requirements: ' + '; '.join(runtime for runtimes in database_runtimes.values() for runtime in runtimes) + '.', '',
               'ThinkThen uses 0.x APIs. APIs may change between releases.', '']
     limits = r"""## Known limits
 

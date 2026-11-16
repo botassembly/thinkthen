@@ -1,0 +1,87 @@
+name: release live installs on Windows
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published version tag whose public packages and website installer are ready
+        required: true
+        type: string
+permissions: {contents: read}
+concurrency:
+  group: live-install-windows-${{ inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    defaults: {run: {shell: bash}}
+    steps:
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Require a published version tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          tag = os.environ['RELEASE_TAG']
+          if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag):
+              raise ValueError('Live installs require a published version tag')
+          release = json.loads(subprocess.check_output(['gh', 'release', 'view', tag,
+              '--repo', os.environ['GITHUB_REPOSITORY'], '--json', 'isDraft,publishedAt,tagName'], text=True))
+          if release['isDraft'] or not release['publishedAt'] or release['tagName'] != tag:
+              raise ValueError('Live installs require the selected published release')
+          PY
+      - name: Preserve source bytes on Windows
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+      - name: Check the selected release source
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          sys.path.insert(0, 'scripts')
+          from release_workflow import version
+          if os.environ['RELEASE_TAG'] != 'v' + version():
+              raise ValueError('Selected tag and package version differ')
+          PY
+          git rev-parse HEAD
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with: {distribution: temurin, java-version: '22.0.2+9'}
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with: {dotnet-version: '10.0.114'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22.12.0'}
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
+        with: {ruby-version: '3.3.8'}
+      - name: Prepare consumer tools and check public installations
+        run: |
+          python3 - <<'PY'
+          import os, subprocess, sys, tomllib
+          from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          from release_rust import prepare
+          from release_windows_r import runtime
+          from release_windows_host import environment, prepare_msys2, prepare_swift
+          from release_prepare_common import TOOLS
+          prepare()
+          runtime()
+          prepare_msys2()
+          env = prepare_swift(environment(), TOOLS / 'windows-check')
+          channel = tomllib.loads(Path('rust-toolchain.toml').read_text())['toolchain']['channel']
+          cargo = subprocess.check_output(['rustup', 'which', '--toolchain', channel, 'cargo'], text=True).strip()
+          env['PATH'] = str(Path(cargo).parent) + os.pathsep + env['PATH']
+          subprocess.run([sys.executable, 'scripts/release-live-install-check',
+              'pypi', 'npm', 'rubygems', 'nuget', 'maven', 'crates', 'go', 'swift', 'r', 'installer'],
+              env=env, check=True)
+          PY

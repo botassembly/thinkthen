@@ -152,6 +152,7 @@ class PackageText(unittest.TestCase):
         relocation = next(output.glob('**/thinkthen-jvm/' + version() + '/*.pom'))
         document = ET.parse(relocation)
         namespace = {'m': 'http://maven.apache.org/POM/4.0.0'}
+        assert document.findtext('m:name', namespaces=namespace) == 'ThinkThen JVM'
         assert document.findtext('m:distributionManagement/m:relocation/m:artifactId', namespaces=namespace) == 'thinkthen-java'
         from release_registry_check import legacy_jvm_consumer, maven_feed
         from release_installed_prepare import jvm as prepare_jvm
