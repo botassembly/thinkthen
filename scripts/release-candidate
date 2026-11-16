@@ -12,6 +12,7 @@ from release_go import command as go_command
 from release_images import image
 import hashlib
 import json
+from build_targets import container_labels
 import os
 from pathlib import Path
 import platform
@@ -164,7 +165,7 @@ Rscript --vanilla -e 'a <- commandArgs(TRUE); db <- installed.packages(); writeL
         shutil.move(generated[0], package / generated[0].name)
         r_version = text('Rscript', '--vanilla', '-e', 'cat(as.character(getRversion()))')
     else:
-        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0],
+        run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
             '--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{ROOT}:/src', '-v', f'{package}:/package',
             '-v', f'{rust}:{rust}:ro',
             '-v', f'{Path(os.environ["THINKTHEN_RUNTIME_PREFIX"]) / "r-frames/library"}:/r-dependencies:ro',
@@ -352,8 +353,7 @@ done
         run('sh', '-c', commands, 'swift-consumer', consumer, destination)
     else:
         toolchain = TOOLS / 'swift/6.3.2-ubuntu22.04'
-        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
-            '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
+        run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT), '--user', f'{os.getuid()}:{os.getgid()}',
             '-v', f'{ROOT}:/src', '-v', f'{out}:/candidate', '-v', f'{toolchain}:/opt/swift:ro',
             image('swift'), 'sh', '-c',
             'mkdir -p /tmp/home; export HOME=/tmp/home PATH=/opt/swift/usr/bin:/usr/bin:/bin; ' + commands +
@@ -473,11 +473,11 @@ def finalize(out, version, java, r_version):
     if platform.system() == 'Linux':
         runtime['r']['tested_glibc'] = (out / 'r/libc-version').read_text().split()[-1]
         runtime['r']['supported_glibc'] = runtime['r']['tested_glibc']
-        runtime['postgres']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], image('floor'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
+        runtime['postgres']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT), image('floor'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
         runtime['postgres']['supported_glibc'] = runtime['postgres']['tested_glibc']
-        runtime['duckdb']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], image('floor'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
+        runtime['duckdb']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT), image('floor'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
         runtime['zig']['tested_glibc'] = runtime['duckdb']['tested_glibc']
-        runtime['swift']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], image('swift'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
+        runtime['swift']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT), image('swift'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
     runtime = floor_requirements(runtime, platform.system())
     for family, value in runtime.items():
         destination = out / ('command-requirements.json' if family == 'command' else f'{family}/requirements.json')

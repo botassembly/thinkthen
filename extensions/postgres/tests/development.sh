@@ -10,13 +10,7 @@ if [ -z "${THINKTHEN_SQL_TEST_ARCHIVE:-}" ]; then
     eval "$(scripts/native-test-assets env)"
 fi
 : "${THINKTHEN_LOOPBACK:?Select its matching loopback}"
-job=${PM_JOB:-local}
 set --
-if [ -n "${JOB_LABEL_FILE:-}" ]; then
-    set -- "$@" --label-file "$JOB_LABEL_FILE"
-else
-    set -- "$@" --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}"
-fi
 scratch=$(mktemp -d)
 cleanup() {
     outcome=$?
@@ -25,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
-docker run "$@" --pull=never --rm --network none -v "$PWD:/src:ro" -v "$scratch:/work" \
+docker run --rm ${JOB_LABEL_FILE:+--label-file "$JOB_LABEL_FILE"} "$@" --pull=never --network none -v "$PWD:/src:ro" -v "$scratch:/work" \
     -v "$THINKTHEN_SQL_TEST_ARCHIVE:/native/libthinkthen_ffi.a:ro" \
     -v "$THINKTHEN_LOOPBACK:/loopback:ro" "$(python3 scripts/release_images.py floor)" \
     sh -eu -c '
@@ -35,7 +29,7 @@ docker run "$@" --pull=never --rm --network none -v "$PWD:/src:ro" -v "$scratch:
             THINKTHEN_PG_CFLAGS= THINKTHEN_SQL_TEST_BUILD=ON sh /src/extensions/postgres/package.sh
     ' sh "$(id -u)" "$(id -g)" "$scope"
 # The prepared test image owns Python's PostgreSQL driver.
-docker run "$@" --pull=never --rm --network none -v "$PWD:/src:ro" -v "$scratch:/work" \
+docker run --rm ${JOB_LABEL_FILE:+--label-file "$JOB_LABEL_FILE"} "$@" --pull=never --network none -v "$PWD:/src:ro" -v "$scratch:/work" \
     -v "$THINKTHEN_LOOPBACK:/loopback:ro" \
     "$(docker image inspect "${THINKTHEN_POSTGRES_TEST_IMAGE:-thinkthen-postgres-build:18.6}" --format '{{.Id}}')" \
     sh -eu -c '

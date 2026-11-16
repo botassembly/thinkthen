@@ -4,7 +4,7 @@ description: What ThinkThen 0.2.0 holds, from the ten functions and their not-su
 goal: Someone about to install ThinkThen or send it paid questions leaves knowing what 0.2.0 holds and each known limit, with the step that avoids it.
 reader: A developer or reviewer about to install ThinkThen or put it in front of a paid service
 kind: reference
-verified: 2026-11-15
+verified: 2026-11-16
 head:
   - tag: title
     content: "Release notes: what ThinkThen 0.2.0 holds and its limits"
@@ -72,7 +72,12 @@ Every package has its own migration section. These are the package and caller ch
 | [SQLite](/sdks/sqlite/#upgrading-from-01) | Rewrite scalar and keyed `_many` calls as query/table calls with state and error columns. |
 | [PostgreSQL](/sdks/postgresql/#upgrading-from-01) | Back up, replace extension files, drop and recreate the extension without `CASCADE`, and rewrite calls in the `thinkthen` schema. Recreate dependent views and columns deliberately. |
 
-find now selects a line inside each message, rather than selecting among messages. Filter has one bar and returns kept inputs; use decide collections for every input's state. Per-call facts become client usage. Follow each guide's error table for scalar failures, collection failures and not-sure answer reads.
+### Update calls that use Find or Filter
+
+- **Find:** put the candidate lines inside one message, one candidate per line. The answer selects a line within that message; it no longer selects one message from a collection. Follow your language's Find migration steps to read that answer and recover the corresponding candidate.
+- **Filter:** set one bar. The result contains the original inputs that were kept. If you need the state of every input, including not sure and failed, use a decide collection instead.
+- **Usage:** read usage from the client in place of the old per-call facts.
+- **Errors:** follow your guide's error table. A one-message call, a collection and an answer read have different failure points; a not-sure answer is not a failed request.
 
 ## Language requirements
 

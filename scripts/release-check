@@ -11,6 +11,7 @@ from release_records import command_output, encode_records
 import json
 import io
 import hashlib
+from build_targets import container_labels
 import os
 from pathlib import Path
 import re
@@ -83,11 +84,6 @@ def native_members(path):
 def require_native(path, expected):
     actual = native_members(path)
     assert actual == set(expected), (path.name, 'native objects', actual, set(expected))
-
-
-def container_ticket():
-    job = os.environ.get('PM_JOB', '').split() or ['local']
-    return 'pm.ticket=' + job[0]
 
 
 def inventory():
@@ -326,7 +322,7 @@ def extra_languages():
     shutil.copy2(CHECKS / 'zig/consumer', zig / 'consumer')
     shutil.copy2(package / f'thinkthen/native/{RID}/libthinkthen_ffi.{SUFFIX}', zig / f'libthinkthen_ffi.{SUFFIX}')
     if SUFFIX == 'so':
-        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+        run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
             '-v', f'{PACKAGE}:/candidate:ro', '-v', f'{zig}:/installed:ro', image('floor'),
             'sh', '-c', 'mkdir /tmp/home; exec env -i HOME=/tmp/home PATH=/usr/bin:/bin LANG=C.UTF-8 '
             'python3 /candidate/checks/zig.py /installed/consumer /candidate/checks/stub.json')
@@ -339,7 +335,7 @@ def extra_languages():
     assert hashlib.sha256(engine).digest() == hashlib.sha256(resources[0].read_bytes()).digest()
     if SUFFIX == 'so':
         runtime = PACKAGE / 'prerequisites/swift-runtime/linux'
-        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+        run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
             '-v', f'{PACKAGE}:/candidate:ro', '-v', f'{runtime}:/runtime:ro',
             image('swift'), 'sh', '-c',
             'set -eu; for tool in swift clang cc rustc cargo; do if command -v "$tool"; then echo "compiler present: $tool" >&2; exit 1; fi; done; mkdir /tmp/home; '
@@ -352,7 +348,7 @@ def extra_languages():
 def r_package():
     if SUFFIX == 'so' and not shutil.which('Rscript'):
         # Only candidate files enter this runtime check; no Rust/cache/source mount.
-        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+        run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
             '-v', f'{PACKAGE}:/candidate:ro', image('floor'), 'sh', '-c',
             'mkdir -p /tmp/runtime /tmp/library /tmp/home; ln -s /opt/R/bin/R /opt/R/bin/Rscript /tmp/runtime/; '
             'exec env -i HOME=/tmp/home PATH=/tmp/runtime:/usr/bin:/bin LANG=C.UTF-8 R_LIBS_SITE= R_LIBS_USER=/tmp/library '
@@ -379,7 +375,7 @@ def databases():
     run(python, CHECKS / 'sql.py', 'duckdb-python', 'unused', duck / 'thinkthen.duckdb_extension', CHECKS / 'stub.json')
     if (PACKAGE / 'postgres').exists():
         # The standard PostgreSQL runtime runs in its prepared offline image.
-        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+        run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
             '-v', f'{PACKAGE}:/candidate:ro', image('floor'), 'sh', '-c',
             'set -eu; mkdir /tmp/package /tmp/pg; tar -xzf /candidate/postgres/*.tar.gz -C /tmp/package; '
             'cp /tmp/package/lib/* "$(pg_config --pkglibdir)/"; cp /tmp/package/share/extension/* "$(pg_config --sharedir)/extension/"; '

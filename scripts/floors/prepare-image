@@ -10,6 +10,7 @@ import tempfile
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 from native_platform import ARM_BASE
+from build_targets import container_labels
 
 if not os.environ.get('PM_JOB'):
     sys.exit('Run image preparation through pm job')
@@ -19,7 +20,7 @@ if platform.machine() in ('aarch64', 'arm64'):
     recipe = recipe.replace('-linux-x64.tar.xz', '-linux-arm64.tar.xz').replace('.linux-amd64.tar.gz', '.linux-arm64.tar.gz')
 print('release prepare: baseline image for ' + platform.machine(), flush=True)
 with tempfile.TemporaryFile(mode='w+') as log:
-    result = subprocess.run(['docker', 'build', '--label', 'pm.repo=thinkthen',
+    result = subprocess.run(['docker', 'build', *container_labels(root, image_build=True),
                              '-t', 'thinkthen-floor-build:glibc2.28', '-f', '-',
                              str(root)], input=recipe, text=True,
                             stdout=log, stderr=subprocess.STDOUT)

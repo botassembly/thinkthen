@@ -4,6 +4,7 @@
 Usage: loader-noexec-check PLATFORM_DIRECTORY JDK_DIRECTORY
 Uses prepared local packages and an existing baseline image without a network.
 """
+from build_targets import container_labels
 import os
 from pathlib import Path
 import shutil
@@ -14,7 +15,6 @@ import tempfile
 
 root = Path(__file__).resolve().parent.parent
 candidate, jdk = map(lambda value: Path(value).resolve(), sys.argv[1:])
-job = os.environ.get('PM_JOB', '').split() or ['local']
 with tempfile.TemporaryDirectory(prefix='thinkthen-loader-') as temporary:
     work = Path(temporary)
     module = work / 'module'
@@ -82,7 +82,7 @@ printf 'Installed loaders reject corrupt cache bytes and unavailable cache direc
 
 '''
     subprocess.run(['docker', 'run', '--rm', '--network', 'none',
-                    '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + job[0],
+                    *container_labels(root),
                     '--user', f'{os.getuid()}:{os.getgid()}',
                     '--tmpfs', '/tmp:rw,noexec,nosuid', '-v', f'{work}:/work',
                     '-v', f'{jdk}:/jdk:ro', 'thinkthen-floor-build:glibc2.28',

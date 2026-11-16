@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install tag-based SDK packages by name from a local release rehearsal."""
 from contextlib import contextmanager
+from build_targets import container_labels
 import argparse
 import json
 import os
@@ -164,8 +165,7 @@ with long_path_scratch('thinkthen-source-install-', 'Source install') as scratch
                     toolchain = Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'
                     home = scratch / 'swift-home'
                     home.mkdir(exist_ok=True)
-                    return run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
-                        '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
+                    return run('docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT), '--user', f'{os.getuid()}:{os.getgid()}',
                         '-v', f'{scratch}:{scratch}', '-v', f'{ROOT}:{ROOT}:ro', '-v', f'{toolchain}:/opt/swift:ro',
                         '-e', 'THINKTHEN_BACKEND=' + env['THINKTHEN_BACKEND'],
                         '-e', 'HOME=' + str(home), '-e', 'PATH=/opt/swift/usr/bin:/usr/bin:/bin',

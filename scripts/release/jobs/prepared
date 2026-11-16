@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""usage: prepared NAME; print one prepared input, or stop and name it."""
+import sys
+
+import release_job
+
+try:
+    print(release_job.prepared(sys.argv[1]))
+except release_job.MissingInput as error:
+    sys.exit(str(error))

@@ -1,0 +1,365 @@
+#!/usr/bin/env python3
+"""Print or submit the release jobs for one candidate, from its saved evidence.
+
+  recipes dry-run CANDIDATE --ticket NNNN [JOB ...]   print each job's pm job run line
+  recipes submit  CANDIDATE --ticket NNNN JOB ...     submit the named jobs
+
+CANDIDATE is the public short SHA. Use "new" with --previous, --control and
+--landed-gate to project a new candidate. Run from the checkout pm serves; jobs run
+at the HEAD of the checkout holding this file, which origin must carry. Submit stops
+if that HEAD differs from the candidate's control revision outside sdlc/ and AGENTS.md.
+
+Evidence arrives in stages, so a value that is missing or wrong stops only the jobs
+that need it, and each stopped job names the value. The exit code is 1 if any job
+stopped. A retry takes --attempt JOB=N, which adds -rN to that job's output folder.
+Output is one line per job.
+
+Each job's machine role and booking live in jobs.json, and inputs that stay the same
+across candidates live in prepared.json. --override JOB.KEY=VALUE changes one of
+role, disk, memory, cores or timeout for this run.
+
+Settings live in $THINKTHEN_RELEASE_SETTINGS, or else release-settings.json in the
+thinkthen folder of the caller's config folder:
+
+  {"roles": {"ROLE": {"machine": "NAME", "evidence_root": "/path", "tools_root": "/path"}, ...}}
+
+Copying folders between machines, pushing, tagging and starting workflows stay PM
+hand steps. A job that needs a staged folder stops and names it until it is there.
+
+A product-changing candidate makes its own native pair: native-mac and native-linux
+build each half, the PM copies the Mac folder to the Linux machine's native_mac_staged
+folder, and native-register records the pair. Every surface's ordinary suite runs as
+scripts/interface-source-gate --shared-abi at the release revision. The hosted release run builds, qualifies
+and packages the release; the engine leak check runs as the pm job line in AGENTS.md.
+"""
+import argparse
+from dataclasses import dataclass
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import shlex
+import subprocess
+import sys
+
+HERE = Path(__file__).resolve().parent
+TABLE = json.loads((HERE / 'jobs.json').read_text())
+PREPARED = json.loads((HERE / 'prepared.json').read_text())
+FOLDERS, JOBS = TABLE['folders'], TABLE['jobs']
+TOKEN = re.compile(r'\{([^{}]+)\}')
+KINDS = {'sha40': '[0-9a-f]{40}', 'job': 'j[0-9]+'}
+BOOKING = ('role', 'disk', 'memory', 'cores', 'timeout')
+
+
+class Stop(Exception):
+    """One value or input a job needs is missing or wrong."""
+
+
+def field(*keys):
+    def read(document, _):
+        for key in keys:
+            document = document[key]
+        return document
+    return read
+
+
+@dataclass(frozen=True)
+class Source:
+    folder: str
+    file: str
+    read: object
+
+
+# Each value lists where it may be saved.
+VALUES = {
+    'public': ('sha40', (Source('projection', 'projection.json', field('revision')),)),
+    'control': ('sha40', (Source('projection', 'projection.json', field('source')),)),
+    'parent': ('sha40', (Source('projection', 'projection.json', field('parent')),)),
+    'private_parent': ('sha40', (Source('projection', 'projection.json', field('private_parent')),)),
+    'landed_gate': ('job', (Source('projection', 'projection.json', field('landed_gate')),)),
+}
+
+
+def checked(name, kind, value):
+    text = str(value)
+    if not re.fullmatch(KINDS[kind], text):
+        raise Stop('value ' + name + ' is wrong: ' + text[:80])
+    return text
+
+
+class Machines:
+    """Read files and folder names on each role's machine, each at most once."""
+
+    def __init__(self, settings):
+        self.settings = settings
+        self.cache = {}
+
+    def role(self, role):
+        if role not in self.settings['roles']:
+            raise Stop('role ' + role + ' is not in the settings file')
+        return self.settings['roles'][role]
+
+    def shell(self, role, script):
+        key = (role, script)
+        if key not in self.cache:
+            machine = self.role(role)['machine']
+            try:
+                self.cache[key] = subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', machine, 'sh', '-s'],
+                                                 input=script, capture_output=True, text=True, timeout=120)
+            except subprocess.TimeoutExpired:
+                raise Stop('machine ' + machine + ' did not answer') from None
+        return self.cache[key]
+
+    def names(self, role, folder):
+        result = self.shell(role, 'ls -1 ' + shlex.quote(folder) + ' 2>/dev/null || true\n')
+        if result.returncode:
+            raise Stop('cannot read ' + role + ': ' + result.stderr.strip()[:120])
+        return result.stdout.splitlines()
+
+    def read_json(self, role, path):
+        result = self.shell(role, 'cat ' + shlex.quote(path) + ' 2>/dev/null\n')
+        if result.returncode:
+            return None
+        try:
+            return json.loads(result.stdout)
+        except ValueError:
+            raise Stop('evidence is not JSON: ' + path) from None
+
+    def missing(self, role, paths):
+        script = ''.join('[ -e ' + shlex.quote(path) + ' ] || echo ' + shlex.quote(path) + '\n' for path in paths)
+        result = self.shell(role, script)
+        if result.returncode:
+            raise Stop('cannot read ' + role + ': ' + result.stderr.strip()[:120])
+        return set(result.stdout.splitlines())
+
+
+class Recipes:
+    def __init__(self, options, settings):
+        self.options = options
+        self.settings = settings
+        self.machines = Machines(settings)
+        self.ticket = options.ticket
+        self.new = options.candidate == 'new'
+        self.short = options.previous if self.new else options.candidate
+        self.values = {}
+        self.attempts = dict(pair.split('=', 1) for pair in options.attempt)
+
+    def base(self, folder, short):
+        row = FOLDERS[folder]
+        role = self.machines.role(row['role'])
+        root = role['evidence_root' if row['root'] == 'evidence' else 'tools_root']
+        return str(PurePosixPath(root) / row['path'].format(ticket=self.ticket, short=short))
+
+    def attempts_of(self, folder):
+        """Every saved attempt of a folder, newest first."""
+        row = FOLDERS[folder]
+        base = PurePosixPath(self.base(folder, self.short))
+        found = []
+        for name in self.machines.names(row['role'], str(base.parent)):
+            match = re.fullmatch(re.escape(base.name) + r'(?:-r([0-9]+))?', name)
+            if match:
+                found.append((int(match.group(1) or 1), str(base.parent / name)))
+        return [path for _, path in sorted(found, reverse=True)]
+
+    def latest(self, folder):
+        paths = self.attempts_of(folder)
+        if not paths:
+            raise Stop('folder ' + folder + ' is missing on ' + FOLDERS[folder]['role'])
+        return paths[0]
+
+    def value(self, name):
+        if name not in self.values:
+            self.values[name] = self.read_value(name)
+        return self.values[name]
+
+    def read_value(self, name):
+        if self.new:
+            given = {'control': self.options.control, 'landed_gate': self.options.landed_gate}
+            previous = {'parent': 'revision', 'private_parent': 'source'}
+            if name in given:
+                if not given[name]:
+                    raise Stop('value ' + name + ' needs --' + name.replace('_', '-'))
+                return checked(name, VALUES[name][0], given[name])
+            if name in previous:
+                document = self.document('projection', 'projection.json')
+                if document is None:
+                    raise Stop('value ' + name + ' is missing: no projection evidence for candidate ' + self.short)
+                return checked(name, VALUES[name][0], document.get(previous[name]))
+            raise Stop('value ' + name + ' does not exist until the projection passes')
+        kind, sources = VALUES[name]
+        for source in sources:
+            found = self.found(source)
+            if found is not None:
+                value = checked(name, kind, found)
+                if name == 'public' and not value.startswith(self.short):
+                    raise Stop('value public is wrong: ' + value + ' is not candidate ' + self.short)
+                return value
+        raise Stop('value ' + name + ' is missing from the saved evidence')
+
+    def document(self, folder, file):
+        for path in self.attempts_of(folder):
+            document = self.machines.read_json(FOLDERS[folder]['role'], path + '/' + file)
+            if document is not None:
+                return document
+        return None
+
+    def found(self, source):
+        document = self.document(source.folder, source.file)
+        if document is None:
+            return None
+        try:
+            return source.read(document, self)
+        except (KeyError, TypeError):
+            return None
+
+    def out(self, job, folder):
+        return self.base(folder, self.short) + self.suffix(job)
+
+    def suffix(self, job):
+        attempt = int(self.attempts.get(job, 1))
+        return '' if attempt == 1 else '-r' + str(attempt)
+
+    def token(self, job, token):
+        kind, _, name = token.partition(':')
+        if token == 'ticket':
+            return self.ticket
+        if token == 'attempt':
+            return str(self.attempts.get(job, 1))
+        if token == 'evidence':
+            return self.machines.role(JOBS[job]['role'])['evidence_root']
+        if kind == 'out':
+            return self.out(job, name)
+        if kind == 'checkout':
+            return self.base(name, self.short)
+        if kind == 'in':
+            return self.latest(name)
+        return self.value(token)
+
+    def render(self, job, argument, stops):
+        def replace(match):
+            try:
+                return self.token(job, match.group(1))
+            except Stop as stop:
+                if str(stop) not in stops:
+                    stops.append(str(stop))
+                return ''
+        return TOKEN.sub(replace, argument)
+
+    def check_prepared(self, role, names, stops):
+        rows = {}
+        for name in names:
+            if name not in PREPARED:
+                stops.append('prepared input ' + name + ' is not in prepared.json')
+            else:
+                rows[name] = str(PurePosixPath(self.machines.role(role)['tools_root']) / PREPARED[name]['value'])
+        try:
+            missing = self.machines.missing(role, sorted(rows.values()))
+        except Stop as stop:
+            stops.append(str(stop))
+            return
+        stops += ['prepared input ' + name + ' is missing: ' + path for name, path in rows.items() if path in missing]
+
+    def recipe(self, job, revision):
+        """Return the pm command for one job, or the list of what stops it."""
+        row = dict(JOBS[job])
+        for pair in self.options.override:
+            key, _, value = pair.partition('=')
+            name, _, setting = key.rpartition('.')
+            if name == job:
+                row[setting] = value
+        stops = []
+        command = [self.render(job, argument, stops) for argument in row['command']]
+        try:
+            machine = self.machines.role(row['role'])['machine']
+            self.check_prepared(row['role'], row.get('prepared', ()), stops)
+        except Stop as stop:
+            stops.append(str(stop))
+        if stops:
+            return None, stops
+        return ['pm', 'job', 'run', '--machine', machine, self.ticket, revision, '--disk', str(row['disk']),
+                '--memory', str(row['memory']), '--cores', str(row['cores']), '--timeout', str(row['timeout']),
+                '--', *command], []
+
+
+def revision_problem(recipes, revision):
+    """Say why jobs at this revision would not be the candidate's scripts, or return nothing."""
+    try:
+        control = recipes.value('control')
+    except Stop as stop:
+        return str(stop)
+    result = subprocess.run(['git', '-C', str(HERE.parent.parent), 'diff', '--name-only', control, revision, '--', '.', ':!sdlc', ':!AGENTS.md'],
+                            capture_output=True, text=True)
+    if result.returncode:
+        return 'control revision ' + control + ' is not in this checkout'
+    paths = result.stdout.splitlines()
+    if paths:
+        return 'HEAD differs from control ' + control + ' outside sdlc/ and AGENTS.md: ' + paths[0] + ' and ' + str(len(paths) - 1) + ' more'
+    return None
+
+
+def settings_path():
+    configured = os.environ.get('THINKTHEN_RELEASE_SETTINGS')
+    if configured:
+        return Path(configured)
+    config = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config')
+    return config / 'thinkthen' / 'release-settings.json'
+
+
+def parse(arguments):
+    parser = argparse.ArgumentParser(prog='recipes', description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('action', choices=('dry-run', 'submit'))
+    parser.add_argument('candidate')
+    parser.add_argument('jobs', nargs='*', metavar='JOB')
+    parser.add_argument('--ticket', required=True, help='the pm ticket the jobs run under, which also names their folders')
+    parser.add_argument('--attempt', action='append', default=[], metavar='JOB=N')
+    parser.add_argument('--override', action='append', default=[], metavar='JOB.KEY=VALUE')
+    parser.add_argument('--previous', help='with candidate "new": the public parent candidate')
+    parser.add_argument('--control', help='with candidate "new": the private revision to project')
+    parser.add_argument('--landed-gate', help='with candidate "new": the job that gated that revision')
+    options = parser.parse_intermixed_args(arguments)
+    if options.action == 'submit' and not options.jobs:
+        parser.error('submit needs at least one JOB')
+    if options.candidate == 'new' and not options.previous:
+        parser.error('candidate "new" needs --previous')
+    for job in options.jobs + [pair.partition('=')[0] for pair in options.attempt] + [pair.partition('.')[0] for pair in options.override]:
+        if job not in JOBS:
+            parser.error('unknown job ' + job + '; jobs: ' + ' '.join(JOBS))
+    for pair in options.attempt:
+        if not re.fullmatch('[^=]+=[1-9][0-9]*', pair):
+            parser.error('--attempt takes JOB=N, not ' + pair)
+    for pair in options.override:
+        if not re.fullmatch(r'[^.]+\.(?:' + '|'.join(BOOKING) + ')=.+', pair):
+            parser.error('--override takes JOB.KEY=VALUE with KEY one of ' + ' '.join(BOOKING) + ', not ' + pair)
+    return options
+
+
+def main():
+    options = parse(sys.argv[1:])
+    path = settings_path()
+    if not path.is_file():
+        sys.exit('settings file is missing: ' + str(path) + '; see recipes --help')
+    recipes = Recipes(options, json.loads(path.read_text()))
+    revision = subprocess.check_output(['git', '-C', str(HERE), 'rev-parse', 'HEAD'], text=True).strip()
+    problem = revision_problem(recipes, revision)
+    if problem and options.action == 'submit':
+        print('STOPPED submit: ' + problem)
+        sys.exit(1)
+    if problem:
+        print('NOTE submit would stop: ' + problem)
+    stopped = False
+    for job in options.jobs or JOBS:
+        command, stops = recipes.recipe(job, revision)
+        if stops:
+            stopped = True
+            print('STOPPED ' + job + ': ' + '; '.join(stops))
+        elif options.action == 'dry-run':
+            print(shlex.join(command))
+        else:
+            result = subprocess.run(command, capture_output=True, text=True)
+            print(job + ': ' + (result.stdout + result.stderr).strip())
+            stopped = stopped or result.returncode != 0
+    sys.exit(1 if stopped else 0)
+
+
+if __name__ == '__main__':
+    main()

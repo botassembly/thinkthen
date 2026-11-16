@@ -1,0 +1,7 @@
+# Sourced by the Linux build jobs: the prepared build inputs and the owned linker.
+CARGO_HOME=$("$jobs/prepared" linux_cargo_home)
+CARGO_TARGET_DIR=$("$jobs/prepared" linux_target)
+THINKTHEN_FLOOR_IMAGE=$("$jobs/prepared" floor_image)
+THINKTHEN_SWIFT_IMAGE=$("$jobs/prepared" swift_image)
+THINKTHEN_POSTGRES_TEST_IMAGE=$("$jobs/prepared" postgres_image)
+export CARGO_HOME CARGO_TARGET_DIR THINKTHEN_FLOOR_IMAGE THINKTHEN_SWIFT_IMAGE THINKTHEN_POSTGRES_TEST_IMAGE

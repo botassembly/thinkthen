@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")/.."
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT HUP INT TERM
-if ! docker build --label pm.repo=thinkthen \
+if ! docker build \
     -t thinkthen-postgres-build:18.6 -f extensions/postgres/prepare.Dockerfile . >"$log" 2>&1; then
     tail -80 "$log"
     exit 1

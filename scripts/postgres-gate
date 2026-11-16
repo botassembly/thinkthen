@@ -12,7 +12,6 @@ if [ "$(uname -s)" != Linux ]; then
     exit 77
 fi
 scope=${1:-all}
-job=${PM_JOB:-local}
 root=$PWD
 fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the shared explicit fixture-routing archive}
 scratch=$(mktemp -d)
@@ -33,12 +32,7 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
 fi
 test_image=$(docker image inspect "${THINKTHEN_POSTGRES_TEST_IMAGE:-thinkthen-postgres-build:18.6}" --format '{{.Id}}')
 set --
-if [ -n "${JOB_LABEL_FILE:-}" ]; then
-    set -- "$@" --label-file "$JOB_LABEL_FILE"
-else
-    set -- "$@" --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}"
-fi
-docker run "$@" --pull=never --rm --network none \
+docker run --rm ${JOB_LABEL_FILE:+--label-file "$JOB_LABEL_FILE"} "$@" --pull=never --network none \
     -v "$root:/src:ro" -v "$scratch:/work" -v "${THINKTHEN_LOOPBACK:-$target/debug/loopback}:/loopback:ro" \
     -v "$scratch/built/build:/work/build" -v "$target:$target" \
     "$test_image" sh -eu -c '

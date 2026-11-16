@@ -1,0 +1,25 @@
+{
+  "folders": {
+    "projection": {"role": "linux-build", "root": "evidence", "path": "{ticket}/{short}-public-projection"},
+    "public_linux": {"role": "linux-build", "root": "tools", "path": "release-candidates/{ticket}-{short}-linux-public"},
+    "public_mac": {"role": "mac-build", "root": "tools", "path": "release-candidates/{ticket}-{short}-public-source"},
+    "native_linux": {"role": "linux-build", "root": "tools", "path": "release-candidates/{ticket}-{short}-native-linux"},
+    "native_mac": {"role": "mac-build", "root": "tools", "path": "release-candidates/{ticket}-{short}-native-mac"},
+    "native_mac_staged": {"role": "linux-build", "root": "evidence", "path": "{ticket}/{short}-native-mac"},
+    "native_registration": {"role": "linux-build", "root": "evidence", "path": "{ticket}/{short}-native-registration"}
+  },
+  "jobs": {
+    "projection": {"role": "linux-build", "disk": 2, "memory": 1, "cores": 1, "timeout": 30,
+      "prepared": ["private_pattern"],
+      "command": ["scripts/native-tools-env", "scripts/release/jobs/projection", "{control}", "{parent}", "{private_parent}", "{landed_gate}", "{evidence}/{ticket}", "{attempt}"]},
+    "native-mac": {"role": "mac-build", "disk": 10, "memory": 5, "cores": 3, "timeout": 120,
+      "prepared": ["mac_cargo_home"],
+      "command": ["scripts/native-tools-env", "scripts/release/jobs/in-public", "{checkout:public_mac}", "{public}", "native-build", "mac", "{out:native_mac}"]},
+    "native-linux": {"role": "linux-build", "disk": 10, "memory": 5, "cores": 2, "timeout": 120,
+      "prepared": ["linux_cargo_home"],
+      "command": ["scripts/native-tools-env", "scripts/release/jobs/in-public", "{checkout:public_linux}", "{public}", "native-build", "linux", "{out:native_linux}"]},
+    "native-register": {"role": "linux-build", "disk": 1, "memory": 1, "cores": 1, "timeout": 20,
+      "prepared": ["linux_cargo_home"],
+      "command": ["scripts/native-tools-env", "scripts/release/jobs/in-public", "{checkout:public_linux}", "{public}", "native-register", "{out:native_registration}", "{in:native_mac_staged}", "{in:native_linux}"]}
+  }
+}

@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""usage: projection CONTROL PARENT PRIVATE_PARENT LANDED_GATE EVIDENCE_ROOT ATTEMPT
+
+Project the control revision onto the approved public parent and seal the evidence.
+Never pushes. Run from the control checkout.
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+import release_job
+
+source, parent, private_parent, landed_gate, evidence_root, attempt = sys.argv[1:7]
+repository = release_job.prepared('public_repository')
+current = subprocess.check_output(['git', 'ls-remote', repository, 'refs/heads/main'], text=True).split()[0]
+assert current == parent, current
+patterns = Path(release_job.prepared('private_pattern'))
+pattern_sha = hashlib.sha256(patterns.read_bytes()).hexdigest()
+assert pattern_sha == release_job.prepared('private_pattern_sha256'), pattern_sha
+name, email = subprocess.check_output(['git', 'show', '-s', '--format=%an%n%ae', source], text=True).splitlines()
+os.environ.update(GIT_AUTHOR_NAME=name, GIT_COMMITTER_NAME=name, GIT_AUTHOR_EMAIL=email, GIT_COMMITTER_EMAIL=email)
+out = Path(tempfile.mkdtemp(prefix='public-projection-')) / source[:8]
+raw = subprocess.check_output(['python3', 'scripts/public-export', '--source', source, '--parent', parent,
+                               '--parent-repository', repository, '--private-patterns', str(patterns),
+                               '--output', str(out)])
+receipt = json.loads(raw)
+revision = receipt['revision']
+diff = subprocess.check_output(['git', 'diff', '--no-renames', '--name-only', '-z', parent, revision], cwd=out).decode().split('\0')[:-1]
+private_product = [path for path in subprocess.check_output(['git', 'diff', '--no-renames', '--name-only', '-z', private_parent, source], text=True).split('\0')[:-1]
+                   if path != 'AGENTS.md' and not path.startswith('sdlc/')]
+assert diff == private_product, (diff, private_product)
+for path in diff:
+    public_entry = subprocess.check_output(['git', '--literal-pathspecs', 'ls-tree', '--full-tree', '-z', revision, '--', path], cwd=out)
+    private_entry = subprocess.check_output(['git', '--literal-pathspecs', 'ls-tree', '--full-tree', '-z', source, '--', path])
+    assert public_entry == private_entry, path
+assert not subprocess.check_output(['git', 'ls-files', 'AGENTS.md', 'sdlc'], cwd=out)
+assert subprocess.check_output(['git', 'rev-list', '--parents', '-n1', revision], cwd=out).decode().split() == [revision, parent]
+words = subprocess.run(['python3', 'scripts/words', str(patterns)], cwd=out, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'),
+                       capture_output=True, text=True)
+assert words.returncode == 0, (words.stdout, words.stderr)
+mapping = subprocess.check_output(['git', 'ls-tree', '-rz', revision], cwd=out)
+evidence = Path(evidence_root) / (revision[:8] + '-public-projection' + ('' if attempt == '1' else '-r' + attempt))
+evidence.mkdir(parents=True)
+receipt.update(private_parent=private_parent, changed_paths=diff, mapping_sha256=hashlib.sha256(mapping).hexdigest(),
+               canonical_private_pattern_sha256=pattern_sha, privacy='PASS', words='PASS', words_rerun_stdout=words.stdout,
+               scripts_only=all(path.startswith('scripts/') for path in diff), public_push=False, landed_gate=landed_gate,
+               output=str(out), job=release_job.job_id())
+(evidence / 'projection.json').write_text(json.dumps(receipt, indent=2) + '\n')
+(evidence / 'mapping.bin').write_bytes(mapping)
+(evidence / 'public-parent.diff').write_bytes(subprocess.check_output(['git', 'diff', parent, revision], cwd=out))
+(evidence / 'changed-blobs.txt').write_bytes(subprocess.check_output(['git', 'diff', '--raw', '--abbrev=40', parent, revision], cwd=out))
+subprocess.run(['git', 'bundle', 'create', str(evidence / 'candidate.bundle'), 'main'], cwd=out, check=True)
+manifest = {path.name: {'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for path in sorted(evidence.iterdir())}
+(evidence / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+print(json.dumps(receipt, indent=2))
+print('PUBLIC_CANDIDATE=' + revision)
+print('EVIDENCE=' + str(evidence))
+print('MANIFEST_SHA256=' + hashlib.sha256((evidence / 'manifest.json').read_bytes()).hexdigest())

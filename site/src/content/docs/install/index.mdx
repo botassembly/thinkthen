@@ -1,16 +1,65 @@
 ---
 title: Installation
-description: Install the thinkthen command on macOS, Linux or Windows with one line, Homebrew, Cargo or a download, then upgrade it, remove it, and add shell completions and the manual page.
-goal: A developer installs the thinkthen command the way that suits their machine, checks it runs, and later upgrades or removes it, with shell completions and the manual page if they want them.
-reader: A developer on macOS, Linux or Windows who wants the thinkthen command on PATH
+description: Choose an installation for the command, your programming language or your database, then verify the download and follow its guide.
+goal: A developer chooses the right package or archive, follows its installation guide and checks the installed command, library or database extension.
+reader: A developer installing the command, a language package or a database extension
 kind: how-to
-verified: 2026-11-06
+verified: 2026-11-16
 ---
 import Example from '../../../components/Example.astro';
 import InstallLine from '../../../components/InstallLine.astro';
 import Fact from '../../../components/Fact.astro';
 
-Install the `thinkthen` command on macOS, Linux or Windows, then check that it runs. Each SDK page has its own install line.
+Choose the command for shell scripts, a language package for your program, or an extension for your database. The language packages and database archives include their matching engine; you do not install the command first.
+
+## Choose your installation
+
+| Use ThinkThen from | Get it from | Installation and first call |
+| --- | --- | --- |
+| The command | One-line installer, Homebrew, Cargo or a release archive | [Command installation](#install-with-one-line) |
+| Python | <Fact k="languages.python.package" /> | [Python guide](/sdks/python/) |
+| pandas | The Python package with its pandas extra | [pandas guide](/sdks/pandas/) |
+| Polars | The Python package with its Polars extra | [Polars guide](/sdks/polars/) |
+| TypeScript or JavaScript | <Fact k="languages.typescript.package" /> | [TypeScript guide](/sdks/typescript/) |
+| Go | <Fact k="languages.go.package" /> | [Go guide](/sdks/go/) |
+| Java | <Fact k="languages.java.package" /> on Maven Central | [Java guide](/sdks/java/) |
+| Kotlin | <Fact k="languages.kotlin.package" /> on Maven Central | [Kotlin guide](/sdks/kotlin/) |
+| C# | <Fact k="languages.csharp.package" /> | [C# guide](/sdks/csharp/) |
+| R | <Fact k="languages.r.package" /> | [R guide](/sdks/r/) |
+| Ruby | <Fact k="languages.ruby.package" /> on RubyGems | [Ruby guide](/sdks/ruby/) |
+| Rust | <Fact k="languages.rust.package" /> | [Rust guide](/sdks/rust/) |
+| Swift | <Fact k="languages.swift.package" /> | [Swift guide](/sdks/swift/) |
+| C | <Fact k="languages.c.package" /> | [C guide](/sdks/c/) |
+| C++ | <Fact k="languages.cpp.package" /> | [C++ guide](/sdks/cpp/) |
+| Zig | <Fact k="languages.zig.package" /> | [Zig guide](/sdks/zig/) |
+| DuckDB | The DuckDB release archive | [DuckDB guide](/sdks/duckdb/#load-the-extension) |
+| SQLite | The SQLite release archive | [SQLite guide](/sdks/sqlite/) |
+| PostgreSQL | The PostgreSQL release archive | [PostgreSQL guide](/sdks/postgresql/#install) |
+
+Go and Swift resolve a versioned source dependency. Use the version in their guides rather than a moving branch. Swift Package Manager works without a Swift Package Index listing.
+
+### Native libraries and database downloads
+
+The [release files](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) include the C, C++, Zig and database archives. Choose the archive for the machine that will run your program or database. C, C++, Zig, DuckDB and SQLite archives are supplied for Linux x86-64, Linux arm64, macOS on Apple silicon and Windows x86-64. Follow each guide's compiler and runtime requirements.
+
+These are the Linux x86-64 downloads; choose the corresponding platform file on the release page for another machine:
+
+| Archive | Download |
+| --- | --- |
+| C | [C archive](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-c-0.2.0-linux-x86_64.tar.gz) |
+| C++ | [C++ archive](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-cpp-0.2.0-linux-x86_64.tar.gz), together with the C archive above |
+| Zig | [Zig archive](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-zig-0.2.0-linux-x86_64.tar.gz) |
+| DuckDB | [DuckDB archive](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-duckdb-0.2.0-linux-x86_64.tar.gz) |
+| SQLite | [SQLite archive](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-sqlite-0.2.0-linux-x86_64.tar.gz) |
+| PostgreSQL | [PostgreSQL archive](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-postgres-0.2.0-18-linux-x86_64.tar.gz) |
+
+Download [SHA256SUMS](https://github.com/botassembly/thinkthen/releases/download/v0.2.0/SHA256SUMS) too. [Check the archive](#download-a-release-file) and [verify its origin](#check-where-a-download-came-from) before loading or linking it. Substitute your archive's file name in the checksum commands below.
+
+- **DuckDB:** use DuckDB 2.0.0 and allow unsigned extensions. Load the verified extension by its absolute path. ThinkThen is not in DuckDB's community repository; `INSTALL thinkthen FROM community` does not install it.
+- **SQLite:** use SQLite 3.41.0 or later with extension loading enabled. Load the library once per connection with `.load` in the shell or your application's extension-loading API.
+- **PostgreSQL:** use PostgreSQL 18 on Linux x86-64 or arm64 with glibc 2.28 or later. Copy the library and extension files into PostgreSQL's directories, set the key in the server environment, then create the extension in each database. The guide gives the administrator commands. Install from the release archive; PGXN is not a distribution route for this release.
+
+The command installation steps follow. After installation, set your key as the [quickstart](/quickstart/) or your language's guide shows.
 
 ## Install with one line
 

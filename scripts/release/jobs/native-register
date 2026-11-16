@@ -1,0 +1,9 @@
+#!/bin/sh
+# usage: native-register FOLDER MAC_PRODUCER LINUX_PRODUCER
+# Register both producers as this candidate's native pair, which the Linux gates read.
+set -eu
+jobs=$(dirname "$0")
+folder=$1
+. "$jobs/linux-env"
+mkdir -p "$(dirname "$folder")"
+exec scripts/native-producer register --floor-image "$THINKTHEN_FLOOR_IMAGE" --cargo-home "$CARGO_HOME" --mac "$2" --linux "$3" --output "$folder"

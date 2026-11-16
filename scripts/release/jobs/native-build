@@ -1,0 +1,13 @@
+#!/bin/sh
+# usage: native-build mac|linux FOLDER
+# Produce this host's half of the native pair from the exact public checkout.
+set -eu
+jobs=$(dirname "$0")
+host=$1
+folder=$2
+cargo_home=$("$jobs/prepared" "${host}_cargo_home")
+target=$("$jobs/prepared" "${host}_target")
+floor=$("$jobs/prepared" floor_image)
+mkdir -p "$(dirname "$folder")"
+scripts/native-producer prepare --floor-image "$floor" --cargo-home "$cargo_home"
+exec scripts/native-producer build --floor-image "$floor" --cargo-home "$cargo_home" --target "$target" --output "$folder"

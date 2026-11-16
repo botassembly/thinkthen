@@ -1,0 +1,24 @@
+#!/bin/sh
+# usage: in-public PUBLIC_SOURCE PUBLIC_SHA JOB [ARG ...]
+# Enter the exact public checkout, then run a job script from this control checkout.
+set -eu
+public_source=$1
+public_sha=$2
+job=$3
+shift 3
+jobs=$(cd "$(dirname "$0")" && pwd)
+repository=$("$jobs/prepared" public_repository)
+mkdir -p "$public_source"
+if ! git -C "$public_source" rev-parse --quiet --verify HEAD >/dev/null 2>&1; then
+    git -C "$public_source" init --quiet
+    git -C "$public_source" remote get-url origin >/dev/null 2>&1 ||
+        git -C "$public_source" remote add origin "$repository"
+    git -C "$public_source" fetch --quiet --no-tags --depth 1 origin "$public_sha"
+    git -C "$public_source" checkout --quiet --detach "$public_sha"
+fi
+test "$(git -C "$public_source" remote get-url origin)" = "$repository"
+test "$(git -C "$public_source" rev-parse HEAD)" = "$public_sha"
+test -z "$(git -C "$public_source" status --porcelain)"
+git -C "$public_source" rev-parse HEAD
+cd "$public_source"
+exec scripts/native-tools-env "$jobs/$job" "$@"

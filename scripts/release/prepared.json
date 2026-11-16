@@ -1,0 +1,13 @@
+{
+  "public_repository": {"kind": "text", "value": "https://github.com/botassembly/thinkthen.git"},
+  "private_pattern": {"kind": "path", "value": "native-pair-builds/0085-final-b69a0a7a-inputs/private-pattern"},
+  "private_pattern_sha256": {"kind": "text", "value": "24f4ac7f9bde989d1cefb245277436cc5106508ff54de48ea082032939e55cfa"},
+  "floor_image": {"kind": "text", "value": "sha256:73ca40ea8c4d0fd2068ca3a6985781f04f47e682442b9c72df1a6a3927b9ef71"},
+  "swift_image": {"kind": "text", "value": "sha256:24337b3512e27d0e1694c884b9dfda3662b0cdade33b42286937ee5b091ce371"},
+  "postgres_image": {"kind": "text", "value": "sha256:d0d42ec789add0e7dcda945efd8dfc0215039f7fdafacc175b44c93fc188af61"},
+  "mac_cargo_home": {"kind": "path", "value": "native-pair-builds/0332-5de6877e/cargo-home"},
+  "mac_target": {"kind": "location", "value": "native-pair-builds/0415-0416/mac-target"},
+  "linux_cargo_home": {"kind": "path", "value": "native-pair-builds/0085-d8236d6b-cargo-home"},
+  "linux_target": {"kind": "location", "value": "native-pair-builds/0384-c495c715-linux-target"},
+  "host_linker": {"kind": "path", "value": "host-linker/mold-2.37.1-dfsg1/extracted/usr/bin"}
+}
