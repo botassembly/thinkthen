@@ -6,6 +6,12 @@ on:
         description: Published version tag whose public packages and website installer are ready
         required: true
         type: string
+      scope:
+        description: Retry Swift alone after the other Windows routes have passed
+        required: true
+        type: choice
+        default: all
+        options: [all, swift]
 permissions: {contents: read}
 concurrency:
   group: live-install-windows-${{ inputs.tag }}
@@ -42,6 +48,13 @@ jobs:
         with:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
+      - name: Select corrected tooling for the Swift-only retry
+        if: inputs.scope == 'swift'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          path: tooling
+          persist-credentials: false
       - name: Check the selected release source
         env:
           RELEASE_TAG: ${{ inputs.tag }}
@@ -54,17 +67,24 @@ jobs:
               raise ValueError('Selected tag and package version differ')
           PY
           git rev-parse HEAD
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      - if: inputs.scope != 'swift'
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with: {go-version: '1.27.1', cache: false}
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      - if: inputs.scope != 'swift'
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with: {distribution: temurin, java-version: '22.0.2+9'}
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+      - if: inputs.scope != 'swift'
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with: {dotnet-version: '10.0.114'}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - if: inputs.scope != 'swift'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: {node-version: '22.12.0'}
-      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
+      - if: inputs.scope != 'swift'
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
         with: {ruby-version: '3.3.8'}
       - name: Prepare consumer tools and check public installations
+        env:
+          LIVE_INSTALL_SCOPE: ${{ inputs.scope }}
         run: |
           python3 - <<'PY'
           import os, subprocess, sys, tomllib
@@ -74,14 +94,19 @@ jobs:
           from release_windows_r import runtime
           from release_windows_host import environment, prepare_msys2, prepare_swift
           from release_prepare_common import TOOLS
-          prepare()
-          runtime()
-          prepare_msys2()
+          retry_swift = os.environ.get('LIVE_INSTALL_SCOPE') == 'swift'
+          if not retry_swift:
+              prepare()
+              runtime()
+              prepare_msys2()
           env = prepare_swift(environment(), TOOLS / 'windows-check')
-          channel = tomllib.loads(Path('rust-toolchain.toml').read_text())['toolchain']['channel']
-          cargo = subprocess.check_output(['rustup', 'which', '--toolchain', channel, 'cargo'], text=True).strip()
-          env['PATH'] = str(Path(cargo).parent) + os.pathsep + env['PATH']
-          subprocess.run([sys.executable, 'scripts/release-live-install-check',
-              'pypi', 'npm', 'rubygems', 'nuget', 'maven', 'crates', 'go', 'swift', 'r', 'installer'],
-              env=env, check=True)
+          if retry_swift:
+              command = [sys.executable, 'tooling/scripts/release-live-install-check', 'swift', '--source', '.']
+          else:
+              channel = tomllib.loads(Path('rust-toolchain.toml').read_text())['toolchain']['channel']
+              cargo = subprocess.check_output(['rustup', 'which', '--toolchain', channel, 'cargo'], text=True).strip()
+              env['PATH'] = str(Path(cargo).parent) + os.pathsep + env['PATH']
+              command = [sys.executable, 'scripts/release-live-install-check',
+                  'pypi', 'npm', 'rubygems', 'nuget', 'maven', 'crates', 'go', 'swift', 'r', 'installer']
+          subprocess.run(command, env=env, check=True)
           PY

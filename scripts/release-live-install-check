@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """After publication, install named packages from public sites and ask a stub question.
 
-Usage: release-live-install-check SITE [SITE ...]
+Usage: release-live-install-check SITE [SITE ...] [--source PUBLISHED_SOURCE]
 Run on a clean host with the selected sites' compilers/package managers installed.
 Each site uses an empty private cache. No model calls or registry writes occur.
 Output is one result per selected site plus package-manager diagnostics on failure.
@@ -43,7 +43,7 @@ def command_question(binary, case, env):
         raise ValueError(f'installed command returned {actual!r}')
 
 
-def check(site, scratch, fixture, case):
+def check(site, scratch, fixture, case, source=ROOT):
     # These existing consumers require the complete canonical function coverage.
     if site in ('pypi', 'nuget', 'maven'):
         fixture = ROOT / 'construction/stub.json'
@@ -64,7 +64,7 @@ def check(site, scratch, fixture, case):
                RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
                NPM_CONFIG_USERCONFIG=str(scratch / 'npmrc'),
                HOMEBREW_NO_AUTO_UPDATE='1', HOMEBREW_NO_ANALYTICS='1', HOMEBREW_CACHE=str(scratch / 'brew-cache'),
-               THINKTHEN_STUB_CASES=str(fixture), THINKTHEN_CASES=str(ROOT / 'conformance'))
+               THINKTHEN_STUB_CASES=str(fixture), THINKTHEN_CASES=str(source / 'conformance'))
     options = dict(cwd=scratch, env=env)
     if site == 'pypi':
         run(sys.executable, '-m', 'venv', scratch / 'venv', **options)
@@ -116,12 +116,14 @@ def check(site, scratch, fixture, case):
     elif site == 'swift':
         consumer = scratch / 'consumer'
         consumer.mkdir()
-        for path in (ROOT / 'sdk/swift/tests').glob('*.swift'):
+        for path in (source / 'sdk/swift/tests').glob('*.swift'):
             if path.name != 'Package.swift':
                 shutil.copy2(path, consumer / path.name)
-        (consumer / 'Package.swift').write_text('// swift-tools-version: 6.3\nimport PackageDescription\nlet package = Package(name: "Consumer", platforms: [.macOS("15.0")], dependencies: [.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version() + '")], targets: [.executableTarget(name: "Consumer", dependencies: [.product(name: "ThinkThen", package: "thinkthen")], path: ".", exclude: ["Package.swift"])])\n')
+        (consumer / 'Package.swift').write_text('// swift-tools-version: 6.3\nimport PackageDescription\nlet package = Package(name: "Consumer", platforms: [.macOS("15.0")], dependencies: [.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version(source) + '")], targets: [.executableTarget(name: "Consumer", dependencies: [.product(name: "ThinkThen", package: "thinkthen")], path: ".", exclude: ["Package.swift"])])\n')
         run('swift', 'build', '--package-path', consumer, '--disable-sandbox', **options)
-        run(sys.executable, ROOT / 'scripts/release/swift.py', consumer / '.build/debug/Consumer', fixture, **options)
+        binary = Path(run('swift', 'build', '--package-path', consumer, '--show-bin-path', **options).strip())
+        run(sys.executable, source / 'scripts/release/swift.py',
+            binary / ('Consumer.exe' if os.name == 'nt' else 'Consumer'), fixture, **options)
     elif site == 'r':
         library = scratch / 'r-library'
         library.mkdir()
@@ -156,8 +158,12 @@ def check(site, scratch, fixture, case):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('sites', nargs='+', choices=SITES)
+    parser.add_argument('--source', type=Path, help='published source for a Swift-only tooling retry')
     args = parser.parse_args()
-    case = next(case for case in json.loads((ROOT / 'construction/stub.json').read_text())
+    if args.source is not None and args.sites != ['swift']:
+        parser.error('--source is only available for the Swift-only retry')
+    source = (args.source or ROOT).resolve()
+    case = next(case for case in json.loads((source / 'construction/stub.json').read_text())
                 if case['request']['question']['function'] == 'decide'
                 and len(case['request']['records']) == 1 and case['expected'][0]['status'] == 'answered')
     failed = []
@@ -169,12 +175,12 @@ def main():
             scratch = root / site
             scratch.mkdir()
             try:
-                check(site, scratch, fixture, case)
+                check(site, scratch, fixture, case, source)
             except Exception as error:  # noqa: BLE001 - Report every site failure before the final nonzero exit.
                 failed.append(site)
                 print(f'live install {site}: FAIL: {error}', flush=True)
             else:
-                print(f'live install {site}: PASS (published {version()}, stub question)', flush=True)
+                print(f'live install {site}: PASS (published {version(source)}, stub question)', flush=True)
     if failed:
         raise SystemExit('live install failed: ' + ', '.join(failed))
 

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import runpy
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -14,6 +15,7 @@ import textwrap
 import unittest
 import urllib.error
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from release_workflow import ROOT, version
 
@@ -27,7 +29,8 @@ class PlatformRelease(unittest.TestCase):
         self.assertEqual(job['runs-on'], 'windows-2022')
         self.assertLessEqual(job['timeout-minutes'], 90)
         self.assertNotIn('if', job)
-        checkout, = (step for step in job['steps'] if step.get('uses', '').startswith('actions/checkout@'))
+        checkout, = (step for step in job['steps'] if step.get('uses', '').startswith('actions/checkout@')
+                        and 'path' not in step['with'])
         self.assertEqual(checkout['with']['ref'], 'refs/tags/${{ inputs.tag }}')
         admission = next(step for step in job['steps'] if step.get('name') == 'Require a published version tag')
         code = admission['run'].split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]
@@ -79,6 +82,88 @@ class PlatformRelease(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][1], 'scripts/release-live-install-check')
         self.assertEqual(calls[0][2:], [site for site in sites if site != 'homebrew'])
+
+    def test_swift_retry_uses_corrected_tooling_and_preserves_tag_guard(self):
+        import release_rust, release_windows_r, release_windows_host, release_workflow
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load(STDIN.read, aliases: true))'],
+            input=(ROOT / '.github/workflows/release-live-install.yml').read_bytes()))
+        steps = workflow['jobs']['windows']['steps']
+        tooling = next(step for step in steps if step.get('with', {}).get('path') == 'tooling')
+        self.assertEqual(tooling['if'], "inputs.scope == 'swift'")
+        self.assertEqual(tooling['with']['ref'], '${{ github.sha }}')
+        guard = next(step for step in steps if step.get('name') == 'Check the selected release source')
+        code = guard['run'].split("<<'PY'\n", 1)[1].split('\nPY', 1)[0]
+        with patch.dict(os.environ, RELEASE_TAG='v0.1.2'), patch.object(release_workflow, 'version', return_value='0.2.0'):
+            with self.assertRaisesRegex(ValueError, 'tag and package version differ'):
+                exec(compile(code, '<published-source-guard>', 'exec'), {})
+        code = steps[-1]['run'].split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]
+        with patch.dict(os.environ, LIVE_INSTALL_SCOPE='swift'), \
+                patch.object(release_rust, 'prepare') as rust, \
+                patch.object(release_windows_r, 'runtime') as r, \
+                patch.object(release_windows_host, 'prepare_msys2') as gcc, \
+                patch.object(release_windows_host, 'environment', return_value={'PATH': 'swift-tools'}), \
+                patch.object(release_windows_host, 'prepare_swift', side_effect=lambda env, folder: env), \
+                patch.object(subprocess, 'run', side_effect=subprocess.CalledProcessError(17, 'consumer')) as run:
+            with self.assertRaises(subprocess.CalledProcessError):
+                exec(compile(code, '<swift-retry>', 'exec'), {})
+            self.assertEqual(run.call_args.args[0][1:],
+                ['tooling/scripts/release-live-install-check', 'swift', '--source', '.'])
+            self.assertTrue(run.call_args.kwargs['check'])
+            for unused in (rust, r, gcc):
+                unused.assert_not_called()
+
+    def test_live_swift_uses_reported_binary_path_and_published_fixtures(self):
+        checker = runpy.run_path(str(ROOT / 'scripts/release-live-install-check'))
+        namespace = checker['main'].__globals__
+        case = next(case for case in json.loads((ROOT / 'construction/stub.json').read_text())
+                    if case['request']['question']['function'] == 'decide'
+                    and len(case['request']['records']) == 1 and case['expected'][0]['status'] == 'answered')
+        case['request']['records'] = ['published source witness']
+        for windows, failed in ((True, False), (False, False), (True, True)):
+            with self.subTest(windows=windows, failed=failed), tempfile.TemporaryDirectory() as temporary:
+                folder = Path(temporary)
+                source = folder / 'published'
+                (source / 'sdk/swift/tests').mkdir(parents=True)
+                (source / 'sdk/swift/tests/Witness.swift').write_text('published Swift source')
+                (source / 'Cargo.toml').write_text('[workspace.package]\nversion="0.2.9"\n')
+                (source / 'construction').mkdir()
+                (source / 'construction/stub.json').write_text(json.dumps([case]))
+                (source / 'scripts/release').mkdir(parents=True)
+                for name in ('swift.py', 'filter_contract.py'):
+                    shutil.copy2(ROOT / 'scripts/release' / name, source / 'scripts/release' / name)
+                tools = folder / 'tools'
+                tools.mkdir()
+                binary = folder / 'reported output' / ('Consumer.exe' if windows else 'Consumer')
+                consumer = ('#!' + sys.executable + '\nimport json,sys\nfrom pathlib import Path\n'
+                    'cases=json.loads(Path(sys.argv[1]).read_text())\n'
+                    'assert cases[0]["request"]["records"] == ["published source witness"]\n'
+                    + ('sys.exit(17)\n' if failed else 'for case in cases: print(json.dumps(case["expected"]))\n'))
+                swift = tools / 'swift'
+                swift.write_text('#!' + sys.executable + '\n' + textwrap.dedent(f"""
+                    import sys
+                    from pathlib import Path
+                    package=Path(sys.argv[sys.argv.index('--package-path')+1])
+                    assert 'exact: "0.2.9"' in (package/'Package.swift').read_text()
+                    assert (package/'Witness.swift').read_text() == 'published Swift source'
+                    binary=Path({str(binary)!r})
+                    if '--show-bin-path' in sys.argv:
+                        print(binary.parent)
+                    else:
+                        binary.parent.mkdir(parents=True, exist_ok=True)
+                        binary.write_text({consumer!r})
+                        binary.chmod(0o755)
+                    """))
+                swift.chmod(0o755)
+                environment = SimpleNamespace(name='nt' if windows else 'posix', environ=os.environ, pathsep=os.pathsep)
+                with patch.dict(namespace, os=environment), \
+                        patch.dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH']), \
+                        patch.object(sys, 'argv', ['release-live-install-check', 'swift', '--source', str(source)]):
+                    if failed:
+                        with self.assertRaisesRegex(SystemExit, 'live install failed: swift'):
+                            checker['main']()
+                    else:
+                        checker['main']()
 
     def test_prepared_image_ids_and_tags_must_exist(self):
         import release_images
